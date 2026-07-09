@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Goal - Sign In</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Anton&amp;family=Archivo+Narrow:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes logoPulse {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(75, 226, 119, 0)); }
+            50% { transform: scale(1.08); filter: drop-shadow(0 0 15px rgba(75, 226, 119, 0.4)); }
+        }
+
+        @keyframes bgZoom {
+            0% { transform: scale(1.1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1.1); }
+        }
+
+        .animate-fade-in-up {
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .animate-logo-pulse {
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+
+        .animate-bg-zoom {
+            animation: bgZoom 20s ease-in-out infinite;
+        }
+
+        .glass-card {
+            background: rgba(30, 30, 30, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .energy-gradient {
+            background: linear-gradient(135deg, #4be277 0%, #00a572 100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .energy-gradient:hover {
+            box-shadow: 0 0 20px rgba(75, 226, 119, 0.4);
+            transform: translateY(-2px) scale(1.02);
+            filter: brightness(1.1);
+        }
+
+        .energy-gradient:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        /* Floating label logic */
+        .input-group input:placeholder-shown ~ label {
+            top: 1rem;
+            font-size: 1rem;
+            color: #869585;
+        }
+
+        .input-group input:focus ~ label,
+        .input-group input:not(:placeholder-shown) ~ label {
+            top: -0.5rem;
+            left: 0.75rem;
+            font-size: 0.75rem;
+            color: #4be277;
+            background-color: #1e1e1e;
+            padding: 0 4px;
+        }
+
+        /* Input Glow Effect */
+        .input-glow:focus {
+            box-shadow: 0 0 15px rgba(75, 226, 119, 0.2);
+            border-color: #4be277 !important;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary": "#003824",
+                        "error-container": "#93000a",
+                        "on-primary-fixed": "#002109",
+                        "surface-variant": "#353534",
+                        "on-primary-fixed-variant": "#005321",
+                        "surface": "#131313",
+                        "inverse-on-surface": "#313030",
+                        "tertiary-fixed": "#ffdad5",
+                        "primary-fixed-dim": "#4ae176",
+                        "surface-tint": "#4ae176",
+                        "on-error-container": "#ffdad6",
+                        "on-background": "#e5e2e1",
+                        "surface-container-lowest": "#0e0e0e",
+                        "primary-container": "#22c55e",
+                        "on-tertiary-container": "#76231b",
+                        "primary-fixed": "#6bff8f",
+                        "inverse-surface": "#e5e2e1",
+                        "secondary-fixed-dim": "#4edea3",
+                        "inverse-primary": "#006e2f",
+                        "on-tertiary": "#60130d",
+                        "tertiary-container": "#ff8b7c",
+                        "outline": "#869585",
+                        "outline-variant": "#3d4a3d",
+                        "on-primary": "#003915",
+                        "error": "#ffb4ab",
+                        "on-tertiary-fixed": "#410001",
+                        "primary": "#4be277",
+                        "on-surface-variant": "#bccbb9",
+                        "on-secondary-container": "#00311f",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-secondary-fixed": "#002113",
+                        "on-tertiary-fixed-variant": "#7f2a21",
+                        "on-primary-container": "#004b1e",
+                        "on-error": "#690005",
+                        "secondary-container": "#00a572",
+                        "surface-bright": "#393939",
+                        "surface-container-high": "#2a2a2a",
+                        "surface-container-low": "#1c1b1b",
+                        "tertiary": "#ffb5ab",
+                        "tertiary-fixed-dim": "#ffb4a9",
+                        "background": "#131313",
+                        "surface-container": "#201f1f",
+                        "surface-container-highest": "#353534",
+                        "surface-dim": "#131313",
+                        "on-secondary-fixed-variant": "#005236",
+                        "secondary": "#4edea3",
+                        "on-surface": "#e5e2e1"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "xs": "4px",
+                        "lg": "24px",
+                        "sm": "8px",
+                        "margin-mobile": "20px",
+                        "margin-desktop": "64px",
+                        "xl": "40px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Archivo Narrow"],
+                        "label-sm": ["Archivo Narrow"],
+                        "title-md": ["Archivo Narrow"],
+                        "body-lg": ["Archivo Narrow"],
+                        "headline-lg-mobile": ["Anton"],
+                        "headline-lg": ["Anton"],
+                        "display-lg": ["Anton"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "title-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "26px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "0.02em", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md selection:bg-primary selection:text-on-primary min-h-screen overflow-x-hidden">
+<!-- Background Layer with Sports Theme -->
+<div class="fixed inset-0 z-0 overflow-hidden">
+<div class="absolute inset-0 bg-black/60 z-10"></div>
+<div class="w-full h-full bg-cover bg-center opacity-40 animate-bg-zoom" data-alt="A moody, high-contrast wide shot of a professional football pitch at night under glowing stadium floodlights." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCNgBJlBY97_QaewYW2r-DjSlc7y1DcxBuTyd2FT01aWpOMDdC6E5Ojftib57g020fqnyp0_maN4R5MEHbvA5mKvbvL62-rTz8r9ur1HeYAdQRNcHj2N8UkRNLsr6n30pKT8wvR2ALUnlrVoH30n83mprQd7LqD0c88IYJTTyGNiDVyADu8naOoqsrI2DdszdWsC6qGeg9DMNEPKErslJTkraaMEw-PLU4zYb0RM7Qzcqh4FeFxhc1IHMBcbbO-zGz4b_LtpTKBW06d')">
+</div>
+</div>
+<!-- Main Content Wrapper -->
+<main class="relative z-20 flex flex-col items-center justify-center min-h-screen px-margin-mobile md:px-margin-desktop py-xl">
+<!-- Logo Area -->
+<div class="mb-xl text-center animate-fade-in-up" style="animation-delay: 0.1s;">
+<div class="animate-logo-pulse inline-block mb-sm">
+<span class="material-symbols-outlined text-primary text-[64px] leading-none" style="font-variation-settings: 'FILL' 1;">sports_soccer</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-primary italic tracking-tighter uppercase">GOAL</h1>
+<p class="font-title-md text-title-md text-on-surface-variant mt-xs">Secure your pitch. Own the game.</p>
+</div>
+<!-- Glassmorphism Form Card -->
+<div class="w-full max-w-md glass-card rounded-xl p-lg md:p-xl shadow-2xl opacity-0 animate-fade-in-up" style="animation-delay: 0.3s; animation-fill-mode: forwards;">
+<form class="space-y-lg" onsubmit="event.preventDefault();">
+<!-- Email Input Group -->
+<div class="input-group relative">
+<input class="input-glow w-full bg-surface-container-low border border-white/10 rounded-lg px-md py-md text-on-surface focus:outline-none transition-all duration-300" id="email" name="email" placeholder=" " required="" type="email"/>
+<label class="absolute left-md transition-all duration-300 pointer-events-none font-label-sm uppercase tracking-wider" for="email">Email Address</label>
+</div>
+<!-- Password Input Group -->
+<div class="input-group relative">
+<input class="input-glow w-full bg-surface-container-low border border-white/10 rounded-lg px-md py-md text-on-surface focus:outline-none transition-all duration-300" id="password" name="password" placeholder=" " required="" type="password"/>
+<label class="absolute left-md transition-all duration-300 pointer-events-none font-label-sm uppercase tracking-wider" for="password">Password</label>
+<button class="absolute right-md top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors" id="togglePassword" type="button">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+</div>
+<div class="flex items-center justify-between">
+<label class="flex items-center space-x-sm cursor-pointer group">
+<input class="w-5 h-5 rounded border-white/20 bg-surface-container-low text-primary focus:ring-primary focus:ring-offset-background" type="checkbox"/>
+<span class="font-label-sm text-on-surface-variant group-hover:text-on-surface transition-colors">Remember Me</span>
+</label>
+<a class="font-label-sm text-primary hover:underline transition-all" href="#">Forgot Password?</a>
+</div>
+<!-- Primary Action Button -->
+<button class="energy-gradient w-full py-md rounded-lg font-title-md text-on-primary-fixed uppercase tracking-widest shadow-lg flex items-center justify-center space-x-sm" type="submit">
+<span>Sign In</span>
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</form>
+<!-- Separator -->
+<div class="relative my-xl flex items-center">
+<div class="flex-grow border-t border-white/10"></div>
+<span class="mx-md font-label-sm text-on-surface-variant uppercase tracking-tighter">Or continue with</span>
+<div class="flex-grow border-t border-white/10"></div>
+</div>
+<!-- Social Logins -->
+<div class="grid grid-cols-2 gap-md">
+<button class="flex items-center justify-center py-sm px-md rounded-lg bg-surface-container-high border border-white/5 hover:bg-surface-bright transition-all active:scale-95 duration-200">
+<div class="w-6 h-6 mr-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">google</span>
+</div>
+<span class="font-label-sm uppercase">Google</span>
+</button>
+<button class="flex items-center justify-center py-sm px-md rounded-lg bg-surface-container-high border border-white/5 hover:bg-surface-bright transition-all active:scale-95 duration-200">
+<div class="w-6 h-6 mr-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">apps</span>
+</div>
+<span class="font-label-sm uppercase">Apple</span>
+</button>
+</div>
+</div>
+<!-- Bottom Link -->
+<p class="mt-xl font-body-md text-on-surface-variant opacity-0 animate-fade-in-up" style="animation-delay: 0.5s; animation-fill-mode: forwards;">
+        Don't have an account? 
+        <a class="text-primary font-bold hover:underline ml-xs transition-all" href="#">Register for free</a>
+</p>
+</main>
+<!-- Scripts -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const inputs = document.querySelectorAll('.input-glow');
+        
+        inputs.forEach(input => {
+            input.addEventListener('focus', () => {
+                const card = input.closest('.glass-card');
+                card.style.boxShadow = '0 0 30px rgba(75, 226, 119, 0.15)';
+                card.style.borderColor = 'rgba(75, 226, 119, 0.3)';
+            });
+
+            input.addEventListener('blur', () => {
+                const card = input.closest('.glass-card');
+                card.style.boxShadow = '';
+                card.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            });
+        });
+
+        // Password visibility toggle
+        const toggleBtn = document.getElementById('togglePassword');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                const passInput = document.getElementById('password');
+                const icon = toggleBtn.querySelector('.material-symbols-outlined');
+                const isPass = passInput.type === 'password';
+                passInput.type = isPass ? 'text' : 'password';
+                icon.textContent = isPass ? 'visibility_off' : 'visibility';
+            });
+        }
+    });
+</script>
+</body></html>
