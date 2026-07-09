@@ -2,15 +2,13 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ProfileController;
 
-// This is an example of a route protected by Supabase Auth middleware
 Route::middleware('supabase')->group(function () {
-    Route::get('/me', function (Request $request) {
-        $authUser = $request->attributes->get('auth_user');
-        
-        return response()->json([
-            'message' => 'You are authenticated with Supabase!',
-            'user' => $authUser
-        ]);
-    });
+    // Profile
+    Route::get('/me', [ProfileController::class, 'me']);
+
+    // Onboarding
+    Route::get('/me/onboarding/check-username', [ProfileController::class, 'checkUsername']);
+    Route::post('/me/onboarding', [ProfileController::class, 'submitOnboarding']);
 });
