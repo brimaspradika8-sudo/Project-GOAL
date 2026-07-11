@@ -1,0 +1,10 @@
+{
+  "description": "Streamline player card activation with a simple 3-step onboarding that personalizes usernames and sports preferences for a tailored experience.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

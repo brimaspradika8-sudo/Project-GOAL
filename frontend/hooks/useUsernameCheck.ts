@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { API_BASE_URL } from '../lib/api';
 import { useDebouncedValue } from './useDebouncedValue';
 
 export type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000/api';
 
 export function useUsernameCheck(rawUsername: string): UsernameStatus {
   const debouncedUsername = useDebouncedValue(rawUsername, 500);
@@ -28,6 +27,8 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
 
     const checkUsername = async () => {
       setStatus('checking');
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
@@ -36,6 +37,7 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
           `${API_BASE_URL}/me/onboarding/check-username?username=${encodeURIComponent(debouncedUsername)}`,
           {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
+            signal: controller.signal,
           }
         );
 
@@ -44,8 +46,10 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
         const json = await res.json();
         setStatus(json.available ? 'available' : 'taken');
       } catch {
-        // On network error, allow user to still try submitting
+        // On network error or timeout, allow user to still try submitting
         setStatus('available');
+      } finally {
+        clearTimeout(timeout);
       }
     };
 

@@ -34,9 +34,16 @@ class SupabaseAuth
             // Supabase uses HS256 to sign user tokens using the project JWT secret
             $decoded = JWT::decode($token, new Key($jwtSecret, 'HS256'));
             
-            // Set the authenticated user ID and data in the request attributes
+            $userId = $decoded->sub ?? null;
+
+            if (!$userId) {
+                return response()->json(['error' => 'Invalid token payload.'], 401);
+            }
+
+            // Set the authenticated user ID and data in the request attributes.
             $request->attributes->set('auth_user', $decoded);
-            $request->attributes->set('user_id', $decoded->sub ?? null);
+            $request->attributes->set('auth_user_id', $userId);
+            $request->attributes->set('user_id', $userId);
 
         } catch (Exception $e) {
             return response()->json([
