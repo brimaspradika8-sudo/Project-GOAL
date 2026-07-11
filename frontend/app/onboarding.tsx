@@ -2,152 +2,212 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet, View, Text, TextInput, TouchableOpacity,
   ActivityIndicator, Animated, Easing, KeyboardAvoidingView,
-  Platform, ScrollView, Image, Modal,
+  Platform, ScrollView, Image, Modal, Alert,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
+import { API_BASE_URL } from '../lib/api';
 import { useUsernameCheck } from '../hooks/useUsernameCheck';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000/api';
-
 const SPORTS = [
-  { id: 'soccer',     label: 'SEPAKBOLA',  icon: 'sports-soccer' as const },
-  { id: 'futsal',     label: 'FUTSAL',     icon: 'sports-soccer' as const }, // using soccer icon for futsal
-  { id: 'basketball', label: 'BASKET',     icon: 'sports-basketball' as const },
-  { id: 'badminton',  label: 'BADMINTON',  icon: 'sports-tennis' as const },
+  { id: 'futsal',      label: 'FUTSAL',       icon: 'sports-soccer' as const },
+  { id: 'basketball',  label: 'BASKET',       icon: 'sports-basketball' as const },
+  { id: 'badminton',   label: 'BADMINTON',    icon: 'sports-tennis' as const },
+  { id: 'volleyball',  label: 'VOLI',         icon: 'sports-volleyball' as const },
+  { id: 'minisoccer',  label: 'MINI SOCCER',  icon: 'sports-soccer' as const },
+  { id: 'tennis',      label: 'TENIS',        icon: 'sports-tennis' as const },
+  { id: 'tabletennis', label: 'TENIS MEJA',   icon: 'sports' as const },
+  { id: 'others',      label: 'LAINNYA',      icon: 'more-horiz' as const },
 ];
 
 const SPORT_PREFIXES = [
   'Striker', 'GoalGetter', 'Slamdunk', 'Pebulutangkis', 'SmashMaster',
   'Playmaker', 'Defender', 'AceSpiker', 'FastDribbler', 'CourtKing',
-  'NetViper', 'MidfieldGenius', 'Jumper', 'Winger', 'Keeper'
+  'NetViper', 'MidfieldGenius', 'Jumper', 'Winger', 'Keeper',
+  'StrikerMaut', 'KiperGanteng', 'MaestroFutsal', 'RajaLapangan'
 ];
 
-const PRESET_AVATARS = [
-  { id: '1', url: 'https://images.unsplash.com/photo-1548690312-e3b507d8c110?auto=format&fit=crop&q=80&w=250&h=250' }, // Athlete male
-  { id: '2', url: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&q=80&w=250&h=250' }, // Athlete female
-  { id: '3', url: 'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=250&h=250' }, // Athlete male workout
-  { id: '4', url: 'https://images.unsplash.com/photo-1518310383802-640c2de311b2?auto=format&fit=crop&q=80&w=250&h=250' }, // Active female portrait
-  { id: '5', url: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=250&h=250' }, // Gym portrait male
-  { id: '6', url: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&q=80&w=250&h=250' }, // Active fitness female
+const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/bottts/png?seed=goal&backgroundColor=131313';
+const TOTAL_STEPS = 4;
+
+const PROVINCES = [
+  'DKI JAKARTA',
+  'JAWA BARAT',
+  'JAWA TENGAH',
+  'JAWA TIMUR',
 ];
 
-const KABUPATENS = [
-  'JAKARTA BARAT, ID',
-  'JAKARTA SELATAN, ID',
-  'JAKARTA TIMUR, ID',
-  'JAKARTA UTARA, ID',
-  'JAKARTA PUSAT, ID',
-  'BANDUNG, ID',
-  'BEKASI, ID',
-  'BOGOR, ID',
-  'DEPOK, ID',
-  'TANGERANG, ID',
-  'SURABAYA, ID',
-  'MALANG, ID',
-  'SEMARANG, ID',
-  'YOGYAKARTA, ID',
-  'MEDAN, ID',
-  'PALEMBANG, ID',
-  'DENPASAR, ID',
-  'MAKASSAR, ID',
-  'BALIKPAPAN, ID',
-  'SAMARINDA, ID',
-];
+const CITIES_BY_PROVINCE: Record<string, string[]> = {
+  'DKI JAKARTA': [
+    'JAKARTA SELATAN, ID',
+    'JAKARTA PUSAT, ID',
+    'JAKARTA UTARA, ID',
+    'JAKARTA BARAT, ID',
+    'JAKARTA TIMUR, ID',
+  ],
+  'JAWA BARAT': [
+    'BANDUNG, ID',
+    'BEKASI, ID',
+    'BOGOR, ID',
+    'DEPOK, ID',
+    'TANGERANG, ID',
+    'CIREBON, ID',
+    'CIAMIS, ID', 
+    'TASIKMALAYA, ID',
 
-// ────────────────────────────────────────────────────────────────────────────
-// Sport Chip
-// ────────────────────────────────────────────────────────────────────────────
-function SportChip({
-  sport, selected, onPress,
-}: { sport: typeof SPORTS[0]; selected: boolean; onPress: () => void }) {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  const handlePress = () => {
-    Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.95, duration: 80, useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
-    ]).start();
-    onPress();
-  };
-
-  return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }], flex: 1 }}>
-      <TouchableOpacity
-        style={[styles.chip, selected && styles.chipSelected]}
-        onPress={handlePress}
-        activeOpacity={0.8}
-      >
-        <MaterialIcons
-          name={sport.icon}
-          size={24}
-          color={selected ? '#002109' : '#e5e2e1'}
-        />
-        <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-          {sport.label}
-        </Text>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
+  ],
+  'JAWA TENGAH': [
+    'SEMARANG, ID',
+    'YOGYAKARTA, ID',
+    'SURAKARTA, ID',
+    'PURWOKERTO, ID',
+    'PURBALINGGA, ID',
+    'BANJARNEGARA, ID',
+    'CILACAP, ID',
+    'KUDUS, ID',
+    'PEKALONGAN, ID',
+    'TEGAL, ID',
+    'MAGELANG, ID',
+    'SALATIGA, ID',
+    'BLORA, ID',
+    'BOYOLALI, ID',
+    'BREBES, ID',
+    'DEMAK, ID',
+    'GROBOGAN, ID',
+    'JEPARA, ID',
+    'KENDAL, ID',
+    'KLATEN, ID',
+    'KUDUS, ID',
+    'KUNINGAN, ID',
+    'MAGELANG, ID',
+    'PATI, ID',
+    'PEKALONGAN, ID',
+    'PEMALANG, ID',
+    'PURBALINGGA, ID',
+    'PURWOKERTO, ID',
+    'PURWOREJO, ID',
+    'SALATIGA, ID',
+    'SEMARANG, ID',
+    'SRAGEN, ID',
+    'SUKOHARJO, ID',
+    'SURAKARTA, ID',
+    'TEGAL, ID',
+    'TEMANGGUNG, ID',
+    'WONOGIRI, ID',
+    'WONOSOBO, ID',
+  ],
+  'JAWA TIMUR': [
+    'SURABAYA, ID',
+    'MALANG, ID',
+    'KEDIRI, ID',
+    'GRESIK, ID',
+    'LAMONGAN, ID',
+    'SIDOARJO, ID',
+    'JOMBANG, ID',
+    'NGANJUK, ID'
+  ],
+};
 
 // ────────────────────────────────────────────────────────────────────────────
 // Main Screen
 // ────────────────────────────────────────────────────────────────────────────
 export default function OnboardingScreen() {
+  // Navigation Steps
+  const [step, setStep] = useState(1);
+
+  // Form State
   const [username, setUsername] = useState('');
+  const [age, setAge] = useState('');
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const usernameStatus = useUsernameCheck(username);
 
-  // New features state
-  const [avatarUrl, setAvatarUrl] = useState(PRESET_AVATARS[0].url);
-  const [region, setRegion] = useState('JAKARTA, ID');
-  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  // Profile Customization State
+  const [avatarUrl, setAvatarUrl] = useState(DEFAULT_AVATAR);
+  const [selectedProvince, setSelectedProvince] = useState(PROVINCES[0]);
+  const [region, setRegion] = useState(CITIES_BY_PROVINCE[PROVINCES[0]][0]);
+
+  // Pick avatar from gallery
+  const pickAvatarFromGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Izin Diperlukan', 'Izinkan akses galeri di pengaturan untuk memilih foto profil.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]?.uri) {
+      setAvatarUrl(result.assets[0].uri);
+    }
+  };
+
+  // Modal Open States
+  const [isProvinceModalOpen, setIsProvinceModalOpen] = useState(false);
   const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
+ 
+  // Custom search string in city selector search text input
   const [regionSearch, setRegionSearch] = useState('');
 
   // Animations
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(60)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-
-  // Scanline animation
   const scanAnim = useRef(new Animated.Value(0)).current;
+
+  // Dice icon rotation animation
+  const diceRotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
-        toValue: 1, duration: 900,
+        toValue: 1, duration: 800,
         easing: Easing.out(Easing.cubic), useNativeDriver: false,
       }),
       Animated.timing(slideAnim, {
-        toValue: 0, duration: 900,
+        toValue: 0, duration: 800,
         easing: Easing.out(Easing.cubic), useNativeDriver: false,
       }),
     ]).start();
 
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.12, duration: 1400, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
-        Animated.timing(pulseAnim, { toValue: 1,    duration: 1400, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+        Animated.timing(pulseAnim, { toValue: 1.12, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
+        Animated.timing(pulseAnim, { toValue: 1,    duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
       ])
     ).start();
 
     Animated.loop(
-      Animated.timing(scanAnim, { toValue: 1, duration: 3000, useNativeDriver: false })
+      Animated.timing(scanAnim, { toValue: 1, duration: 3500, useNativeDriver: false })
     ).start();
-  }, []);
+  }, [step]);
 
-  const canSubmit =
+  const parsedAge = Number(age);
+  const canCompleteUsername =
     usernameStatus === 'available' &&
-    selectedSports.length > 0 &&
-    termsAccepted &&
-    !isSubmitting;
+    username.trim().length >= 3 &&
+    termsAccepted;
+  const canCompleteProfile =
+    age.trim().length > 0 &&
+    Number.isInteger(parsedAge) &&
+    parsedAge >= 10 &&
+    parsedAge <= 80;
+  const canCompleteRegion = !!selectedProvince && !!region;
+  const canCompleteSports = selectedSports.length > 0;
+  const canGoNext =
+    step === 1 ? canCompleteUsername :
+    step === 2 ? canCompleteProfile :
+    step === 3 ? canCompleteRegion :
+    canCompleteSports;
+  const canSubmit = canCompleteSports && !isSubmitting;
 
   function toggleSport(id: string) {
     setSelectedSports(prev =>
@@ -164,6 +224,17 @@ export default function OnboardingScreen() {
     }
   }
 
+  function handleBack() {
+    if (step > 1) {
+      setStep(prev => prev - 1);
+    }
+  }
+
+  async function handleNextStep() {
+    if (!canGoNext) return;
+    setStep(prev => Math.min(prev + 1, TOTAL_STEPS));
+  }
+
   async function handleSubmit() {
     if (!canSubmit) return;
     setIsSubmitting(true);
@@ -173,6 +244,9 @@ export default function OnboardingScreen() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+
       const res = await fetch(`${API_BASE_URL}/me/onboarding`, {
         method: 'POST',
         headers: {
@@ -181,11 +255,14 @@ export default function OnboardingScreen() {
         },
         body: JSON.stringify({
           username,
+          age: parsedAge,
           sports: selectedSports,
           region,
           avatar_url: avatarUrl,
         }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
 
       if (!res.ok) {
         const err = await res.json();
@@ -196,7 +273,7 @@ export default function OnboardingScreen() {
         return;
       }
 
-      // Redirect to main app
+      // Redirect to main app dashboard
       router.replace('/(tabs)');
     } catch {
       setSubmitError('Gagal terhubung ke server. Coba lagi.');
@@ -205,21 +282,31 @@ export default function OnboardingScreen() {
     }
   }
 
-  // Username status rendering
+  const triggerDiceRoll = () => {
+    Animated.sequence([
+      Animated.timing(diceRotateAnim, { toValue: 1, duration: 400, easing: Easing.out(Easing.back(1.5)), useNativeDriver: true }),
+      Animated.timing(diceRotateAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
+    ]).start();
+
+    const rand = SPORT_PREFIXES[Math.floor(Math.random() * SPORT_PREFIXES.length)] + '_' + (Math.floor(Math.random() * 900) + 100);
+    setUsername(rand);
+  };
+
+  // Username status indicators
   const renderStatus = () => {
     switch (usernameStatus) {
       case 'checking':
         return (
           <View style={styles.statusRow}>
             <MaterialIcons name="sync" size={14} color="#869585" />
-            <Text style={[styles.statusText, { color: '#869585' }]}>Validating Identity...</Text>
+            <Text style={[styles.statusText, { color: '#869585' }]}>Validating ID...</Text>
           </View>
         );
       case 'available':
         return (
           <View style={styles.statusRow}>
             <MaterialIcons name="check-circle" size={14} color="#4be277" />
-            <Text style={[styles.statusText, { color: '#4be277' }]}>Identity Verified</Text>
+            <Text style={[styles.statusText, { color: '#4be277' }]}>USERNAME TERSEDIA</Text>
           </View>
         );
       case 'taken':
@@ -233,20 +320,27 @@ export default function OnboardingScreen() {
         return (
           <View style={styles.statusRow}>
             <MaterialIcons name="error" size={14} color="#ffb4ab" />
-            <Text style={[styles.statusText, { color: '#ffb4ab' }]}>Too short</Text>
+            <Text style={[styles.statusText, { color: '#ffb4ab' }]}>Terlalu pendek</Text>
           </View>
         );
       default:
         return (
           <View style={styles.statusRow}>
-            <MaterialIcons name="sync" size={14} color="#869585" />
-            <Text style={[styles.statusText, { color: '#869585' }]}>Awaiting Identity...</Text>
+            <MaterialIcons name="info-outline" size={14} color="#869585" />
+            <Text style={[styles.statusText, { color: '#869585' }]}>Input Username Anda</Text>
           </View>
         );
     }
   };
 
-  const filteredKabupatens = KABUPATENS.filter(k => k.toLowerCase().includes(regionSearch.toLowerCase()));
+  const filteredKabupatens = (CITIES_BY_PROVINCE[selectedProvince] || []).filter(k => 
+    k.toLowerCase().includes(regionSearch.toLowerCase())
+  );
+
+  const spin = diceRotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
     <KeyboardAvoidingView
@@ -255,18 +349,30 @@ export default function OnboardingScreen() {
     >
       <StatusBar style="light" />
 
-      {/* ── Atmospheric Background ── */}
+      {/* ── Progress Glow Top Bar ── */}
+      <View style={styles.progressBarWrapper} pointerEvents="none">
+        <View style={[styles.progressBar, { width: `${(step / TOTAL_STEPS) * 100}%` }]} />
+      </View>
+
+      {/* ── Atmospheric Background Glows ── */}
       <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <View style={styles.glowTopLeft} />
         <View style={styles.glowBottomRight} />
         <View style={styles.radialOverlay} />
       </View>
 
-      {/* ── Fixed Header ── */}
+      {/* ── Fixed Premium Header ── */}
       <View style={styles.fixedHeader}>
-        <TouchableOpacity style={styles.headerLeft} onPress={handleSignOut} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={[styles.headerLeft, step === 1 && styles.headerLeftDisabled]}
+          onPress={handleBack}
+          disabled={step === 1}
+          activeOpacity={0.7}
+        >
           <MaterialIcons name="arrow-back" size={24} color="#4be277" />
-          <Text style={styles.headerTitle}>AKTIFKAN KARTU</Text>
+          <Text style={styles.headerTitle}>
+            {step === 1 ? 'NAMA ARENA' : step === 2 ? 'PROFIL PEMAIN' : step === 3 ? 'WILAYAH' : 'KARIER OLAHRAGA'}
+          </Text>
         </TouchableOpacity>
         <Text style={styles.headerGoal}>GOAL</Text>
       </View>
@@ -278,163 +384,233 @@ export default function OnboardingScreen() {
       >
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
 
-          {/* ── Section Heading ── */}
-          <View style={styles.sectionHeading}>
-            <Text style={styles.headingBig}>Lengkapi Identitasmu</Text>
-            <Text style={styles.headingSub}>Satu langkah lagi untuk memulai perjalananmu di arena.</Text>
-          </View>
-
-          {/* ── Modern Athlete Card ── */}
-          <View style={styles.card}>
-            {/* Scanline */}
-            <Animated.View
-              style={[
-                styles.scanline,
-                {
-                  top: scanAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['0%', '100%'],
-                  }),
-                },
-              ]}
-              pointerEvents="none"
-            />
-
-            {/* Card texture overlay */}
-            <View style={styles.cardGradientOverlay} pointerEvents="none" />
-
-            <View style={styles.cardPadding}>
-              {/* Card Header */}
-              <View style={styles.cardHeaderRow}>
-                <View>
-                  <Text style={styles.cardLabel}>PRO PLAYER CARD</Text>
-                  <Text style={styles.cardTitle}>KARTU PEMAIN</Text>
-                </View>
-                <View style={styles.qrIcon}>
-                  <MaterialIcons name="qr-code-2" size={24} color="#4be277" />
-                </View>
+          {step < 4 ? (
+            /* ──────────────────────────────────────────────────────────────────
+               STEP 1: LENGKAPI IDENTITAS (CARD BIODATA)
+               ────────────────────────────────────────────────────────────────── */
+            <View>
+              {/* Head instruction */}
+              <View style={styles.sectionHeading}>
+                <Text style={styles.stepEyebrow}>LANGKAH {step}/{TOTAL_STEPS}</Text>
+                <Text style={styles.headingBig}>
+                  {step === 1 ? 'SIAPA NAMA ARENAMU?' : step === 2 ? 'TAMBAHKAN FOTOMU' : 'DI MANA ARENAMU?'}
+                </Text>
+                <Text style={styles.headingSub}>
+                  {step === 1
+                    ? 'Nama ini yang akan dilihat pemain lain. Kamu bisa acak atau edit sendiri.'
+                    : step === 2
+                      ? 'Foto opsional, umur wajib supaya profil pemainmu lengkap.'
+                      : 'Pilih kabupaten/kota tempat kamu biasa main.'}
+                </Text>
               </View>
 
-              {/* Green divider line */}
-              <View style={styles.cardDivider} />
+              {/* Player Card Frame */}
+              <View style={styles.card}>
+                {/* Visual scanline scanning card */}
+                <Animated.View
+                  style={[
+                    styles.scanline,
+                    {
+                      top: scanAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0%', '100%'],
+                      }),
+                    },
+                  ]}
+                  pointerEvents="none"
+                />
 
-              {/* Card Content: Avatar + Username input */}
-              <View style={styles.cardContent}>
-                {/* Avatar Wrapper (Clickable to change) */}
-                <TouchableOpacity
-                  style={styles.avatarWrapper}
-                  onPress={() => setIsAvatarModalOpen(true)}
-                  activeOpacity={0.85}
-                >
-                  <Animated.View style={[styles.avatarPulseBorder, { opacity: pulseAnim.interpolate({ inputRange: [1, 1.12], outputRange: [0.4, 0.9] }) }]} />
-                  <Image
-                    source={{ uri: avatarUrl }}
-                    style={styles.avatarImg}
-                  />
-                  <View style={styles.avatarEditBadge}>
-                    <MaterialIcons name="camera-alt" size={14} color="#002109" />
+                <View style={styles.cardGradientOverlay} pointerEvents="none" />
+
+                <View style={styles.cardPadding}>
+                  {/* Card Identifier bar */}
+                  <View style={styles.cardHeaderRow}>
+                    <View>
+                      <Text style={styles.cardLabel}>PRO PLAYER CARD</Text>
+                      <Text style={styles.cardTitle}>
+                        {step === 1 ? 'NAMA ARENA' : step === 2 ? 'PROFIL PEMAIN' : 'LOKASI ARENA'}
+                      </Text>
+                    </View>
+                    <View style={styles.qrIcon}>
+                      <MaterialIcons name="qr-code-2" size={24} color="#4be277" />
+                    </View>
                   </View>
-                  <View style={styles.lvlBadge}><Text style={styles.lvlText}>LVL 01</Text></View>
-                </TouchableOpacity>
 
-                {/* Input section with Randomizer dice */}
-                <View style={styles.usernameSection}>
-                  <View style={styles.usernameRow}>
-                    <TextInput
-                      style={styles.usernameInput}
-                      placeholder="USERNAME"
-                      placeholderTextColor="rgba(255,255,255,0.2)"
-                      value={username}
-                      onChangeText={text => setUsername(text.replace(/[^a-zA-Z0-9_]/g, ''))}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      maxLength={20}
-                    />
+                  <View style={styles.cardDivider} />
+
+                  {step === 2 && (
+                  <View style={styles.topFormRow}>
+                    {/* Avatar interactive selection area */}
                     <TouchableOpacity
-                      style={styles.randomButton}
+                      style={styles.avatarWrapper}
+                      onPress={pickAvatarFromGallery}
+                      activeOpacity={0.8}
+                    >
+                      <Animated.View style={[styles.avatarPulseBorder, { opacity: pulseAnim.interpolate({ inputRange: [1, 1.12], outputRange: [0.4, 0.9] }) }]} />
+                      <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
+                      <View style={styles.avatarEditBadge}>
+                        <MaterialIcons name="camera-alt" size={12} color="#002109" />
+                      </View>
+                    </TouchableOpacity>
+
+                    {/* Age Input Box */}
+                    <View style={styles.ageContainer}>
+                      <Text style={styles.cardInputLabel}>UMUR (TAHUN)</Text>
+                      <TextInput
+                        style={styles.ageInput}
+                        placeholder="00"
+                        placeholderTextColor="rgba(75, 226, 119, 0.2)"
+                        keyboardType="numeric"
+                        value={age}
+                        onChangeText={text => setAge(text.replace(/[^0-9]/g, ''))}
+                        maxLength={3}
+                      />
+                    </View>
+                  </View>
+                  )}
+
+                  {step === 1 && (
+                  <View style={styles.usernameCardSection}>
+                    <Text style={styles.cardInputLabel}>USERNAME</Text>
+                    <View style={styles.usernameInputWrapper}>
+                      <MaterialIcons name="alternate-email" size={20} color="rgba(255,255,255,0.4)" style={{ marginRight: 6 }} />
+                      <TextInput
+                        style={styles.usernameInput}
+                        placeholder="username_kamu"
+                        placeholderTextColor="rgba(255,255,255,0.2)"
+                        value={username}
+                        onChangeText={text => setUsername(text.replace(/[^a-zA-Z0-9_]/g, ''))}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        maxLength={20}
+                      />
+                      <TouchableOpacity
+                        style={styles.randomButton}
+                        onPress={triggerDiceRoll}
+                        activeOpacity={0.7}
+                      >
+                        <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                          <MaterialIcons name="casino" size={24} color="#4be277" />
+                        </Animated.View>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={[
+                      styles.usernameUnderline,
+                      usernameStatus === 'available' && { backgroundColor: '#4be277' },
+                      usernameStatus === 'taken' && { backgroundColor: '#ffb4ab' },
+                    ]} />
+                    {renderStatus()}
+                  </View>
+                  )}
+
+                  {step === 3 && <View style={styles.cardDivider} />}
+
+                  {step === 3 && (
+                  <View style={styles.locationFieldsContainer}>
+                    <TouchableOpacity
+                      style={styles.dropdownTrigger}
+                      onPress={() => setIsProvinceModalOpen(true)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.cardInputLabel}>LOKASI (PROVINSI)</Text>
+                      <View style={styles.dropdownContent}>
+                        <Text style={styles.dropdownValueText}>{selectedProvince}</Text>
+                        <MaterialIcons name="expand-more" size={22} color="#869585" />
+                      </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.dropdownTrigger}
                       onPress={() => {
-                        const rand = SPORT_PREFIXES[Math.floor(Math.random() * SPORT_PREFIXES.length)] + '_' + (Math.floor(Math.random() * 900) + 100);
-                        setUsername(rand);
+                        setRegionSearch('');
+                        setIsRegionModalOpen(true);
                       }}
                       activeOpacity={0.7}
                     >
-                      <MaterialIcons name="casino" size={24} color="#4be277" />
+                      <Text style={styles.cardInputLabel}>KABUPATEN/KOTA</Text>
+                      <View style={styles.dropdownContent}>
+                        <Text style={styles.dropdownValueText}>{region.replace(', ID', '')}</Text>
+                        <MaterialIcons name="expand-more" size={22} color="#869585" />
+                      </View>
                     </TouchableOpacity>
                   </View>
-                  <View style={[
-                    styles.usernameUnderline,
-                    usernameStatus === 'available' && { backgroundColor: '#4be277' },
-                    usernameStatus === 'taken' && { backgroundColor: '#ffb4ab' },
-                  ]} />
-                  {renderStatus()}
+                  )}
                 </View>
               </View>
 
-              {/* Card Footer  */}
-              <View style={styles.cardFooter}>
-                <TouchableOpacity
-                  style={styles.cardStatCol}
-                  onPress={() => {
-                    setRegionSearch('');
-                    setIsRegionModalOpen(true);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.cardStatLabel}>REGION ✎</Text>
-                  <Text style={styles.cardStatValue}>{region}</Text>
-                </TouchableOpacity>
-                <View style={styles.cardStatCol}>
-                  <Text style={styles.cardStatLabel}>JOINED</Text>
-                  <Text style={styles.cardStatValue}>OCT 2023</Text>
+              {step === 1 && (
+              <TouchableOpacity
+                style={styles.termsBox}
+                activeOpacity={0.8}
+                onPress={() => setTermsAccepted(!termsAccepted)}
+              >
+                <View style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}>
+                  {termsAccepted && (
+                    <MaterialIcons name="check" size={14} color="#002109" />
+                  )}
                 </View>
-                <View style={[styles.cardStatCol, { alignItems: 'flex-end' }]}>
-                  <Text style={styles.cardStatLabel}>STATUS</Text>
-                  <Animated.Text style={[styles.cardStatPending, { opacity: pulseAnim.interpolate({ inputRange: [1, 1.12], outputRange: [0.6, 1] }) }]}>
-                    {selectedSports.length > 0 && usernameStatus === 'available' ? 'ACTIVE' : 'PENDING'}
-                  </Animated.Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* ── Sport Chip Selection ── */}
-          <View style={styles.sportSection}>
-            <View style={styles.sportSectionHeader}>
-              <Text style={styles.sportTitle}>Pilih Cabang Utama</Text>
-              <View style={styles.sportMinBadge}>
-                <Text style={styles.sportMinText}>MIN. 1</Text>
-              </View>
-            </View>
-
-            <View style={styles.chipGrid}>
-              <View style={styles.chipRow}>
-                <SportChip sport={SPORTS[0]} selected={selectedSports.includes(SPORTS[0].id)} onPress={() => toggleSport(SPORTS[0].id)} />
-                <SportChip sport={SPORTS[1]} selected={selectedSports.includes(SPORTS[1].id)} onPress={() => toggleSport(SPORTS[1].id)} />
-              </View>
-              <View style={styles.chipRow}>
-                <SportChip sport={SPORTS[2]} selected={selectedSports.includes(SPORTS[2].id)} onPress={() => toggleSport(SPORTS[2].id)} />
-                <SportChip sport={SPORTS[3]} selected={selectedSports.includes(SPORTS[3].id)} onPress={() => toggleSport(SPORTS[3].id)} />
-              </View>
-            </View>
-          </View>
-
-          {/* ── Terms & Agreements Box ── */}
-          <TouchableOpacity
-            style={styles.termsBox}
-            activeOpacity={0.8}
-            onPress={() => setTermsAccepted(!termsAccepted)}
-          >
-            <View style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}>
-              {termsAccepted && (
-                <MaterialIcons name="check" size={14} color="#002109" />
+                <Text style={styles.termsText}>
+                  Saya menyetujui <Text style={styles.termsLink}>Syarat & Ketentuan</Text> serta penggunaan data untuk profil atlet professional saya.
+                </Text>
+              </TouchableOpacity>
               )}
             </View>
-            <Text style={styles.termsText}>
-              Saya menyetujui <Text style={styles.termsLink}>Syarat & Ketentuan</Text> serta penggunaan data untuk profil atlet profesional saya.
-            </Text>
-          </TouchableOpacity>
+          ) : (
+            /* ──────────────────────────────────────────────────────────────────
+               STEP 2: OLAHRAGA APA YANG KAMU SUKA? (SPORTS PREFERENCE)
+               ────────────────────────────────────────────────────────────────── */
+            <View>
+              {/* Heading */}
+              <View style={styles.sectionHeadingCenter}>
+                <Text style={styles.stepEyebrow}>LANGKAH {step}/{TOTAL_STEPS}</Text>
+                <Text style={styles.headingBig}>OLAHRAGA APA YANG KAMU SUKA?</Text>
+                <Text style={styles.headingSub}>Pilih minimal 1, boleh lebih.</Text>
+              </View>
 
-          {/* ── Submit Error ── */}
+              {/* Bento Chips Grid */}
+              <View style={styles.bentoGrid}>
+                {SPORTS.map((sport) => {
+                  const isSelected = selectedSports.includes(sport.id);
+                  return (
+                    <TouchableOpacity
+                      key={sport.id}
+                      style={[styles.bentoBox, isSelected && styles.bentoBoxSelected]}
+                      onPress={() => toggleSport(sport.id)}
+                      activeOpacity={0.85}
+                    >
+                      <MaterialIcons
+                        name={sport.icon}
+                        size={40}
+                        color={isSelected ? '#002109' : '#bccbb9'}
+                        style={styles.bentoIcon}
+                      />
+                      <Text style={[styles.bentoLabel, isSelected && styles.bentoLabelSelected]}>
+                        {sport.label}
+                      </Text>
+                      {isSelected && (
+                        <View style={styles.bentoSelectedGlow} pointerEvents="none" />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Lower Card Preview card block */}
+              <View style={styles.previewBox}>
+                <View style={styles.previewContent}>
+                  <View style={styles.previewAvatarBorder}>
+                    <Image source={{ uri: avatarUrl }} style={styles.previewAvatarImg} />
+                  </View>
+                  <View style={styles.previewInfo}>
+                    <Text style={styles.previewTitle}>KARTU PEMAIN</Text>
+                    <Text style={styles.previewSubtitle}>Hampir siap untuk bertanding!</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* submit error banner */}
           {submitError && (
             <View style={styles.errorBox}>
               <MaterialIcons name="error-outline" size={16} color="#ffb4ab" />
@@ -442,7 +618,7 @@ export default function OnboardingScreen() {
             </View>
           )}
 
-          {/* spacer for fixed footer */}
+          {/* Spacer block */}
           <View style={{ height: 120 }} />
         </Animated.View>
       </ScrollView>
@@ -450,74 +626,95 @@ export default function OnboardingScreen() {
       {/* ── Persistent Bottom CTA ── */}
       <View style={styles.footer}>
         <Animated.View style={{ opacity: fadeAnim, width: '100%' }}>
-          <TouchableOpacity
-            style={[styles.ctaButton, !canSubmit && styles.ctaButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={!canSubmit}
-            activeOpacity={0.85}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color="#002109" />
-            ) : (
-              <View style={styles.ctaContent}>
-                <Text style={[styles.ctaText, !canSubmit && styles.ctaTextDisabled]}>
-                  Aktivasi Sekarang
-                </Text>
-                <MaterialIcons
-                  name="rocket-launch"
-                  size={24}
-                  color={canSubmit ? '#002109' : '#3d4a3d'}
-                  style={{ marginLeft: 8 }}
-                />
-              </View>
-            )}
-          </TouchableOpacity>
+          {step < 4 ? (
+            <TouchableOpacity
+              style={[styles.stampButton, !canGoNext && styles.stampButtonDisabled]}
+              onPress={handleNextStep}
+              disabled={!canGoNext}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.ctaText, !canGoNext && styles.ctaTextDisabled]}>
+                Lanjut
+              </Text>
+              <MaterialIcons
+                name="arrow-forward"
+                size={22}
+                color={canGoNext ? '#002109' : '#3d4a3d'}
+                style={{ marginLeft: 6 }}
+              />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.stampButton, !canSubmit && styles.stampButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={!canSubmit}
+              activeOpacity={0.85}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color="#002109" />
+              ) : (
+                <View style={styles.ctaContent}>
+                  <Text style={[styles.ctaText, !canSubmit && styles.ctaTextDisabled]}>
+                    Aktifkan Kartu
+                  </Text>
+                  <MaterialIcons
+                    name="rocket-launch"
+                    size={22}
+                    color={canSubmit ? '#002109' : '#3d4a3d'}
+                    style={{ marginLeft: 8 }}
+                  />
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
         </Animated.View>
       </View>
 
-      {/* ── Avatar Preset Selector Modal ── */}
+
       <Modal
-        visible={isAvatarModalOpen}
+        visible={isProvinceModalOpen}
         transparent={true}
-        animationType="fade"
-        onRequestClose={() => setIsAvatarModalOpen(false)}
+        animationType="slide"
+        onRequestClose={() => setIsProvinceModalOpen(false)}
       >
-        <View style={styles.modalBackdrop}>
-          <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={() => setIsAvatarModalOpen(false)} />
-          <View style={styles.modalContainer}>
+        <View style={styles.modalBackdropHorizontal}>
+          <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={() => setIsProvinceModalOpen(false)} />
+          <View style={styles.modalContainerRegion}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>PILIH AVATAR ATLET</Text>
-              <TouchableOpacity onPress={() => setIsAvatarModalOpen(false)}>
+              <Text style={styles.modalTitle}>PILIH PROVINSI</Text>
+              <TouchableOpacity onPress={() => setIsProvinceModalOpen(false)}>
                 <MaterialIcons name="close" size={24} color="#e5e2e1" />
               </TouchableOpacity>
             </View>
             <View style={styles.modalDivider} />
-            <Text style={styles.modalSub}>Pilih avatar yang mewakili cabor utama Anda.</Text>
-            <View style={styles.avatarGrid}>
-              {PRESET_AVATARS.map((item) => (
+
+            <ScrollView style={styles.regionList} showsVerticalScrollIndicator={true}>
+              {PROVINCES.map((prov) => (
                 <TouchableOpacity
-                  key={item.id}
-                  style={[styles.avatarGridItem, avatarUrl === item.url && styles.avatarGridItemSelected]}
+                  key={prov}
+                  style={[styles.regionItem, selectedProvince === prov && styles.regionItemSelected]}
                   onPress={() => {
-                    setAvatarUrl(item.url);
-                    setIsAvatarModalOpen(false);
+                    setSelectedProvince(prov);
+                    // Default to first city of selected province
+                    setRegion(CITIES_BY_PROVINCE[prov][0]);
+                    setIsProvinceModalOpen(false);
                   }}
-                  activeOpacity={0.8}
+                  activeOpacity={0.7}
                 >
-                  <Image source={{ uri: item.url }} style={styles.avatarGridImg} />
-                  {avatarUrl === item.url && (
-                    <View style={styles.avatarGridItemBadge}>
-                      <MaterialIcons name="check" size={12} color="#002109" />
-                    </View>
+                  <Text style={[styles.regionItemText, selectedProvince === prov && styles.regionItemTextSelected]}>
+                    {prov}
+                  </Text>
+                  {selectedProvince === prov && (
+                    <MaterialIcons name="check" size={18} color="#4be277" />
                   )}
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
 
-      {/* ── Region Selection Modal ── */}
+      {/* ── Region Selection Modal (Cities) ── */}
       <Modal
         visible={isRegionModalOpen}
         transparent={true}
@@ -528,14 +725,14 @@ export default function OnboardingScreen() {
           <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={() => setIsRegionModalOpen(false)} />
           <View style={[styles.modalContainerRegion, { maxHeight: '80%' }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>PILIH KABUPATEN / REGION</Text>
+              <Text style={styles.modalTitle}>PILIH KABUPATEN / KOTA</Text>
               <TouchableOpacity onPress={() => setIsRegionModalOpen(false)}>
                 <MaterialIcons name="close" size={24} color="#e5e2e1" />
               </TouchableOpacity>
             </View>
             <View style={styles.modalDivider} />
 
-            {/* Search Input */}
+            {/* Search Input Box */}
             <View style={styles.regionSearchWrapper}>
               <MaterialIcons name="search" size={20} color="#869585" style={{ marginRight: 8 }} />
               <TextInput
@@ -560,7 +757,7 @@ export default function OnboardingScreen() {
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.regionItemText, region === item && styles.regionItemTextSelected]}>
-                    {item}
+                    {item.replace(', ID', '')}
                   </Text>
                   {region === item && (
                     <MaterialIcons name="check" size={18} color="#4be277" />
@@ -581,7 +778,7 @@ export default function OnboardingScreen() {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Styles matching the HTML energy look exactly
+// Premium Glassmorphism Styles (Colors: #4be277 Green, #131313 Dark Background)
 // ────────────────────────────────────────────────────────────────────────────
 const GREEN = '#4be277';
 const DARK  = '#131313';
@@ -589,181 +786,194 @@ const DARK  = '#131313';
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: DARK },
 
-  // Background atmosphere glows
+  // Glowing Top Progress Line
+  progressBarWrapper: {
+    position: 'absolute', top: 0, left: 0, right: 0, height: 4,
+    backgroundColor: '#201f1f', zIndex: 60,
+  },
+  progressBar: {
+    height: '100%', backgroundColor: GREEN,
+    shadowColor: GREEN, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.6, shadowRadius: 8,
+  },
+
+  // Atmospheric glows
   glowTopLeft: {
-    position: 'absolute', top: '-10%', left: '-10%',
-    width: '60%', height: '50%',
+    position: 'absolute', top: '-15%', left: '-15%',
+    width: '65%', height: '55%',
     backgroundColor: GREEN, borderRadius: 9999,
-    opacity: 0.15,
+    opacity: 0.12,
   },
   glowBottomRight: {
-    position: 'absolute', bottom: '-10%', right: '-10%',
-    width: '50%', height: '50%',
-    backgroundColor: '#4edea3', borderRadius: 9999,
-    opacity: 0.15,
+    position: 'absolute', bottom: '-15%', right: '-15%',
+    width: '60%', height: '60%',
+    backgroundColor: '#22c55e', borderRadius: 9999,
+    opacity: 0.12,
   },
   radialOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(19,19,19,0.8)',
+    backgroundColor: 'rgba(19,19,19,0.85)',
   },
 
-  // Fixed header
+  // Header styles
   fixedHeader: {
-    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 50,
-    height: 64,
+    position: 'absolute', top: 4, left: 0, right: 0, zIndex: 50,
+    height: 48,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    backgroundColor: 'rgba(19,19,19,0.3)',
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(19,19,19,0.4)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomColor: 'rgba(255,255,255,0.08)',
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerLeftDisabled: { opacity: 0.35 },
   headerTitle: {
-    fontSize: 24, fontWeight: '900', color: GREEN, letterSpacing: -0.5,
-    fontStyle: 'italic',
+    fontSize: 16, fontWeight: '800', color: GREEN, letterSpacing: -0.5,
+    fontStyle: 'italic', textTransform: 'uppercase'
   },
   headerGoal: {
-    fontSize: 32, fontWeight: '900', color: GREEN, fontStyle: 'italic',
-    letterSpacing: -1, opacity: 0.3,
+    fontSize: 22, fontWeight: '900', color: GREEN, fontStyle: 'italic',
+    letterSpacing: -1, opacity: 0.25,
   },
 
-  // Scroll content
-  scrollContent: { paddingTop: 104, paddingHorizontal: 20, paddingBottom: 24 },
+  // Scroll View Container
+  scrollContent: { paddingTop: 72, paddingHorizontal: 16, paddingBottom: 100 },
 
-  // Section heading
-  sectionHeading: { marginBottom: 28 },
-  headingBig: { fontSize: 28, fontWeight: '900', color: '#e5e2e1', textTransform: 'uppercase', letterSpacing: -0.5 },
-  headingSub: { fontSize: 16, color: '#bccbb9', marginTop: 6, fontWeight: '500' },
+  // Heading styles
+  sectionHeading: { marginBottom: 12 },
+  stepEyebrow: { fontSize: 10, color: GREEN, fontWeight: '900', letterSpacing: 1.6, marginBottom: 4 },
+  headingBig: { fontSize: 18, fontWeight: '900', color: '#e5e2e1', textTransform: 'uppercase', letterSpacing: -0.5 },
+  headingSub: { fontSize: 12, color: '#bccbb9', marginTop: 2, fontWeight: '500', opacity: 0.8 },
 
-  // Card
+  sectionHeadingCenter: { marginBottom: 14, alignItems: 'center' },
+
+  // Player Card Frame matching cabor look
   card: {
-    backgroundColor: 'rgba(30,30,30,0.6)',
-    borderRadius: 32,
+    backgroundColor: 'rgba(30,30,30,0.65)',
+    borderRadius: 18,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
     overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.6, shadowRadius: 30, elevation: 15,
-    marginBottom: 28,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5, shadowRadius: 16, elevation: 8,
+    marginBottom: 12,
   },
-  cardPadding: { padding: 24 },
+  cardPadding: { padding: 14 },
   cardGradientOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: 'rgba(255,255,255,0.01)',
   },
   scanline: {
     position: 'absolute', left: 0, right: 0, height: 2,
-    backgroundColor: 'rgba(75,226,119,0.3)',
-    zIndex: 1,
+    backgroundColor: 'rgba(75,226,119,0.25)',
+    zIndex: 2,
   },
   cardHeaderRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
   },
   cardLabel: {
-    fontSize: 12, fontWeight: '700', color: GREEN,
+    fontSize: 11, fontWeight: '700', color: GREEN,
     letterSpacing: 2, textTransform: 'uppercase',
   },
   cardTitle: {
-    fontSize: 24, fontWeight: '900', color: '#fff', opacity: 0.9,
+    fontSize: 20, fontWeight: '900', color: '#fff', opacity: 0.9,
     letterSpacing: 0.5,
   },
   qrIcon: {
-    width: 48, height: 48, borderRadius: 12,
+    width: 44, height: 44, borderRadius: 10,
     backgroundColor: '#353534',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center', alignItems: 'center',
   },
   cardDivider: {
-    height: 1, backgroundColor: 'rgba(255,255,255,0.1)',
-    marginVertical: 18,
+    height: 1, backgroundColor: 'rgba(255,255,255,0.08)',
+    marginVertical: 10,
   },
 
-  // Avatar + content
-  cardContent: { flexDirection: 'row', gap: 20, alignItems: 'center' },
-  avatarWrapper: { width: 112, height: 112, position: 'relative' },
+  // Card Content inputs
+  topFormRow: { flexDirection: 'row', gap: 12, alignItems: 'center', marginBottom: 10 },
+  avatarWrapper: { width: 76, height: 76, position: 'relative' },
   avatarPulseBorder: {
-    position: 'absolute', inset: 0, borderRadius: 18,
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 12,
     borderWidth: 2, borderColor: GREEN,
   },
-  avatarImg: { width: 112, height: 112, borderRadius: 16 },
+  avatarImg: { width: 76, height: 76, borderRadius: 12 },
   lvlBadge: {
-    position: 'absolute', bottom: -8, right: -8,
-    backgroundColor: GREEN, borderRadius: 8,
-    paddingHorizontal: 8, paddingVertical: 3,
+    position: 'absolute', bottom: -6, right: -6,
+    backgroundColor: GREEN, borderRadius: 6,
+    paddingHorizontal: 6, paddingVertical: 2,
   },
-  lvlText: { fontSize: 10, fontWeight: '900', color: '#002109', letterSpacing: 0.5 },
+  lvlText: { fontSize: 9, fontWeight: '900', color: '#002109', letterSpacing: 0.5 },
+  barcodeContainer: { flex: 1, height: 100, justifyContent: 'center', alignItems: 'center'},
+  
+  // Age Box style
+  ageContainer: { flex: 1, justifyContent: 'center' },
+  ageInput: {
+    backgroundColor: '#201f1f',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    height: 48,
+    fontSize: 22,
+    fontWeight: '900',
+    color: GREEN,
+    textAlign: 'center',
+    marginTop: 4,
+  },
 
-  // Username Section
-  usernameSection: { flex: 1, justifyContent: 'center' },
-  usernameRow: {
+  // Input styling
+  cardInputLabel: { fontSize: 10, color: '#869585', fontWeight: '800', letterSpacing: 1.0, textTransform: 'uppercase' },
+  
+  usernameCardSection: { marginTop: 2 },
+  usernameInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    marginTop: 4,
+    height: 38,
   },
   usernameInput: {
-    color: '#fff', fontSize: 24, fontWeight: '900',
+    color: '#fff', fontSize: 15, fontWeight: '900',
     textTransform: 'uppercase', letterSpacing: 0.5,
-    paddingVertical: 4, paddingHorizontal: 0,
-    borderBottomWidth: 0,
     flex: 1,
+    height: '100%',
+    padding: 0,
   },
   randomButton: {
     padding: 8,
-    marginLeft: 4,
   },
   usernameUnderline: {
     height: 2, backgroundColor: 'rgba(255,255,255,0.15)',
-    marginBottom: 8, borderRadius: 1,
+    marginBottom: 6, borderRadius: 1,
   },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statusText: { fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  statusText: { fontSize: 11, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
 
-  // Card footer
-  cardFooter: {
+  // Location dropdown elements
+  locationFieldsContainer: { gap: 8 },
+  dropdownTrigger: {
+    backgroundColor: '#201f1f',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  dropdownContent: {
     flexDirection: 'row',
-    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)',
-    paddingTop: 18, marginTop: 18,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 2,
   },
-  cardStatCol: { flex: 1 },
-  cardStatLabel: { fontSize: 10, color: '#869585', fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 },
-  cardStatValue: { fontSize: 14, color: '#fff', fontWeight: '750' },
-  cardStatPending: { fontSize: 14, color: GREEN, fontWeight: '900', letterSpacing: 0.5 },
+  dropdownValueText: { fontSize: 14, color: '#fff', fontWeight: '700' },
 
-  // Sports selection
-  sportSection: { marginBottom: 28 },
-  sportSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  sportTitle: { fontSize: 20, fontWeight: '900', color: '#fff', textTransform: 'uppercase', letterSpacing: 0.5 },
-  sportMinBadge: {
-    backgroundColor: '#2a2a2a', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4,
-  },
-  sportMinText: { fontSize: 10, color: '#869585', fontWeight: '700', letterSpacing: 1 },
-
-  chipGrid: { gap: 12 },
-  chipRow: { flexDirection: 'row', gap: 12 },
-  chip: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#1c1b1b',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 20, paddingHorizontal: 16, paddingVertical: 16,
-  },
-  chipSelected: {
-    backgroundColor: GREEN,
-    borderColor: GREEN,
-    shadowColor: GREEN, shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4, shadowRadius: 15, elevation: 8,
-  },
-  chipText: { fontSize: 16, fontWeight: '750', color: '#869585', textTransform: 'uppercase', flex: 1 },
-  chipTextSelected: { color: '#002109' },
-
-  // Terms and Agreements
+  // Terms and conditions
   termsBox: {
-    flexDirection: 'row', gap: 12, alignItems: 'flex-start',
-    backgroundColor: 'rgba(14,14,14,0.5)',
+    flexDirection: 'row', gap: 10, alignItems: 'flex-start',
+    backgroundColor: 'rgba(14,14,14,0.4)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 20, padding: 16, marginBottom: 20,
+    borderRadius: 12, padding: 10, marginBottom: 8,
   },
   checkbox: {
-    width: 20, height: 20, borderRadius: 6,
+    width: 18, height: 18, borderRadius: 5,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center', alignItems: 'center',
     marginTop: 2,
@@ -772,45 +982,108 @@ const styles = StyleSheet.create({
     backgroundColor: GREEN,
     borderColor: GREEN,
   },
-  termsText: { fontSize: 14, color: '#bccbb9', flex: 1, lineHeight: 18 },
+  termsText: { fontSize: 11, color: '#bccbb9', flex: 1, lineHeight: 15 },
   termsLink: { color: GREEN, textDecorationLine: 'underline' },
 
-  // Error
+  // STEP 2 styles (Hobi Olahraga)
+  bentoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  bentoBox: {
+    width: '48%',
+    height: 88,
+    backgroundColor: 'rgba(30, 30, 30, 0.5)',
+    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 8,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  bentoBoxSelected: {
+    backgroundColor: GREEN,
+    borderColor: GREEN,
+  },
+  bentoIcon: {
+    marginBottom: 6,
+  },
+  bentoLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#bccbb9',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  bentoLabelSelected: {
+    color: '#002109',
+  },
+  bentoSelectedGlow: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 18,
+  },
+
+  // Sport card preview at the bottom of Stage 2
+  previewBox: {
+    backgroundColor: 'rgba(30,30,30,0.5)',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    marginTop: 6,
+  },
+  previewContent: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  previewAvatarBorder: {
+    width: 44, height: 44, borderRadius: 22,
+    borderWidth: 2, borderColor: GREEN, overflow: 'hidden',
+  },
+  previewAvatarImg: { width: '100%', height: '100%' },
+  previewInfo: { flex: 1 },
+  previewTitle: { fontSize: 13, color: '#fff', fontWeight: '900' },
+  previewSubtitle: { fontSize: 11, color: '#bccbb9', opacity: 0.8 },
+
+  // Submit error
   errorBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: 'rgba(58,13,16,0.8)',
+    backgroundColor: 'rgba(58,13,16,0.85)',
     borderLeftWidth: 3, borderLeftColor: '#ffb4ab',
-    borderRadius: 12, padding: 16, marginBottom: 12,
+    borderRadius: 10, padding: 14, marginVertical: 10,
   },
-  errorText: { color: '#ffb4ab', fontSize: 14, flex: 1 },
+  errorText: { color: '#ffb4ab', fontSize: 13, flex: 1 },
 
-  // Fixed Bottom CTA
+  // Bottom Fixed CTA Bar
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 20, paddingBottom: Platform.OS === 'ios' ? 36 : 20,
-    paddingTop: 12,
+    paddingHorizontal: 20, paddingBottom: Platform.OS === 'ios' ? 32 : 18,
+    paddingTop: 10,
     backgroundColor: 'transparent',
   },
-  ctaButton: {
+  stampButton: {
+    flexDirection: 'row',
+    height: 50, borderRadius: 14,
     backgroundColor: GREEN,
-    height: 64, borderRadius: 20,
     justifyContent: 'center', alignItems: 'center',
-    shadowColor: GREEN, shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.35, shadowRadius: 20, elevation: 10,
+    shadowColor: GREEN, shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4, shadowRadius: 18, elevation: 8,
   },
-  ctaButtonDisabled: {
+  stampButtonDisabled: {
     backgroundColor: '#1d3da3', // faint dim color
-    opacity: 0.5,
+    opacity: 0.4,
     shadowOpacity: 0, elevation: 0,
   },
   ctaContent: { flexDirection: 'row', alignItems: 'center' },
   ctaText: {
-    fontSize: 20, fontWeight: '900', color: '#002109',
+    fontSize: 18, fontWeight: '900', color: '#002109',
     textTransform: 'uppercase', letterSpacing: 1,
   },
   ctaTextDisabled: { color: '#3d4a3d' },
 
-  // Modal styles
+  // Modals Overlay Styles
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.75)',
@@ -824,11 +1097,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    backgroundColor: 'rgba(30, 30, 30, 0.95)',
+    backgroundColor: 'rgba(30, 30, 30, 0.98)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 24,
-    padding: 24,
+    borderRadius: 22,
+    padding: 20,
     width: '100%',
     maxWidth: 380,
     shadowColor: '#000',
@@ -838,12 +1111,12 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   modalContainerRegion: {
-    backgroundColor: 'rgba(30, 30, 30, 0.95)',
+    backgroundColor: 'rgba(30, 30, 30, 0.98)',
     borderWidth: 1,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     borderColor: 'rgba(255,255,255,0.1)',
-    padding: 24,
+    padding: 22,
     width: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -10 },
@@ -857,32 +1130,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '900',
     color: GREEN,
     letterSpacing: -0.5,
     fontStyle: 'italic',
   },
   modalSub: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#bccbb9',
-    marginBottom: 20,
+    marginBottom: 16,
+    opacity: 0.8,
   },
   modalDivider: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    marginVertical: 14,
+    marginVertical: 12,
   },
   avatarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 14,
+    gap: 12,
     justifyContent: 'center',
   },
   avatarGridItem: {
-    width: 90,
-    height: 90,
-    borderRadius: 16,
+    width: 86,
+    height: 86,
+    borderRadius: 14,
     borderWidth: 2,
     borderColor: 'transparent',
     overflow: 'hidden',
@@ -897,23 +1171,23 @@ const styles = StyleSheet.create({
   },
   avatarGridItemBadge: {
     position: 'absolute',
-    bottom: 4,
-    right: 4,
+    bottom: 3,
+    right: 3,
     backgroundColor: GREEN,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarEditBadge: {
     position: 'absolute',
-    bottom: -4,
-    right: -4,
+    bottom: -3,
+    right: -3,
     backgroundColor: GREEN,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -923,36 +1197,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 14,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   regionSearchInput: {
     fontSize: 14,
     color: '#fff',
     flex: 1,
+    padding: 0,
   },
   regionList: {
-    maxHeight: 300,
+    maxHeight: 260,
   },
   regionItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.04)',
   },
   regionItemSelected: {
     backgroundColor: 'rgba(75, 226, 119, 0.08)',
-    borderRadius: 10,
+    borderRadius: 8,
   },
   regionItemText: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#bccbb9',
     fontWeight: '500',
   },
@@ -962,11 +1237,10 @@ const styles = StyleSheet.create({
   },
   emptyRegion: {
     alignItems: 'center',
-    paddingVertical: 32,
+    paddingVertical: 28,
   },
   emptyRegionText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#869585',
   },
-});
-// Force Metro rebuild
+}) as any;

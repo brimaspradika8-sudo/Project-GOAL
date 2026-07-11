@@ -1,253 +1,168 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
   Animated,
   Easing,
-  Dimensions,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 
-const { width } = Dimensions.get('window');
-const BALL_SIZE = 28;
-const ARC_WIDTH = Math.min(width * 0.6, 220);
-const CENTER_X = ARC_WIDTH / 2;
-const ARC_HEIGHT = 100;
-
-// One juggling ball that follows a parabolic arc
-const JugglingBall = ({
-  color,
-  shadowColor,
-  delay,
-  label,
-}: {
-  color: string;
-  shadowColor: string;
-  delay: number;
-  label: string;
-}) => {
-  const progress = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    // Stagger the start
-    const timeout = setTimeout(() => {
-      Animated.loop(
-        Animated.timing(progress, {
-          toValue: 1,
-          duration: 1200,
-          easing: Easing.linear,
-          useNativeDriver: false,
-        })
-      ).start();
-    }, delay);
-
-    return () => clearTimeout(timeout);
-  }, []);
-
-  // Parabolic X: moves left → right across the arc
-  const translateX = progress.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0, CENTER_X, ARC_WIDTH - BALL_SIZE],
-  });
-
-  // Parabolic Y: goes up then comes back down (arc shape)
-  const translateY = progress.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [ARC_HEIGHT, 0, ARC_HEIGHT],
-  });
-
-  // Scale slightly when at top (in air)
-  const scale = progress.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.8, 1.1, 0.8],
-  });
-
-  // Opacity: slightly dim when on the "ground"
-  const opacity = progress.interpolate({
-    inputRange: [0, 0.15, 0.5, 0.85, 1],
-    outputRange: [0.5, 1, 1, 1, 0.5],
-  });
-
-  return (
-    <Animated.View
-      style={[
-        styles.ball,
-        {
-          backgroundColor: color,
-          shadowColor,
-          transform: [{ translateX }, { translateY }, { scale }],
-          opacity,
-        },
-      ]}
-    >
-      <Text style={styles.ballLabel}>{label}</Text>
-    </Animated.View>
-  );
+type LoadingScreenProps = {
+  message?: string;
 };
 
-// Shadow/squash on ground beneath each ball
-const BallShadow = ({
-  delay,
-  offset,
-}: {
-  delay: number;
-  offset: number;
-}) => {
-  const progress = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      Animated.loop(
-        Animated.timing(progress, {
-          toValue: 1,
-          duration: 1200,
-          easing: Easing.linear,
-          useNativeDriver: false,
-        })
-      ).start();
-    }, delay);
-    return () => clearTimeout(timeout);
-  }, []);
-
-  const shadowWidth = progress.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [20, 8, 20],
-  });
-
-  const shadowOpacity = progress.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.5, 0.1, 0.5],
-  });
-
-  const shadowX = progress.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [offset, offset + CENTER_X - 4, offset + ARC_WIDTH - BALL_SIZE],
-  });
-
-  return (
-    <Animated.View
-      style={[
-        styles.shadow,
-        {
-          opacity: shadowOpacity,
-          width: shadowWidth,
-          transform: [{ translateX: shadowX }],
-        },
-      ]}
-    />
-  );
-};
-
-export default function LoadingScreen() {
-  // Slow pulse for logo text
-  const logoScale = useRef(new Animated.Value(1)).current;
-  // Fade in on mount
+export default function LoadingScreen({ message = 'Menyiapkan arena' }: LoadingScreenProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  // Dots animation for "Loading..."
-  const dot1 = useRef(new Animated.Value(0)).current;
-  const dot2 = useRef(new Animated.Value(0)).current;
-  const dot3 = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(0.96)).current;
+  const ballRotate = useRef(new Animated.Value(0)).current;
+  const ballLift = useRef(new Animated.Value(0)).current;
+  const scanX = useRef(new Animated.Value(0)).current;
+  const dot1 = useRef(new Animated.Value(0.35)).current;
+  const dot2 = useRef(new Animated.Value(0.35)).current;
+  const dot3 = useRef(new Animated.Value(0.35)).current;
 
   useEffect(() => {
-    // Fade in
+    const loops: Animated.CompositeAnimation[] = [];
+
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 600,
-      useNativeDriver: false,
+      duration: 350,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
     }).start();
 
-    // Logo pulse
-    Animated.loop(
+    const logoLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(logoScale, {
-          toValue: 1.06,
-          duration: 1400,
+          toValue: 1.04,
+          duration: 900,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: false,
+          useNativeDriver: true,
         }),
         Animated.timing(logoScale, {
-          toValue: 1,
-          duration: 1400,
+          toValue: 0.96,
+          duration: 900,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: false,
+          useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
 
-    // Bouncing dots
-    const animateDot = (dot: Animated.Value, delay: number) => {
-      setTimeout(() => {
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(dot, {
-              toValue: -8,
-              duration: 350,
-              easing: Easing.out(Easing.quad),
-              useNativeDriver: false,
-            }),
-            Animated.timing(dot, {
-              toValue: 0,
-              duration: 350,
-              easing: Easing.in(Easing.quad),
-              useNativeDriver: false,
-            }),
-            Animated.delay(300),
-          ])
-        ).start();
-      }, delay);
+    const ballLoop = Animated.loop(
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(ballLift, {
+            toValue: -18,
+            duration: 420,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(ballLift, {
+            toValue: 0,
+            duration: 420,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(ballRotate, {
+          toValue: 1,
+          duration: 840,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const scanLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scanX, {
+          toValue: 1,
+          duration: 1300,
+          easing: Easing.inOut(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanX, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const makeDotLoop = (dot: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, {
+            toValue: 1,
+            duration: 260,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(dot, {
+            toValue: 0.35,
+            duration: 360,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.delay(360 - delay),
+        ])
+      );
+
+    loops.push(logoLoop, ballLoop, scanLoop, makeDotLoop(dot1, 0), makeDotLoop(dot2, 140), makeDotLoop(dot3, 280));
+    loops.forEach((loop) => loop.start());
+
+    return () => {
+      loops.forEach((loop) => loop.stop());
     };
+  }, [ballLift, ballRotate, dot1, dot2, dot3, fadeAnim, logoScale, scanX]);
 
-    animateDot(dot1, 0);
-    animateDot(dot2, 180);
-    animateDot(dot3, 360);
-  }, []);
+  const rotate = ballRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const scanTranslate = scanX.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-120, 120],
+  });
 
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      {/* Background glow orbs */}
-      <View style={[styles.glowOrb, styles.glowOrb1]} />
-      <View style={[styles.glowOrb, styles.glowOrb2]} />
+      <View style={styles.glowTop} />
+      <View style={styles.glowBottom} />
 
-      {/* Logo */}
-      <Animated.View style={{ transform: [{ scale: logoScale }], marginBottom: 8 }}>
-        <Text style={styles.logo}>G</Text>
-        <Text style={styles.logoAccent}>O</Text>
-        <Text style={styles.logo}>AL</Text>
+      <Animated.View style={[styles.brandWrap, { transform: [{ scale: logoScale }] }]}>
+        <Text style={styles.logo}>GOAL</Text>
+        <Text style={styles.logoSub}>Game Organizer & Arena League</Text>
       </Animated.View>
-      <Text style={styles.logoSub}>Game Organizer &amp; Arena League</Text>
 
-      {/* Juggling Animation Container */}
-      <View style={styles.jugglingContainer}>
-        {/* The balls */}
-        <View style={styles.ballsArea}>
-          <JugglingBall color="#4be277" shadowColor="#4be277" delay={0} label="⚽" />
-          <JugglingBall color="#38bdf8" shadowColor="#38bdf8" delay={400} label="🏀" />
-          <JugglingBall color="#f59e0b" shadowColor="#f59e0b" delay={800} label="🎾" />
+      <View style={styles.loaderCard}>
+        <Animated.View
+          style={[
+            styles.ball,
+            {
+              transform: [
+                { translateY: ballLift },
+                { rotate },
+              ],
+            },
+          ]}
+        >
+          <MaterialIcons name="sports-soccer" size={42} color="#06140a" />
+        </Animated.View>
+
+        <View style={styles.fieldLine}>
+          <Animated.View style={[styles.scanLine, { transform: [{ translateX: scanTranslate }] }]} />
         </View>
 
-        {/* Ground line */}
-        <View style={styles.groundLine} />
-
-        {/* Shadows */}
-        <View style={styles.shadowsArea}>
-          <BallShadow delay={0} offset={0} />
-          <BallShadow delay={400} offset={0} />
-          <BallShadow delay={800} offset={0} />
+        <View style={styles.loadingRow}>
+          <Text style={styles.loadingText}>{message}</Text>
+          <Animated.View style={[styles.dot, { opacity: dot1 }]} />
+          <Animated.View style={[styles.dot, { opacity: dot2 }]} />
+          <Animated.View style={[styles.dot, { opacity: dot3 }]} />
         </View>
-      </View>
-
-      {/* Loading text with bouncing dots */}
-      <View style={styles.loadingRow}>
-        <Text style={styles.loadingText}>Loading</Text>
-        <Animated.View style={[styles.dot, { transform: [{ translateY: dot1 }] }]}>
-          <Text style={styles.dotText}>.</Text>
-        </Animated.View>
-        <Animated.View style={[styles.dot, { transform: [{ translateY: dot2 }] }]}>
-          <Text style={styles.dotText}>.</Text>
-        </Animated.View>
-        <Animated.View style={[styles.dot, { transform: [{ translateY: dot3 }] }]}>
-          <Text style={styles.dotText}>.</Text>
-        </Animated.View>
       </View>
     </Animated.View>
   );
@@ -256,138 +171,111 @@ export default function LoadingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0f0a',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#101310',
+    paddingHorizontal: 28,
   },
-
-  // Glow orbs for ambient background
-  glowOrb: {
+  glowTop: {
     position: 'absolute',
-    borderRadius: 999,
+    top: -120,
+    left: -90,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: '#4be277',
     opacity: 0.12,
   },
-  glowOrb1: {
-    width: 300,
-    height: 300,
-    backgroundColor: '#4be277',
-    top: -60,
-    left: -80,
-  },
-  glowOrb2: {
-    width: 250,
-    height: 250,
+  glowBottom: {
+    position: 'absolute',
+    right: -110,
+    bottom: -130,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
     backgroundColor: '#38bdf8',
-    bottom: -40,
-    right: -60,
+    opacity: 0.09,
   },
-
-  // Logo
+  brandWrap: {
+    alignItems: 'center',
+    marginBottom: 34,
+  },
   logo: {
-    fontSize: 52,
-    fontWeight: '900',
     color: '#4be277',
-    fontStyle: 'italic',
-    letterSpacing: 3,
-    textShadowColor: 'rgba(75,226,119,0.5)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 20,
-    textAlign: 'center',
-    lineHeight: 56,
-  },
-  logoAccent: {
     fontSize: 52,
-    fontWeight: '900',
-    color: '#ffffff',
     fontStyle: 'italic',
-    letterSpacing: 3,
-    textShadowColor: 'rgba(255,255,255,0.3)',
+    fontWeight: '900',
+    letterSpacing: 2,
+    textShadowColor: 'rgba(75,226,119,0.45)',
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 12,
-    textAlign: 'center',
-    lineHeight: 56,
+    textShadowRadius: 18,
   },
   logoSub: {
+    color: '#9db7a0',
     fontSize: 11,
-    color: '#4b7b56',
-    letterSpacing: 2,
+    fontWeight: '700',
+    letterSpacing: 1.8,
+    marginTop: 2,
     textTransform: 'uppercase',
-    marginBottom: 48,
-    marginTop: 4,
   },
-
-  // Juggling area
-  jugglingContainer: {
-    width: ARC_WIDTH,
-    height: ARC_HEIGHT + BALL_SIZE + 20,
-    marginBottom: 32,
-  },
-  ballsArea: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: ARC_WIDTH,
-    height: ARC_HEIGHT + BALL_SIZE,
+  loaderCard: {
+    width: '100%',
+    maxWidth: 280,
+    minHeight: 178,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: 'rgba(24,31,24,0.82)',
+    overflow: 'hidden',
+    paddingVertical: 28,
   },
   ball: {
-    position: 'absolute',
-    width: BALL_SIZE,
-    height: BALL_SIZE,
-    borderRadius: BALL_SIZE / 2,
-    justifyContent: 'center',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 12,
-    elevation: 8,
+    justifyContent: 'center',
+    backgroundColor: '#4be277',
+    shadowColor: '#4be277',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    elevation: 10,
   },
-  ballLabel: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  groundLine: {
-    position: 'absolute',
-    bottom: 16,
-    left: 0,
-    right: 0,
-    height: 2,
-    backgroundColor: 'rgba(75,226,119,0.15)',
+  fieldLine: {
+    width: 170,
+    height: 4,
     borderRadius: 2,
+    backgroundColor: 'rgba(75,226,119,0.16)',
+    marginTop: 18,
+    overflow: 'hidden',
   },
-  shadowsArea: {
-    position: 'absolute',
-    bottom: 10,
-    left: 0,
-    width: ARC_WIDTH,
-    height: 10,
+  scanLine: {
+    width: 80,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#4be277',
   },
-  shadow: {
-    position: 'absolute',
-    height: 6,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    borderRadius: 6,
-    bottom: 0,
-  },
-
-  // Loading text row
   loadingRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    marginTop: 22,
   },
   loadingText: {
-    fontSize: 14,
-    color: '#4b7b56',
-    letterSpacing: 3,
+    color: '#dfe8df',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    marginRight: 8,
     textTransform: 'uppercase',
-    fontWeight: '600',
   },
   dot: {
-    marginBottom: 0,
-  },
-  dotText: {
-    fontSize: 18,
-    color: '#4be277',
-    fontWeight: '800',
-    lineHeight: 20,
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#4be277',
+    marginHorizontal: 2,
   },
 });

@@ -2,69 +2,108 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack, router, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Platform } from 'react-native';
 import LoadingScreen from '../components/LoadingScreen';
 import * as Linking from 'expo-linking';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { supabase } from '../lib/supabase';
+import { API_BASE_URL } from '../lib/api';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000/api';
-
 async function fetchProfile(accessToken: string) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
   try {
-    const res = await fetch(`${API_BASE}/me`, {
+    const res = await fetch(`${API_BASE_URL}/me`, {
       headers: { Authorization: `Bearer ${accessToken}` },
+      signal: controller.signal,
     });
     if (!res.ok) return null;
     return await res.json();
   } catch {
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
+}
+
+function getUrlParam(url: string, name: string) {
+  const normalizedUrl = url.replace('#', '&');
+  const match = normalizedUrl.match(new RegExp(`[?&]${name}=([^&]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [isReady, setIsReady] = useState(false);
+  const [isRouting, setIsRouting] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Menyiapkan arena');
   const [session, setSession] = useState<any>(null);
   const segments = useSegments();
+  const routingRef = useRef(false);
 
-  // URL Handler for Supabase Session (handling deep links & PKCE codes)
+  const routeByProfile = async (accessToken: string) => {
+    if (routingRef.current) return;
+    routingRef.current = true;
+    setIsRouting(true);
+    setLoadingMessage('Mengecek profil pemain');
+
+    const profile = await fetchProfile(accessToken);
+    if (!profile?.onboarding_completed) {
+      router.replace('/onboarding' as any);
+    } else {
+      router.replace('/(tabs)');
+    }
+
+    setTimeout(() => {
+      routingRef.current = false;
+      setIsRouting(false);
+      setLoadingMessage('Menyiapkan arena');
+    }, 250);
+  };
+
+  const routeToLogin = () => {
+    if (routingRef.current) return;
+    routingRef.current = true;
+    setIsRouting(true);
+    setLoadingMessage('Membuka halaman login');
+    router.replace('/login');
+
+    setTimeout(() => {
+      routingRef.current = false;
+      setIsRouting(false);
+      setLoadingMessage('Menyiapkan arena');
+    }, 250);
+  };
+
   const handleDeepLink = async (url: string | null) => {
     if (!url) return;
-    
+
     try {
       console.log('--- Checking deep link URL:', url, '---');
-      
-      // Jika flow lama (Implicit Flow) menghasilkan access_token di URL
+
       if (url.includes('access_token=')) {
         console.log('=> Menemukan access_token di URL');
-        const matchAccessToken = url.match(/access_token=([^&]*)/);
-        const matchRefreshToken = url.match(/refresh_token=([^&]*)/);
-        
-        if (matchAccessToken && matchRefreshToken) {
+        const accessToken = getUrlParam(url, 'access_token');
+        const refreshToken = getUrlParam(url, 'refresh_token');
+
+        if (accessToken && refreshToken) {
           await supabase.auth.setSession({
-            access_token: matchAccessToken[1],
-            refresh_token: matchRefreshToken[1],
+            access_token: accessToken,
+            refresh_token: refreshToken,
           });
           console.log('=> Sukses memuat sesi dari access_token');
         }
-      } 
-      // Jika flow baru (PKCE Flow) menghasilkan code di URL
-      else if (url.includes('code=')) {
+      } else if (url.includes('code=')) {
         console.log('=> Menemukan auth code (PKCE) di URL');
-        const matchCode = url.match(/code=([^&]*)/);
-        
-        if (matchCode) {
-          let code = matchCode[1];
-          // Hapus karakter tambahan seperti hash jika menempel
-          code = code.split('#')[0];
-          
+        const code = getUrlParam(url, 'code');
+
+        if (code) {
           await supabase.auth.exchangeCodeForSession(code);
           console.log('=> Sukses menukar kode PKCE dengan sesiaktif');
         }
@@ -75,49 +114,43 @@ export default function RootLayout() {
   };
 
   useEffect(() => {
-    // 1. Ekstrak params jika aplikasi dibuka lewat link email
     const sub = Linking.addEventListener('url', (event) => {
       handleDeepLink(event.url);
     });
 
-    Linking.getInitialURL().then((url) => {
-      if (url) handleDeepLink(url);
-    });
+    const initializeSession = async () => {
+      setLoadingMessage('Membuka sesi');
 
-    // Cek juga window.location di platform web apabila url event terlewat
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-       handleDeepLink(window.location.href);
-    }
+      const initialUrl = await Linking.getInitialURL();
+      if (initialUrl) {
+        await handleDeepLink(initialUrl);
+      }
 
-    // 2. Cek sesi saat aplikasi dimuat
-    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        await handleDeepLink(window.location.href);
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       setIsReady(true);
-    });
+    };
 
-    // 3. Dengarkan perubahan status auth (login, logout, token refresh)
+    initializeSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth event:', event);
       setSession(session);
-      
+
       if (event === 'PASSWORD_RECOVERY') {
         router.replace('/reset-password');
       } else if (event === 'SIGNED_IN' && session) {
-        const isRecovery = Platform.OS === 'web' && typeof window !== 'undefined' && 
+        const isRecovery = Platform.OS === 'web' && typeof window !== 'undefined' &&
           (window.location?.href?.includes('type=recovery') || window.location?.href?.includes('recovery'));
-        
+
         if (isRecovery) {
           router.replace('/reset-password');
         } else {
-          // Check onboarding status on every sign-in (async IIFE)
-          ;(async () => {
-            const profile = await fetchProfile(session.access_token);
-            if (!profile?.onboarding_completed) {
-              router.replace('/onboarding' as any);
-            } else {
-              router.replace('/(tabs)');
-            }
-          })();
+          routeByProfile(session.access_token);
         }
       }
     });
@@ -131,42 +164,32 @@ export default function RootLayout() {
   useEffect(() => {
     if (!isReady) return;
 
-    const inAuthGroup = 
-      segments[0] === 'login' || 
-      segments[0] === 'register' || 
-      segments[0] === 'forgot-password' || 
+    const inAuthGroup =
+      segments[0] === 'login' ||
+      segments[0] === 'register' ||
+      segments[0] === 'forgot-password' ||
       segments[0] === 'reset-password';
 
     const inOnboarding = (segments[0] as string) === 'onboarding';
 
     if (session?.user && inAuthGroup) {
-      const isRecovery = Platform.OS === 'web' && typeof window !== 'undefined' && 
+      const isRecovery = Platform.OS === 'web' && typeof window !== 'undefined' &&
           (window.location?.href?.includes('type=recovery') || window.location?.href?.includes('recovery') || window.location?.pathname?.includes('reset-password'));
 
       if (!isRecovery && segments[0] !== 'reset-password') {
-        // Check onboarding before routing away from auth pages
-        supabase.auth.getSession().then(async ({ data: { session: s } }) => {
-          if (!s) return;
-          const profile = await fetchProfile(s.access_token);
-          if (!profile?.onboarding_completed) {
-            router.replace('/onboarding' as any);
-          } else {
-            router.replace('/(tabs)');
-          }
-        });
+        routeByProfile(session.access_token);
       }
     } else if (!session?.user && !inAuthGroup && !inOnboarding) {
       if (segments[0] !== undefined) {
-         router.replace('/login');
+         routeToLogin();
       }
     } else if (!session?.user && inOnboarding) {
-      // Not logged in on onboarding? Send to login.
-      router.replace('/login');
+      routeToLogin();
     }
   }, [session, segments, isReady]);
 
-  if (!isReady) {
-    return <LoadingScreen />;
+  if (!isReady || isRouting) {
+    return <LoadingScreen message={loadingMessage} />;
   }
 
   return (
@@ -177,7 +200,6 @@ export default function RootLayout() {
         <Stack.Screen name="register" />
         <Stack.Screen name="forgot-password" />
         <Stack.Screen name="reset-password" />
-        {/* gestureEnabled: false prevents swipe-back to bypass onboarding */}
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal', headerShown: true }} />
       </Stack>
@@ -185,4 +207,3 @@ export default function RootLayout() {
     </ThemeProvider>
   );
 }
-

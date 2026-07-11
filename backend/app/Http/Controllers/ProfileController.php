@@ -8,6 +8,11 @@ use Illuminate\Support\Str;
 
 class ProfileController extends Controller
 {
+    private function authUserId(Request $request): string
+    {
+        return (string) $request->attributes->get('auth_user_id');
+    }
+
     /**
      * GET /me/onboarding/check-username
      * Live-check username availability (case-insensitive).
@@ -39,13 +44,14 @@ class ProfileController extends Controller
                 'regex:/^[a-zA-Z0-9_]+$/',
                 'unique:profiles,username',
             ],
+            'age'        => 'required|integer|min:10|max:80',
             'sports'     => 'required|array|min:1',
             'sports.*'   => 'string|max:100',
             'region'     => 'nullable|string|max:100',
             'avatar_url' => 'nullable|string',
         ]);
 
-        $userId = $request->attributes->get('auth_user_id');
+        $userId = $this->authUserId($request);
 
         // Upsert profile row (creates if doesn't exist yet)
         $existing = DB::table('profiles')->where('id', $userId)->first();
@@ -53,6 +59,7 @@ class ProfileController extends Controller
         if ($existing) {
             DB::table('profiles')->where('id', $userId)->update([
                 'username'              => $validated['username'],
+                'age'                   => $validated['age'],
                 'region'                => $validated['region'] ?? null,
                 'avatar_url'            => $validated['avatar_url'] ?? null,
                 'onboarding_completed'  => true,
@@ -62,6 +69,7 @@ class ProfileController extends Controller
             DB::table('profiles')->insert([
                 'id'                    => $userId,
                 'username'              => $validated['username'],
+                'age'                   => $validated['age'],
                 'region'                => $validated['region'] ?? null,
                 'avatar_url'            => $validated['avatar_url'] ?? null,
                 'onboarding_completed'  => true,
@@ -96,7 +104,7 @@ class ProfileController extends Controller
      */
     public function me(Request $request)
     {
-        $userId = $request->attributes->get('auth_user_id');
+        $userId = $this->authUserId($request);
 
         $profile = DB::table('profiles')->where('id', $userId)->first();
 
