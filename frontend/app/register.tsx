@@ -43,7 +43,7 @@ export default function RegisterScreen() {
     }
 
     if (password !== confirmPassword) {
-      showMessage('Password dan Verifikasi Password tidak cocok!', 'error');
+      showMessage('Kata sandi dan konfirmasi kata sandi tidak sesuai.', 'error');
       return;
     }
 
@@ -65,7 +65,7 @@ export default function RegisterScreen() {
       if (error) {
         showMessage(error.message, 'error');
       } else {
-        showMessage('Pendaftaran berhasil! Mengarahkan ke halaman login...', 'success');
+        showMessage('Pendaftaran berhasil. Mengarahkan ke halaman masuk...', 'success');
         setTimeout(() => router.replace('/login'), 1500);
       }
     } catch (err: any) {
@@ -97,8 +97,8 @@ export default function RegisterScreen() {
             <Animated.View style={{ transform: [{ scale: pulseAnim }], marginBottom: 12, shadowColor: '#4be277', shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }}>
               <MaterialIcons name="sports-soccer" size={56} color="#4be277" />
             </Animated.View>
-            <Text style={styles.title}>REGISTER</Text>
-            <Text style={styles.subtitle}>Join G.O.A.L and start playing</Text>
+            <Text style={styles.title}>DAFTAR</Text>
+            <Text style={styles.subtitle}>Bergabunglah dengan G.O.A.L untuk memulai.</Text>
           </Animated.View>
 
           <Animated.View style={[styles.glassCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
@@ -108,7 +108,7 @@ export default function RegisterScreen() {
               </Animated.View>
             )}
 
-            <FloatingInput
+              <FloatingInput
               label="Nama Lengkap"
               value={name}
               onChangeText={setName}
@@ -146,7 +146,7 @@ export default function RegisterScreen() {
                 <ActivityIndicator color="#0e2a14" />
               ) : (
                 <View style={styles.buttonContent}>
-                  <Text style={styles.buttonText}>SIGN UP</Text>
+              <Text style={styles.buttonText}>DAFTAR</Text>
                   <MaterialIcons name="arrow-forward" size={20} color="#005321" style={{ marginLeft: 8 }} />
                 </View>
               )}
@@ -155,9 +155,9 @@ export default function RegisterScreen() {
           </Animated.View>
 
           <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
-            <Text style={styles.footerText}>Already have an account? </Text>
+            <Text style={styles.footerText}>Sudah memiliki akun? </Text>
             <TouchableOpacity onPress={() => router.push('/login')}>
-              <Text style={styles.footerLink}>Sign In</Text>
+              <Text style={styles.footerLink}>Masuk</Text>
             </TouchableOpacity>
           </Animated.View>
         </View>

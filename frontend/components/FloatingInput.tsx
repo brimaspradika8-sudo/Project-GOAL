@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { StyleSheet, View, TextInput, TouchableOpacity, Animated, Easing } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
@@ -11,17 +11,23 @@ interface FloatingInputProps {
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 }
 
-export default function FloatingInput({
+const FloatingInput = forwardRef<any, FloatingInputProps>(({
   label,
   value,
   onChangeText,
   secureTextEntry = false,
   keyboardType = 'default',
   autoCapitalize = 'none',
-}: FloatingInputProps) {
+}, ref) => {
+  const inputRef = useRef<TextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const animatedIsFocused = useRef(new Animated.Value(value === '' ? 0 : 1)).current;
+
+  useImperativeHandle(ref, () => ({
+    focus: () => inputRef.current?.focus(),
+    blur: () => inputRef.current?.blur(),
+  }));
 
   useEffect(() => {
     Animated.timing(animatedIsFocused, {
@@ -63,6 +69,7 @@ export default function FloatingInput({
     <View style={styles.inputContainer}>
       <Animated.Text style={labelStyle}>{label}</Animated.Text>
       <TextInput
+        ref={inputRef}
         style={[styles.input, isFocused && styles.inputFocused]}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
@@ -86,7 +93,11 @@ export default function FloatingInput({
       )}
     </View>
   );
-}
+});
+
+FloatingInput.displayName = 'FloatingInput';
+
+export default FloatingInput;
 
 const styles = StyleSheet.create({
   inputContainer: {

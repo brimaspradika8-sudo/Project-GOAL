@@ -1,19 +1,17 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, router, useSegments } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
-import { useEffect, useState, useRef } from 'react';
-import { Platform } from 'react-native';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 import LoadingScreen from '../components/LoadingScreen';
+import SplashScreen from '../components/SplashScreen';
 import * as Linking from 'expo-linking';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { supabase } from '../lib/supabase';
 import { API_BASE_URL } from '../lib/api';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
+import { useProfileStore } from '../store/profileStore';
 
 async function fetchProfile(accessToken: string) {
   const controller = new AbortController();
@@ -25,7 +23,7 @@ async function fetchProfile(accessToken: string) {
     });
     if (!res.ok) return null;
     return await res.json();
-  } catch {
+  } catch (e) {
     return null;
   } finally {
     clearTimeout(timeout);
@@ -38,45 +36,40 @@ function getUrlParam(url: string, name: string) {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+function isRecoveryUrl(url: string): boolean {
+  return url.includes('type=recovery') || url.includes('type=reset');
+}
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const [showSplash, setShowSplash] = useState(false);
   const [isReady, setIsReady] = useState(false);
-  const [isRouting, setIsRouting] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Menyiapkan arena');
-  const [session, setSession] = useState<any>(null);
-  const segments = useSegments();
   const routingRef = useRef(false);
+  const isRecoveryRef = useRef(false);
 
   const routeByProfile = async (accessToken: string) => {
     if (routingRef.current) return;
     routingRef.current = true;
-    setIsRouting(true);
     setLoadingMessage('Mengecek profil pemain');
 
     const profile = await fetchProfile(accessToken);
-    if (!profile?.onboarding_completed) {
-      router.replace('/onboarding' as any);
-    } else {
-      router.replace('/(tabs)');
-    }
-
+    useProfileStore.setState({ profile: profile ?? undefined, loading: false });
+    router.replace('/(tabs)');
     setTimeout(() => {
       routingRef.current = false;
-      setIsRouting(false);
       setLoadingMessage('Menyiapkan arena');
     }, 250);
   };
 
   const routeToLogin = () => {
-    if (routingRef.current) return;
+    isRecoveryRef.current = false;
     routingRef.current = true;
-    setIsRouting(true);
     setLoadingMessage('Membuka halaman login');
     router.replace('/login');
 
     setTimeout(() => {
       routingRef.current = false;
-      setIsRouting(false);
       setLoadingMessage('Menyiapkan arena');
     }, 250);
   };
@@ -84,28 +77,21 @@ export default function RootLayout() {
   const handleDeepLink = async (url: string | null) => {
     if (!url) return;
 
-    try {
-      console.log('--- Checking deep link URL:', url, '---');
+    if (isRecoveryUrl(url)) {
+      isRecoveryRef.current = true;
+    }
 
+    try {
       if (url.includes('access_token=')) {
-        console.log('=> Menemukan access_token di URL');
         const accessToken = getUrlParam(url, 'access_token');
         const refreshToken = getUrlParam(url, 'refresh_token');
-
         if (accessToken && refreshToken) {
-          await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-          console.log('=> Sukses memuat sesi dari access_token');
+          await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
         }
       } else if (url.includes('code=')) {
-        console.log('=> Menemukan auth code (PKCE) di URL');
         const code = getUrlParam(url, 'code');
-
         if (code) {
           await supabase.auth.exchangeCodeForSession(code);
-          console.log('=> Sukses menukar kode PKCE dengan sesiaktif');
         }
       }
     } catch (e) {
@@ -113,41 +99,101 @@ export default function RootLayout() {
     }
   };
 
+  const onSplashFinish = useCallback(() => {
+    setShowSplash(false);
+  }, []);
+
   useEffect(() => {
+    if (showSplash) return;
+
+    let cancelled = false;
+
     const sub = Linking.addEventListener('url', (event) => {
-      handleDeepLink(event.url);
+      if (cancelled) return;
+      const url = event.url;
+      if (isRecoveryUrl(url)) {
+        isRecoveryRef.current = true;
+        router.replace('/reset-password');
+        return;
+      }
+      handleDeepLink(url);
     });
 
-    const initializeSession = async () => {
+    const initialize = async () => {
       setLoadingMessage('Membuka sesi');
 
-      const initialUrl = await Linking.getInitialURL();
-      if (initialUrl) {
-        await handleDeepLink(initialUrl);
+      isRecoveryRef.current = false;
+
+      // Check URL FIRST for recovery — before any session handling
+      let currentUrl: string | null = null;
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        currentUrl = window.location.href;
+      }
+      if (!currentUrl) {
+        currentUrl = await Linking.getInitialURL();
+      }
+      if (cancelled) return;
+
+      if (currentUrl && isRecoveryUrl(currentUrl)) {
+        isRecoveryRef.current = true;
+        try {
+          const accessToken = getUrlParam(currentUrl, 'access_token');
+          const refreshToken = getUrlParam(currentUrl, 'refresh_token');
+          if (accessToken && refreshToken) {
+            await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+          }
+        } catch (e) {
+          console.error('Error setting recovery session:', e);
+        }
+        if (cancelled) return;
+        setIsReady(true);
+        router.replace('/reset-password');
+        return;
       }
 
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        await handleDeepLink(window.location.href);
+      // Not a recovery — process deep link tokens if any
+      if (currentUrl) {
+        await handleDeepLink(currentUrl);
       }
+
+      if (cancelled) return;
 
       const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
+
+      if (cancelled) return;
+      if (session?.user) {
+        await routeByProfile(session.access_token);
+      } else {
+        routeToLogin();
+      }
+
       setIsReady(true);
     };
 
-    initializeSession();
+    initialize();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return;
       console.log('Auth event:', event);
-      setSession(session);
 
       if (event === 'PASSWORD_RECOVERY') {
+        isRecoveryRef.current = true;
         router.replace('/reset-password');
+      } else if (event === 'SIGNED_OUT') {
+        isRecoveryRef.current = false;
+        useProfileStore.getState().clearProfile();
+        routeToLogin();
       } else if (event === 'SIGNED_IN' && session) {
+        if (isRecoveryRef.current) {
+          router.replace('/reset-password');
+          return;
+        }
+
         const isRecovery = Platform.OS === 'web' && typeof window !== 'undefined' &&
           (window.location?.href?.includes('type=recovery') || window.location?.href?.includes('recovery'));
 
         if (isRecovery) {
+          isRecoveryRef.current = true;
           router.replace('/reset-password');
         } else {
           routeByProfile(session.access_token);
@@ -156,54 +202,41 @@ export default function RootLayout() {
     });
 
     return () => {
+      cancelled = true;
       sub.remove();
       subscription.unsubscribe();
     };
-  }, []);
-
-  useEffect(() => {
-    if (!isReady) return;
-
-    const inAuthGroup =
-      segments[0] === 'login' ||
-      segments[0] === 'register' ||
-      segments[0] === 'forgot-password' ||
-      segments[0] === 'reset-password';
-
-    const inOnboarding = (segments[0] as string) === 'onboarding';
-
-    if (session?.user && inAuthGroup) {
-      const isRecovery = Platform.OS === 'web' && typeof window !== 'undefined' &&
-          (window.location?.href?.includes('type=recovery') || window.location?.href?.includes('recovery') || window.location?.pathname?.includes('reset-password'));
-
-      if (!isRecovery && segments[0] !== 'reset-password') {
-        routeByProfile(session.access_token);
-      }
-    } else if (!session?.user && !inAuthGroup && !inOnboarding) {
-      if (segments[0] !== undefined) {
-         routeToLogin();
-      }
-    } else if (!session?.user && inOnboarding) {
-      routeToLogin();
-    }
-  }, [session, segments, isReady]);
-
-  if (!isReady || isRouting) {
-    return <LoadingScreen message={loadingMessage} />;
-  }
+  }, [showSplash]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="login" />
-        <Stack.Screen name="register" />
-        <Stack.Screen name="forgot-password" />
-        <Stack.Screen name="reset-password" />
-        <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal', headerShown: true }} />
-      </Stack>
-      <StatusBar style="auto" />
+      {showSplash ? (
+        <SplashScreen onFinish={onSplashFinish} />
+      ) : (
+        <>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="login" />
+            <Stack.Screen name="register" />
+            <Stack.Screen name="forgot-password" />
+            <Stack.Screen name="reset-password" />
+            <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="(tabs)" />
+          </Stack>
+          {!isReady && (
+            <View style={styles.loadingOverlay}>
+              <LoadingScreen message={loadingMessage} />
+            </View>
+          )}
+        </>
+      )}
+      <StatusBar style="light" />
     </ThemeProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+  },
+});

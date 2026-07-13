@@ -41,7 +41,7 @@ export default function LoginScreen() {
     const now = Date.now();
     if (now - lastAttemptRef.current < RATE_LIMIT_MS) {
       const waitSec = Math.ceil((RATE_LIMIT_MS - (now - lastAttemptRef.current)) / 1000);
-      showMessage(`Tunggu ${waitSec} detik sebelum mencoba lagi.`, 'error');
+      showMessage(`Silakan tunggu ${waitSec} detik sebelum mencoba kembali.`, 'error');
       return;
     }
 
@@ -92,7 +92,7 @@ export default function LoginScreen() {
               <MaterialIcons name="sports-soccer" size={72} color="#4be277" />
             </Animated.View>
             <Text style={styles.title}>GOAL</Text>
-            <Text style={styles.subtitle}>Game Arena & Arena League</Text>
+            <Text style={styles.subtitle}>Platform olahraga dan kompetisi</Text>
           </Animated.View>
 
           <Animated.View style={[styles.glassCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
@@ -119,7 +119,7 @@ export default function LoginScreen() {
             <View style={styles.rowBetween}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }} />
               <TouchableOpacity onPress={() => router.push('/forgot-password')}>
-                <Text style={styles.forgotText}>Forgot Password?</Text>
+                <Text style={styles.forgotText}>Lupa Kata Sandi?</Text>
               </TouchableOpacity>
             </View>
 
@@ -133,7 +133,7 @@ export default function LoginScreen() {
                 <ActivityIndicator color="#0e2a14" />
               ) : (
                 <View style={styles.buttonContent}>
-                  <Text style={styles.buttonText}>SIGN IN</Text>
+                  <Text style={styles.buttonText}>MASUK</Text>
                   <MaterialIcons name="arrow-forward" size={20} color="#005321" style={{ marginLeft: 8 }} />
                 </View>
               )}
@@ -142,9 +142,9 @@ export default function LoginScreen() {
           </Animated.View>
 
           <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
+            <Text style={styles.footerText}>{"Don't have an account? "}</Text>
             <TouchableOpacity onPress={() => router.push('/register')}>
-              <Text style={styles.footerLink}>Register for free</Text>
+              <Text style={styles.footerLink}>Daftar Akun</Text>
             </TouchableOpacity>
           </Animated.View>
 
@@ -287,3 +287,4 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 });
+

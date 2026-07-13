@@ -94,7 +94,6 @@ export default function ResetPasswordScreen() {
       } else {
         showMessage('Password berhasil diperbarui! Mengarahkan ke login...', 'success');
         await supabase.auth.signOut();
-        setTimeout(() => router.replace('/login'), 2000);
       }
     } catch (err: any) {
       showMessage(err?.message || 'Terjadi kesalahan sistem.', 'error');

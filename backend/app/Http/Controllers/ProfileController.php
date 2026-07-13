@@ -13,10 +13,41 @@ class ProfileController extends Controller
         return (string) $request->attributes->get('auth_user_id');
     }
 
-    /**
-     * GET /me/onboarding/check-username
-     * Live-check username availability (case-insensitive).
-     */
+    private function profilePayload(?object $profile): array|object
+    {
+        $authUser = request()->attributes->get('auth_user');
+        $fullName = null;
+
+        if (is_object($authUser)) {
+            $userMetadata = $authUser->user_metadata ?? null;
+            if (is_object($userMetadata)) {
+                $fullName = $userMetadata->full_name ?? null;
+            } elseif (is_array($userMetadata)) {
+                $fullName = $userMetadata['full_name'] ?? null;
+            }
+        }
+
+        if (!$profile) {
+            return (object) [
+                'onboarding_completed' => false,
+                'role'                 => 'player',
+                'is_owner_verified'    => false,
+                'sports'               => [],
+                'full_name'            => $fullName,
+            ];
+        }
+
+        $sports = DB::table('user_sport_preferences')
+            ->where('user_id', $profile->id)
+            ->orderBy('created_at')
+            ->pluck('sport_type')
+            ->all();
+
+        return (object) array_merge((array) $profile, [
+            'sports' => $sports,
+            'full_name' => $fullName ?? ($profile->full_name ?? null),
+        ]);
+    }
     public function checkUsername(Request $request)
     {
         $username = $request->query('username', '');
@@ -31,11 +62,6 @@ class ProfileController extends Controller
 
         return response()->json(['available' => !$exists]);
     }
-
-    /**
-     * POST /me/onboarding
-     * Complete the onboarding: set username + sport preferences.
-     */
     public function submitOnboarding(Request $request)
     {
         $validated = $request->validate([
@@ -44,7 +70,6 @@ class ProfileController extends Controller
                 'regex:/^[a-zA-Z0-9_]+$/',
                 'unique:profiles,username',
             ],
-            'age'        => 'required|integer|min:10|max:80',
             'sports'     => 'required|array|min:1',
             'sports.*'   => 'string|max:100',
             'region'     => 'nullable|string|max:100',
@@ -52,31 +77,29 @@ class ProfileController extends Controller
         ]);
 
         $userId = $this->authUserId($request);
-
-        // Upsert profile row (creates if doesn't exist yet)
         $existing = DB::table('profiles')->where('id', $userId)->first();
 
         if ($existing) {
-            DB::table('profiles')->where('id', $userId)->update([
-                'username'              => $validated['username'],
-                'age'                   => $validated['age'],
-                'region'                => $validated['region'] ?? null,
-                'avatar_url'            => $validated['avatar_url'] ?? null,
-                'onboarding_completed'  => true,
-                'updated_at'            => now(),
-            ]);
+            $updateData = [
+                'username'             => $validated['username'],
+                'region'               => $validated['region'] ?? null,
+                'avatar_url'           => $validated['avatar_url'] ?? null,
+                'onboarding_completed' => true,
+                'updated_at'           => now(),
+            ];
+
+            DB::table('profiles')->where('id', $userId)->update($updateData);
         } else {
             DB::table('profiles')->insert([
-                'id'                    => $userId,
-                'username'              => $validated['username'],
-                'age'                   => $validated['age'],
-                'region'                => $validated['region'] ?? null,
-                'avatar_url'            => $validated['avatar_url'] ?? null,
-                'onboarding_completed'  => true,
-                'role'                  => 'player',
-                'is_owner_verified'     => false,
-                'created_at'            => now(),
-                'updated_at'            => now(),
+                'id'                   => $userId,
+                'username'             => $validated['username'],
+                'region'               => $validated['region'] ?? null,
+                'avatar_url'           => $validated['avatar_url'] ?? null,
+                'onboarding_completed' => true,
+                'role'                 => 'player',
+                'is_owner_verified'    => false,
+                'created_at'           => now(),
+                'updated_at'           => now(),
             ]);
         }
 
@@ -95,27 +118,14 @@ class ProfileController extends Controller
 
         $profile = DB::table('profiles')->where('id', $userId)->first();
 
-        return response()->json($profile);
+        return response()->json($this->profilePayload($profile));
     }
-
-    /**
-     * GET /me
-     * Return current user's profile (includes onboarding_completed for route guard).
-     */
     public function me(Request $request)
     {
         $userId = $this->authUserId($request);
 
         $profile = DB::table('profiles')->where('id', $userId)->first();
 
-        if (!$profile) {
-            return response()->json([
-                'onboarding_completed' => false,
-                'role'                 => 'player',
-                'is_owner_verified'    => false,
-            ]);
-        }
-
-        return response()->json($profile);
+        return response()->json($this->profilePayload($profile));
     }
 }

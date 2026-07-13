@@ -10,7 +10,15 @@ import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { API_BASE_URL } from '../lib/api';
+import { useProfileStore } from '../store/profileStore';
 import { useUsernameCheck } from '../hooks/useUsernameCheck';
+
+const GREEN = '#4be277';
+const DARK = '#131313';
+const CARD = '#1a2e1f';
+const CARD_BORDER = '#263d2c';
+const MUTED = '#627369';
+const INPUT_BG = '#162119';
 
 const SPORTS = [
   { id: 'futsal',      label: 'FUTSAL',       icon: 'sports-soccer' as const },
@@ -31,7 +39,7 @@ const SPORT_PREFIXES = [
 ];
 
 const DEFAULT_AVATAR = 'https://api.dicebear.com/7.x/bottts/png?seed=goal&backgroundColor=131313';
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 2;
 
 const PROVINCES = [
   'DKI JAKARTA',
@@ -55,45 +63,14 @@ const CITIES_BY_PROVINCE: Record<string, string[]> = {
     'DEPOK, ID',
     'TANGERANG, ID',
     'CIREBON, ID',
-    'CIAMIS, ID', 
+    'CIAMIS, ID',
     'TASIKMALAYA, ID',
-
   ],
   'JAWA TENGAH': [
     'SEMARANG, ID',
     'YOGYAKARTA, ID',
     'SURAKARTA, ID',
     'PURWOKERTO, ID',
-    'PURBALINGGA, ID',
-    'BANJARNEGARA, ID',
-    'CILACAP, ID',
-    'KUDUS, ID',
-    'PEKALONGAN, ID',
-    'TEGAL, ID',
-    'MAGELANG, ID',
-    'SALATIGA, ID',
-    'BLORA, ID',
-    'BOYOLALI, ID',
-    'BREBES, ID',
-    'DEMAK, ID',
-    'GROBOGAN, ID',
-    'JEPARA, ID',
-    'KENDAL, ID',
-    'KLATEN, ID',
-    'KUDUS, ID',
-    'KUNINGAN, ID',
-    'MAGELANG, ID',
-    'PATI, ID',
-    'PEKALONGAN, ID',
-    'PEMALANG, ID',
-    'PURBALINGGA, ID',
-    'PURWOKERTO, ID',
-    'PURWOREJO, ID',
-    'SALATIGA, ID',
-    'SEMARANG, ID',
-    'SRAGEN, ID',
-    'SUKOHARJO, ID',
-    'SURAKARTA, ID',
     'TEGAL, ID',
     'TEMANGGUNG, ID',
     'WONOGIRI, ID',
@@ -107,127 +84,70 @@ const CITIES_BY_PROVINCE: Record<string, string[]> = {
     'LAMONGAN, ID',
     'SIDOARJO, ID',
     'JOMBANG, ID',
-    'NGANJUK, ID'
+    'NGANJUK, ID',
   ],
 };
 
-// ────────────────────────────────────────────────────────────────────────────
-// Main Screen
-// ────────────────────────────────────────────────────────────────────────────
 export default function OnboardingScreen() {
-  // Navigation Steps
   const [step, setStep] = useState(1);
-
-  // Form State
   const [username, setUsername] = useState('');
-  const [age, setAge] = useState('');
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const usernameStatus = useUsernameCheck(username);
-
-  // Profile Customization State
   const [avatarUrl, setAvatarUrl] = useState(DEFAULT_AVATAR);
   const [selectedProvince, setSelectedProvince] = useState(PROVINCES[0]);
   const [region, setRegion] = useState(CITIES_BY_PROVINCE[PROVINCES[0]][0]);
-
-  // Pick avatar from gallery
-  const pickAvatarFromGallery = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Izin Diperlukan', 'Izinkan akses galeri di pengaturan untuk memilih foto profil.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]?.uri) {
-      setAvatarUrl(result.assets[0].uri);
-    }
-  };
-
-  // Modal Open States
   const [isProvinceModalOpen, setIsProvinceModalOpen] = useState(false);
   const [isRegionModalOpen, setIsRegionModalOpen] = useState(false);
- 
-  // Custom search string in city selector search text input
   const [regionSearch, setRegionSearch] = useState('');
 
-  // Animations
-  const fadeAnim  = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(60)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(40)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const scanAnim = useRef(new Animated.Value(0)).current;
-
-  // Dice icon rotation animation
   const diceRotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    fadeAnim.setValue(0);
+    slideAnim.setValue(40);
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1, duration: 800,
-        easing: Easing.out(Easing.cubic), useNativeDriver: false,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0, duration: 800,
-        easing: Easing.out(Easing.cubic), useNativeDriver: false,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
     ]).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.12, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
-        Animated.timing(pulseAnim, { toValue: 1,    duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: false }),
-      ])
-    ).start();
-
-    Animated.loop(
-      Animated.timing(scanAnim, { toValue: 1, duration: 3500, useNativeDriver: false })
-    ).start();
   }, [step]);
 
-  const parsedAge = Number(age);
-  const canCompleteUsername =
-    usernameStatus === 'available' &&
-    username.trim().length >= 3 &&
-    termsAccepted;
-  const canCompleteProfile =
-    age.trim().length > 0 &&
-    Number.isInteger(parsedAge) &&
-    parsedAge >= 10 &&
-    parsedAge <= 80;
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => { anim.stop(); };
+  }, []);
+
+  const canCompleteUsername = usernameStatus === 'available' && username.trim().length >= 3 && termsAccepted;
   const canCompleteRegion = !!selectedProvince && !!region;
   const canCompleteSports = selectedSports.length > 0;
-  const canGoNext =
-    step === 1 ? canCompleteUsername :
-    step === 2 ? canCompleteProfile :
-    step === 3 ? canCompleteRegion :
-    canCompleteSports;
+  const canGoNext = step === 1 ? (canCompleteUsername && canCompleteRegion) : canCompleteSports;
   const canSubmit = canCompleteSports && !isSubmitting;
 
   function toggleSport(id: string) {
-    setSelectedSports(prev =>
-      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
-    );
+    setSelectedSports(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
   }
 
   async function handleSignOut() {
     try {
       await supabase.auth.signOut();
-      router.replace('/login');
     } catch (e) {
       console.log('Error signing out:', e);
     }
   }
 
   function handleBack() {
-    if (step > 1) {
-      setStep(prev => prev - 1);
-    }
+    if (step > 1) setStep(prev => prev - 1);
   }
 
   async function handleNextStep() {
@@ -239,31 +159,18 @@ export default function OnboardingScreen() {
     if (!canSubmit) return;
     setIsSubmitting(true);
     setSubmitError(null);
-
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 8000);
-
       const res = await fetch(`${API_BASE_URL}/me/onboarding`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          username,
-          age: parsedAge,
-          sports: selectedSports,
-          region,
-          avatar_url: avatarUrl,
-        }),
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ username, sports: selectedSports, region, avatar_url: avatarUrl }),
         signal: controller.signal,
       });
       clearTimeout(timeout);
-
       if (!res.ok) {
         const err = await res.json();
         const messages = err?.errors
@@ -272,441 +179,327 @@ export default function OnboardingScreen() {
         setSubmitError(messages);
         return;
       }
-
-      // Redirect to main app dashboard
-      router.replace('/(tabs)');
-    } catch {
+      const profile = await res.json();
+      useProfileStore.setState({ profile, loading: false });
+      router.replace('/(tabs)/profile');
+    } catch (e) {
       setSubmitError('Gagal terhubung ke server. Coba lagi.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  const pickAvatarFromGallery = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Izin Diperlukan', 'Izinkan akses galeri di pengaturan untuk memilih foto profil.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]?.uri) {
+        setAvatarUrl(result.assets[0].uri);
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Gagal membuka galeri. Coba lagi.');
+    }
+  };
+
   const triggerDiceRoll = () => {
     Animated.sequence([
       Animated.timing(diceRotateAnim, { toValue: 1, duration: 400, easing: Easing.out(Easing.back(1.5)), useNativeDriver: true }),
       Animated.timing(diceRotateAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
     ]).start();
-
     const rand = SPORT_PREFIXES[Math.floor(Math.random() * SPORT_PREFIXES.length)] + '_' + (Math.floor(Math.random() * 900) + 100);
     setUsername(rand);
   };
 
-  // Username status indicators
+  const spin = diceRotateAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
   const renderStatus = () => {
     switch (usernameStatus) {
       case 'checking':
         return (
           <View style={styles.statusRow}>
-            <MaterialIcons name="sync" size={14} color="#869585" />
-            <Text style={[styles.statusText, { color: '#869585' }]}>Validating ID...</Text>
+            <MaterialIcons name="sync" size={13} color={MUTED} />
+            <Text style={[styles.statusText, { color: MUTED }]}>Memeriksa...</Text>
           </View>
         );
       case 'available':
         return (
           <View style={styles.statusRow}>
-            <MaterialIcons name="check-circle" size={14} color="#4be277" />
-            <Text style={[styles.statusText, { color: '#4be277' }]}>USERNAME TERSEDIA</Text>
+            <MaterialIcons name="check-circle" size={13} color={GREEN} />
+            <Text style={[styles.statusText, { color: GREEN }]}>Tersedia</Text>
           </View>
         );
       case 'taken':
         return (
           <View style={styles.statusRow}>
-            <MaterialIcons name="cancel" size={14} color="#ffb4ab" />
-            <Text style={[styles.statusText, { color: '#ffb4ab' }]}>Username sudah dipakai</Text>
+            <MaterialIcons name="cancel" size={13} color="#f43f5e" />
+            <Text style={[styles.statusText, { color: '#f43f5e' }]}>Sudah digunakan</Text>
           </View>
         );
       case 'invalid':
         return (
           <View style={styles.statusRow}>
-            <MaterialIcons name="error" size={14} color="#ffb4ab" />
-            <Text style={[styles.statusText, { color: '#ffb4ab' }]}>Terlalu pendek</Text>
+            <MaterialIcons name="error" size={13} color="#f43f5e" />
+            <Text style={[styles.statusText, { color: '#f43f5e' }]}>Terlalu singkat</Text>
+          </View>
+        );
+      case 'error':
+        return (
+          <View style={styles.statusRow}>
+            <MaterialIcons name="wifi-off" size={13} color="#f59e0b" />
+            <Text style={[styles.statusText, { color: '#f59e0b' }]}>Gagal memeriksa</Text>
           </View>
         );
       default:
         return (
           <View style={styles.statusRow}>
-            <MaterialIcons name="info-outline" size={14} color="#869585" />
-            <Text style={[styles.statusText, { color: '#869585' }]}>Input Username Anda</Text>
+            <MaterialIcons name="info-outline" size={13} color={MUTED} />
+            <Text style={[styles.statusText, { color: MUTED }]}>Minimal 3 karakter</Text>
           </View>
         );
     }
   };
 
-  const filteredKabupatens = (CITIES_BY_PROVINCE[selectedProvince] || []).filter(k => 
+  const filteredCities = (CITIES_BY_PROVINCE[selectedProvince] || []).filter(k =>
     k.toLowerCase().includes(regionSearch.toLowerCase())
   );
 
-  const spin = diceRotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <StatusBar style="light" />
 
-      {/* ── Progress Glow Top Bar ── */}
-      <View style={styles.progressBarWrapper} pointerEvents="none">
-        <View style={[styles.progressBar, { width: `${(step / TOTAL_STEPS) * 100}%` }]} />
+      {/* Progress Bar */}
+      <View style={styles.progressBg}>
+        <View style={[styles.progressFill, { width: `${(step / TOTAL_STEPS) * 100}%` }]} />
       </View>
 
-      {/* ── Atmospheric Background Glows ── */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <View style={styles.glowTopLeft} />
-        <View style={styles.glowBottomRight} />
-        <View style={styles.radialOverlay} />
+      {/* Background Glows */}
+      <View style={[StyleSheet.absoluteFill, styles.pointerEventsNone]}>
+        <View style={styles.glow1} />
+        <View style={styles.glow2} />
       </View>
 
-      {/* ── Fixed Premium Header ── */}
-      <View style={styles.fixedHeader}>
+      {/* Header */}
+      <View style={styles.header}>
         <TouchableOpacity
-          style={[styles.headerLeft, step === 1 && styles.headerLeftDisabled]}
+          style={[styles.backBtn, step === 1 && { opacity: 0.3 }]}
           onPress={handleBack}
           disabled={step === 1}
           activeOpacity={0.7}
         >
-          <MaterialIcons name="arrow-back" size={24} color="#4be277" />
-          <Text style={styles.headerTitle}>
-            {step === 1 ? 'NAMA ARENA' : step === 2 ? 'PROFIL PEMAIN' : step === 3 ? 'WILAYAH' : 'KARIER OLAHRAGA'}
-          </Text>
+          <MaterialIcons name="arrow-back" size={20} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerGoal}>GOAL</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.stepLabel}>LANGKAH {step} DARI {TOTAL_STEPS}</Text>
+        </View>
+        <TouchableOpacity onPress={handleSignOut} style={styles.closeBtn} activeOpacity={0.7}>
+          <MaterialIcons name="close" size={20} color={MUTED} />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
 
-          {step < 4 ? (
-            /* ──────────────────────────────────────────────────────────────────
-               STEP 1: LENGKAPI IDENTITAS (CARD BIODATA)
-               ────────────────────────────────────────────────────────────────── */
+          {step === 1 ? (
             <View>
-              {/* Head instruction */}
-              <View style={styles.sectionHeading}>
-                <Text style={styles.stepEyebrow}>LANGKAH {step}/{TOTAL_STEPS}</Text>
-                <Text style={styles.headingBig}>
-                  {step === 1 ? 'SIAPA NAMA ARENAMU?' : step === 2 ? 'TAMBAHKAN FOTOMU' : 'DI MANA ARENAMU?'}
-                </Text>
-                <Text style={styles.headingSub}>
-                  {step === 1
-                    ? 'Nama ini yang akan dilihat pemain lain. Kamu bisa acak atau edit sendiri.'
-                    : step === 2
-                      ? 'Foto opsional, umur wajib supaya profil pemainmu lengkap.'
-                      : 'Pilih kabupaten/kota tempat kamu biasa main.'}
-                </Text>
-              </View>
+              {/* Title */}
+              <Text style={styles.title}>Lengkapi Profil Pemain</Text>
+              <Text style={styles.subtitle}>Lengkapi data profil agar akun Anda siap digunakan.</Text>
 
-              {/* Player Card Frame */}
+              {/* Player Card */}
               <View style={styles.card}>
-                {/* Visual scanline scanning card */}
-                <Animated.View
-                  style={[
-                    styles.scanline,
-                    {
-                      top: scanAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: ['0%', '100%'],
-                      }),
-                    },
-                  ]}
-                  pointerEvents="none"
-                />
-
-                <View style={styles.cardGradientOverlay} pointerEvents="none" />
-
-                <View style={styles.cardPadding}>
-                  {/* Card Identifier bar */}
-                  <View style={styles.cardHeaderRow}>
-                    <View>
-                      <Text style={styles.cardLabel}>PRO PLAYER CARD</Text>
-                      <Text style={styles.cardTitle}>
-                        {step === 1 ? 'NAMA ARENA' : step === 2 ? 'PROFIL PEMAIN' : 'LOKASI ARENA'}
-                      </Text>
-                    </View>
-                    <View style={styles.qrIcon}>
-                      <MaterialIcons name="qr-code-2" size={24} color="#4be277" />
-                    </View>
+                {/* Card Header */}
+                <View style={styles.cardHeader}>
+                  <View style={styles.cardHeaderLeft}>
+                    <Text style={styles.cardTag}>PENYIAPAN AKUN</Text>
+                    <Text style={styles.cardTitle}>PROFIL PEMAIN</Text>
                   </View>
-
-                  <View style={styles.cardDivider} />
-
-                  {step === 2 && (
-                  <View style={styles.topFormRow}>
-                    {/* Avatar interactive selection area */}
-                    <TouchableOpacity
-                      style={styles.avatarWrapper}
-                      onPress={pickAvatarFromGallery}
-                      activeOpacity={0.8}
-                    >
-                      <Animated.View style={[styles.avatarPulseBorder, { opacity: pulseAnim.interpolate({ inputRange: [1, 1.12], outputRange: [0.4, 0.9] }) }]} />
-                      <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
-                      <View style={styles.avatarEditBadge}>
-                        <MaterialIcons name="camera-alt" size={12} color="#002109" />
-                      </View>
-                    </TouchableOpacity>
-
-                    {/* Age Input Box */}
-                    <View style={styles.ageContainer}>
-                      <Text style={styles.cardInputLabel}>UMUR (TAHUN)</Text>
-                      <TextInput
-                        style={styles.ageInput}
-                        placeholder="00"
-                        placeholderTextColor="rgba(75, 226, 119, 0.2)"
-                        keyboardType="numeric"
-                        value={age}
-                        onChangeText={text => setAge(text.replace(/[^0-9]/g, ''))}
-                        maxLength={3}
-                      />
-                    </View>
+                  <View style={styles.cardIcon}>
+                    <MaterialIcons name="person-outline" size={20} color={GREEN} />
                   </View>
-                  )}
-
-                  {step === 1 && (
-                  <View style={styles.usernameCardSection}>
-                    <Text style={styles.cardInputLabel}>USERNAME</Text>
-                    <View style={styles.usernameInputWrapper}>
-                      <MaterialIcons name="alternate-email" size={20} color="rgba(255,255,255,0.4)" style={{ marginRight: 6 }} />
-                      <TextInput
-                        style={styles.usernameInput}
-                        placeholder="username_kamu"
-                        placeholderTextColor="rgba(255,255,255,0.2)"
-                        value={username}
-                        onChangeText={text => setUsername(text.replace(/[^a-zA-Z0-9_]/g, ''))}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        maxLength={20}
-                      />
-                      <TouchableOpacity
-                        style={styles.randomButton}
-                        onPress={triggerDiceRoll}
-                        activeOpacity={0.7}
-                      >
-                        <Animated.View style={{ transform: [{ rotate: spin }] }}>
-                          <MaterialIcons name="casino" size={24} color="#4be277" />
-                        </Animated.View>
-                      </TouchableOpacity>
-                    </View>
-                    <View style={[
-                      styles.usernameUnderline,
-                      usernameStatus === 'available' && { backgroundColor: '#4be277' },
-                      usernameStatus === 'taken' && { backgroundColor: '#ffb4ab' },
-                    ]} />
-                    {renderStatus()}
-                  </View>
-                  )}
-
-                  {step === 3 && <View style={styles.cardDivider} />}
-
-                  {step === 3 && (
-                  <View style={styles.locationFieldsContainer}>
-                    <TouchableOpacity
-                      style={styles.dropdownTrigger}
-                      onPress={() => setIsProvinceModalOpen(true)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.cardInputLabel}>LOKASI (PROVINSI)</Text>
-                      <View style={styles.dropdownContent}>
-                        <Text style={styles.dropdownValueText}>{selectedProvince}</Text>
-                        <MaterialIcons name="expand-more" size={22} color="#869585" />
-                      </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.dropdownTrigger}
-                      onPress={() => {
-                        setRegionSearch('');
-                        setIsRegionModalOpen(true);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.cardInputLabel}>KABUPATEN/KOTA</Text>
-                      <View style={styles.dropdownContent}>
-                        <Text style={styles.dropdownValueText}>{region.replace(', ID', '')}</Text>
-                        <MaterialIcons name="expand-more" size={22} color="#869585" />
-                      </View>
-                    </TouchableOpacity>
-                  </View>
-                  )}
                 </View>
+
+                <View style={styles.cardDivider} />
+
+                {/* Avatar */}
+                <View style={styles.avatarCenter}>
+                  <TouchableOpacity onPress={pickAvatarFromGallery} activeOpacity={0.8}>
+                    <Animated.View style={[styles.avatarRing, { transform: [{ scale: pulseAnim }] }]}>
+                      <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+                    </Animated.View>
+                    <View style={styles.cameraBadge}>
+                      <MaterialIcons name="camera-alt" size={12} color="#fff" />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Username */}
+                <Text style={styles.label}>USERNAME</Text>
+                <View style={styles.inputRow}>
+                  <MaterialIcons name="alternate-email" size={18} color={MUTED} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="username_kamu"
+                    placeholderTextColor={MUTED}
+                    value={username}
+                    onChangeText={text => setUsername(text.replace(/[^a-zA-Z0-9_]/g, ''))}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    maxLength={20}
+                  />
+                  <TouchableOpacity onPress={triggerDiceRoll} activeOpacity={0.7} style={styles.diceBtn}>
+                    <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                      <MaterialIcons name="casino" size={22} color={GREEN} />
+                    </Animated.View>
+                  </TouchableOpacity>
+                </View>
+                {renderStatus()}
+
+                <View style={styles.cardDivider} />
+
+                {/* Location */}
+                <Text style={styles.label}>LOKASI</Text>
+                <TouchableOpacity style={styles.dropdown} onPress={() => setIsProvinceModalOpen(true)} activeOpacity={0.7}>
+                  <Text style={styles.dropdownLabel}>Provinsi</Text>
+                  <View style={styles.dropdownRow}>
+                    <Text style={styles.dropdownValue}>{selectedProvince}</Text>
+                    <MaterialIcons name="expand-more" size={20} color={MUTED} />
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.dropdown} onPress={() => { setRegionSearch(''); setIsRegionModalOpen(true); }} activeOpacity={0.7}>
+                  <Text style={styles.dropdownLabel}>Kota / Kabupaten</Text>
+                  <View style={styles.dropdownRow}>
+                    <Text style={styles.dropdownValue}>{region.replace(', ID', '')}</Text>
+                    <MaterialIcons name="expand-more" size={20} color={MUTED} />
+                  </View>
+                </TouchableOpacity>
               </View>
 
-              {step === 1 && (
-              <TouchableOpacity
-                style={styles.termsBox}
-                activeOpacity={0.8}
-                onPress={() => setTermsAccepted(!termsAccepted)}
-              >
-                <View style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}>
-                  {termsAccepted && (
-                    <MaterialIcons name="check" size={14} color="#002109" />
-                  )}
+              {/* Terms */}
+              <TouchableOpacity style={styles.termsRow} activeOpacity={0.8} onPress={() => setTermsAccepted(!termsAccepted)}>
+                <View style={[styles.checkbox, termsAccepted && styles.checkboxActive]}>
+                  {termsAccepted && <MaterialIcons name="check" size={12} color="#fff" />}
                 </View>
                 <Text style={styles.termsText}>
-                  Saya menyetujui <Text style={styles.termsLink}>Syarat & Ketentuan</Text> serta penggunaan data untuk profil atlet professional saya.
+                  Saya menyetujui <Text style={styles.termsLink}>Syarat dan Ketentuan</Text> serta penggunaan data untuk keperluan profil.
                 </Text>
               </TouchableOpacity>
-              )}
             </View>
           ) : (
-            /* ──────────────────────────────────────────────────────────────────
-               STEP 2: OLAHRAGA APA YANG KAMU SUKA? (SPORTS PREFERENCE)
-               ────────────────────────────────────────────────────────────────── */
             <View>
-              {/* Heading */}
-              <View style={styles.sectionHeadingCenter}>
-                <Text style={styles.stepEyebrow}>LANGKAH {step}/{TOTAL_STEPS}</Text>
-                <Text style={styles.headingBig}>OLAHRAGA APA YANG KAMU SUKA?</Text>
-                <Text style={styles.headingSub}>Pilih minimal 1, boleh lebih.</Text>
-              </View>
+              {/* Title */}
+              <Text style={styles.title}>Pilih Preferensi Olahraga</Text>
+              <Text style={styles.subtitle}>Pilih minimal satu jenis olahraga.</Text>
 
-              {/* Bento Chips Grid */}
-              <View style={styles.bentoGrid}>
+              {/* Sports Grid */}
+              <View style={styles.sportsGrid}>
                 {SPORTS.map((sport) => {
                   const isSelected = selectedSports.includes(sport.id);
                   return (
                     <TouchableOpacity
                       key={sport.id}
-                      style={[styles.bentoBox, isSelected && styles.bentoBoxSelected]}
+                      style={[styles.sportCard, isSelected && styles.sportCardActive]}
                       onPress={() => toggleSport(sport.id)}
-                      activeOpacity={0.85}
+                      activeOpacity={0.8}
                     >
                       <MaterialIcons
                         name={sport.icon}
-                        size={40}
-                        color={isSelected ? '#002109' : '#bccbb9'}
-                        style={styles.bentoIcon}
+                        size={28}
+                        color={isSelected ? GREEN : MUTED}
                       />
-                      <Text style={[styles.bentoLabel, isSelected && styles.bentoLabelSelected]}>
+                      <Text style={[styles.sportLabel, isSelected && styles.sportLabelActive]}>
                         {sport.label}
                       </Text>
                       {isSelected && (
-                        <View style={styles.bentoSelectedGlow} pointerEvents="none" />
+                        <View style={styles.sportCheck}>
+                          <MaterialIcons name="check" size={10} color="#fff" />
+                        </View>
                       )}
                     </TouchableOpacity>
                   );
                 })}
               </View>
 
-              {/* Lower Card Preview card block */}
-              <View style={styles.previewBox}>
-                <View style={styles.previewContent}>
-                  <View style={styles.previewAvatarBorder}>
-                    <Image source={{ uri: avatarUrl }} style={styles.previewAvatarImg} />
-                  </View>
-                  <View style={styles.previewInfo}>
-                    <Text style={styles.previewTitle}>KARTU PEMAIN</Text>
-                    <Text style={styles.previewSubtitle}>Hampir siap untuk bertanding!</Text>
-                  </View>
+              {/* Preview Card */}
+              <View style={styles.previewCard}>
+                <Image source={{ uri: avatarUrl }} style={styles.previewAvatar} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.previewName}>{username || 'username'}</Text>
+                  <Text style={styles.previewSub}>Profil Anda hampir selesai disiapkan.</Text>
                 </View>
+                <MaterialIcons name="sports" size={24} color={GREEN} />
               </View>
             </View>
           )}
 
-          {/* submit error banner */}
+          {/* Error */}
           {submitError && (
             <View style={styles.errorBox}>
-              <MaterialIcons name="error-outline" size={16} color="#ffb4ab" />
+              <MaterialIcons name="error-outline" size={16} color="#f43f5e" />
               <Text style={styles.errorText}>{submitError}</Text>
             </View>
           )}
 
-          {/* Spacer block */}
-          <View style={{ height: 120 }} />
+          <View style={{ height: 100 }} />
         </Animated.View>
       </ScrollView>
 
-      {/* ── Persistent Bottom CTA ── */}
+      {/* Bottom CTA */}
       <View style={styles.footer}>
-        <Animated.View style={{ opacity: fadeAnim, width: '100%' }}>
-          {step < 4 ? (
-            <TouchableOpacity
-              style={[styles.stampButton, !canGoNext && styles.stampButtonDisabled]}
-              onPress={handleNextStep}
-              disabled={!canGoNext}
-              activeOpacity={0.85}
-            >
-              <Text style={[styles.ctaText, !canGoNext && styles.ctaTextDisabled]}>
-                Lanjut
+        <TouchableOpacity
+          style={[styles.ctaBtn, (!canGoNext && !canSubmit) && styles.ctaBtnDisabled]}
+          onPress={step === 1 ? handleNextStep : handleSubmit}
+          disabled={step === 1 ? !canGoNext : !canSubmit}
+          activeOpacity={0.8}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Text style={styles.ctaText}>
+                {step === 1 ? 'Lanjutkan' : 'Simpan Profil'}
               </Text>
               <MaterialIcons
-                name="arrow-forward"
-                size={22}
-                color={canGoNext ? '#002109' : '#3d4a3d'}
-                style={{ marginLeft: 6 }}
+                name={step === 1 ? 'arrow-forward' : 'rocket-launch'}
+                size={20}
+                color="#fff"
+                style={{ marginLeft: 8 }}
               />
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={[styles.stampButton, !canSubmit && styles.stampButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={!canSubmit}
-              activeOpacity={0.85}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#002109" />
-              ) : (
-                <View style={styles.ctaContent}>
-                  <Text style={[styles.ctaText, !canSubmit && styles.ctaTextDisabled]}>
-                    Aktifkan Kartu
-                  </Text>
-                  <MaterialIcons
-                    name="rocket-launch"
-                    size={22}
-                    color={canSubmit ? '#002109' : '#3d4a3d'}
-                    style={{ marginLeft: 8 }}
-                  />
-                </View>
-              )}
-            </TouchableOpacity>
+            </>
           )}
-        </Animated.View>
+        </TouchableOpacity>
       </View>
 
-
-      <Modal
-        visible={isProvinceModalOpen}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setIsProvinceModalOpen(false)}
-      >
-        <View style={styles.modalBackdropHorizontal}>
+      {/* Province Modal */}
+      <Modal visible={isProvinceModalOpen} transparent animationType="slide" onRequestClose={() => setIsProvinceModalOpen(false)}>
+        <View style={styles.modalOverlay}>
           <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={() => setIsProvinceModalOpen(false)} />
-          <View style={styles.modalContainerRegion}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>PILIH PROVINSI</Text>
-              <TouchableOpacity onPress={() => setIsProvinceModalOpen(false)}>
-                <MaterialIcons name="close" size={24} color="#e5e2e1" />
-              </TouchableOpacity>
-            </View>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Pilih Provinsi</Text>
             <View style={styles.modalDivider} />
-
-            <ScrollView style={styles.regionList} showsVerticalScrollIndicator={true}>
+            <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator>
               {PROVINCES.map((prov) => (
                 <TouchableOpacity
                   key={prov}
-                  style={[styles.regionItem, selectedProvince === prov && styles.regionItemSelected]}
+                  style={[styles.modalItem, selectedProvince === prov && styles.modalItemActive]}
                   onPress={() => {
                     setSelectedProvince(prov);
-                    // Default to first city of selected province
                     setRegion(CITIES_BY_PROVINCE[prov][0]);
                     setIsProvinceModalOpen(false);
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.regionItemText, selectedProvince === prov && styles.regionItemTextSelected]}>
-                    {prov}
-                  </Text>
-                  {selectedProvince === prov && (
-                    <MaterialIcons name="check" size={18} color="#4be277" />
-                  )}
+                  <Text style={[styles.modalItemText, selectedProvince === prov && styles.modalItemTextActive]}>{prov}</Text>
+                  {selectedProvince === prov && <MaterialIcons name="check" size={18} color={GREEN} />}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -714,60 +507,39 @@ export default function OnboardingScreen() {
         </View>
       </Modal>
 
-      {/* ── Region Selection Modal (Cities) ── */}
-      <Modal
-        visible={isRegionModalOpen}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setIsRegionModalOpen(false)}
-      >
-        <View style={styles.modalBackdropHorizontal}>
+      {/* City Modal */}
+      <Modal visible={isRegionModalOpen} transparent animationType="slide" onRequestClose={() => setIsRegionModalOpen(false)}>
+        <View style={styles.modalOverlay}>
           <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={() => setIsRegionModalOpen(false)} />
-          <View style={[styles.modalContainerRegion, { maxHeight: '80%' }]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>PILIH KABUPATEN / KOTA</Text>
-              <TouchableOpacity onPress={() => setIsRegionModalOpen(false)}>
-                <MaterialIcons name="close" size={24} color="#e5e2e1" />
-              </TouchableOpacity>
-            </View>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Pilih Kota atau Kabupaten</Text>
             <View style={styles.modalDivider} />
-
-            {/* Search Input Box */}
-            <View style={styles.regionSearchWrapper}>
-              <MaterialIcons name="search" size={20} color="#869585" style={{ marginRight: 8 }} />
+            <View style={styles.searchRow}>
+              <MaterialIcons name="search" size={18} color={MUTED} />
               <TextInput
-                style={styles.regionSearchInput}
-                placeholder="Cari kabupaten/kota..."
-                placeholderTextColor="rgba(255,255,255,0.3)"
+                style={styles.searchInput}
+                placeholder="Cari..."
+                placeholderTextColor={MUTED}
                 value={regionSearch}
                 onChangeText={setRegionSearch}
                 autoCorrect={false}
               />
             </View>
-
-            <ScrollView style={styles.regionList} showsVerticalScrollIndicator={true}>
-              {filteredKabupatens.map((item) => (
+            <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator>
+              {filteredCities.map((item) => (
                 <TouchableOpacity
                   key={item}
-                  style={[styles.regionItem, region === item && styles.regionItemSelected]}
-                  onPress={() => {
-                    setRegion(item);
-                    setIsRegionModalOpen(false);
-                  }}
+                  style={[styles.modalItem, region === item && styles.modalItemActive]}
+                  onPress={() => { setRegion(item); setIsRegionModalOpen(false); }}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.regionItemText, region === item && styles.regionItemTextSelected]}>
-                    {item.replace(', ID', '')}
-                  </Text>
-                  {region === item && (
-                    <MaterialIcons name="check" size={18} color="#4be277" />
-                  )}
+                  <Text style={[styles.modalItemText, region === item && styles.modalItemTextActive]}>{item.replace(', ID', '')}</Text>
+                  {region === item && <MaterialIcons name="check" size={18} color={GREEN} />}
                 </TouchableOpacity>
               ))}
-              {filteredKabupatens.length === 0 && (
-                <View style={styles.emptyRegion}>
-                  <Text style={styles.emptyRegionText}>Kabupaten tidak ditemukan</Text>
-                </View>
+              {filteredCities.length === 0 && (
+                <Text style={styles.emptyText}>Kota tidak ditemukan</Text>
               )}
             </ScrollView>
           </View>
@@ -777,470 +549,167 @@ export default function OnboardingScreen() {
   );
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Premium Glassmorphism Styles (Colors: #4be277 Green, #131313 Dark Background)
-// ────────────────────────────────────────────────────────────────────────────
-const GREEN = '#4be277';
-const DARK  = '#131313';
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: DARK },
+  pointerEventsNone: { pointerEvents: 'none' },
 
-  // Glowing Top Progress Line
-  progressBarWrapper: {
-    position: 'absolute', top: 0, left: 0, right: 0, height: 4,
-    backgroundColor: '#201f1f', zIndex: 60,
-  },
-  progressBar: {
-    height: '100%', backgroundColor: GREEN,
-    shadowColor: GREEN, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.6, shadowRadius: 8,
-  },
+  // Progress
+  progressBg: { position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: '#1e2e23', zIndex: 60 },
+  progressFill: { height: '100%', backgroundColor: GREEN, shadowColor: GREEN, shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
 
-  // Atmospheric glows
-  glowTopLeft: {
-    position: 'absolute', top: '-15%', left: '-15%',
-    width: '65%', height: '55%',
-    backgroundColor: GREEN, borderRadius: 9999,
-    opacity: 0.12,
-  },
-  glowBottomRight: {
-    position: 'absolute', bottom: '-15%', right: '-15%',
-    width: '60%', height: '60%',
-    backgroundColor: '#22c55e', borderRadius: 9999,
-    opacity: 0.12,
-  },
-  radialOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(19,19,19,0.85)',
-  },
+  // Background glows
+  glow1: { position: 'absolute', top: '-15%', left: '-20%', width: '60%', height: '40%', backgroundColor: GREEN, borderRadius: 999, opacity: 0.06 },
+  glow2: { position: 'absolute', bottom: '-15%', right: '-20%', width: '60%', height: '40%', backgroundColor: '#86efac', borderRadius: 999, opacity: 0.04 },
 
-  // Header styles
-  fixedHeader: {
-    position: 'absolute', top: 4, left: 0, right: 0, zIndex: 50,
-    height: 48,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  // Header
+  header: {
+    position: 'absolute', top: 8, left: 0, right: 0, zIndex: 50,
+    height: 50, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16,
-    backgroundColor: 'rgba(19,19,19,0.4)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerLeftDisabled: { opacity: 0.35 },
-  headerTitle: {
-    fontSize: 16, fontWeight: '800', color: GREEN, letterSpacing: -0.5,
-    fontStyle: 'italic', textTransform: 'uppercase'
-  },
-  headerGoal: {
-    fontSize: 22, fontWeight: '900', color: GREEN, fontStyle: 'italic',
-    letterSpacing: -1, opacity: 0.25,
-  },
+  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center' },
+  headerCenter: { flex: 1, alignItems: 'center' },
+  stepLabel: { fontSize: 11, fontWeight: '700', color: MUTED, letterSpacing: 1 },
+  closeBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center' },
 
-  // Scroll View Container
-  scrollContent: { paddingTop: 72, paddingHorizontal: 16, paddingBottom: 100 },
+  // Scroll
+  scroll: { paddingTop: 72, paddingHorizontal: 20, paddingBottom: 100 },
 
-  // Heading styles
-  sectionHeading: { marginBottom: 12 },
-  stepEyebrow: { fontSize: 10, color: GREEN, fontWeight: '900', letterSpacing: 1.6, marginBottom: 4 },
-  headingBig: { fontSize: 18, fontWeight: '900', color: '#e5e2e1', textTransform: 'uppercase', letterSpacing: -0.5 },
-  headingSub: { fontSize: 12, color: '#bccbb9', marginTop: 2, fontWeight: '500', opacity: 0.8 },
+  // Typography
+  title: { fontSize: 24, fontWeight: '900', color: '#fff', marginBottom: 6 },
+  subtitle: { fontSize: 14, color: MUTED, marginBottom: 28, lineHeight: 20 },
 
-  sectionHeadingCenter: { marginBottom: 14, alignItems: 'center' },
-
-  // Player Card Frame matching cabor look
+  // Card
   card: {
-    backgroundColor: 'rgba(30,30,30,0.65)',
-    borderRadius: 18,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5, shadowRadius: 16, elevation: 8,
-    marginBottom: 12,
+    backgroundColor: CARD, borderRadius: 20, borderWidth: 1, borderColor: CARD_BORDER,
+    padding: 20, marginBottom: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3, shadowRadius: 20, elevation: 10,
   },
-  cardPadding: { padding: 14 },
-  cardGradientOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.01)',
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  cardHeaderLeft: { flex: 1 },
+  cardTag: { fontSize: 10, fontWeight: '800', color: GREEN, letterSpacing: 1, marginBottom: 4 },
+  cardTitle: { fontSize: 20, fontWeight: '900', color: '#fff' },
+  cardIcon: {
+    width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(75,226,119,0.12)',
+    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(75,226,119,0.2)',
   },
-  scanline: {
-    position: 'absolute', left: 0, right: 0, height: 2,
-    backgroundColor: 'rgba(75,226,119,0.25)',
-    zIndex: 2,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
-  },
-  cardLabel: {
-    fontSize: 11, fontWeight: '700', color: GREEN,
-    letterSpacing: 2, textTransform: 'uppercase',
-  },
-  cardTitle: {
-    fontSize: 20, fontWeight: '900', color: '#fff', opacity: 0.9,
-    letterSpacing: 0.5,
-  },
-  qrIcon: {
-    width: 44, height: 44, borderRadius: 10,
-    backgroundColor: '#353534',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  cardDivider: {
-    height: 1, backgroundColor: 'rgba(255,255,255,0.08)',
-    marginVertical: 10,
+  cardDivider: { height: 1, backgroundColor: CARD_BORDER, marginVertical: 18 },
+
+  // Avatar
+  avatarCenter: { alignItems: 'center', marginBottom: 28 },
+  avatarRing: { width: 96, height: 96, borderRadius: 28, borderWidth: 2.5, borderColor: GREEN, overflow: 'hidden' },
+  avatar: { width: '100%', height: '100%', borderRadius: 26 },
+  cameraBadge: {
+    position: 'absolute', bottom: 2, right: 2,
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: GREEN, justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: DARK,
   },
 
-  // Card Content inputs
-  topFormRow: { flexDirection: 'row', gap: 12, alignItems: 'center', marginBottom: 10 },
-  avatarWrapper: { width: 76, height: 76, position: 'relative' },
-  avatarPulseBorder: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 12,
-    borderWidth: 2, borderColor: GREEN,
+  // Labels & Inputs
+  label: { fontSize: 11, fontWeight: '800', color: MUTED, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 },
+  inputRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: INPUT_BG, borderRadius: 14, borderWidth: 1, borderColor: CARD_BORDER,
+    paddingHorizontal: 14, height: 50,
   },
-  avatarImg: { width: 76, height: 76, borderRadius: 12 },
-  lvlBadge: {
-    position: 'absolute', bottom: -6, right: -6,
-    backgroundColor: GREEN, borderRadius: 6,
-    paddingHorizontal: 6, paddingVertical: 2,
-  },
-  lvlText: { fontSize: 9, fontWeight: '900', color: '#002109', letterSpacing: 0.5 },
-  barcodeContainer: { flex: 1, height: 100, justifyContent: 'center', alignItems: 'center'},
-  
-  // Age Box style
-  ageContainer: { flex: 1, justifyContent: 'center' },
-  ageInput: {
-    backgroundColor: '#201f1f',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    height: 48,
-    fontSize: 22,
-    fontWeight: '900',
-    color: GREEN,
-    textAlign: 'center',
-    marginTop: 4,
-  },
+  input: { flex: 1, fontSize: 15, fontWeight: '700', color: '#fff', padding: 0 },
+  diceBtn: { padding: 4 },
 
-  // Input styling
-  cardInputLabel: { fontSize: 10, color: '#869585', fontWeight: '800', letterSpacing: 1.0, textTransform: 'uppercase' },
-  
-  usernameCardSection: { marginTop: 2 },
-  usernameInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-    height: 38,
-  },
-  usernameInput: {
-    color: '#fff', fontSize: 15, fontWeight: '900',
-    textTransform: 'uppercase', letterSpacing: 0.5,
-    flex: 1,
-    height: '100%',
-    padding: 0,
-  },
-  randomButton: {
-    padding: 8,
-  },
-  usernameUnderline: {
-    height: 2, backgroundColor: 'rgba(255,255,255,0.15)',
-    marginBottom: 6, borderRadius: 1,
-  },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
-  statusText: { fontSize: 11, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase' },
+  // Status
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
+  statusText: { fontSize: 11, fontWeight: '600', letterSpacing: 0.5 },
 
-  // Location dropdown elements
-  locationFieldsContainer: { gap: 8 },
-  dropdownTrigger: {
-    backgroundColor: '#201f1f',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  // Dropdown
+  dropdown: {
+    backgroundColor: INPUT_BG, borderRadius: 14, borderWidth: 1, borderColor: CARD_BORDER,
+    paddingHorizontal: 14, paddingVertical: 12, marginBottom: 10,
   },
-  dropdownContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  dropdownValueText: { fontSize: 14, color: '#fff', fontWeight: '700' },
+  dropdownLabel: { fontSize: 10, fontWeight: '700', color: MUTED, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 },
+  dropdownRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  dropdownValue: { fontSize: 14, fontWeight: '700', color: '#fff' },
 
-  // Terms and conditions
-  termsBox: {
-    flexDirection: 'row', gap: 10, alignItems: 'flex-start',
-    backgroundColor: 'rgba(14,14,14,0.4)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 12, padding: 10, marginBottom: 8,
-  },
+  // Terms
+  termsRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginTop: 8 },
   checkbox: {
-    width: 18, height: 18, borderRadius: 5,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center', alignItems: 'center',
-    marginTop: 2,
+    width: 20, height: 20, borderRadius: 6, borderWidth: 1.5, borderColor: CARD_BORDER,
+    justifyContent: 'center', alignItems: 'center', marginTop: 1,
   },
-  checkboxChecked: {
-    backgroundColor: GREEN,
-    borderColor: GREEN,
-  },
-  termsText: { fontSize: 11, color: '#bccbb9', flex: 1, lineHeight: 15 },
-  termsLink: { color: GREEN, textDecorationLine: 'underline' },
+  checkboxActive: { backgroundColor: GREEN, borderColor: GREEN },
+  termsText: { fontSize: 12, color: '#9aaba0', flex: 1, lineHeight: 18 },
+  termsLink: { color: GREEN, fontWeight: '700' },
 
-  // STEP 2 styles (Hobi Olahraga)
-  bentoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 14,
-  },
-  bentoBox: {
-    width: '48%',
-    height: 88,
-    backgroundColor: 'rgba(30, 30, 30, 0.5)',
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 8,
+  // Sports Grid
+  sportsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
+  sportCard: {
+    width: '48%', flexGrow: 1, height: 88,
+    backgroundColor: CARD, borderRadius: 16, borderWidth: 1, borderColor: CARD_BORDER,
+    justifyContent: 'center', alignItems: 'center', gap: 8,
     position: 'relative',
-    overflow: 'hidden',
   },
-  bentoBoxSelected: {
-    backgroundColor: GREEN,
-    borderColor: GREEN,
-  },
-  bentoIcon: {
-    marginBottom: 6,
-  },
-  bentoLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#bccbb9',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  bentoLabelSelected: {
-    color: '#002109',
-  },
-  bentoSelectedGlow: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 18,
+  sportCardActive: { backgroundColor: 'rgba(75,226,119,0.1)', borderColor: GREEN },
+  sportLabel: { fontSize: 11, fontWeight: '700', color: MUTED, letterSpacing: 0.3 },
+  sportLabelActive: { color: GREEN },
+  sportCheck: {
+    position: 'absolute', top: 8, right: 8,
+    width: 18, height: 18, borderRadius: 9,
+    backgroundColor: GREEN, justifyContent: 'center', alignItems: 'center',
   },
 
-  // Sport card preview at the bottom of Stage 2
-  previewBox: {
-    backgroundColor: 'rgba(30,30,30,0.5)',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-    marginTop: 6,
+  // Preview Card
+  previewCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: CARD, borderRadius: 14, borderWidth: 1, borderColor: CARD_BORDER,
+    padding: 14, marginTop: 4,
   },
-  previewContent: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  previewAvatarBorder: {
-    width: 44, height: 44, borderRadius: 22,
-    borderWidth: 2, borderColor: GREEN, overflow: 'hidden',
-  },
-  previewAvatarImg: { width: '100%', height: '100%' },
-  previewInfo: { flex: 1 },
-  previewTitle: { fontSize: 13, color: '#fff', fontWeight: '900' },
-  previewSubtitle: { fontSize: 11, color: '#bccbb9', opacity: 0.8 },
+  previewAvatar: { width: 44, height: 44, borderRadius: 12 },
+  previewName: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  previewSub: { fontSize: 12, color: MUTED, marginTop: 2 },
 
-  // Submit error
+  // Error
   errorBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: 'rgba(58,13,16,0.85)',
-    borderLeftWidth: 3, borderLeftColor: '#ffb4ab',
-    borderRadius: 10, padding: 14, marginVertical: 10,
+    backgroundColor: 'rgba(244,63,94,0.1)', borderRadius: 10, borderWidth: 1,
+    borderColor: 'rgba(244,63,94,0.2)', padding: 12, marginTop: 12,
   },
-  errorText: { color: '#ffb4ab', fontSize: 13, flex: 1 },
+  errorText: { color: '#f43f5e', fontSize: 13, flex: 1 },
 
-  // Bottom Fixed CTA Bar
+  // Footer
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 20, paddingBottom: Platform.OS === 'ios' ? 32 : 18,
-    paddingTop: 10,
-    backgroundColor: 'transparent',
+    paddingHorizontal: 20, paddingBottom: Platform.OS === 'ios' ? 32 : 18, paddingTop: 12,
+    backgroundColor: 'rgba(19,19,19,0.92)',
   },
-  stampButton: {
-    flexDirection: 'row',
-    height: 50, borderRadius: 14,
-    backgroundColor: GREEN,
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: GREEN, shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4, shadowRadius: 18, elevation: 8,
+  ctaBtn: {
+    flexDirection: 'row', height: 54, borderRadius: 16,
+    backgroundColor: GREEN, justifyContent: 'center', alignItems: 'center',
+    shadowColor: GREEN, shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8,
   },
-  stampButtonDisabled: {
-    backgroundColor: '#1d3da3', // faint dim color
-    opacity: 0.4,
-    shadowOpacity: 0, elevation: 0,
-  },
-  ctaContent: { flexDirection: 'row', alignItems: 'center' },
-  ctaText: {
-    fontSize: 18, fontWeight: '900', color: '#002109',
-    textTransform: 'uppercase', letterSpacing: 1,
-  },
-  ctaTextDisabled: { color: '#3d4a3d' },
+  ctaBtnDisabled: { backgroundColor: '#2a3d30', shadowOpacity: 0, elevation: 0 },
+  ctaText: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: 0.3 },
 
-  // Modals Overlay Styles
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
+  // Modals
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalSheet: {
+    backgroundColor: '#1a2e1f', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: 20, maxHeight: '70%',
   },
-  modalBackdropHorizontal: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    justifyContent: 'flex-end',
+  modalHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#2d4433', alignSelf: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 17, fontWeight: '800', color: '#fff' },
+  modalDivider: { height: 1, backgroundColor: CARD_BORDER, marginVertical: 14 },
+  modalItem: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: 14, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: '#1e2e23',
   },
-  modalContainer: {
-    backgroundColor: 'rgba(30, 30, 30, 0.98)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 22,
-    padding: 20,
-    width: '100%',
-    maxWidth: 380,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 10,
+  modalItemActive: { backgroundColor: 'rgba(75,226,119,0.08)', borderRadius: 10 },
+  modalItemText: { fontSize: 14, color: '#b8c8bb', fontWeight: '500' },
+  modalItemTextActive: { color: GREEN, fontWeight: '700' },
+  searchRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: INPUT_BG, borderRadius: 12, borderWidth: 1, borderColor: CARD_BORDER,
+    paddingHorizontal: 12, height: 44, marginBottom: 14,
   },
-  modalContainerRegion: {
-    backgroundColor: 'rgba(30, 30, 30, 0.98)',
-    borderWidth: 1,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderColor: 'rgba(255,255,255,0.1)',
-    padding: 22,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 15,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: GREEN,
-    letterSpacing: -0.5,
-    fontStyle: 'italic',
-  },
-  modalSub: {
-    fontSize: 13,
-    color: '#bccbb9',
-    marginBottom: 16,
-    opacity: 0.8,
-  },
-  modalDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginVertical: 12,
-  },
-  avatarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    justifyContent: 'center',
-  },
-  avatarGridItem: {
-    width: 86,
-    height: 86,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  avatarGridItemSelected: {
-    borderColor: GREEN,
-  },
-  avatarGridImg: {
-    width: '100%',
-    height: '100%',
-  },
-  avatarGridItemBadge: {
-    position: 'absolute',
-    bottom: 3,
-    right: 3,
-    backgroundColor: GREEN,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarEditBadge: {
-    position: 'absolute',
-    bottom: -3,
-    right: -3,
-    backgroundColor: GREEN,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: DARK,
-  },
-  regionSearchWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    marginBottom: 14,
-  },
-  regionSearchInput: {
-    fontSize: 14,
-    color: '#fff',
-    flex: 1,
-    padding: 0,
-  },
-  regionList: {
-    maxHeight: 260,
-  },
-  regionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.04)',
-  },
-  regionItemSelected: {
-    backgroundColor: 'rgba(75, 226, 119, 0.08)',
-    borderRadius: 8,
-  },
-  regionItemText: {
-    fontSize: 14,
-    color: '#bccbb9',
-    fontWeight: '500',
-  },
-  regionItemTextSelected: {
-    color: GREEN,
-    fontWeight: '800',
-  },
-  emptyRegion: {
-    alignItems: 'center',
-    paddingVertical: 28,
-  },
-  emptyRegionText: {
-    fontSize: 13,
-    color: '#869585',
-  },
-}) as any;
+  searchInput: { flex: 1, fontSize: 14, color: '#fff', padding: 0 },
+  emptyText: { fontSize: 13, color: MUTED, textAlign: 'center', paddingVertical: 24 },
+});
