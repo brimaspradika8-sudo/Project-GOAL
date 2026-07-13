@@ -1,8 +1,6 @@
 import 'react-native-url-polyfill/auto'
 import { Platform } from 'react-native'
 import { createClient } from '@supabase/supabase-js'
-
-// Menyediakan storage khusus Mobile saja, untuk Web biarkan Supabase gunakan default (localStorage)
 let mobileStorage = undefined;
 if (Platform.OS !== 'web') {
   mobileStorage = require('@react-native-async-storage/async-storage').default;
@@ -16,7 +14,7 @@ export const supabase = createClient(
       ...(mobileStorage ? { storage: mobileStorage } : {}),
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: Platform.OS === 'web',
+      detectSessionInUrl: false,
     },
   }
 )

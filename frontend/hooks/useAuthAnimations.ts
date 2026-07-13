@@ -11,7 +11,7 @@ export function useAuthAnimations() {
     fadeAnim.setValue(0);
     slideAnim.setValue(100);
 
-    Animated.parallel([
+    const fadeAnimRef = Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 1000,
@@ -24,9 +24,9 @@ export function useAuthAnimations() {
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
-    ]).start();
+    ]);
 
-    Animated.loop(
+    const pulseAnimRef = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.15,
@@ -41,9 +41,9 @@ export function useAuthAnimations() {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
 
-    Animated.loop(
+    const bgAnimRef = Animated.loop(
       Animated.sequence([
         Animated.timing(bgScaleAnim, {
           toValue: 1.3,
@@ -58,7 +58,17 @@ export function useAuthAnimations() {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+
+    fadeAnimRef.start();
+    pulseAnimRef.start();
+    bgAnimRef.start();
+
+    return () => {
+      fadeAnimRef.stop();
+      pulseAnimRef.stop();
+      bgAnimRef.stop();
+    };
   }, []);
 
   return { fadeAnim, slideAnim, pulseAnim, bgScaleAnim };
