@@ -107,6 +107,11 @@ export default function OnboardingScreen() {
   const slideAnim = useRef(new Animated.Value(40)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const diceRotateAnim = useRef(new Animated.Value(0)).current;
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => { mountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     fadeAnim.setValue(0);
@@ -159,11 +164,11 @@ export default function OnboardingScreen() {
     if (!canSubmit) return;
     setIsSubmitting(true);
     setSubmitError(null);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
       const res = await fetch(`${API_BASE_URL}/me/onboarding`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -183,9 +188,10 @@ export default function OnboardingScreen() {
       useProfileStore.setState({ profile, loading: false });
       router.replace('/(tabs)/profile');
     } catch (e) {
-      setSubmitError('Gagal terhubung ke server. Coba lagi.');
+      if (mountedRef.current) setSubmitError('Gagal terhubung ke server. Silakan coba lagi.');
     } finally {
-      setIsSubmitting(false);
+      clearTimeout(timeout);
+      if (mountedRef.current) setIsSubmitting(false);
     }
   }
 
@@ -193,7 +199,7 @@ export default function OnboardingScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Izin Diperlukan', 'Izinkan akses galeri di pengaturan untuk memilih foto profil.');
+        Alert.alert('Izin Diperlukan', 'Silakan izinkan akses galeri di pengaturan untuk memilih foto profil.');
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -206,7 +212,7 @@ export default function OnboardingScreen() {
         setAvatarUrl(result.assets[0].uri);
       }
     } catch (e) {
-      Alert.alert('Error', 'Gagal membuka galeri. Coba lagi.');
+      Alert.alert('Kesalahan', 'Gagal membuka galeri. Silakan coba lagi.');
     }
   };
 
@@ -555,7 +561,7 @@ const styles = StyleSheet.create({
 
   // Progress
   progressBg: { position: 'absolute', top: 0, left: 0, right: 0, height: 3, backgroundColor: '#1e2e23', zIndex: 60 },
-  progressFill: { height: '100%', backgroundColor: GREEN, shadowColor: GREEN, shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
+  progressFill: { height: '100%', backgroundColor: GREEN, boxShadow: `0px 0px 8px ${GREEN}66` },
 
   // Background glows
   glow1: { position: 'absolute', top: '-15%', left: '-20%', width: '60%', height: '40%', backgroundColor: GREEN, borderRadius: 999, opacity: 0.06 },
@@ -583,8 +589,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: CARD, borderRadius: 20, borderWidth: 1, borderColor: CARD_BORDER,
     padding: 20, marginBottom: 16,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3, shadowRadius: 20, elevation: 10,
+    boxShadow: '0px 8px 20px rgba(0, 0, 0, 0.3)', elevation: 10,
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   cardHeaderLeft: { flex: 1 },
@@ -684,9 +689,9 @@ const styles = StyleSheet.create({
   ctaBtn: {
     flexDirection: 'row', height: 54, borderRadius: 16,
     backgroundColor: GREEN, justifyContent: 'center', alignItems: 'center',
-    shadowColor: GREEN, shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8,
+    boxShadow: `0px 4px 12px ${GREEN}4D`, elevation: 8,
   },
-  ctaBtnDisabled: { backgroundColor: '#2a3d30', shadowOpacity: 0, elevation: 0 },
+  ctaBtnDisabled: { backgroundColor: '#2a3d30', boxShadow: 'none', elevation: 0 },
   ctaText: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: 0.3 },
 
   // Modals

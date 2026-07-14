@@ -9,6 +9,11 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
   const debouncedUsername = useDebouncedValue(rawUsername, 500);
   const [status, setStatus] = useState<UsernameStatus>('idle');
   const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => { mountedRef.current = false; };
+  }, []);
 
   useEffect(() => {
     if (rawUsername.length > 0 && rawUsername.length < 3) {
@@ -19,7 +24,6 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
       setStatus('idle');
       return;
     }
-    setStatus('checking');
   }, [rawUsername]);
 
   useEffect(() => {
@@ -30,11 +34,12 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
     }
     const controller = new AbortController();
     abortRef.current = controller;
-    let timeout: ReturnType<typeof setTimeout>;
+
+    const timeout = setTimeout(() => controller.abort(), 5000);
 
     const checkUsername = async () => {
+      if (!mountedRef.current) return;
       setStatus('checking');
-      timeout = setTimeout(() => controller.abort(), 5000);
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
@@ -50,9 +55,11 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
         if (!res.ok) throw new Error('Network error');
 
         const json = await res.json();
-        setStatus(json.available ? 'available' : 'taken');
+        if (mountedRef.current) {
+          setStatus(json.available ? 'available' : 'taken');
+        }
       } catch (e: any) {
-        if (e?.name !== 'AbortError') {
+        if (e?.name !== 'AbortError' && mountedRef.current) {
           setStatus('error');
         }
       } finally {

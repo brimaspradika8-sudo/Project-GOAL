@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Http;
 
 class SupabaseAuth
 {
+    private const ALLOWED_ALGORITHMS = ['HS256', 'RS256', 'ES256'];
+
     public function handle(Request $request, Closure $next): Response
     {
         $token = $request->bearerToken();
@@ -31,8 +33,8 @@ class SupabaseAuth
         $alg = $header['alg'] ?? null;
         $kid = $header['kid'] ?? null;
 
-        if (!$alg) {
-            return response()->json(['error' => 'Missing algorithm in token header.'], 401);
+        if (!$alg || !in_array($alg, self::ALLOWED_ALGORITHMS, true)) {
+            return response()->json(['error' => 'Unsupported or missing algorithm in token header.'], 401);
         }
 
         try {
@@ -47,6 +49,10 @@ class SupabaseAuth
                 return response()->json(['error' => 'Invalid token payload.'], 401);
             }
 
+            if (isset($decoded->exp) && $decoded->exp < time()) {
+                return response()->json(['error' => 'Token has expired.'], 401);
+            }
+
             $request->attributes->set('auth_user', $decoded);
             $request->attributes->set('auth_user_id', $userId);
             $request->attributes->set('user_id', $userId);
@@ -55,7 +61,6 @@ class SupabaseAuth
             Log::warning('JWT verification failed', ['alg' => $alg, 'kid' => $kid, 'error' => $e->getMessage()]);
             return response()->json([
                 'error' => 'Invalid or expired token.',
-                'message' => config('app.debug') ? $e->getMessage() : 'Unauthorized'
             ], 401);
         }
 
@@ -80,9 +85,13 @@ class SupabaseAuth
         if ($kid && isset($keys[$kid])) {
             $key = $keys[$kid];
         } else {
-            foreach ($keys as $k) {
-                $key = $k;
-                break;
+            if ($kid) {
+                Cache::pull('supabase_jwks');
+                $jwks = $this->fetchJwks();
+                $keys = JWK::parseKeySet($jwks, $alg);
+                if ($kid && isset($keys[$kid])) {
+                    $key = $keys[$kid];
+                }
             }
         }
 

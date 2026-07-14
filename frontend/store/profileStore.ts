@@ -18,11 +18,21 @@ interface ProfileState {
   clearProfile: () => void;
 }
 
+let activeController: AbortController | null = null;
+let activeTimeout: ReturnType<typeof setTimeout> | null = null;
+
 export const useProfileStore = create<ProfileState>((set) => ({
   profile: null,
   loading: true,
 
   fetchProfile: async () => {
+    if (activeController) {
+      activeController.abort();
+    }
+    if (activeTimeout) {
+      clearTimeout(activeTimeout);
+    }
+
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
@@ -31,7 +41,9 @@ export const useProfileStore = create<ProfileState>((set) => ({
       }
 
       const controller = new AbortController();
+      activeController = controller;
       const timeout = setTimeout(() => controller.abort(), 8000);
+      activeTimeout = timeout;
 
       const res = await fetch(`${API_BASE_URL}/me`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
@@ -39,6 +51,8 @@ export const useProfileStore = create<ProfileState>((set) => ({
       });
 
       clearTimeout(timeout);
+      activeTimeout = null;
+      activeController = null;
 
       if (res.ok) {
         const data = await res.json();

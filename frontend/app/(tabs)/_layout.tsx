@@ -29,7 +29,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="matches"
         options={{
-          title: 'Matches',
+          title: 'Pertandingan',
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="sports" size={size} color={color} />
           ),

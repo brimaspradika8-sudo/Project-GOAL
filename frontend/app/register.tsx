@@ -1,15 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity,
-  ActivityIndicator, Animated, Easing, KeyboardAvoidingView,
-  Platform, ScrollView, Keyboard
+  ActivityIndicator, KeyboardAvoidingView,
+  Platform, ScrollView, Keyboard, Image
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
-import { useAuthAnimations } from '../hooks/useAuthAnimations';
+import { setRegistering } from './_layout';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -17,20 +17,17 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
 
-  const { fadeAnim, slideAnim, pulseAnim, bgScaleAnim } = useAuthAnimations();
-  const messageAnim = useRef(new Animated.Value(0)).current;
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const showMessage = (text: string, type: 'error' | 'success') => {
     setMessage({ text, type });
-    messageAnim.setValue(0);
-    Animated.timing(messageAnim, {
-      toValue: 1,
-      duration: 300,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
   };
 
   async function signUpWithEmail() {
@@ -48,11 +45,12 @@ export default function RegisterScreen() {
     }
 
     if (password.length < 6) {
-      showMessage('Password minimal 6 karakter.', 'error');
+      showMessage('Kata sandi minimal 6 karakter.', 'error');
       return;
     }
 
     setLoading(true);
+    setRegistering(true);
     try {
       const { error } = await supabase.auth.signUp({
         email: email.trim(),
@@ -63,15 +61,22 @@ export default function RegisterScreen() {
       });
 
       if (error) {
+        setRegistering(false);
         showMessage(error.message, 'error');
       } else {
+        await supabase.auth.signOut();
+        setRegistering(false);
+        setSubmitted(true);
         showMessage('Pendaftaran berhasil. Mengarahkan ke halaman masuk...', 'success');
-        setTimeout(() => router.replace('/login'), 1500);
+        setTimeout(() => {
+          if (mountedRef.current) router.replace('/login');
+        }, 1500);
       }
     } catch (err: any) {
+      setRegistering(false);
       showMessage(err?.message || 'Terjadi kesalahan sistem.', 'error');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }
 
@@ -83,9 +88,9 @@ export default function RegisterScreen() {
       <StatusBar style="light" />
 
       <View style={StyleSheet.absoluteFill}>
-        <Animated.Image
+        <Image
           source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCNgBJlBY97_QaewYW2r-DjSlc7y1DcxBuTyd2FT01aWpOMDdC6E5Ojftib57g020fqnyp0_maN4R5MEHbvA5mKvbvL62-rTz8r9ur1HeYAdQRNcHj2N8UkRNLsr6n30pKT8wvR2ALUnlrVoH30n83mprQd7LqD0c88IYJTTyGNiDVyADu8naOoqsrI2DdszdWsC6qGeg9DMNEPKErslJTkraaMEw-PLU4zYb0RM7Qzcqh4FeFxhc1IHMBcbbO-zGz4b_LtpTKBW06d' }}
-          style={[styles.bgImage, { transform: [{ scale: bgScaleAnim }] }]}
+          style={styles.bgImage}
           resizeMode="cover"
         />
         <View style={styles.overlay} />
@@ -93,19 +98,19 @@ export default function RegisterScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.responsiveWrapper}>
-          <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <Animated.View style={{ transform: [{ scale: pulseAnim }], marginBottom: 12, shadowColor: '#4be277', shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }}>
+          <View style={styles.header}>
+            <View style={styles.iconCircle}>
               <MaterialIcons name="sports-soccer" size={56} color="#4be277" />
-            </Animated.View>
+            </View>
             <Text style={styles.title}>DAFTAR</Text>
-            <Text style={styles.subtitle}>Bergabunglah dengan G.O.A.L untuk memulai.</Text>
-          </Animated.View>
+            <Text style={styles.subtitle}>Bergabunglah dengan GOAL untuk memulai.</Text>
+          </View>
 
-          <Animated.View style={[styles.glassCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <View style={styles.glassCard}>
             {message && (
-              <Animated.View style={[styles.messageBox, message.type === 'error' ? styles.messageError : styles.messageSuccess, { opacity: messageAnim, transform: [{ translateY: messageAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]}>
+              <View style={[styles.messageBox, message.type === 'error' ? styles.messageError : styles.messageSuccess]}>
                 <Text style={styles.messageText}>{message.text}</Text>
-              </Animated.View>
+              </View>
             )}
 
               <FloatingInput
@@ -116,30 +121,30 @@ export default function RegisterScreen() {
             />
 
             <FloatingInput
-              label="Email Address"
+              label="Alamat Email"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
             />
 
             <FloatingInput
-              label="Password"
+              label="Kata Sandi"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={true}
             />
 
             <FloatingInput
-              label="Verifikasi Password"
+              label="Konfirmasi Kata Sandi"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry={true}
             />
 
             <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+              style={[styles.button, (loading || submitted) && styles.buttonDisabled]}
               onPress={signUpWithEmail}
-              disabled={loading}
+              disabled={loading || submitted}
               activeOpacity={0.8}
             >
               {loading ? (
@@ -152,14 +157,14 @@ export default function RegisterScreen() {
               )}
             </TouchableOpacity>
 
-          </Animated.View>
+          </View>
 
-          <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
+          <View style={styles.footer}>
             <Text style={styles.footerText}>Sudah memiliki akun? </Text>
-            <TouchableOpacity onPress={() => router.push('/login')}>
+            <TouchableOpacity onPress={() => router.replace('/login')}>
               <Text style={styles.footerLink}>Masuk</Text>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -195,6 +200,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
+  iconCircle: {
+    marginBottom: 12,
+    boxShadow: '0px 0px 20px rgba(75, 226, 119, 0.6)',
+    elevation: 15,
+  },
   title: {
     fontSize: 48,
     fontWeight: '900',
@@ -202,9 +212,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textTransform: 'uppercase',
     letterSpacing: 2,
-    textShadowColor: 'rgba(75, 226, 119, 0.4)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 10,
+    textShadow: '0px 2px 10px rgba(75, 226, 119, 0.4)',
   },
   subtitle: {
     fontSize: 16,
@@ -219,10 +227,7 @@ const styles = StyleSheet.create({
     padding: 28,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 15 },
-    shadowOpacity: 0.5,
-    shadowRadius: 25,
+    boxShadow: '0px 15px 25px rgba(0, 0, 0, 0.5)',
     elevation: 10,
   },
   button: {
@@ -231,16 +236,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#4be277',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
+    boxShadow: '0px 6px 12px rgba(75, 226, 119, 0.4)',
     elevation: 6,
     marginTop: 8,
   },
   buttonDisabled: {
     backgroundColor: '#2a8b46',
-    shadowOpacity: 0,
+    boxShadow: 'none',
     elevation: 0,
   },
   buttonContent: {

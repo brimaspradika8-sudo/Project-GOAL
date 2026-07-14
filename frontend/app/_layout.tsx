@@ -13,6 +13,10 @@ import { supabase } from '../lib/supabase';
 import { API_BASE_URL } from '../lib/api';
 import { useProfileStore } from '../store/profileStore';
 
+let isRegistering = false;
+
+export function setRegistering(val: boolean) { isRegistering = val; }
+
 async function fetchProfile(accessToken: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 5000);
@@ -31,7 +35,7 @@ async function fetchProfile(accessToken: string) {
 }
 
 function getUrlParam(url: string, name: string) {
-  const normalizedUrl = url.replace('#', '&');
+  const normalizedUrl = url.replaceAll('#', '&');
   const match = normalizedUrl.match(new RegExp(`[?&]${name}=([^&]*)`));
   return match ? decodeURIComponent(match[1]) : null;
 }
@@ -42,35 +46,41 @@ function isRecoveryUrl(url: string): boolean {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const [showSplash, setShowSplash] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
   const [isReady, setIsReady] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('Menyiapkan arena');
+  const [loadingMessage, setLoadingMessage] = useState('Memuat...');
   const routingRef = useRef(false);
   const isRecoveryRef = useRef(false);
 
   const routeByProfile = async (accessToken: string) => {
     if (routingRef.current) return;
     routingRef.current = true;
-    setLoadingMessage('Mengecek profil pemain');
+    setLoadingMessage('Memeriksa data profil');
 
     const profile = await fetchProfile(accessToken);
     useProfileStore.setState({ profile: profile ?? undefined, loading: false });
-    router.replace('/(tabs)');
+
+    if (profile && profile.onboarding_completed === false) {
+      router.replace('/onboarding');
+    } else {
+      router.replace('/(tabs)');
+    }
+
     setTimeout(() => {
       routingRef.current = false;
-      setLoadingMessage('Menyiapkan arena');
+      setLoadingMessage('Memuat...');
     }, 250);
   };
 
   const routeToLogin = () => {
     isRecoveryRef.current = false;
     routingRef.current = true;
-    setLoadingMessage('Membuka halaman login');
+    setLoadingMessage('Mengarahkan ke halaman masuk');
     router.replace('/login');
 
     setTimeout(() => {
       routingRef.current = false;
-      setLoadingMessage('Menyiapkan arena');
+      setLoadingMessage('Memuat...');
     }, 250);
   };
 
@@ -120,7 +130,7 @@ export default function RootLayout() {
     });
 
     const initialize = async () => {
-      setLoadingMessage('Membuka sesi');
+      setLoadingMessage('Memeriksa sesi');
 
       isRecoveryRef.current = false;
 
@@ -167,6 +177,7 @@ export default function RootLayout() {
         routeToLogin();
       }
 
+      if (cancelled) return;
       setIsReady(true);
     };
 
@@ -188,6 +199,8 @@ export default function RootLayout() {
           router.replace('/reset-password');
           return;
         }
+
+        if (isRegistering) return;
 
         const isRecovery = Platform.OS === 'web' && typeof window !== 'undefined' &&
           (window.location?.href?.includes('type=recovery') || window.location?.href?.includes('recovery'));
@@ -214,7 +227,7 @@ export default function RootLayout() {
         <SplashScreen onFinish={onSplashFinish} />
       ) : (
         <>
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack screenOptions={{ headerShown: false }} initialRouteName="login">
             <Stack.Screen name="login" />
             <Stack.Screen name="register" />
             <Stack.Screen name="forgot-password" />
