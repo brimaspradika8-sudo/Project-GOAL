@@ -13,9 +13,9 @@ class ProfileController extends Controller
         return (string) $request->attributes->get('auth_user_id');
     }
 
-    private function profilePayload(?object $profile): array|object
+    private function profilePayload(Request $request, ?object $profile): object
     {
-        $authUser = request()->attributes->get('auth_user');
+        $authUser = $request->attributes->get('auth_user');
         $fullName = null;
 
         if (is_object($authUser)) {
@@ -48,6 +48,7 @@ class ProfileController extends Controller
             'full_name' => $fullName ?? ($profile->full_name ?? null),
         ]);
     }
+
     public function checkUsername(Request $request)
     {
         $username = $request->query('username', '');
@@ -56,76 +57,93 @@ class ProfileController extends Controller
             return response()->json(['available' => false, 'reason' => 'too_short']);
         }
 
+        if (strlen($username) > 20) {
+            return response()->json(['available' => false, 'reason' => 'too_long']);
+        }
+
         $exists = DB::table('profiles')
-            ->whereRaw('LOWER(username) = ?', [strtolower($username)])
+            ->whereRaw('LOWER(username) = LOWER(?)', [$username])
             ->exists();
 
         return response()->json(['available' => !$exists]);
     }
+
     public function submitOnboarding(Request $request)
     {
         $validated = $request->validate([
             'username' => [
                 'required', 'string', 'min:3', 'max:20',
                 'regex:/^[a-zA-Z0-9_]+$/',
-                'unique:profiles,username',
             ],
             'sports'     => 'required|array|min:1',
             'sports.*'   => 'string|max:100',
             'region'     => 'nullable|string|max:100',
-            'avatar_url' => 'nullable|string',
+            'avatar_url' => 'nullable|string|max:2048',
         ]);
 
         $userId = $this->authUserId($request);
-        $existing = DB::table('profiles')->where('id', $userId)->first();
+        $usernameLower = strtolower($validated['username']);
 
-        if ($existing) {
-            $updateData = [
-                'username'             => $validated['username'],
-                'region'               => $validated['region'] ?? null,
-                'avatar_url'           => $validated['avatar_url'] ?? null,
-                'onboarding_completed' => true,
-                'updated_at'           => now(),
-            ];
+        $usernameTaken = DB::table('profiles')
+            ->whereRaw('LOWER(username) = ?', [$usernameLower])
+            ->where('id', '!=', $userId)
+            ->exists();
 
-            DB::table('profiles')->where('id', $userId)->update($updateData);
-        } else {
-            DB::table('profiles')->insert([
-                'id'                   => $userId,
-                'username'             => $validated['username'],
-                'region'               => $validated['region'] ?? null,
-                'avatar_url'           => $validated['avatar_url'] ?? null,
-                'onboarding_completed' => true,
-                'role'                 => 'player',
-                'is_owner_verified'    => false,
-                'created_at'           => now(),
-                'updated_at'           => now(),
-            ]);
+        if ($usernameTaken) {
+            return response()->json([
+                'errors' => ['username' => ['Username sudah digunakan.']],
+            ], 422);
         }
 
-        // Remove any previous sport prefs, then insert fresh ones
-        DB::table('user_sport_preferences')->where('user_id', $userId)->delete();
+        DB::transaction(function () use ($userId, $validated) {
+            $existing = DB::table('profiles')->where('id', $userId)->first();
 
-        foreach ($validated['sports'] as $sport) {
-            DB::table('user_sport_preferences')->insert([
-                'id'         => Str::uuid()->toString(),
-                'user_id'    => $userId,
-                'sport_type' => strtolower($sport),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+            if ($existing) {
+                DB::table('profiles')->where('id', $userId)->update([
+                    'username'             => $validated['username'],
+                    'region'               => $validated['region'] ?? null,
+                    'avatar_url'           => $validated['avatar_url'] ?? null,
+                    'onboarding_completed' => true,
+                    'updated_at'           => now(),
+                ]);
+            } else {
+                DB::table('profiles')->insert([
+                    'id'                   => $userId,
+                    'username'             => $validated['username'],
+                    'region'               => $validated['region'] ?? null,
+                    'avatar_url'           => $validated['avatar_url'] ?? null,
+                    'onboarding_completed' => true,
+                    'role'                 => 'player',
+                    'is_owner_verified'    => false,
+                    'created_at'           => now(),
+                    'updated_at'           => now(),
+                ]);
+            }
+
+            DB::table('user_sport_preferences')->where('user_id', $userId)->delete();
+
+            foreach ($validated['sports'] as $sport) {
+                DB::table('user_sport_preferences')->insert([
+                    'id'         => Str::uuid()->toString(),
+                    'user_id'    => $userId,
+                    'sport_type' => strtolower($sport),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        });
 
         $profile = DB::table('profiles')->where('id', $userId)->first();
 
-        return response()->json($this->profilePayload($profile));
+        return response()->json($this->profilePayload($request, $profile));
     }
+
     public function me(Request $request)
     {
         $userId = $this->authUserId($request);
 
         $profile = DB::table('profiles')->where('id', $userId)->first();
 
-        return response()->json($this->profilePayload($profile));
+        return response()->json($this->profilePayload($request, $profile));
     }
 }

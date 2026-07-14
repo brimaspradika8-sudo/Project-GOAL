@@ -28,17 +28,16 @@ const SPORT_ICONS: Record<string, string> = {
 
 export default function ProfileScreen() {
   const { profile, clearProfile } = useProfileStore();
-  const [fullName, setFullName] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
     const loadName = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       const name = user?.user_metadata?.full_name;
-      if (name) setFullName(name);
+      if (name) setDisplayName(name);
     };
     loadName();
-
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 400,
@@ -49,7 +48,7 @@ export default function ProfileScreen() {
 
   const handleSignOut = () => {
     if (Platform.OS === 'web') {
-      if (window.confirm('Apakah Anda yakin ingin keluar akun?')) {
+      if (window.confirm('Apakah Anda yakin ingin keluar dari akun?')) {
         try {
           supabase.auth.signOut();
           clearProfile();
@@ -59,7 +58,7 @@ export default function ProfileScreen() {
       }
       return;
     }
-    Alert.alert('Keluar Akun', 'Apakah Anda yakin ingin keluar?', [
+    Alert.alert('Keluar Akun', 'Apakah Anda yakin ingin keluar dari akun?', [
       { text: 'Batal', style: 'cancel' },
       {
         text: 'Keluar',
@@ -90,7 +89,7 @@ export default function ProfileScreen() {
               style={styles.avatar}
             />
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{fullName ?? profile?.full_name ?? profile?.username ?? 'Pengguna'}</Text>
+              <Text style={styles.profileName}>{displayName ?? profile?.full_name ?? profile?.username ?? 'Pengguna'}</Text>
               {profile?.username ? (
                 <Text style={styles.profileHandle}>@{profile.username}</Text>
               ) : null}
@@ -122,25 +121,25 @@ export default function ProfileScreen() {
           {/* Menu Items */}
           <Text style={styles.sectionTitle}>PENGATURAN</Text>
           <View style={styles.menuCard}>
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={() => router.push('/onboarding')}>
               <MaterialIcons name="person-outline" size={20} color={MUTED} />
               <Text style={styles.menuLabel}>Ubah Profil</Text>
               <MaterialIcons name="chevron-right" size={20} color={MUTED} />
             </TouchableOpacity>
             <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={() => Alert.alert('Segera Hadir', 'Fitur notifikasi akan segera tersedia.')}>
               <MaterialIcons name="notifications-none" size={20} color={MUTED} />
               <Text style={styles.menuLabel}>Notifikasi</Text>
               <MaterialIcons name="chevron-right" size={20} color={MUTED} />
             </TouchableOpacity>
             <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={() => Alert.alert('Segera Hadir', 'Fitur ubah kata sandi akan segera tersedia.')}>
               <MaterialIcons name="lock-outline" size={20} color={MUTED} />
               <Text style={styles.menuLabel}>Ubah Kata Sandi</Text>
               <MaterialIcons name="chevron-right" size={20} color={MUTED} />
             </TouchableOpacity>
             <View style={styles.menuDivider} />
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={() => Alert.alert('Segera Hadir', 'Pusat bantuan akan segera tersedia.')}>
               <MaterialIcons name="help-outline" size={20} color={MUTED} />
               <Text style={styles.menuLabel}>Pusat Bantuan</Text>
               <MaterialIcons name="chevron-right" size={20} color={MUTED} />

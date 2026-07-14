@@ -54,7 +54,7 @@ export default function FieldsScreen() {
           </View>
 
           {/* Nearby */}
-          <Text style={styles.sectionTitle}>SEKITAR KAMU</Text>
+          <Text style={styles.sectionTitle}>SEKITAR ANDA</Text>
           <View style={styles.emptyCard}>
             <MaterialIcons name="location-off" size={40} color={CARD_BORDER} />
             <Text style={styles.emptyTitle}>Izinkan akses lokasi</Text>
@@ -70,7 +70,7 @@ export default function FieldsScreen() {
           <View style={styles.emptyCard}>
             <MaterialIcons name="favorite-border" size={40} color={CARD_BORDER} />
             <Text style={styles.emptyTitle}>Belum ada favorit</Text>
-            <Text style={styles.emptyDesc}>Simpan lapangan favoritmu di sini</Text>
+            <Text style={styles.emptyDesc}>Simpan lapangan favorit Anda di sini</Text>
           </View>
         </Animated.View>
       </ScrollView>

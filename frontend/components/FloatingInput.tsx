@@ -119,10 +119,7 @@ const styles = StyleSheet.create({
   inputFocused: {
     borderColor: '#4be277',
     backgroundColor: '#181f18',
-    shadowColor: '#4be277',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    boxShadow: '0px 0px 12px rgba(75, 226, 119, 0.3)',
     elevation: 4,
   },
   eyeIcon: {

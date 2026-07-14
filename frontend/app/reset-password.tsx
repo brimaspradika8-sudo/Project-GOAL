@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity,
-  ActivityIndicator, Animated, Easing, KeyboardAvoidingView,
-  Platform, ScrollView, Keyboard
+  ActivityIndicator, KeyboardAvoidingView,
+  Platform, ScrollView, Keyboard, Image
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
-import { useAuthAnimations } from '../hooks/useAuthAnimations';
 
 export default function ResetPasswordScreen() {
   const [password, setPassword] = useState('');
@@ -18,18 +17,8 @@ export default function ResetPasswordScreen() {
   const [sessionReady, setSessionReady] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
 
-  const { fadeAnim, slideAnim, pulseAnim, bgScaleAnim } = useAuthAnimations();
-  const messageAnim = useRef(new Animated.Value(0)).current;
-
   const showMessage = (text: string, type: 'error' | 'success') => {
     setMessage({ text, type });
-    messageAnim.setValue(0);
-    Animated.timing(messageAnim, {
-      toValue: 1,
-      duration: 300,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
   };
 
   useEffect(() => {
@@ -40,13 +29,13 @@ export default function ResetPasswordScreen() {
       setSessionReady(!!session);
 
       if (!session) {
-        showMessage('Session reset belum aktif. Buka halaman ini dari link reset password terbaru di email.', 'error');
+        showMessage('Sesi reset belum aktif. Silakan buka halaman ini melalui tautan reset kata sandi terbaru di email Anda.', 'error');
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
-      if (event === 'PASSWORD_RECOVERY' || session) {
+      if (event === 'PASSWORD_RECOVERY') {
         setSessionReady(true);
         setMessage(null);
       }
@@ -68,18 +57,18 @@ export default function ResetPasswordScreen() {
     }
 
     if (password !== confirmPassword) {
-      showMessage('Password dan Verifikasi Password tidak cocok!', 'error');
+      showMessage('Kata sandi dan konfirmasi kata sandi tidak cocok.', 'error');
       return;
     }
 
     if (password.length < 6) {
-      showMessage('Password minimal 6 karakter.', 'error');
+      showMessage('Kata sandi minimal 6 karakter.', 'error');
       return;
     }
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      showMessage('Auth session missing. Buka kembali link reset password terbaru dari email, lalu coba lagi.', 'error');
+      showMessage('Sesi autentikasi tidak ditemukan. Silakan buka kembali tautan reset kata sandi terbaru dari email, lalu coba lagi.', 'error');
       return;
     }
 
@@ -92,8 +81,10 @@ export default function ResetPasswordScreen() {
       if (error) {
         showMessage(error.message, 'error');
       } else {
-        showMessage('Password berhasil diperbarui! Mengarahkan ke login...', 'success');
-        await supabase.auth.signOut();
+        showMessage('Kata sandi berhasil diperbarui. Mengarahkan ke halaman masuk...', 'success');
+        setTimeout(async () => {
+          await supabase.auth.signOut();
+        }, 2000);
       }
     } catch (err: any) {
       showMessage(err?.message || 'Terjadi kesalahan sistem.', 'error');
@@ -110,9 +101,9 @@ export default function ResetPasswordScreen() {
       <StatusBar style="light" />
 
       <View style={StyleSheet.absoluteFill}>
-        <Animated.Image
+        <Image
           source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCNgBJlBY97_QaewYW2r-DjSlc7y1DcxBuTyd2FT01aWpOMDdC6E5Ojftib57g020fqnyp0_maN4R5MEHbvA5mKvbvL62-rTz8r9ur1HeYAdQRNcHj2N8UkRNLsr6n30pKT8wvR2ALUnlrVoH30n83mprQd7LqD0c88IYJTTyGNiDVyADu8naOoqsrI2DdszdWsC6qGeg9DMNEPKErslJTkraaMEw-PLU4zYb0RM7Qzcqh4FeFxhc1IHMBcbbO-zGz4b_LtpTKBW06d' }}
-          style={[styles.bgImage, { transform: [{ scale: bgScaleAnim }] }]}
+          style={styles.bgImage}
           resizeMode="cover"
         />
         <View style={styles.overlay} />
@@ -120,30 +111,30 @@ export default function ResetPasswordScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.responsiveWrapper}>
-          <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <Animated.View style={{ transform: [{ scale: pulseAnim }], marginBottom: 12, shadowColor: '#4be277', shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }}>
+          <View style={styles.header}>
+            <View style={styles.iconCircle}>
               <MaterialIcons name="password" size={56} color="#4be277" />
-            </Animated.View>
-            <Text style={styles.title}>NEW PASSWORD</Text>
-            <Text style={styles.subtitle}>Masukkan password baru Anda di bawah ini dan berhati-hatilah.</Text>
-          </Animated.View>
+            </View>
+            <Text style={styles.title}>KATA SANDI BARU</Text>
+            <Text style={styles.subtitle}>Masukkan kata sandi baru Anda di bawah ini dengan hati-hati.</Text>
+          </View>
 
-          <Animated.View style={[styles.glassCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <View style={styles.glassCard}>
             {message && (
-              <Animated.View style={[styles.messageBox, message.type === 'error' ? styles.messageError : styles.messageSuccess, { opacity: messageAnim, transform: [{ translateY: messageAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]}>
+              <View style={[styles.messageBox, message.type === 'error' ? styles.messageError : styles.messageSuccess]}>
                 <Text style={styles.messageText}>{message.text}</Text>
-              </Animated.View>
+              </View>
             )}
 
             <FloatingInput
-              label="Password Baru"
+              label="Kata Sandi Baru"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={true}
             />
 
             <FloatingInput
-              label="Ulangi Password Baru"
+              label="Konfirmasi Kata Sandi Baru"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry={true}
@@ -165,14 +156,14 @@ export default function ResetPasswordScreen() {
               )}
             </TouchableOpacity>
 
-          </Animated.View>
+          </View>
 
-          <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
-            <TouchableOpacity onPress={() => router.push('/login')} style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={styles.footer}>
+            <TouchableOpacity onPress={() => router.replace('/login')} style={{ flexDirection: 'row', alignItems: 'center' }}>
               <MaterialIcons name="arrow-back" size={16} color="#4be277" style={{ marginRight: 4 }} />
-              <Text style={styles.footerLink}>Kembali ke Login</Text>
+              <Text style={styles.footerLink}>Kembali ke Halaman Masuk</Text>
             </TouchableOpacity>
-          </Animated.View>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -208,6 +199,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
+  iconCircle: {
+    marginBottom: 12,
+    boxShadow: '0px 0px 20px rgba(75, 226, 119, 0.6)',
+    elevation: 15,
+  },
   title: {
     fontSize: 42,
     fontWeight: '900',
@@ -215,9 +211,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textTransform: 'uppercase',
     letterSpacing: 2,
-    textShadowColor: 'rgba(75, 226, 119, 0.4)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 10,
+    textShadow: '0px 2px 10px rgba(75, 226, 119, 0.4)',
     textAlign: 'center',
   },
   subtitle: {
@@ -235,10 +229,7 @@ const styles = StyleSheet.create({
     padding: 28,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 15 },
-    shadowOpacity: 0.5,
-    shadowRadius: 25,
+    boxShadow: '0px 15px 25px rgba(0, 0, 0, 0.5)',
     elevation: 10,
   },
   button: {
@@ -248,15 +239,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 8,
-    shadowColor: '#4be277',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
+    boxShadow: '0px 6px 12px rgba(75, 226, 119, 0.4)',
     elevation: 6,
   },
   buttonDisabled: {
     backgroundColor: '#2a8b46',
-    shadowOpacity: 0,
+    boxShadow: 'none',
     elevation: 0,
   },
   buttonContent: {

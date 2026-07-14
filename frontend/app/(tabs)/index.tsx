@@ -1,38 +1,38 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  ActivityIndicator, Animated, Easing, RefreshControl, Alert,
-  Image, Platform, StatusBar,
+  ActivityIndicator, RefreshControl, Alert,
+  Image, Platform, StatusBar, Dimensions
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useProfileStore } from '../../store/profileStore';
+import Animated, { FadeInDown, FadeInUp, ZoomIn, FadeInRight } from 'react-native-reanimated';
+import { Video, ResizeMode } from 'expo-av';
+
+const { width } = Dimensions.get('window');
 
 const GREEN = '#4be277';
-const DARK = '#131313';
-const DARK2 = '#1a2e1f';
-const CARD = '#1a2e1f';
-const CARD_BORDER = '#263d2c';
-const MUTED = '#627369';
-const SPORT_ICONS: Record<string, string> = {
-  futsal: 'sports-soccer',
-  basketball: 'sports-basketball',
-  badminton: 'sports-tennis',
-  volleyball: 'sports-volleyball',
-  minisoccer: 'sports-soccer',
-  tennis: 'sports-tennis',
-  tabletennis: 'sports',
-  others: 'more-horiz',
-};
+const DARK = '#0d110f';
+const CARD = '#161f19';
+const CARD_LIGHT = '#1e2b22';
+const CARD_BORDER = '#25382c';
+const MUTED = '#7d9484';
+const TEXT_LIGHT = '#f0f5f2';
+const PRIMARY_RED = '#b21c27'; // To match the image's red bar if desired, but we'll use dark theme for consistency
+const FLOATING_BG = '#1a1423'; // Darker contrasting tone for the bar, or just use PRIMARY_RED
 
 export default function HomeScreen() {
-  const { profile, loading, fetchProfile } = useProfileStore();
+  const { profile, loading, fetchProfile, clearProfile } = useProfileStore();
   const [refreshing, setRefreshing] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const [displayName, setDisplayName] = useState<string | null>(null);
 
   useEffect(() => {
     const hydrateHome = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const name = user?.user_metadata?.full_name;
+      if (name) setDisplayName(name);
+
       if (!profile) {
         await fetchProfile();
       }
@@ -41,57 +41,13 @@ export default function HomeScreen() {
     hydrateHome();
   }, []);
 
-  useEffect(() => {
-    if (!loading && profile) {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 500,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 500,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [loading, profile]);
-
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchProfile();
     setRefreshing(false);
   };
 
-  const handleSignOut = () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Apakah Anda yakin ingin keluar akun?')) {
-        try {
-          supabase.auth.signOut();
-        } catch (e) {
-          window.alert('Terjadi kesalahan saat sign out.');
-        }
-      }
-      return;
-    }
-    Alert.alert('Keluar Akun', 'Apakah Anda yakin ingin keluar?', [
-      { text: 'Batal', style: 'cancel' },
-      {
-        text: 'Keluar',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await supabase.auth.signOut();
-          } catch (e) {
-            Alert.alert('Gagal', 'Terjadi kesalahan saat sign out.');
-          }
-        },
-      },
-    ]);
-  };
+  const userName = displayName ?? profile?.full_name ?? profile?.username ?? 'Pengguna';
 
   if (loading) {
     return (
@@ -103,106 +59,135 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={DARK} />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GREEN} colors={[GREEN]} />
         }
         showsVerticalScrollIndicator={false}
+        bounces={false}
       >
-        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View>
-              <Text style={styles.greeting}>Selamat datang,</Text>
-              <Text style={styles.username}>{profile?.full_name ?? profile?.username ?? 'Pengguna'}</Text>
-            </View>
-            <TouchableOpacity onPress={handleSignOut} style={styles.signOutBtn}>
-              <MaterialIcons name="logout" size={20} color={MUTED} />
+        {/* HERO SECTION WITH VIDEO */}
+        <View style={styles.heroBackground}>
+          <Video
+            source={{ uri: 'https://youtu.be/RgaHhPDmThw?si=CLxCaBtzw3kml6V8' }}
+            style={StyleSheet.absoluteFillObject}
+            resizeMode={ResizeMode.COVER}
+            shouldPlay
+            isLooping
+            isMuted
+          />
+          {/* Overlay to darken image */}
+          <View style={styles.heroOverlay} />
+
+          {/* Top Navbar / Header */}
+          <View style={styles.topHeader}>
+            <Image
+              source={{ uri: profile?.avatar_url || `https://api.dicebear.com/7.x/initials/png?seed=${userName}&backgroundColor=161f19&textColor=4be277` }}
+              style={styles.headerAvatar}
+            />
+            <TouchableOpacity style={styles.iconBtn}>
+              <MaterialIcons name="notifications-none" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
 
-          {/* Profile Card */}
-          <View style={styles.profileCard}>
-            <Image
-              source={{ uri: profile?.avatar_url || 'https://api.dicebear.com/7.x/bottts/png?seed=goal&backgroundColor=131313' }}
-              style={styles.avatar}
-            />
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{profile?.full_name ?? profile?.username ?? 'Pengguna'}</Text>
-              {profile?.username ? (
-                <Text style={styles.profileHandle}>@{profile.username}</Text>
-              ) : null}
-              <View style={styles.locationRow}>
-                <MaterialIcons name="location-on" size={14} color={MUTED} />
-                <Text style={styles.locationText}>{profile?.region ?? 'Belum diatur'}</Text>
+          <Animated.View entering={FadeInDown.duration(800).springify()} style={styles.heroContent}>
+            <Text style={styles.heroTitle}>Selamat Datang,{'\n'}{userName}</Text>
+            <Text style={styles.heroSubtext}>
+              Platform all-in-one untuk sewa lapangan, cari lawan sparring, atau cari kawan main bareng. Olahraga makin mudah dan menyenangkan!
+            </Text>
+          </Animated.View>
+        </View>
+
+        {/* FLOATING SEARCH BAR */}
+        <Animated.View entering={ZoomIn.duration(600).delay(300).springify()} style={styles.searchBarContainer}>
+          <View style={styles.searchBarInner}>
+            <View style={styles.searchItem}>
+              <MaterialIcons name="sports-soccer" size={20} color={TEXT_LIGHT} />
+              <View>
+                <Text style={styles.searchLabel}>Aktivitas</Text>
+                <Text style={styles.searchValue}>Pilih Aktivitas <MaterialIcons name="keyboard-arrow-down" size={14} /></Text>
               </View>
             </View>
-          </View>
+            
+            <View style={styles.searchDivider} />
+            
+            <View style={styles.searchItem}>
+              <MaterialIcons name="location-on" size={20} color={TEXT_LIGHT} />
+              <View>
+                <Text style={styles.searchLabel}>Lokasi</Text>
+                <Text style={styles.searchValue}>Pilih Kota <MaterialIcons name="keyboard-arrow-down" size={14} /></Text>
+              </View>
+            </View>
 
-          {/* Sports Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Olahraga Saya</Text>
+            <View style={styles.searchDivider} />
+
+            <View style={styles.searchItem}>
+              <MaterialIcons name="category" size={20} color={TEXT_LIGHT} />
+              <View>
+                <Text style={styles.searchLabel}>Cabang Olahraga</Text>
+                <Text style={styles.searchValue}>Pilih Olahraga <MaterialIcons name="keyboard-arrow-down" size={14} /></Text>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.primaryBtn}>
+              <Text style={styles.primaryBtnText}>Temukan</Text>
+              <MaterialIcons name="arrow-forward" size={16} color={DARK} />
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
+        {/* DAFTAR LAPANGAN SECTION */}
+        <View style={styles.pageContent}>
+          <Animated.View entering={FadeInUp.duration(600).delay(500).springify()} style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>DAFTAR LAPANGAN</Text>
+              <TouchableOpacity>
+                <Text style={styles.viewAllText}>Lihat Semua</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.fieldScroll}>
+              {[1, 2, 3].map((item, idx) => (
+                <View key={item} style={styles.fieldCard}>
+                  <Image 
+                    source={{ uri: `https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop&sig=${item}` }}
+                    style={styles.fieldImage}
+                  />
+                  <View style={styles.fieldInfo}>
+                    <Text style={styles.fieldTitle}>Arena Futsal {item}</Text>
+                    <View style={styles.locationRow}>
+                      <MaterialIcons name="location-pin" size={14} color={MUTED} />
+                      <Text style={styles.locationText}>Jakarta Selatan</Text>
+                    </View>
+                    <Text style={styles.fieldPrice}>Mulai Rp 150.000 / Jam</Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </Animated.View>
+
+          {/* OLAHRAGA SAYA */}
+          <Animated.View entering={FadeInRight.duration(600).delay(600).springify()} style={styles.section}>
+            <Text style={styles.sectionTitle}>OLAHRAGA SAYA</Text>
             {profile?.sports && profile.sports.length > 0 ? (
-              <View style={styles.sportsGrid}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sportsScroll}>
                 {profile.sports.map((sport) => (
                   <View key={sport} style={styles.sportChip}>
-                    <MaterialIcons
-                      name={(SPORT_ICONS[sport] ?? 'sports') as any}
-                      size={16}
-                      color={GREEN}
-                    />
                     <Text style={styles.sportLabel}>{sport.toUpperCase()}</Text>
                   </View>
                 ))}
-              </View>
+              </ScrollView>
             ) : (
-              <Text style={styles.emptyText}>Belum ada olahraga dipilih</Text>
+              <View style={styles.emptySportsContainer}>
+                <Text style={styles.emptyText}>Belum ada olahraga pilihan.</Text>
+              </View>
             )}
-          </View>
+          </Animated.View>
+        </View>
 
-          {/* Quick Actions */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Aksi Cepat</Text>
-            <View style={styles.actionsGrid}>
-              <TouchableOpacity style={styles.actionCard} activeOpacity={0.7}>
-                <View style={[styles.actionIcon, { backgroundColor: 'rgba(75,226,119,0.12)' }]}>
-                  <MaterialIcons name="sports" size={24} color={GREEN} />
-                </View>
-                <Text style={styles.actionLabel}>Cari Pertandingan</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionCard} activeOpacity={0.7}>
-                <View style={[styles.actionIcon, { backgroundColor: 'rgba(59,130,246,0.12)' }]}>
-                  <MaterialIcons name="groups" size={24} color="#3b82f6" />
-                </View>
-                <Text style={styles.actionLabel}>Tim Saya</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionCard} activeOpacity={0.7}>
-                <View style={[styles.actionIcon, { backgroundColor: 'rgba(251,191,36,0.12)' }]}>
-                  <MaterialIcons name="stadium" size={24} color="#fbbf24" />
-                </View>
-                <Text style={styles.actionLabel}>Lapangan</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionCard} activeOpacity={0.7}>
-                <View style={[styles.actionIcon, { backgroundColor: 'rgba(168,85,247,0.12)' }]}>
-                  <MaterialIcons name="leaderboard" size={24} color="#a855f7" />
-                </View>
-                <Text style={styles.actionLabel}>Peringkat</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Upcoming Match Placeholder */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Pertandingan Mendatang</Text>
-            <View style={styles.emptyCard}>
-              <MaterialIcons name="event-busy" size={40} color={CARD_BORDER} />
-              <Text style={styles.emptyCardTitle}>Belum ada pertandingan</Text>
-              <Text style={styles.emptyCardDesc}>Buat atau cari pertandingan untuk memulai.</Text>
-            </View>
-          </View>
-        </Animated.View>
       </ScrollView>
     </View>
   );
@@ -220,155 +205,209 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scrollContent: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 48,
-    paddingHorizontal: 20,
     paddingBottom: 100,
   },
-  header: {
+  heroBackground: {
+    width: '100%',
+    height: 480,
+    backgroundColor: '#000',
+  },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  topHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 24,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 50,
   },
-  greeting: {
-    fontSize: 15,
-    color: MUTED,
-    fontWeight: '500',
+  headerAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: GREEN,
   },
-  username: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: 0.3,
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  signOutBtn: {
-    padding: 8,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+  heroContent: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 60,
   },
-  profileCard: {
+  heroTitle: {
+    fontSize: 34,
+    fontWeight: '900',
+    color: '#ffffff',
+    lineHeight: 42,
+    marginBottom: 16,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  heroSubtext: {
+    fontSize: 14,
+    color: '#e0e0e0',
+    lineHeight: 22,
+    maxWidth: '90%',
+  },
+  searchBarContainer: {
+    paddingHorizontal: 16,
+    marginTop: -45, // Pulls the bar up into the hero section
+    zIndex: 10,
+  },
+  searchBarInner: {
+    backgroundColor: PRIMARY_RED,
+    borderRadius: 16,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: CARD,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-    padding: 16,
-    marginBottom: 28,
-    gap: 14,
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 8,
   },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    backgroundColor: DARK2,
-  },
-  profileInfo: {
+  searchItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     flex: 1,
   },
-  profileName: {
-    fontSize: 17,
+  searchLabel: {
+    fontSize: 10,
     fontWeight: '700',
-    color: '#fff',
-    marginBottom: 4,
+    color: 'rgba(255,255,255,0.7)',
+    textTransform: 'uppercase',
   },
-  profileHandle: {
+  searchValue: {
     fontSize: 12,
-    color: MUTED,
-    marginBottom: 4,
-    fontWeight: '600',
+    color: '#fff',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  searchDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginHorizontal: 12,
+  },
+  primaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 24,
+    gap: 4,
+    marginLeft: 8,
+  },
+  primaryBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: PRIMARY_RED,
+  },
+  pageContent: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
+  },
+  section: {
+    marginBottom: 32,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: TEXT_LIGHT,
+    letterSpacing: 1,
+  },
+  viewAllText: {
+    fontSize: 12,
+    color: GREEN,
+    fontWeight: '700',
+  },
+  fieldScroll: {
+    gap: 16,
+  },
+  fieldCard: {
+    width: 260,
+    backgroundColor: CARD,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
+  },
+  fieldImage: {
+    width: '100%',
+    height: 140,
+    backgroundColor: CARD_LIGHT,
+  },
+  fieldInfo: {
+    padding: 16,
+  },
+  fieldTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: TEXT_LIGHT,
+    marginBottom: 6,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    marginBottom: 10,
   },
   locationText: {
-    fontSize: 13,
+    fontSize: 12,
     color: MUTED,
   },
-  section: {
-    marginBottom: 28,
-  },
-  sectionTitle: {
-    fontSize: 13,
+  fieldPrice: {
+    fontSize: 14,
     fontWeight: '800',
-    color: MUTED,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 12,
+    color: GREEN,
   },
-  sportsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  sportsScroll: {
     gap: 8,
   },
   sportChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
     backgroundColor: CARD,
-    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: CARD_BORDER,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
   },
   sportLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#fff',
-    letterSpacing: 0.3,
+    color: TEXT_LIGHT,
   },
-  emptyText: {
-    fontSize: 13,
-    color: MUTED,
-  },
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  actionCard: {
-    width: '48%',
-    flexGrow: 1,
+  emptySportsContainer: {
     backgroundColor: CARD,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
+    borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    gap: 10,
   },
-  actionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  actionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  emptyCard: {
-    backgroundColor: CARD,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-    padding: 32,
-    alignItems: 'center',
-    gap: 8,
-  },
-  emptyCardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  emptyCardDesc: {
-    fontSize: 13,
+  emptyText: {
+    fontSize: 12,
     color: MUTED,
-    textAlign: 'center',
-  },
+    fontStyle: 'italic',
+  }
 });
+
+
