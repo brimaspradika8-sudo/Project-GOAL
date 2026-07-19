@@ -1,26 +1,77 @@
 import React, { useState, useRef } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity,
-  ActivityIndicator, KeyboardAvoidingView,
-  Platform, ScrollView, Keyboard, Image
+  ActivityIndicator, Animated, Easing, KeyboardAvoidingView,
+  Platform, ScrollView, Keyboard
 } from 'react-native';
-import { supabase } from '../lib/supabase';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import FloatingInput from '../components/FloatingInput';
+import { useAuthAnimations } from '../hooks/useAuthAnimations';
+import { API_BASE_URL } from '../lib/api';
+import { TOKEN_KEY } from './_layout';
+import { useProfileStore } from '../store/profileStore';
 
 const RATE_LIMIT_MS = 5000;
 const lastAttemptRef = { current: 0 };
+async function parseApiResponse(res: Response) {
+  const text = await res.text();
+
+  if (!text) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+}
+
+function getApiErrorMessage(data: any, status: number) {
+  if (typeof data?.message === 'string' && data.message.trim()) {
+    return data.message;
+  }
+
+  if (typeof data?.error === 'string' && data.error.trim()) {
+    return data.error;
+  }
+
+  if (data?.errors && typeof data.errors === 'object') {
+    const firstError = Object.values(data.errors)[0];
+    if (Array.isArray(firstError) && firstError[0]) {
+      return firstError[0];
+    }
+  }
+
+  if (status === 401) {
+    return 'Email atau password salah.';
+  }
+
+  if (status >= 500) {
+    return 'Server sedang tidak tersedia. Silakan coba lagi sebentar.';
+  }
+  return 'Terjadi kesalahan sistem. Silakan coba lagi.';
+}
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
-
+  const { fadeAnim, slideAnim, pulseAnim, bgScaleAnim } = useAuthAnimations();
+  const messageAnim = useRef(new Animated.Value(0)).current;
   const showMessage = (text: string, type: 'error' | 'success') => {
     setMessage({ text, type });
+    messageAnim.setValue(0);
+    Animated.timing(messageAnim, {
+      toValue: 1,
+      duration: 300,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
   };
 
   async function signInWithEmail() {
@@ -30,7 +81,7 @@ export default function LoginScreen() {
     const now = Date.now();
     if (now - lastAttemptRef.current < RATE_LIMIT_MS) {
       const waitSec = Math.ceil((RATE_LIMIT_MS - (now - lastAttemptRef.current)) / 1000);
-      showMessage(`Silakan tunggu ${waitSec} detik sebelum mencoba kembali.`, 'error');
+      showMessage(`Tunggu ${waitSec} detik sebelum mencoba lagi.`, 'error');
       return;
     }
 
@@ -41,17 +92,45 @@ export default function LoginScreen() {
 
     setLoading(true);
     lastAttemptRef.current = Date.now();
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password,
-      });
 
-      if (error) {
-        showMessage(error.message, 'error');
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      const data = await parseApiResponse(res);
+
+      if (!res.ok) {
+        showMessage(getApiErrorMessage(data, res.status), 'error');
+        setLoading(false);
+        return;
       }
-    } catch (err: any) {
-      showMessage(err?.message || 'Terjadi kesalahan sistem.', 'error');
+
+      if (data?.token) {
+        await AsyncStorage.setItem(TOKEN_KEY, data.token);
+
+        const profileRes = await fetch(`${API_BASE_URL}/me`, {
+          headers: { Authorization: `Bearer ${data.token}` },
+        });
+        const profileData = await parseApiResponse(profileRes);
+
+        if (profileRes.ok && profileData) {
+          useProfileStore.setState({ profile: profileData, loading: false });
+
+          if (profileData.onboarding_completed === false) {
+            router.replace('/onboarding');
+          } else {
+            router.replace('/(tabs)');
+          }
+        } else {
+          router.replace('/(tabs)');
+        }
+      } else {
+        showMessage('Gagal login. Silakan coba lagi.', 'error');
+      }
+    } catch {
+      showMessage('Terjadi kesalahan sistem. Silakan coba lagi.', 'error');
     } finally {
       setLoading(false);
     }
@@ -65,9 +144,9 @@ export default function LoginScreen() {
       <StatusBar style="light" />
 
       <View style={StyleSheet.absoluteFill}>
-        <Image
+        <Animated.Image
           source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCNgBJlBY97_QaewYW2r-DjSlc7y1DcxBuTyd2FT01aWpOMDdC6E5Ojftib57g020fqnyp0_maN4R5MEHbvA5mKvbvL62-rTz8r9ur1HeYAdQRNcHj2N8UkRNLsr6n30pKT8wvR2ALUnlrVoH30n83mprQd7LqD0c88IYJTTyGNiDVyADu8naOoqsrI2DdszdWsC6qGeg9DMNEPKErslJTkraaMEw-PLU4zYb0RM7Qzcqh4FeFxhc1IHMBcbbO-zGz4b_LtpTKBW06d' }}
-          style={styles.bgImage}
+          style={[styles.bgImage, { transform: [{ scale: bgScaleAnim }] }]}
           resizeMode="cover"
         />
         <View style={styles.overlay} />
@@ -76,30 +155,30 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.responsiveWrapper}>
 
-          <View style={styles.header}>
-            <View style={styles.iconCircle}>
+          <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+            <Animated.View style={{ transform: [{ scale: pulseAnim }], marginBottom: 12, shadowColor: '#4be277', shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }}>
               <MaterialIcons name="sports-soccer" size={72} color="#4be277" />
-            </View>
+            </Animated.View>
             <Text style={styles.title}>GOAL</Text>
-            <Text style={styles.subtitle}>Platform olahraga dan kompetisi</Text>
-          </View>
+            <Text style={styles.subtitle}>Game Arena & Arena League</Text>
+          </Animated.View>
 
-          <View style={styles.glassCard}>
+          <Animated.View style={[styles.glassCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
             {message && (
-              <View style={[styles.messageBox, message.type === 'error' ? styles.messageError : styles.messageSuccess]}>
+              <Animated.View style={[styles.messageBox, message.type === 'error' ? styles.messageError : styles.messageSuccess, { opacity: messageAnim, transform: [{ translateY: messageAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]}>
                 <Text style={styles.messageText}>{message.text}</Text>
-              </View>
+              </Animated.View>
             )}
 
             <FloatingInput
-              label="Alamat Email"
+              label="Email Address"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
             />
 
             <FloatingInput
-              label="Kata Sandi"
+              label="Password"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={true}
@@ -108,7 +187,7 @@ export default function LoginScreen() {
             <View style={styles.rowBetween}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }} />
               <TouchableOpacity onPress={() => router.push('/forgot-password')}>
-                <Text style={styles.forgotText}>Lupa Kata Sandi?</Text>
+                <Text style={styles.forgotText}>Forgot Password?</Text>
               </TouchableOpacity>
             </View>
 
@@ -122,20 +201,20 @@ export default function LoginScreen() {
                 <ActivityIndicator color="#0e2a14" />
               ) : (
                 <View style={styles.buttonContent}>
-                  <Text style={styles.buttonText}>MASUK</Text>
+                  <Text style={styles.buttonText}>SIGN IN</Text>
                   <MaterialIcons name="arrow-forward" size={20} color="#005321" style={{ marginLeft: 8 }} />
                 </View>
               )}
             </TouchableOpacity>
 
-          </View>
+          </Animated.View>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>{"Belum memiliki akun? "}</Text>
+          <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
+            <Text style={styles.footerText}>Belum punya akun? </Text>
             <TouchableOpacity onPress={() => router.push('/register')}>
-              <Text style={styles.footerLink}>Daftar Akun</Text>
+              <Text style={styles.footerLink}>Register for free</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
 
         </View>
       </ScrollView>
@@ -172,11 +251,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  iconCircle: {
-    marginBottom: 12,
-    boxShadow: '0px 0px 20px rgba(75, 226, 119, 0.6)',
-    elevation: 15,
-  },
   title: {
     fontSize: 56,
     fontWeight: '900',
@@ -184,7 +258,9 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textTransform: 'uppercase',
     letterSpacing: 2,
-    textShadow: '0px 2px 10px rgba(75, 226, 119, 0.4)',
+    textShadowColor: 'rgba(75, 226, 119, 0.4)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 10,
   },
   subtitle: {
     fontSize: 18,
@@ -199,7 +275,10 @@ const styles = StyleSheet.create({
     padding: 28,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
-    boxShadow: '0px 15px 25px rgba(0, 0, 0, 0.5)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 15 },
+    shadowOpacity: 0.5,
+    shadowRadius: 25,
     elevation: 10,
   },
   rowBetween: {
@@ -220,12 +299,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    boxShadow: '0px 6px 12px rgba(75, 226, 119, 0.4)',
+    shadowColor: '#4be277',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
     elevation: 6,
   },
   buttonDisabled: {
     backgroundColor: '#2a8b46',
-    boxShadow: 'none',
+    shadowOpacity: 0,
     elevation: 0,
   },
   buttonContent: {
@@ -273,4 +355,3 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 });
-

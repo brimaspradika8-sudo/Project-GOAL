@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../lib/api';
+import { TOKEN_KEY } from '../app/_layout';
 import { useDebouncedValue } from './useDebouncedValue';
 
 export type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'error';
@@ -29,20 +30,16 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
   useEffect(() => {
     if (debouncedUsername.length < 3) return;
 
-    if (abortRef.current) {
-      abortRef.current.abort();
-    }
+    if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-
     const timeout = setTimeout(() => controller.abort(), 5000);
 
     const checkUsername = async () => {
       if (!mountedRef.current) return;
       setStatus('checking');
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
+        const token = await AsyncStorage.getItem(TOKEN_KEY);
 
         const res = await fetch(
           `${API_BASE_URL}/me/onboarding/check-username?username=${encodeURIComponent(debouncedUsername)}`,

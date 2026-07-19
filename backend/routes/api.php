@@ -1,18 +1,75 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\AuthCheckController;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\Profile\ProfileController;
+use App\Http\Controllers\Profile\OnboardingController;
+use App\Http\Controllers\Field\FieldController;
+use App\Http\Controllers\Owner\OwnerRequestController;
+use App\Http\Controllers\Owner\AdminOwnerController;
+use App\Http\Controllers\Admin\UserController;
 
-Route::post('/auth/check-email', [AuthCheckController::class, 'checkEmail'])
-    ->middleware('throttle:10,1');
+// Auth (public, rate limited)
+Route::middleware('throttle:10,1')->group(function () {
+    Route::post('/auth/register',    [AuthController::class, 'register']);
+    Route::post('/auth/login',       [AuthController::class, 'login']);
+    Route::post('/auth/check-email', [AuthController::class, 'check-email']);
+    Route::post('/auth/verify-token',    [PasswordResetController::class, 'token']);
+    Route::post('/auth/reset-password',  [PasswordResetController::class, 'reset']);
+});
 
-Route::middleware('supabase')->group(function () {
-    // Profile
+Route::middleware('throttle:5,1')->group(function () {
+    Route::post('/auth/forgot-password', [PasswordResetController::class, 'forgot']);
+});
+
+// Public — no auth required
+Route::get('/fields',                                   [FieldController::class, 'index']);
+Route::get('/fields/{id}',                              [FieldController::class, 'show']);
+Route::get('/me/onboarding/check-username',              [OnboardingController::class, 'checkUsername']);
+
+// Protected (Sanctum + rate limit)
+Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
+
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/me', [ProfileController::class, 'me']);
+    Route::put('/me', [ProfileController::class, 'update']);
+    Route::put('/me/password', [ProfileController::class, 'updatePassword']);
+    Route::post('/me/onboarding',               [OnboardingController::class, 'submit']);
 
-    // Onboarding
-    Route::get('/me/onboarding/check-username', [ProfileController::class, 'checkUsername']);
-    Route::post('/me/onboarding', [ProfileController::class, 'submitOnboarding']);
+    // Owner upgrade request
+    Route::post('/me/owner-request', [OwnerRequestController::class, 'store']);
+    Route::get('/me/owner-request',  [OwnerRequestController::class, 'status']);
+
+    // Fields - owner's own list
+    Route::get('/fields/my/list', [FieldController::class, 'myFields']);
+
+    // Fields - owner manages own fields
+    Route::middleware('role:owner,admin,super_admin')->group(function () {
+        Route::post('/fields',            [FieldController::class, 'store']);
+        Route::put('/fields/{id}',        [FieldController::class, 'update']);
+        Route::delete('/fields/{id}',     [FieldController::class, 'destroy']);
+    });
+
+    // Fields - super admin only
+    Route::middleware('role:super_admin')->group(function () {
+        Route::get('/fields/pending/list',    [FieldController::class, 'pending']);
+        Route::post('/fields/{id}/approve',   [FieldController::class, 'approve']);
+        Route::get('/fields/trashed/list',    [FieldController::class, 'trashed']);
+        Route::post('/fields/{id}/restore',   [FieldController::class, 'restore']);
+        Route::delete('/fields/{id}/force',   [FieldController::class, 'forceDelete']);
+    });
+
+    // Owner requests - admin+
+    Route::middleware('role:admin,super_admin')->group(function () {
+        Route::get('/owner-requests/pending',      [AdminOwnerController::class, 'pending']);
+        Route::post('/owner-requests/{id}/review', [AdminOwnerController::class, 'review']);
+    });
+
+    // Admin - manage users (admin & super_admin)
+    Route::middleware('role:admin,super_admin')->group(function () {
+        Route::get('/admin/users',                [UserController::class, 'index']);
+        Route::put('/admin/users/{id}/role',       [UserController::class, 'updateRole']);
+        Route::delete('/admin/users/{id}',         [UserController::class, 'destroy']);
+    });
 });
