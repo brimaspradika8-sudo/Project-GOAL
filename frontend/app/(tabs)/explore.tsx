@@ -1,91 +1,106 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
-  StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  TextInput, Animated, Easing, Platform, StatusBar,
+  StyleSheet,
+  View,
+  Text,
+  TextInput,
+  ScrollView,
+  Platform,
+  StatusBar,
+  TouchableOpacity,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-
-const GREEN = '#4be277';
-const DARK = '#131313';
-const CARD = '#1a2e1f';
-const CARD_BORDER = '#263d2c';
-const MUTED = '#627369';
+import { router } from 'expo-router';
+import { COLORS, SIZES, SHADOWS, FONTS } from '../../components/goalTheme';
+import { FadeInView } from '../../components/FadeInView';
 
 const CATEGORIES = [
-  { id: 'futsal', label: 'Futsal', icon: 'sports-soccer' as const, color: GREEN },
-  { id: 'basketball', label: 'Basket', icon: 'sports-basketball' as const, color: '#3b82f6' },
-  { id: 'badminton', label: 'Badminton', icon: 'sports-tennis' as const, color: '#fbbf24' },
-  { id: 'volleyball', label: 'Voli', icon: 'sports-volleyball' as const, color: '#a855f7' },
-  { id: 'minisoccer', label: 'Mini Soccer', icon: 'sports-soccer' as const, color: '#f43f5e' },
-  { id: 'tennis', label: 'Tenis', icon: 'sports-tennis' as const, color: '#06b6d4' },
+  { key: 'futsal', label: 'Futsal', icon: 'sports-soccer' as const, color: COLORS.primary },
+  { key: 'basket', label: 'Basket', icon: 'sports-basketball' as const, color: '#f59e0b' },
+  { key: 'badminton', label: 'Badminton', icon: 'sports-tennis' as const, color: '#3b82f6' },
+  { key: 'volley', label: 'Voli', icon: 'sports-volleyball' as const, color: '#8b5cf6' },
+  { key: 'tennis', label: 'Tenis', icon: 'sports-tennis' as const, color: '#06b6d4' },
+  { key: 'minisoccer', label: 'Mini Soccer', icon: 'sports-soccer' as const, color: '#10b981' },
 ];
 
 export default function ExploreScreen() {
   const [search, setSearch] = useState('');
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  React.useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 400,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, []);
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={DARK} />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Animated.View style={{ opacity: fadeAnim }}>
-          {/* Header */}
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <FadeInView>
           <Text style={styles.title}>Jelajahi</Text>
-          <Text style={styles.subtitle}>Cari lapangan, pertandingan, atau pemain</Text>
+          <Text style={styles.subtitle}>Temukan lapangan, pertandingan, dan teman olahraga.</Text>
+        </FadeInView>
 
-          {/* Search Bar */}
-          <View style={styles.searchWrapper}>
-            <MaterialIcons name="search" size={20} color={MUTED} style={styles.searchIcon} />
+        <FadeInView delay={80}>
+          <View style={styles.searchCard}>
+            <MaterialIcons name="search" size={20} color={COLORS.textTertiary} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Cari..."
-              placeholderTextColor={MUTED}
+              placeholder="Cari lapangan atau olahraga"
+              placeholderTextColor={COLORS.textTertiary}
               value={search}
               onChangeText={setSearch}
             />
-          </View>
-
-          {/* Categories */}
-          <Text style={styles.sectionTitle}>KATEGORI OLAHRAGA</Text>
-          <View style={styles.categoriesGrid}>
-            {CATEGORIES.map((cat) => (
-              <TouchableOpacity key={cat.id} style={styles.categoryCard} activeOpacity={0.7}>
-                <View style={[styles.categoryIcon, { backgroundColor: `${cat.color}18` }]}>
-                  <MaterialIcons name={cat.icon} size={24} color={cat.color} />
-                </View>
-                <Text style={styles.categoryLabel}>{cat.label}</Text>
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <MaterialIcons name="close" size={18} color={COLORS.textTertiary} />
               </TouchableOpacity>
-            ))}
+            )}
           </View>
+        </FadeInView>
 
-          {/* Near You */}
-          <Text style={styles.sectionTitle}>SEKITAR ANDA</Text>
-          <View style={styles.emptyCard}>
-            <MaterialIcons name="location-searching" size={40} color={CARD_BORDER} />
-            <Text style={styles.emptyTitle}>Data lokasi belum tersedia</Text>
-            <Text style={styles.emptyDesc}>Izinkan akses lokasi untuk menemukan lapangan terdekat.</Text>
+        <FadeInView delay={160}>
+          <Text style={styles.sectionTitle}>KATEGORI</Text>
+          <View style={styles.categoryGrid}>
+            {CATEGORIES.map((category) => {
+              const filtered = search && !category.label.toLowerCase().includes(search.toLowerCase());
+              if (filtered) return null;
+              return (
+                <TouchableOpacity
+                  key={category.key}
+                  style={styles.categoryCard}
+                  activeOpacity={0.85}
+                  onPress={() => router.push('/(tabs)/fields')}
+                >
+                  <View style={[styles.categoryIcon, { backgroundColor: category.color + '18' }]}>
+                    <MaterialIcons name={category.icon} size={24} color={category.color} />
+                  </View>
+                  <Text style={styles.categoryLabel}>{category.label}</Text>
+                  <MaterialIcons name="arrow-forward" size={16} color={COLORS.textTertiary} />
+                </TouchableOpacity>
+              );
+            })}
           </View>
+        </FadeInView>
 
-          {/* Popular Matches */}
-          <Text style={styles.sectionTitle}>PERTANDINGAN POPULER</Text>
+        <FadeInView delay={240}>
+          <Text style={styles.sectionTitle}>REKOMENDASI</Text>
+          <TouchableOpacity style={styles.infoCard} activeOpacity={0.85} onPress={() => router.push('/(tabs)/fields')}>
+            <View style={styles.infoIcon}>
+              <MaterialIcons name="place" size={22} color={COLORS.primary} />
+            </View>
+            <View style={styles.infoTextBlock}>
+              <Text style={styles.infoTitle}>Lapangan Terdekat</Text>
+              <Text style={styles.infoDesc}>Temukan lapangan favorit di sekitarmu.</Text>
+            </View>
+            <MaterialIcons name="chevron-right" size={20} color={COLORS.textTertiary} />
+          </TouchableOpacity>
+        </FadeInView>
+
+        <FadeInView delay={320}>
+          <Text style={styles.sectionTitle}>POPULER MINGGU INI</Text>
           <View style={styles.emptyCard}>
-            <MaterialIcons name="sports" size={40} color={CARD_BORDER} />
-            <Text style={styles.emptyTitle}>Belum ada pertandingan</Text>
-            <Text style={styles.emptyDesc}>Pertandingan populer akan ditampilkan di sini.</Text>
+            <View style={styles.emptyIconWrap}>
+              <MaterialIcons name="trending-up" size={32} color={COLORS.textTertiary} />
+            </View>
+            <Text style={styles.emptyTitle}>Belum ada data populer</Text>
+            <Text style={styles.emptyDesc}>Data pertandingan populer akan muncul di sini.</Text>
           </View>
-        </Animated.View>
+        </FadeInView>
       </ScrollView>
     </View>
   );
@@ -94,68 +109,64 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK,
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
     paddingTop: Platform.OS === 'ios' ? 60 : 48,
     paddingHorizontal: 20,
-    paddingBottom: 100,
+    paddingBottom: 40,
   },
   title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#fff',
-    letterSpacing: 0.3,
+    ...FONTS.headlineLg,
+    fontSize: 28,
+    color: COLORS.text,
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: 14,
-    color: MUTED,
-    marginTop: 4,
-    marginBottom: 20,
+    ...FONTS.bodyMd,
+    color: COLORS.textSecondary,
+    marginBottom: 22,
   },
-  searchWrapper: {
+  searchCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: CARD,
-    borderRadius: 12,
+    backgroundColor: COLORS.surfaceWhite,
+    borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: CARD_BORDER,
-    paddingHorizontal: 14,
-    marginBottom: 28,
-  },
-  searchIcon: {
-    marginRight: 10,
+    borderColor: COLORS.divider,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 24,
+    gap: 10,
+    ...SHADOWS.sm,
   },
   searchInput: {
     flex: 1,
-    height: 48,
-    color: '#fff',
-    fontSize: 15,
+    ...FONTS.bodyMd,
+    color: COLORS.text,
   },
   sectionTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: MUTED,
-    letterSpacing: 0.8,
+    color: COLORS.textTertiary,
+    letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 12,
+    marginBottom: 14,
   },
-  categoriesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  categoryGrid: {
     gap: 10,
-    marginBottom: 28,
+    marginBottom: 24,
   },
   categoryCard: {
-    width: '31%',
-    flexGrow: 1,
-    backgroundColor: CARD,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-    padding: 14,
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    backgroundColor: COLORS.surfaceWhite,
+    borderRadius: SIZES.borderRadiusLg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    gap: 14,
+    ...SHADOWS.sm,
   },
   categoryIcon: {
     width: 44,
@@ -165,28 +176,71 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   categoryLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#fff',
+    flex: 1,
+    ...FONTS.titleMd,
+    color: COLORS.text,
+  },
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceWhite,
+    borderRadius: SIZES.borderRadiusLg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    gap: 14,
+    marginBottom: 24,
+    ...SHADOWS.sm,
+  },
+  infoIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: COLORS.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoTextBlock: {
+    flex: 1,
+  },
+  infoTitle: {
+    ...FONTS.titleLg,
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  infoDesc: {
+    ...FONTS.bodySm,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
   },
   emptyCard: {
-    backgroundColor: CARD,
-    borderRadius: 14,
+    backgroundColor: COLORS.surfaceWhite,
+    borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: CARD_BORDER,
-    padding: 32,
+    borderColor: COLORS.divider,
+    padding: 28,
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 20,
+    ...SHADOWS.sm,
+  },
+  emptyIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: COLORS.surfaceContainerLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
   },
   emptyTitle: {
+    ...FONTS.headlineSm,
     fontSize: 15,
-    fontWeight: '700',
-    color: '#fff',
+    color: COLORS.text,
+    marginBottom: 6,
   },
   emptyDesc: {
-    fontSize: 13,
-    color: MUTED,
+    ...FONTS.bodySm,
+    color: COLORS.textSecondary,
     textAlign: 'center',
+    lineHeight: 18,
   },
 });

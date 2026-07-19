@@ -1,105 +1,182 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import {
-  StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  Animated, Easing, Platform, StatusBar,
+  StyleSheet,
+  View,
+  Text,
+  ScrollView,
+  Platform,
+  StatusBar,
+  TouchableOpacity,
+  useWindowDimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-
-const GREEN = '#4be277';
-const DARK = '#131313';
-const CARD = '#1a2e1f';
-const CARD_BORDER = '#263d2c';
-const MUTED = '#627369';
+import { COLORS, SIZES, SHADOWS, FONTS } from '../../components/goalTheme';
+import { FadeInView } from '../../components/FadeInView';
 
 export default function MatchesScreen() {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  React.useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 400,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, []);
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 900;
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={DARK} />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Animated.View style={{ opacity: fadeAnim }}>
+        <View style={styles.pageShell}>
+        <FadeInView>
           <Text style={styles.title}>Pertandingan</Text>
-          <Text style={styles.subtitle}>Kelola jadwal pertandingan Anda</Text>
+          <Text style={styles.subtitle}>Kelola jadwal dan lihat undangan dalam satu tempat.</Text>
+        </FadeInView>
 
-          {/* Action Buttons */}
-          <View style={styles.actionsRow}>
-            <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
-              <MaterialIcons name="add-circle" size={22} color={GREEN} />
-              <Text style={styles.actionBtnText}>Buat Pertandingan</Text>
+        <FadeInView delay={100}>
+          <View style={[styles.actionRow, isDesktop && styles.actionRowDesktop]}>
+            <TouchableOpacity style={styles.actionCard} activeOpacity={0.85}>
+              <View style={styles.actionIconWrap}>
+                <MaterialIcons name="add-circle" size={22} color={COLORS.primary} />
+              </View>
+              <Text style={styles.actionText}>Buat</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionBtn, styles.actionBtnOutline]} activeOpacity={0.7}>
-              <MaterialIcons name="search" size={22} color={GREEN} />
-              <Text style={styles.actionBtnText}>Cari Pertandingan</Text>
+            <TouchableOpacity style={styles.actionCard} activeOpacity={0.85}>
+              <View style={styles.actionIconWrap}>
+                <MaterialIcons name="search" size={22} color={COLORS.primary} />
+              </View>
+              <Text style={styles.actionText}>Cari</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionCard} activeOpacity={0.85}>
+              <View style={styles.actionIconWrap}>
+                <MaterialIcons name="group-add" size={22} color={COLORS.primary} />
+              </View>
+              <Text style={styles.actionText}>Undang</Text>
             </TouchableOpacity>
           </View>
+        </FadeInView>
 
-          {/* Active Matches */}
-          <Text style={styles.sectionTitle}>PERTANDINGAN AKTIF</Text>
-          <View style={styles.emptyCard}>
-            <MaterialIcons name="event-busy" size={40} color={CARD_BORDER} />
+        <FadeInView delay={200}>
+          <View style={[styles.emptyCard, isDesktop && styles.emptyCardDesktop]}>
+            <View style={styles.emptyIconWrap}>
+              <MaterialIcons name="event-busy" size={36} color={COLORS.textTertiary} />
+            </View>
             <Text style={styles.emptyTitle}>Belum ada pertandingan aktif</Text>
-            <Text style={styles.emptyDesc}>Buat atau cari pertandingan untuk memulai.</Text>
+            <Text style={styles.emptyDesc}>Buat atau cari pertandingan untuk mulai bermain.</Text>
           </View>
+        </FadeInView>
 
-          {/* History */}
+        <FadeInView delay={300}>
           <Text style={styles.sectionTitle}>RIWAYAT</Text>
-          <View style={styles.emptyCard}>
-            <MaterialIcons name="history" size={40} color={CARD_BORDER} />
-            <Text style={styles.emptyTitle}>Belum ada riwayat</Text>
-            <Text style={styles.emptyDesc}>Riwayat pertandingan akan ditampilkan di sini.</Text>
+          <View style={[styles.emptyCard, isDesktop && styles.emptyCardDesktop]}>
+            <View style={styles.emptyIconWrap}>
+              <MaterialIcons name="history" size={36} color={COLORS.textTertiary} />
+            </View>
+            <Text style={styles.emptyTitle}>Riwayat kosong</Text>
+            <Text style={styles.emptyDesc}>Pertandingan selesai akan muncul di sini.</Text>
           </View>
-        </Animated.View>
+        </FadeInView>
+        </View>
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: DARK },
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
   scrollContent: {
     paddingTop: Platform.OS === 'ios' ? 60 : 48,
     paddingHorizontal: 20,
-    paddingBottom: 100,
+    paddingBottom: 40,
   },
-  title: { fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: 0.3 },
-  subtitle: { fontSize: 14, color: MUTED, marginTop: 4, marginBottom: 24 },
-  actionsRow: { flexDirection: 'row', gap: 10, marginBottom: 28 },
-  actionBtn: {
-    flex: 1,
+  pageShell: {
+    width: '100%',
+    maxWidth: 960,
+    alignSelf: 'center',
+  },
+  title: {
+    ...FONTS.headlineLg,
+    fontSize: 28,
+    color: COLORS.text,
+    marginBottom: 6,
+  },
+  subtitle: {
+    ...FONTS.bodyMd,
+    color: COLORS.textSecondary,
+    marginBottom: 22,
+  },
+  actionRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 24,
+  },
+  actionRowDesktop: {
+    gap: 16,
+  },
+  actionCard: {
+    flexGrow: 1,
+    flexBasis: 100,
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: COLORS.surfaceWhite,
+    borderRadius: SIZES.borderRadiusLg,
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    ...SHADOWS.sm,
+  },
+  actionIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(75,226,119,0.12)',
-    borderRadius: 12,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(75,226,119,0.2)',
   },
-  actionBtnOutline: {
-    backgroundColor: 'transparent',
-    borderColor: CARD_BORDER,
-  },
-  actionBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
-  sectionTitle: {
-    fontSize: 11, fontWeight: '800', color: MUTED,
-    letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 12,
+  actionText: {
+    ...FONTS.titleMd,
+    color: COLORS.text,
   },
   emptyCard: {
-    backgroundColor: CARD, borderRadius: 14, borderWidth: 1,
-    borderColor: CARD_BORDER, padding: 32, alignItems: 'center',
-    gap: 8, marginBottom: 20,
+    backgroundColor: COLORS.surfaceWhite,
+    borderRadius: SIZES.borderRadiusLg,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    padding: 28,
+    alignItems: 'center',
+    ...SHADOWS.sm,
+    marginBottom: 20,
   },
-  emptyTitle: { fontSize: 15, fontWeight: '700', color: '#fff' },
-  emptyDesc: { fontSize: 13, color: MUTED, textAlign: 'center' },
+  emptyCardDesktop: {
+    paddingVertical: 36,
+  },
+  emptyIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: COLORS.surfaceContainerLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  emptyTitle: {
+    ...FONTS.headlineSm,
+    fontSize: 15,
+    color: COLORS.text,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  emptyDesc: {
+    ...FONTS.bodySm,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: COLORS.textTertiary,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 14,
+  },
 });

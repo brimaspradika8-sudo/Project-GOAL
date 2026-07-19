@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, TextInput, TouchableOpacity, Animated, Easing } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
@@ -11,23 +11,17 @@ interface FloatingInputProps {
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 }
 
-const FloatingInput = forwardRef<any, FloatingInputProps>(({
+export default function FloatingInput({
   label,
   value,
   onChangeText,
   secureTextEntry = false,
   keyboardType = 'default',
   autoCapitalize = 'none',
-}, ref) => {
-  const inputRef = useRef<TextInput>(null);
+}: FloatingInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const animatedIsFocused = useRef(new Animated.Value(value === '' ? 0 : 1)).current;
-
-  useImperativeHandle(ref, () => ({
-    focus: () => inputRef.current?.focus(),
-    blur: () => inputRef.current?.blur(),
-  }));
 
   useEffect(() => {
     Animated.timing(animatedIsFocused, {
@@ -36,7 +30,7 @@ const FloatingInput = forwardRef<any, FloatingInputProps>(({
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
-  }, [isFocused, value]);
+  }, [animatedIsFocused, isFocused, value]);
 
   const labelStyle = {
     position: 'absolute' as 'absolute',
@@ -69,7 +63,6 @@ const FloatingInput = forwardRef<any, FloatingInputProps>(({
     <View style={styles.inputContainer}>
       <Animated.Text style={labelStyle}>{label}</Animated.Text>
       <TextInput
-        ref={inputRef}
         style={[styles.input, isFocused && styles.inputFocused]}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
@@ -93,11 +86,7 @@ const FloatingInput = forwardRef<any, FloatingInputProps>(({
       )}
     </View>
   );
-});
-
-FloatingInput.displayName = 'FloatingInput';
-
-export default FloatingInput;
+}
 
 const styles = StyleSheet.create({
   inputContainer: {
@@ -119,7 +108,10 @@ const styles = StyleSheet.create({
   inputFocused: {
     borderColor: '#4be277',
     backgroundColor: '#181f18',
-    boxShadow: '0px 0px 12px rgba(75, 226, 119, 0.3)',
+    shadowColor: '#4be277',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
     elevation: 4,
   },
   eyeIcon: {

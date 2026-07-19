@@ -1,169 +1,137 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity,
-  ActivityIndicator, KeyboardAvoidingView,
-  Platform, ScrollView, Keyboard, Image
+  ActivityIndicator, Animated, Easing, KeyboardAvoidingView,
+  Platform, ScrollView, Keyboard
 } from 'react-native';
-import { supabase } from '../lib/supabase';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
+import { useAuthAnimations } from '../hooks/useAuthAnimations';
+import { API_BASE_URL } from '../lib/api';
 
 export default function ResetPasswordScreen() {
+  const params = useLocalSearchParams<{ token?: string; email?: string }>();
+
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sessionReady, setSessionReady] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
+
+  const { fadeAnim, slideAnim, pulseAnim, bgScaleAnim } = useAuthAnimations();
+  const messageAnim = useRef(new Animated.Value(0)).current;
 
   const showMessage = (text: string, type: 'error' | 'success') => {
     setMessage({ text, type });
+    messageAnim.setValue(0);
+    Animated.timing(messageAnim, {
+      toValue: 1, duration: 300, easing: Easing.out(Easing.cubic), useNativeDriver: true,
+    }).start();
   };
 
-  useEffect(() => {
-    let mounted = true;
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      setSessionReady(!!session);
-
-      if (!session) {
-        showMessage('Sesi reset belum aktif. Silakan buka halaman ini melalui tautan reset kata sandi terbaru di email Anda.', 'error');
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!mounted) return;
-      if (event === 'PASSWORD_RECOVERY') {
-        setSessionReady(true);
-        setMessage(null);
-      }
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
+  const isValid = params.token && params.email;
 
   async function handleResetPassword() {
     setMessage(null);
     Keyboard.dismiss();
 
     if (!password || !confirmPassword) {
-      showMessage('Semua kolom wajib diisi.', 'error');
-      return;
+      showMessage('Semua kolom wajib diisi.', 'error'); return;
     }
-
     if (password !== confirmPassword) {
-      showMessage('Kata sandi dan konfirmasi kata sandi tidak cocok.', 'error');
-      return;
+      showMessage('Password dan Verifikasi Password tidak cocok!', 'error'); return;
     }
-
-    if (password.length < 6) {
-      showMessage('Kata sandi minimal 6 karakter.', 'error');
-      return;
+    if (password.length < 8) {
+      showMessage('Password minimal 8 karakter.', 'error'); return;
     }
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      showMessage('Sesi autentikasi tidak ditemukan. Silakan buka kembali tautan reset kata sandi terbaru dari email, lalu coba lagi.', 'error');
-      return;
+    if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      showMessage('Password harus mengandung huruf besar dan angka.', 'error'); return;
     }
 
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: password
+      const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          email: params.email,
+          token: params.token,
+          password,
+          password_confirmation: confirmPassword,
+        }),
       });
+      const data = await res.json();
 
-      if (error) {
-        showMessage(error.message, 'error');
+      if (res.ok) {
+        showMessage('Password berhasil diperbarui! Mengarahkan ke login...', 'success');
+        setTimeout(() => router.replace('/login'), 2000);
       } else {
-        showMessage('Kata sandi berhasil diperbarui. Mengarahkan ke halaman masuk...', 'success');
-        setTimeout(async () => {
-          await supabase.auth.signOut();
-        }, 2000);
+        showMessage(data.message || 'Token tidak valid atau sudah kedaluwarsa.', 'error');
       }
-    } catch (err: any) {
-      showMessage(err?.message || 'Terjadi kesalahan sistem.', 'error');
+    } catch {
+      showMessage('Terjadi kesalahan sistem. Silakan coba lagi.', 'error');
     } finally {
       setLoading(false);
     }
   }
 
-  return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <StatusBar style="light" />
+  if (!isValid) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <MaterialIcons name="link-off" size={56} color="#ff6b6b" />
+        <Text style={{ color: '#fff', fontSize: 16, marginTop: 12, textAlign: 'center' }}>
+          Tautan reset tidak valid. Silakan minta tautan baru.
+        </Text>
+        <TouchableOpacity style={[styles.button, { marginTop: 24 }]} onPress={() => router.replace('/forgot-password')}>
+          <Text style={styles.buttonText}>MINTA LINK BARU</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
+  return (
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <StatusBar style="light" />
       <View style={StyleSheet.absoluteFill}>
-        <Image
+        <Animated.Image
           source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCNgBJlBY97_QaewYW2r-DjSlc7y1DcxBuTyd2FT01aWpOMDdC6E5Ojftib57g020fqnyp0_maN4R5MEHbvA5mKvbvL62-rTz8r9ur1HeYAdQRNcHj2N8UkRNLsr6n30pKT8wvR2ALUnlrVoH30n83mprQd7LqD0c88IYJTTyGNiDVyADu8naOoqsrI2DdszdWsC6qGeg9DMNEPKErslJTkraaMEw-PLU4zYb0RM7Qzcqh4FeFxhc1IHMBcbbO-zGz4b_LtpTKBW06d' }}
-          style={styles.bgImage}
-          resizeMode="cover"
+          style={[styles.bgImage, { transform: [{ scale: bgScaleAnim }] }]} resizeMode="cover"
         />
         <View style={styles.overlay} />
       </View>
-
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.responsiveWrapper}>
-          <View style={styles.header}>
-            <View style={styles.iconCircle}>
+          <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+            <Animated.View style={{ transform: [{ scale: pulseAnim }], marginBottom: 12, shadowColor: '#4be277', shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }}>
               <MaterialIcons name="password" size={56} color="#4be277" />
-            </View>
-            <Text style={styles.title}>KATA SANDI BARU</Text>
-            <Text style={styles.subtitle}>Masukkan kata sandi baru Anda di bawah ini dengan hati-hati.</Text>
-          </View>
-
-          <View style={styles.glassCard}>
+            </Animated.View>
+            <Text style={styles.title}>NEW PASSWORD</Text>
+            <Text style={styles.subtitle}>Masukkan password baru Anda di bawah ini.</Text>
+          </Animated.View>
+          <Animated.View style={[styles.glassCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
             {message && (
-              <View style={[styles.messageBox, message.type === 'error' ? styles.messageError : styles.messageSuccess]}>
+              <Animated.View style={[styles.messageBox, message.type === 'error' ? styles.messageError : styles.messageSuccess, { opacity: messageAnim, transform: [{ translateY: messageAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]}>
                 <Text style={styles.messageText}>{message.text}</Text>
-              </View>
+              </Animated.View>
             )}
-
-            <FloatingInput
-              label="Kata Sandi Baru"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={true}
-            />
-
-            <FloatingInput
-              label="Konfirmasi Kata Sandi Baru"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry={true}
-            />
-
-            <TouchableOpacity
-              style={[styles.button, (loading || !sessionReady) && styles.buttonDisabled]}
-              onPress={handleResetPassword}
-              disabled={loading || !sessionReady}
-              activeOpacity={0.8}
-            >
-              {loading ? (
-                <ActivityIndicator color="#0e2a14" />
-              ) : (
+            <FloatingInput label="Password Baru" value={password} onChangeText={setPassword} secureTextEntry={true} />
+            <FloatingInput label="Ulangi Password Baru" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={true} />
+            <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleResetPassword} disabled={loading} activeOpacity={0.8}>
+              {loading ? <ActivityIndicator color="#0e2a14" /> : (
                 <View style={styles.buttonContent}>
                   <Text style={styles.buttonText}>PERBARUI</Text>
                   <MaterialIcons name="done-all" size={20} color="#005321" style={{ marginLeft: 8 }} />
                 </View>
               )}
             </TouchableOpacity>
-
-          </View>
-
-          <View style={styles.footer}>
+          </Animated.View>
+          <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
             <TouchableOpacity onPress={() => router.replace('/login')} style={{ flexDirection: 'row', alignItems: 'center' }}>
               <MaterialIcons name="arrow-back" size={16} color="#4be277" style={{ marginRight: 4 }} />
-              <Text style={styles.footerLink}>Kembali ke Halaman Masuk</Text>
+              <Text style={styles.footerLink}>Kembali ke Login</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -171,120 +139,23 @@ export default function ResetPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#131313',
-  },
-  bgImage: {
-    width: '100%',
-    height: '100%',
-    opacity: 0.5,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 24,
-  },
-  responsiveWrapper: {
-    width: '100%',
-    maxWidth: 440,
-    alignSelf: 'center',
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  iconCircle: {
-    marginBottom: 12,
-    boxShadow: '0px 0px 20px rgba(75, 226, 119, 0.6)',
-    elevation: 15,
-  },
-  title: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: '#4be277',
-    fontStyle: 'italic',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    textShadow: '0px 2px 10px rgba(75, 226, 119, 0.4)',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#bccbb9',
-    marginTop: 8,
-    fontWeight: '600',
-    textAlign: 'center',
-    paddingHorizontal: 20,
-    lineHeight: 22,
-  },
-  glassCard: {
-    backgroundColor: 'rgba(30,30,30,0.7)',
-    borderRadius: 20,
-    padding: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    boxShadow: '0px 15px 25px rgba(0, 0, 0, 0.5)',
-    elevation: 10,
-  },
-  button: {
-    backgroundColor: '#4be277',
-    height: 60,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-    boxShadow: '0px 6px 12px rgba(75, 226, 119, 0.4)',
-    elevation: 6,
-  },
-  buttonDisabled: {
-    backgroundColor: '#2a8b46',
-    boxShadow: 'none',
-    elevation: 0,
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#002109',
-    fontSize: 18,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 40,
-  },
-  footerLink: {
-    color: '#4be277',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  messageBox: {
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 20,
-  },
-  messageError: {
-    backgroundColor: '#3a0d10',
-    borderLeftWidth: 4,
-    borderLeftColor: '#ffb4ab',
-  },
-  messageSuccess: {
-    backgroundColor: '#0a2614',
-    borderLeftWidth: 4,
-    borderLeftColor: '#4be277',
-  },
-  messageText: {
-    color: '#e5e2e1',
-    fontSize: 15,
-  },
+  container: { flex: 1, backgroundColor: '#131313' },
+  bgImage: { width: '100%', height: '100%', opacity: 0.5 },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', paddingVertical: 40, paddingHorizontal: 24 },
+  responsiveWrapper: { width: '100%', maxWidth: 440, alignSelf: 'center' },
+  header: { alignItems: 'center', marginBottom: 40 },
+  title: { fontSize: 42, fontWeight: '900', color: '#4be277', fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: 2, textShadowColor: 'rgba(75,226,119,0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10, textAlign: 'center' },
+  subtitle: { fontSize: 16, color: '#bccbb9', marginTop: 8, fontWeight: '600', textAlign: 'center', paddingHorizontal: 20, lineHeight: 22 },
+  glassCard: { backgroundColor: 'rgba(30,30,30,0.7)', borderRadius: 20, padding: 28, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', shadowColor: '#000', shadowOffset: { width: 0, height: 15 }, shadowOpacity: 0.5, shadowRadius: 25, elevation: 10 },
+  button: { backgroundColor: '#4be277', height: 60, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 8, shadowColor: '#4be277', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 },
+  buttonDisabled: { backgroundColor: '#2a8b46', shadowOpacity: 0, elevation: 0 },
+  buttonContent: { flexDirection: 'row', alignItems: 'center' },
+  buttonText: { color: '#002109', fontSize: 18, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 2 },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 40 },
+  footerLink: { color: '#4be277', fontSize: 16, fontWeight: 'bold' },
+  messageBox: { borderRadius: 8, padding: 14, marginBottom: 20 },
+  messageError: { backgroundColor: '#3a0d10', borderLeftWidth: 4, borderLeftColor: '#ffb4ab' },
+  messageSuccess: { backgroundColor: '#0a2614', borderLeftWidth: 4, borderLeftColor: '#4be277' },
+  messageText: { color: '#e5e2e1', fontSize: 15 },
 });

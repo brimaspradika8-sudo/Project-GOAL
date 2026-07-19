@@ -1,194 +1,300 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  ActivityIndicator, RefreshControl, Alert,
-  Image, Platform, StatusBar, Dimensions
+  StyleSheet,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+  Platform,
+  StatusBar,
+  TextInput,
+  useWindowDimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { supabase } from '../../lib/supabase';
+import { router } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useProfileStore } from '../../store/profileStore';
-import Animated, { FadeInDown, FadeInUp, ZoomIn, FadeInRight } from 'react-native-reanimated';
-import { Video, ResizeMode } from 'expo-av';
+import { useFieldStore } from '../../store/fieldStore';
+import { COLORS, FONTS, SIZES, SHADOWS } from '../../components/goalTheme';
+import { CATEGORIES } from '../../data/venues';
+import { SafeImage } from '../../components/SafeImage';
+import { SkeletonVenueList, SkeletonHorizontalCards, SkeletonProfile } from '../../components/Skeleton';
+import { useDebounce } from '../../hooks/useDebounce';
 
-const { width } = Dimensions.get('window');
 
-const GREEN = '#4be277';
-const DARK = '#0d110f';
-const CARD = '#161f19';
-const CARD_LIGHT = '#1e2b22';
-const CARD_BORDER = '#25382c';
-const MUTED = '#7d9484';
-const TEXT_LIGHT = '#f0f5f2';
-const PRIMARY_RED = '#b21c27'; // To match the image's red bar if desired, but we'll use dark theme for consistency
-const FLOATING_BG = '#1a1423'; // Darker contrasting tone for the bar, or just use PRIMARY_RED
+const SPORT_MAP: Record<string, string> = {
+  'Futsal': 'futsal',
+  'Basket': 'basketball',
+  'Badminton': 'badminton',
+  'Mini Soccer': 'mini_soccer',
+  'Tenis': 'tennis',
+};
+const DEFAULT_IMAGES: Record<string, string> = {
+  futsal: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
+  basketball: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop',
+  badminton: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?q=80&w=800&auto=format&fit=crop',
+  default: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
+};
+
+function formatPrice(price: number | null): string {
+  if (!price) return 'Hubungi';
+  return `Rp${price.toLocaleString('id-ID')}`;
+}
 
 export default function HomeScreen() {
-  const { profile, loading, fetchProfile, clearProfile } = useProfileStore();
+  const { width } = useWindowDimensions();
+  const { profile, loading, fetchProfile } = useProfileStore();
+  const { fields, fetchFields } = useFieldStore();
   const [refreshing, setRefreshing] = useState(false);
-  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState('Futsal');
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
   useEffect(() => {
-    const hydrateHome = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const name = user?.user_metadata?.full_name;
-      if (name) setDisplayName(name);
+    if (!profile) fetchProfile();
+  }, [profile, fetchProfile]);
 
-      if (!profile) {
-        await fetchProfile();
-      }
-    };
-
-    hydrateHome();
-  }, []);
+  useEffect(() => {
+    const sport = SPORT_MAP[activeCategory] || activeCategory.toLowerCase();
+    fetchFields(sport, debouncedSearch || undefined);
+  }, [activeCategory, debouncedSearch, fetchFields]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchProfile();
+    await Promise.all([fetchProfile(), fetchFields()]);
     setRefreshing(false);
   };
 
-  const userName = displayName ?? profile?.full_name ?? profile?.username ?? 'Pengguna';
+  const filteredVenues = useMemo(() => fields.slice(0, 5), [fields]);
+  const rekomendasi = useMemo(() => fields.slice(0, 4), [fields]);
 
-  if (loading) {
+  const isDesktop = width >= 900;
+  const sports = profile?.sports ?? [];
+  const userName = profile?.full_name || profile?.username || 'Pengguna';
+
+  if (loading && !refreshing) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={GREEN} />
+      <View style={styles.skeletonContainer}>
+        <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <SkeletonProfile />
+          <View style={{ height: 16 }} />
+          <SkeletonHorizontalCards />
+          <View style={{ height: 16 }} />
+          <SkeletonVenueList />
+        </ScrollView>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-      
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+
+      <View style={styles.topBar}>
+        <View style={[styles.pageShell, styles.topBarShell]}>
+          <View style={styles.logoRow}>
+            <View style={styles.logoIconWrap}>
+              <MaterialIcons name="sports-soccer" size={20} color={COLORS.primary} />
+            </View>
+            <Text style={styles.logoText}>GOAL</Text>
+          </View>
+          <View style={styles.topBarActions}>
+            <TouchableOpacity style={styles.topBarBtn} activeOpacity={0.7}>
+              <MaterialIcons name="notifications-none" size={22} color={COLORS.onSurface} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.avatarBtn} activeOpacity={0.7} onPress={() => router.push('/(tabs)/profile')}>
+              <MaterialIcons name="person" size={20} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GREEN} colors={[GREEN]} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
         showsVerticalScrollIndicator={false}
-        bounces={false}
       >
-        {/* HERO SECTION WITH VIDEO */}
-        <View style={styles.heroBackground}>
-          <Video
-            source={{ uri: 'https://youtu.be/RgaHhPDmThw?si=CLxCaBtzw3kml6V8' }}
-            style={StyleSheet.absoluteFillObject}
-            resizeMode={ResizeMode.COVER}
-            shouldPlay
-            isLooping
-            isMuted
-          />
-          {/* Overlay to darken image */}
-          <View style={styles.heroOverlay} />
-
-          {/* Top Navbar / Header */}
-          <View style={styles.topHeader}>
-            <Image
-              source={{ uri: profile?.avatar_url || `https://api.dicebear.com/7.x/initials/png?seed=${userName}&backgroundColor=161f19&textColor=4be277` }}
-              style={styles.headerAvatar}
-            />
-            <TouchableOpacity style={styles.iconBtn}>
-              <MaterialIcons name="notifications-none" size={24} color="#fff" />
-            </TouchableOpacity>
+        <View style={styles.pageShell}>
+        <View style={[styles.heroPanel, isDesktop && styles.heroPanelDesktop]}>
+          <View style={styles.heroCopy}>
+            <Text style={styles.greeting}>Halo, {userName}</Text>
+            <Text style={styles.heroTitle}>Temukan lapangan terbaik hari ini</Text>
+            <Text style={styles.heroText}>Cari venue, cek status, lalu lanjut booking dari satu tempat.</Text>
           </View>
-
-          <Animated.View entering={FadeInDown.duration(800).springify()} style={styles.heroContent}>
-            <Text style={styles.heroTitle}>Selamat Datang,{'\n'}{userName}</Text>
-            <Text style={styles.heroSubtext}>
-              Platform all-in-one untuk sewa lapangan, cari lawan sparring, atau cari kawan main bareng. Olahraga makin mudah dan menyenangkan!
-            </Text>
-          </Animated.View>
+          <TouchableOpacity style={styles.heroButton} activeOpacity={0.85} onPress={() => router.push('/(tabs)/fields')}>
+            <MaterialIcons name="stadium" size={18} color="#ffffff" />
+            <Text style={styles.heroButtonText}>Cari Lapangan</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* FLOATING SEARCH BAR */}
-        <Animated.View entering={ZoomIn.duration(600).delay(300).springify()} style={styles.searchBarContainer}>
-          <View style={styles.searchBarInner}>
-            <View style={styles.searchItem}>
-              <MaterialIcons name="sports-soccer" size={20} color={TEXT_LIGHT} />
-              <View>
-                <Text style={styles.searchLabel}>Aktivitas</Text>
-                <Text style={styles.searchValue}>Pilih Aktivitas <MaterialIcons name="keyboard-arrow-down" size={14} /></Text>
-              </View>
-            </View>
-            
-            <View style={styles.searchDivider} />
-            
-            <View style={styles.searchItem}>
-              <MaterialIcons name="location-on" size={20} color={TEXT_LIGHT} />
-              <View>
-                <Text style={styles.searchLabel}>Lokasi</Text>
-                <Text style={styles.searchValue}>Pilih Kota <MaterialIcons name="keyboard-arrow-down" size={14} /></Text>
-              </View>
-            </View>
+        <View style={styles.searchBar}>
+          <MaterialIcons name="search" size={20} color={COLORS.textTertiary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Cari lapangan atau venue"
+            placeholderTextColor={COLORS.textTertiary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <MaterialIcons name="close" size={18} color={COLORS.textTertiary} />
+            </TouchableOpacity>
+          )}
+        </View>
 
-            <View style={styles.searchDivider} />
+        <View style={styles.section}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+            {CATEGORIES.map((item) => {
+              const isActive = activeCategory === item.label;
+              return (
+                <TouchableOpacity
+                  key={item.label}
+                  style={styles.categoryItem}
+                  activeOpacity={0.7}
+                  onPress={() => setActiveCategory(item.label)}
+                >
+                  <View style={[styles.categoryIconWrap, isActive && styles.categoryIconWrapActive]}>
+                    <MaterialIcons name={item.icon} size={22} color={isActive ? '#ffffff' : COLORS.onSurfaceVariant} />
+                  </View>
+                  <Text style={[styles.categoryLabel, isActive && styles.categoryLabelActive]}>{item.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
 
-            <View style={styles.searchItem}>
-              <MaterialIcons name="category" size={20} color={TEXT_LIGHT} />
-              <View>
-                <Text style={styles.searchLabel}>Cabang Olahraga</Text>
-                <Text style={styles.searchValue}>Pilih Olahraga <MaterialIcons name="keyboard-arrow-down" size={14} /></Text>
-              </View>
+        <View style={styles.promoCard}>
+          <SafeImage
+            source={{ uri: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?q=80&w=800&auto=format&fit=crop' }}
+            style={styles.promoImage}
+            fallbackSize={32}
+          />
+          <View style={styles.promoGradient} />
+          <View style={styles.promoContent}>
+            <View style={styles.promoBadge}>
+              <Text style={styles.promoBadgeText}>PROMO SPESIAL</Text>
             </View>
-
-            <TouchableOpacity style={styles.primaryBtn}>
-              <Text style={styles.primaryBtnText}>Temukan</Text>
-              <MaterialIcons name="arrow-forward" size={16} color={DARK} />
+            <Text style={styles.promoTitle}>Diskon 20%</Text>
+            <Text style={styles.promoDesc}>Booking lebih hemat di akhir pekan ini.</Text>
+            <TouchableOpacity style={styles.promoBtn} activeOpacity={0.8}>
+              <Text style={styles.promoBtnText}>Gunakan Sekarang</Text>
             </TouchableOpacity>
           </View>
-        </Animated.View>
+          <View style={styles.promoDots}>
+            <View style={[styles.dot, styles.dotActive]} />
+            <View style={styles.dot} />
+            <View style={styles.dot} />
+          </View>
+        </View>
 
-        {/* DAFTAR LAPANGAN SECTION */}
-        <View style={styles.pageContent}>
-          <Animated.View entering={FadeInUp.duration(600).delay(500).springify()} style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>DAFTAR LAPANGAN</Text>
-              <TouchableOpacity>
-                <Text style={styles.viewAllText}>Lihat Semua</Text>
-              </TouchableOpacity>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Venue Populer</Text>
+            <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/(tabs)/fields')}>
+              <Text style={styles.sectionLink}>Lihat Semua</Text>
+            </TouchableOpacity>
+          </View>
+
+          {filteredVenues.length === 0 ? (
+            <View style={styles.emptyState}>
+              <MaterialIcons name="search-off" size={40} color={COLORS.textTertiary} />
+              <Text style={styles.emptyText}>Tidak ada venue ditemukan</Text>
             </View>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.fieldScroll}>
-              {[1, 2, 3].map((item, idx) => (
-                <View key={item} style={styles.fieldCard}>
-                  <Image 
-                    source={{ uri: `https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&auto=format&fit=crop&sig=${item}` }}
-                    style={styles.fieldImage}
-                  />
-                  <View style={styles.fieldInfo}>
-                    <Text style={styles.fieldTitle}>Arena Futsal {item}</Text>
-                    <View style={styles.locationRow}>
-                      <MaterialIcons name="location-pin" size={14} color={MUTED} />
-                      <Text style={styles.locationText}>Jakarta Selatan</Text>
+          ) : (
+            <View style={[styles.venueGrid, isDesktop && styles.venueGridDesktop]}>
+            {filteredVenues.map((item) => {
+              const imgUrl = item.image_url || DEFAULT_IMAGES[item.sport_type] || DEFAULT_IMAGES.default;
+              const isApproved = item.status === 'approved';
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.venueCard, isDesktop && styles.venueCardDesktop]}
+                  activeOpacity={0.85}
+                  onPress={() => router.push({ pathname: '/venue-detail', params: { id: String(item.id) } })}
+                >
+                  <View style={styles.venueImageWrap}>
+                    <SafeImage source={{ uri: imgUrl }} style={styles.venueImage} fallbackSize={32} />
+                    <View style={styles.venueImageOverlay} />
+                    <View style={[styles.statusBadge, { backgroundColor: isApproved ? COLORS.primary : COLORS.error }]}>
+                      <Text style={styles.statusText}>{isApproved ? 'Tersedia' : 'Menunggu'}</Text>
                     </View>
-                    <Text style={styles.fieldPrice}>Mulai Rp 150.000 / Jam</Text>
                   </View>
+                  <View style={styles.venueInfo}>
+                    <View style={styles.venueTopRow}>
+                      <Text style={styles.venueName}>{item.name}</Text>
+                      <Text style={styles.venuePrice}>{formatPrice(item.price_per_hour)}/jam</Text>
+                    </View>
+                    <View style={styles.venueLocationRow}>
+                      <MaterialIcons name="location-on" size={14} color={COLORS.textTertiary} />
+                      <Text style={styles.venueLocation}>{item.location}</Text>
+                    </View>
+                    <View style={styles.featureRow}>
+                      <View style={styles.featureChip}>
+                        <Text style={styles.featureText}>{item.sport_type}</Text>
+                      </View>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+            </View>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Rekomendasi Terdekat</Text>
+          </View>
+          <View style={[styles.rekomGrid, isDesktop && styles.rekomGridDesktop]}>
+            {rekomendasi.map((item) => {
+              const imgUrl = item.image_url || DEFAULT_IMAGES[item.sport_type] || DEFAULT_IMAGES.default;
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.rekomCard, isDesktop && styles.rekomCardDesktop]}
+                  activeOpacity={0.85}
+                  onPress={() => router.push({ pathname: '/venue-detail', params: { id: String(item.id) } })}
+                >
+                  <SafeImage source={{ uri: imgUrl }} style={styles.rekomImage} fallbackSize={24} />
+                  <View style={styles.rekomOverlay} />
+                  <View style={styles.rekomInfo}>
+                    <Text style={styles.rekomName}>{item.name}</Text>
+                    <View style={styles.rekomDistRow}>
+                      <MaterialIcons name="near-me" size={12} color="rgba(255,255,255,0.8)" />
+                      <Text style={styles.rekomDist}>{item.location}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {sports.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Olahraga Favorit</Text>
+            </View>
+            <View style={styles.sportChips}>
+              {sports.map((sport) => (
+                <View key={sport} style={styles.sportChip}>
+                  <Text style={styles.sportChipText}>{sport}</Text>
                 </View>
               ))}
-            </ScrollView>
-          </Animated.View>
+            </View>
+          </View>
+        )}
 
-          {/* OLAHRAGA SAYA */}
-          <Animated.View entering={FadeInRight.duration(600).delay(600).springify()} style={styles.section}>
-            <Text style={styles.sectionTitle}>OLAHRAGA SAYA</Text>
-            {profile?.sports && profile.sports.length > 0 ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sportsScroll}>
-                {profile.sports.map((sport) => (
-                  <View key={sport} style={styles.sportChip}>
-                    <Text style={styles.sportLabel}>{sport.toUpperCase()}</Text>
-                  </View>
-                ))}
-              </ScrollView>
-            ) : (
-              <View style={styles.emptySportsContainer}>
-                <Text style={styles.emptyText}>Belum ada olahraga pilihan.</Text>
-              </View>
-            )}
-          </Animated.View>
+        <View style={{ height: 80 }} />
         </View>
-
       </ScrollView>
+
+      <TouchableOpacity style={styles.fab} activeOpacity={0.85} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/(tabs)/fields'); }}>
+        <MaterialIcons name="add" size={28} color="#ffffff" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -196,218 +302,462 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DARK,
+    backgroundColor: COLORS.background,
   },
-  centered: {
+  skeletonContainer: {
     flex: 1,
-    backgroundColor: DARK,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: COLORS.background,
   },
-  scrollContent: {
-    paddingBottom: 100,
-  },
-  heroBackground: {
-    width: '100%',
-    height: 480,
-    backgroundColor: '#000',
-  },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  topHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  topBar: {
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 50,
+    paddingTop: Platform.OS === 'ios' ? 56 : 38,
+    paddingBottom: 12,
+    backgroundColor: COLORS.background,
   },
-  headerAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: GREEN,
+  pageShell: {
+    width: '100%',
+    maxWidth: 1120,
+    alignSelf: 'center',
   },
-  iconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heroContent: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 60,
-  },
-  heroTitle: {
-    fontSize: 34,
-    fontWeight: '900',
-    color: '#ffffff',
-    lineHeight: 42,
-    marginBottom: 16,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  heroSubtext: {
-    fontSize: 14,
-    color: '#e0e0e0',
-    lineHeight: 22,
-    maxWidth: '90%',
-  },
-  searchBarContainer: {
-    paddingHorizontal: 16,
-    marginTop: -45, // Pulls the bar up into the hero section
-    zIndex: 10,
-  },
-  searchBarInner: {
-    backgroundColor: PRIMARY_RED,
-    borderRadius: 16,
-    padding: 16,
+  topBarShell: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 8,
   },
-  searchItem: {
+  logoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    flex: 1,
   },
-  searchLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.7)',
-    textTransform: 'uppercase',
+  logoIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: COLORS.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  searchValue: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: '500',
-    marginTop: 2,
+  logoText: {
+    fontSize: 22,
+    fontWeight: '800',
+    fontFamily: 'Montserrat',
+    color: COLORS.primary,
+    letterSpacing: 1,
   },
-  searchDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    marginHorizontal: 12,
-  },
-  primaryBtn: {
+  topBarActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 24,
-    gap: 4,
-    marginLeft: 8,
+    gap: 8,
   },
-  primaryBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: PRIMARY_RED,
+  topBarBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: COLORS.surfaceWhite,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    ...SHADOWS.sm,
   },
-  pageContent: {
+  avatarBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: COLORS.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 32,
+  },
+  heroPanel: {
+    backgroundColor: COLORS.surfaceWhite,
+    borderRadius: SIZES.borderRadiusLg,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    padding: 18,
+    marginTop: 12,
+    ...SHADOWS.sm,
+  },
+  heroPanelDesktop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 24,
+  },
+  heroCopy: {
+    flex: 1,
+  },
+  greeting: {
+    ...FONTS.labelMd,
+    color: COLORS.primary,
+    marginBottom: 6,
+  },
+  heroTitle: {
+    ...FONTS.headlineLg,
+    color: COLORS.text,
+  },
+  heroText: {
+    ...FONTS.bodyMd,
+    color: COLORS.textSecondary,
+    marginTop: 6,
+  },
+  heroButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: SIZES.borderRadius,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+    marginTop: 16,
+    ...SHADOWS.primary,
+  },
+  heroButtonText: {
+    ...FONTS.buttonMd,
+    color: '#ffffff',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceWhite,
+    borderRadius: SIZES.borderRadiusLg,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    marginTop: 16,
+    marginBottom: 8,
+    gap: 10,
+    ...SHADOWS.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'Montserrat',
+    color: COLORS.text,
   },
   section: {
-    marginBottom: 32,
+    marginTop: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 17,
+    fontWeight: '700',
+    fontFamily: 'Montserrat',
+    color: COLORS.text,
+  },
+  sectionLink: {
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: 'Montserrat',
+    color: COLORS.primary,
+  },
+  categoryScroll: {
+    gap: 12,
+    paddingVertical: 4,
+  },
+  categoryItem: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  categoryIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: COLORS.surfaceWhite,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    ...SHADOWS.sm,
+  },
+  categoryIconWrapActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+    ...SHADOWS.primary,
+  },
+  categoryLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: 'Montserrat',
+    color: COLORS.onSurfaceVariant,
+  },
+  categoryLabelActive: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  promoCard: {
+    marginTop: 20,
+    borderRadius: SIZES.borderRadiusLg,
+    overflow: 'hidden',
+    ...SHADOWS.md,
+  },
+  promoImage: {
+    width: '100%',
+    height: 200,
+  },
+  promoGradient: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 30, 15, 0.55)',
+  },
+  promoContent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 40,
+    padding: 20,
+    justifyContent: 'flex-end',
+  },
+  promoBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 10,
+  },
+  promoBadgeText: {
+    fontSize: 10,
     fontWeight: '800',
-    color: TEXT_LIGHT,
+    fontFamily: 'Montserrat',
+    color: '#ffffff',
     letterSpacing: 1,
   },
-  viewAllText: {
-    fontSize: 12,
-    color: GREEN,
-    fontWeight: '700',
-  },
-  fieldScroll: {
-    gap: 16,
-  },
-  fieldCard: {
-    width: 260,
-    backgroundColor: CARD,
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
-  },
-  fieldImage: {
-    width: '100%',
-    height: 140,
-    backgroundColor: CARD_LIGHT,
-  },
-  fieldInfo: {
-    padding: 16,
-  },
-  fieldTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: TEXT_LIGHT,
+  promoTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    fontFamily: 'Montserrat',
+    color: '#ffffff',
     marginBottom: 6,
   },
-  locationRow: {
+  promoDesc: {
+    fontSize: 13,
+    fontFamily: 'Montserrat',
+    color: 'rgba(255,255,255,0.85)',
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  promoBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.primary,
+    borderRadius: SIZES.borderRadius,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  promoBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: 'Montserrat',
+    color: '#ffffff',
+  },
+  promoDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    backgroundColor: COLORS.surfaceWhite,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.surfaceContainerHigh,
+  },
+  dotActive: {
+    backgroundColor: COLORS.primary,
+    width: 20,
+  },
+  venueCard: {
+    backgroundColor: COLORS.surfaceWhite,
+    borderRadius: SIZES.borderRadiusLg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+    marginBottom: 14,
+    ...SHADOWS.md,
+  },
+  venueCardDesktop: {
+    width: 'calc(50% - 7px)' as any,
+  },
+  venueGrid: {
+    gap: 14,
+  },
+  venueGridDesktop: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  venueImageWrap: {
+    height: 180,
+    position: 'relative',
+  },
+  venueImage: {
+    width: '100%',
+    height: '100%',
+  },
+  venueImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+  },
+  statusBadge: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'Montserrat',
+    color: '#ffffff',
+  },
+  venueInfo: {
+    padding: 16,
+  },
+  venueTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  venueName: {
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Montserrat',
+    color: COLORS.text,
+    flex: 1,
+  },
+  venuePrice: {
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Montserrat',
+    color: COLORS.primary,
+  },
+  venueLocationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     marginBottom: 10,
   },
-  locationText: {
-    fontSize: 12,
-    color: MUTED,
+  venueLocation: {
+    fontSize: 13,
+    fontFamily: 'Montserrat',
+    color: COLORS.textSecondary,
   },
-  fieldPrice: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: GREEN,
-  },
-  sportsScroll: {
+  featureRow: {
+    flexDirection: 'row',
     gap: 8,
   },
-  sportChip: {
-    backgroundColor: CARD,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: CARD_BORDER,
+  featureChip: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
-  sportLabel: {
-    fontSize: 12,
+  featureText: {
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: 'Montserrat',
+    color: COLORS.onSurfaceVariant,
+  },
+  rekomGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  rekomGridDesktop: {
+    gap: 16,
+  },
+  rekomCard: {
+    width: '48%' as any,
+    aspectRatio: 1,
+    borderRadius: SIZES.borderRadiusLg,
+    overflow: 'hidden',
+    ...SHADOWS.md,
+  },
+  rekomCardDesktop: {
+    width: '23.5%' as any,
+  },
+  rekomImage: {
+    width: '100%',
+    height: '100%',
+  },
+  rekomOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 20, 10, 0.45)',
+  },
+  rekomInfo: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 12,
+    justifyContent: 'flex-end',
+  },
+  rekomName: {
+    fontSize: 14,
     fontWeight: '700',
-    color: TEXT_LIGHT,
+    fontFamily: 'Montserrat',
+    color: '#ffffff',
+    marginBottom: 4,
   },
-  emptySportsContainer: {
-    backgroundColor: CARD,
-    borderRadius: 12,
-    padding: 16,
+  rekomDistRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
+  },
+  rekomDist: {
+    fontSize: 12,
+    fontFamily: 'Montserrat',
+    color: 'rgba(255,255,255,0.85)',
+  },
+  sportChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  sportChip: {
+    backgroundColor: COLORS.primaryContainer,
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  sportChipText: {
+    color: COLORS.primary,
+    fontWeight: '700',
+    fontSize: 12,
+    fontFamily: 'Montserrat',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    gap: 8,
   },
   emptyText: {
-    fontSize: 12,
-    color: MUTED,
-    fontStyle: 'italic',
-  }
+    ...FONTS.bodyMd,
+    color: COLORS.textTertiary,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.lg,
+    shadowColor: COLORS.primary,
+  },
 });
-
-

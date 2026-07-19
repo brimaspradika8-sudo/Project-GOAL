@@ -1,203 +1,138 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity,
-  ActivityIndicator, KeyboardAvoidingView,
-  Platform, ScrollView, Keyboard, Image
+  ActivityIndicator, Animated, Easing, KeyboardAvoidingView,
+  Platform, ScrollView, Keyboard
 } from 'react-native';
-import { supabase } from '../lib/supabase';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
+import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL } from '../lib/api';
-
-const COOLDOWN_SECONDS = 60;
-const RESET_PASSWORD_PATH = 'reset-password';
-
-function getResetPasswordRedirectUrl() {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return `${window.location.origin}/${RESET_PASSWORD_PATH}`;
-  }
-  return `frontend://${RESET_PASSWORD_PATH}`;
-}
-
-function maskEmail(email: string): string {
-  const [local, domain] = email.split('@');
-  if (!domain) return email;
-  const masked = local.length > 2
-    ? local[0] + '***' + local[local.length - 1]
-    : local[0] + '***';
-  return `${masked}@${domain}`;
-}
-
-function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function translateSupabaseError(message: string): string {
-  const m = message.toLowerCase();
-  if (m.includes('rate limit') || m.includes('too many')) {
-    return 'Terlalu banyak percobaan. Silakan tunggu beberapa menit lagi.';
-  }
-  if (m.includes('invalid email') || m.includes('valid email')) {
-    return 'Format email tidak valid. Periksa kembali.';
-  }
-  if (m.includes('unable') || m.includes('fetch')) {
-    return 'Gagal mengirim. Periksa koneksi internet Anda.';
-  }
-  return 'Gagal mengirim tautan. Silakan coba lagi nanti.';
-}
-
-async function checkEmailExists(email: string): Promise<boolean | null> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/auth/check-email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data.exists;
-  } catch {
-    return null;
-  }
-}
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
-  const inputRef = useRef<any>(null);
+  const [emailSent, setEmailSent] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      inputRef.current?.focus();
-    }, 600);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const interval = setInterval(() => {
-      setCooldown(prev => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [cooldown]);
+  const { fadeAnim, slideAnim, pulseAnim, bgScaleAnim } = useAuthAnimations();
+  const messageAnim = useRef(new Animated.Value(0)).current;
 
   const showMessage = (text: string, type: 'error' | 'success') => {
     setMessage({ text, type });
+    messageAnim.setValue(0);
+    Animated.timing(messageAnim, {
+      toValue: 1,
+      duration: 300,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
   };
 
-  const showSuccess = () => {
-    setEmailSent(true);
-    setCooldown(COOLDOWN_SECONDS);
-  };
-
-  async function sendResetEmail() {
+  async function handleSend() {
     setMessage(null);
     Keyboard.dismiss();
 
-    if (!email.trim()) {
+    if (!email) {
       showMessage('Masukkan alamat email Anda terlebih dahulu.', 'error');
-      return;
-    }
-
-    if (!isValidEmail(email.trim())) {
-      showMessage('Format email tidak valid. Periksa kembali.', 'error');
       return;
     }
 
     setLoading(true);
     try {
-      const exists = await checkEmailExists(email.trim());
-
-      if (exists === false) {
-        showMessage('Email belum terdaftar dalam sistem. Silakan daftar terlebih dahulu.', 'error');
-        setLoading(false);
-        return;
-      }
-
-      if (exists === null) {
-        showMessage('Gagal memverifikasi email. Periksa koneksi internet Anda.', 'error');
-        setLoading(false);
-        return;
-      }
-
-      const redirectUrl = getResetPasswordRedirectUrl();
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: redirectUrl,
+      const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
       });
+      const data = await res.json();
 
-      if (error) {
-        showMessage(translateSupabaseError(error.message), 'error');
-      } else {
-        showSuccess();
+      if (!res.ok) {
+        showMessage(data.message || 'Gagal mengirim tautan reset.', 'error');
+        setLoading(false);
+        return;
       }
-    } catch (err: any) {
+
+      setEmailSent(true);
+    } catch {
       showMessage('Terjadi kesalahan sistem. Silakan coba lagi.', 'error');
     } finally {
       setLoading(false);
     }
   }
 
-  async function resendEmail() {
-    if (cooldown > 0) return;
-    setMessage(null);
-    setLoading(true);
-    try {
-      const exists = await checkEmailExists(email.trim());
+  if (emailSent) {
+    return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <StatusBar style="light" />
 
-      if (exists === false) {
-        showMessage('Email tidak lagi terdaftar dalam sistem.', 'error');
-        setLoading(false);
-        return;
-      }
+        <View style={StyleSheet.absoluteFill}>
+          <Animated.Image
+            source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCNgBJlBY97_QaewYW2r-DjSlc7y1DcxBuTyd2FT01aWpOMDdC6E5Ojftib57g020fqnyp0_maN4R5MEHbvA5mKvbvL62-rTz8r9ur1HeYAdQRNcHj2N8UkRNLsr6n30pKT8wvR2ALUnlrVoH30n83mprQd7LqD0c88IYJTTyGNiDVyADu8naOoqsrI2DdszdWsC6qGeg9DMNEPKErslJTkraaMEw-PLU4zYb0RM7Qzcqh4FeFxhc1IHMBcbbO-zGz4b_LtpTKBW06d' }}
+            style={[styles.bgImage, { transform: [{ scale: bgScaleAnim }] }]}
+            resizeMode="cover"
+          />
+          <View style={styles.overlay} />
+        </View>
 
-      if (exists === null) {
-        showMessage('Gagal memverifikasi email. Periksa koneksi internet Anda.', 'error');
-        setLoading(false);
-        return;
-      }
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.responsiveWrapper}>
+            <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+              <Animated.View style={{ transform: [{ scale: pulseAnim }], marginBottom: 12, shadowColor: '#4be277', shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }}>
+                <MaterialIcons name="mark-email-read" size={56} color="#4be277" />
+              </Animated.View>
+              <Text style={styles.title}>TERKIRIM!</Text>
+              <Text style={styles.subtitle}>Tautan reset password telah dikirim ke</Text>
+              <Text style={styles.emailHighlight}>{email}</Text>
+            </Animated.View>
 
-      const redirectUrl = getResetPasswordRedirectUrl();
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: redirectUrl,
-      });
+            <Animated.View style={[styles.glassCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+              {message && (
+                <Animated.View style={[styles.messageBox, message.type === 'error' ? styles.messageError : styles.messageSuccess, { opacity: messageAnim, transform: [{ translateY: messageAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]}>
+                  <Text style={styles.messageText}>{message.text}</Text>
+                </Animated.View>
+              )}
 
-      if (error) {
-        showMessage(translateSupabaseError(error.message), 'error');
-      } else {
-        setCooldown(COOLDOWN_SECONDS);
-        showMessage('Tautan baru telah dikirim.', 'success');
-      }
-    } catch (err: any) {
-      showMessage('Gagal mengirim ulang. Periksa koneksi internet Anda.', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }
+              <View style={styles.sentIconWrap}>
+                <MaterialIcons name="email" size={40} color="#4be277" />
+              </View>
 
-  function goToLogin() {
-    router.replace('/login');
-  }
+              <Text style={styles.sentDesc}>
+                Buka aplikasi email Anda dan cari tautan untuk mengatur ulang password. Jika tidak ada di inbox, cek folder spam atau junk.
+              </Text>
 
-  function goToRegister() {
-    router.replace('/register');
-  }
+              <TouchableOpacity
+                style={styles.button}
+                onPress={handleSend}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#0e2a14" />
+                ) : (
+                  <View style={styles.buttonContent}>
+                    <MaterialIcons name="refresh" size={20} color="#005321" style={{ marginRight: 8 }} />
+                    <Text style={styles.buttonText}>KIRIM ULANG</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </Animated.View>
 
-  function changeEmail() {
-    setEmailSent(false);
-    setEmail('');
-    setMessage(null);
-    setTimeout(() => inputRef.current?.focus(), 300);
+            <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
+              <TouchableOpacity onPress={() => router.push('/login')} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <MaterialIcons name="arrow-back" size={16} color="#4be277" style={{ marginRight: 4 }} />
+                <Text style={styles.footerLink}>Kembali ke Login</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
   }
 
   return (
@@ -208,131 +143,66 @@ export default function ForgotPasswordScreen() {
       <StatusBar style="light" />
 
       <View style={StyleSheet.absoluteFill}>
-        <Image
+        <Animated.Image
           source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCNgBJlBY97_QaewYW2r-DjSlc7y1DcxBuTyd2FT01aWpOMDdC6E5Ojftib57g020fqnyp0_maN4R5MEHbvA5mKvbvL62-rTz8r9ur1HeYAdQRNcHj2N8UkRNLsr6n30pKT8wvR2ALUnlrVoH30n83mprQd7LqD0c88IYJTTyGNiDVyADu8naOoqsrI2DdszdWsC6qGeg9DMNEPKErslJTkraaMEw-PLU4zYb0RM7Qzcqh4FeFxhc1IHMBcbbO-zGz4b_LtpTKBW06d' }}
-          style={styles.bgImage}
+          style={[styles.bgImage, { transform: [{ scale: bgScaleAnim }] }]}
           resizeMode="cover"
         />
         <View style={styles.overlay} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.responsiveWrapper}>
-          {!emailSent ? (
-            <>
-              <TouchableOpacity style={styles.backBtn} onPress={goToLogin} activeOpacity={0.7}>
-                <MaterialIcons name="arrow-back" size={20} color="#4be277" />
-                <Text style={styles.backBtnText}>Kembali</Text>
-              </TouchableOpacity>
+          <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+            <Animated.View style={{ transform: [{ scale: pulseAnim }], marginBottom: 12, shadowColor: '#4be277', shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }}>
+              <MaterialIcons name="lock-reset" size={56} color="#4be277" />
+            </Animated.View>
+            <Text style={styles.title}>RESET</Text>
+            <Text style={styles.subtitle}>Masukkan email Anda dan kami akan mengirimkan tautan untuk reset password.</Text>
+          </Animated.View>
 
-              <View style={styles.header}>
-                <View style={styles.iconCircle}>
-                  <MaterialIcons name="mail-outline" size={56} color="#4be277" />
-                </View>
-                <Text style={styles.title}>LUPA KATA SANDI?</Text>
-                <Text style={styles.subtitle}>Masukkan alamat email yang terdaftar, kami akan mengirimkan tautan untuk mengatur ulang kata sandi.</Text>
-              </View>
+          <Animated.View style={[styles.glassCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+            {message && (
+              <Animated.View style={[styles.messageBox, message.type === 'error' ? styles.messageError : styles.messageSuccess, { opacity: messageAnim, transform: [{ translateY: messageAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]}>
+                <Text style={styles.messageText}>{message.text}</Text>
+              </Animated.View>
+            )}
 
-              <View style={styles.glassCard}>
-                {message && (
-                  <View style={[styles.messageBox, message.type === 'error' ? styles.messageError : styles.messageSuccess]}>
-                    <MaterialIcons name={message.type === 'error' ? 'error-outline' : 'check-circle'} size={18} color={message.type === 'error' ? '#ffb4ab' : '#4be277'} />
-                    <Text style={[styles.messageText, { flex: 1 }]}>{message.text}</Text>
-                  </View>
-                )}
+            <FloatingInput
+              label="Email Address"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+            />
 
-                <FloatingInput
-                  ref={inputRef}
-                  label="Alamat Email"
-                  value={email}
-                  onChangeText={(t) => { setEmail(t); if (message) setMessage(null); }}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-
-                <TouchableOpacity
-                  style={[styles.button, loading && styles.buttonDisabled]}
-                  onPress={sendResetEmail}
-                  disabled={loading}
-                  activeOpacity={0.8}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#0e2a14" />
-                  ) : (
-                    <View style={styles.buttonContent}>
-                      <Text style={styles.buttonText}>KIRIM LINK</Text>
-                      <MaterialIcons name="send" size={20} color="#005321" style={{ marginLeft: 8 }} />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>Belum memiliki akun? </Text>
-                <TouchableOpacity onPress={goToRegister}>
-                  <Text style={styles.footerLink}>Daftar sekarang</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          ) : (
-            <View>
-              <View style={styles.successHeader}>
-                <View style={styles.successIconCircle}>
-                  <MaterialIcons name="mark-email-read" size={48} color="#4be277" />
-                </View>
-                <Text style={styles.successTitle}>TAUTAN TELAH DIKIRIM!</Text>
-                <Text style={styles.successSubtitle}>Silakan cek inbox email Anda</Text>
-                <Text style={styles.successEmail}>{maskEmail(email)}</Text>
-              </View>
-
-              <View style={styles.infoCard}>
-                <MaterialIcons name="info-outline" size={18} color={MUTED} />
-                <Text style={styles.infoText}>Tautan berlaku selama 60 menit. Silakan periksa folder spam jika tidak ditemukan.</Text>
-              </View>
-
-              {message && (
-                <View style={[styles.messageBox, message.type === 'error' ? styles.messageError : styles.messageSuccess]}>
-                  <MaterialIcons name={message.type === 'error' ? 'error-outline' : 'check-circle'} size={18} color={message.type === 'error' ? '#ffb4ab' : '#4be277'} />
-                  <Text style={[styles.messageText, { flex: 1 }]}>{message.text}</Text>
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleSend}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <ActivityIndicator color="#0e2a14" />
+              ) : (
+                <View style={styles.buttonContent}>
+                  <MaterialIcons name="send" size={20} color="#005321" style={{ marginRight: 8 }} />
+                  <Text style={styles.buttonText}>KIRIM LINK</Text>
                 </View>
               )}
+            </TouchableOpacity>
+          </Animated.View>
 
-              <TouchableOpacity
-                style={[styles.button, (loading || cooldown > 0) && styles.buttonDisabled]}
-                onPress={resendEmail}
-                disabled={loading || cooldown > 0}
-                activeOpacity={0.8}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#0e2a14" />
-                ) : (
-                  <View style={styles.buttonContent}>
-                    <Text style={styles.buttonText}>
-                      {cooldown > 0 ? `KIRIM ULANG (${cooldown}s)` : 'KIRIM ULANG'}
-                    </Text>
-                    <MaterialIcons name="refresh" size={20} color="#005321" style={{ marginLeft: 8 }} />
-                  </View>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.changeEmailBtn} onPress={changeEmail} activeOpacity={0.8}>
-                <MaterialIcons name="edit" size={18} color="#4be277" />
-                <Text style={styles.changeEmailText}>Ubah Email</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.secondaryButton} onPress={goToLogin} activeOpacity={0.8}>
-                <MaterialIcons name="arrow-back" size={18} color="#4be277" />
-                <Text style={styles.secondaryButtonText}>Kembali ke Halaman Masuk</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
+            <TouchableOpacity onPress={() => router.push('/login')} style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <MaterialIcons name="arrow-back" size={16} color="#4be277" style={{ marginRight: 4 }} />
+              <Text style={styles.footerLink}>Kembali ke Login</Text>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
-
-const MUTED = '#627369';
 
 const styles = StyleSheet.create({
   container: {
@@ -359,44 +229,36 @@ const styles = StyleSheet.create({
     maxWidth: 440,
     alignSelf: 'center',
   },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    alignSelf: 'flex-start',
-    gap: 4,
-  },
-  backBtnText: {
-    color: '#4be277',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   header: {
     alignItems: 'center',
     marginBottom: 40,
   },
-  iconCircle: {
-    marginBottom: 12,
-    boxShadow: '0px 0px 20px rgba(75, 226, 119, 0.6)',
-    elevation: 15,
-  },
   title: {
-    fontSize: 36,
+    fontSize: 48,
     fontWeight: '900',
     color: '#4be277',
     fontStyle: 'italic',
     textTransform: 'uppercase',
     letterSpacing: 2,
-    textShadow: '0px 2px 10px rgba(75, 226, 119, 0.4)',
+    textShadowColor: 'rgba(75, 226, 119, 0.4)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 10,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 16,
     color: '#bccbb9',
-    marginTop: 10,
-    fontWeight: '500',
+    marginTop: 8,
+    fontWeight: '600',
     textAlign: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 20,
     lineHeight: 22,
+  },
+  emailHighlight: {
+    fontSize: 17,
+    color: '#4be277',
+    marginTop: 8,
+    fontWeight: '800',
+    textAlign: 'center',
   },
   glassCard: {
     backgroundColor: 'rgba(30,30,30,0.7)',
@@ -404,22 +266,47 @@ const styles = StyleSheet.create({
     padding: 28,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
-    boxShadow: '0px 15px 25px rgba(0, 0, 0, 0.5)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 15 },
+    shadowOpacity: 0.5,
+    shadowRadius: 25,
     elevation: 10,
+  },
+  sentIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(75, 226, 119, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: 'rgba(75, 226, 119, 0.25)',
+  },
+  sentDesc: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
   },
   button: {
     backgroundColor: '#4be277',
-    height: 56,
-    borderRadius: 14,
+    height: 60,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    boxShadow: '0px 6px 12px rgba(75, 226, 119, 0.4)',
+    shadowColor: '#4be277',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
     elevation: 6,
     marginTop: 8,
   },
   buttonDisabled: {
     backgroundColor: '#2a8b46',
-    boxShadow: 'none',
+    shadowOpacity: 0,
     elevation: 0,
   },
   buttonContent: {
@@ -428,65 +315,23 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#002109',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 1.5,
-  },
-  changeEmailBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(75,226,119,0.08)',
-    borderRadius: 14,
-    height: 52,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(75,226,119,0.15)',
-  },
-  changeEmailText: {
-    color: '#4be277',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 14,
-    height: 52,
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  secondaryButtonText: {
-    color: '#888',
-    fontSize: 15,
-    fontWeight: '600',
+    letterSpacing: 2,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 32,
-    alignItems: 'center',
-  },
-  footerText: {
-    color: '#888',
-    fontSize: 14,
+    marginTop: 40,
   },
   footerLink: {
     color: '#4be277',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
   },
   messageBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderRadius: 10,
+    borderRadius: 8,
     padding: 14,
     marginBottom: 20,
   },
@@ -502,58 +347,6 @@ const styles = StyleSheet.create({
   },
   messageText: {
     color: '#e5e2e1',
-    fontSize: 14,
-  },
-  successHeader: {
-    alignItems: 'center',
-    marginBottom: 28,
-  },
-  successIconCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: 'rgba(75,226,119,0.12)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(75,226,119,0.25)',
-    marginBottom: 20,
-  },
-  successTitle: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#4be277',
-    letterSpacing: 1,
-    textShadow: '0px 2px 8px rgba(75, 226, 119, 0.3)',
-  },
-  successSubtitle: {
-    fontSize: 14,
-    color: '#bccbb9',
-    marginTop: 8,
-    fontWeight: '500',
-  },
-  successEmail: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#fff',
-    marginTop: 4,
-    letterSpacing: 0.5,
-  },
-  infoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: 'rgba(30,30,30,0.6)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    padding: 14,
-    marginBottom: 20,
-  },
-  infoText: {
-    color: '#bccbb9',
-    fontSize: 13,
-    flex: 1,
-    lineHeight: 18,
+    fontSize: 15,
   },
 });
