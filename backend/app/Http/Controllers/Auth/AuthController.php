@@ -18,12 +18,18 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request): JsonResponse
     {
-        $result = $this->auth->register($request->validated());
+        try {
+            $result = $this->auth->register($request->validated());
 
-        return response()->json([
-            'message' => 'Registrasi berhasil.',
-            ...$result,
-        ], 201);
+            return response()->json([
+                'message' => 'Registrasi berhasil.',
+                ...$result,
+            ], 201);
+        } catch (\Exception $e) {
+            // Catch any unexpected errors during registration and return a generic error message
+            // The actual error details are logged in AuthService.
+            return response()->json(['message' => 'Registrasi gagal. Silakan coba lagi nanti.'], 500);
+        }
     }
 
     public function login(LoginRequest $request): JsonResponse
