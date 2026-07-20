@@ -9,23 +9,30 @@ class AuthService
 {
     public function register(array $data): array
     {
-        $user = User::create([
-            'name'     => trim($data['name']),
-            'email'    => strtolower(trim($data['email'])),
-            'password' => Hash::make($data['password']),
-        ]);
+        try {
+            $user = User::create([
+                'name'     => trim($data['name']),
+                'email'    => strtolower(trim($data['email'])),
+                'password' => Hash::make($data['password']),
+            ]);
 
-        $this->syncToSupabase($data['email'], $data['password'], $data['name']);
+            $this->syncToSupabase($data['email'], $data['password'], $data['name']);
 
-        $token = $user->createToken('app-token', ['*'], now()->addDay())->plainTextToken;
-        return [
-            'token' => $token,
-            'user'  => [
-                'id'    => $user->id,
-                'name'  => $user->name,
-                'email' => $user->email,
-            ],
-        ];
+            $token = $user->createToken('app-token', ['*'], now()->addDay())->plainTextToken;
+            return [
+                'token' => $token,
+                'user'  => [
+                    'id'    => $user->id,
+                    'name'  => $user->name,
+                    'email' => $user->email,
+                ],
+            ];
+        } catch (\Exception $e) {
+            // Log the error for debugging purposes
+            Log::error('AuthService: User registration failed for email ' . $data['email'] . ': ' . $e->getMessage());
+            // Re-throw the exception to be handled by the calling controller
+            throw $e;
+        }
     }
 
     public function login(string $email, string $password): array
@@ -52,11 +59,16 @@ class AuthService
 
     public function logout(User $user): void
     {
-        $token = $user->currentAccessToken();
-        if ($token) {
-            $token->delete();
-        } else {
-            $user->tokens()->delete();
+        try {
+            $token = $user->currentAccessToken();
+            if ($token) {
+                $token->delete();
+            } else {
+                $user->tokens()->delete();
+            }
+        } catch (\Exception $e) {
+            // Log the error, but don't prevent the response as logout is often a best-effort operation.
+            Log::error('AuthService: User logout failed for user ID ' . $user->id . ': ' . $e->getMessage());
         }
     }
 
