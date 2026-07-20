@@ -147,36 +147,4 @@ class FieldController extends Controller
         return response()->json(new FieldResource($field));
     }
 
-    public function trashed(): JsonResponse
-    {
-        $fields = $this->fieldService->listTrashed();
-
-        return $this->paginatedResponse($fields);
-    }
-
-    public function restore(int $id): JsonResponse
-    {
-        $field = \App\Models\Field::onlyTrashed()->find($id);
-
-        if (!$field) {
-            return response()->json(['message' => 'Lapangan tidak ditemukan.'], 404);
-        }
-
-        $field = $this->fieldService->restore($field);
-
-        return response()->json(new FieldResource($field));
-    }
-
-    public function forceDelete(int $id): JsonResponse
-    {
-        $field = \App\Models\Field::onlyTrashed()->find($id);
-
-        if (!$field) {
-            return response()->json(['message' => 'Lapangan tidak ditemukan.'], 404);
-        }
-
-        $this->fieldService->forceDelete($field);
-
-        return response()->json(['message' => 'Lapangan berhasil dihapus permanen.']);
-    }
 }

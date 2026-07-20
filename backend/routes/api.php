@@ -9,6 +9,7 @@ use App\Http\Controllers\Field\FieldController;
 use App\Http\Controllers\Owner\OwnerRequestController;
 use App\Http\Controllers\Owner\AdminOwnerController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\UploadController;
 
 // Auth (public, rate limited)
 Route::middleware('throttle:10,1')->group(function () {
@@ -37,6 +38,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::put('/me/password', [ProfileController::class, 'updatePassword']);
     Route::post('/me/onboarding',               [OnboardingController::class, 'submit']);
 
+    // Image upload
+    Route::post('/upload/image', [UploadController::class, 'image']);
+
     // Owner upgrade request
     Route::post('/me/owner-request', [OwnerRequestController::class, 'store']);
     Route::get('/me/owner-request',  [OwnerRequestController::class, 'status']);
@@ -55,9 +59,6 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::middleware('role:super_admin')->group(function () {
         Route::get('/fields/pending/list',    [FieldController::class, 'pending']);
         Route::post('/fields/{id}/approve',   [FieldController::class, 'approve']);
-        Route::get('/fields/trashed/list',    [FieldController::class, 'trashed']);
-        Route::post('/fields/{id}/restore',   [FieldController::class, 'restore']);
-        Route::delete('/fields/{id}/force',   [FieldController::class, 'forceDelete']);
     });
 
     // Owner requests - admin+
@@ -69,6 +70,8 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     // Admin - manage users (admin & super_admin)
     Route::middleware('role:admin,super_admin')->group(function () {
         Route::get('/admin/users',                [UserController::class, 'index']);
+        Route::post('/admin/users',               [UserController::class, 'store']);
+        Route::put('/admin/users/{id}',            [UserController::class, 'update']);
         Route::put('/admin/users/{id}/role',       [UserController::class, 'updateRole']);
         Route::delete('/admin/users/{id}',         [UserController::class, 'destroy']);
     });

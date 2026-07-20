@@ -15,11 +15,11 @@ class AdminOwnerController extends Controller
         private OwnerRequestService $ownerRequestService
     ) {}
 
-    public function pending(): JsonResponse
+    public function pending()
     {
         $requests = $this->ownerRequestService->listPending();
 
-        return response()->json(OwnerRequestResource::collection($requests));
+        return OwnerRequestResource::collection($requests);
     }
 
     public function review(ReviewOwnerRequest $request, int $id): JsonResponse

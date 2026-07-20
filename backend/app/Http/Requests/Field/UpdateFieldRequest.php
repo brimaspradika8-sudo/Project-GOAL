@@ -16,7 +16,7 @@ class UpdateFieldRequest extends FormRequest
         return [
             'name'            => 'sometimes|required|string|max:255',
             'sport_type'      => 'sometimes|required|string|max:50',
-            'location'        => 'sometimes|required|string|max:255',
+            'location'        => 'nullable|string|max:255',
             'description'     => 'nullable|string|max:1000',
             'price_per_hour'  => 'nullable|integer|min:0',
             'image_url'       => 'nullable|string|max:2048',

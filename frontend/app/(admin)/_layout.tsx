@@ -11,26 +11,20 @@ import { TOKEN_KEY } from '../_layout';
 import { API_BASE_URL } from '../../lib/api';
 import UserPage from '../../components/admin/UserPage';
 import OwnerRequestPage from '../../components/admin/OwnerRequestPage';
-import PendingFieldsPage from '../../components/admin/PendingFieldsPage';
-import TrashedFieldsPage from '../../components/admin/TrashedFieldsPage';
 
 const { width } = Dimensions.get('window');
 const SIDEBAR_WIDTH = Math.min(width * 0.78, 300);
 
-type Page = 'users' | 'owner-requests' | 'fields-pending' | 'fields-trashed';
+type Page = 'users' | 'owner-requests';
 
 const MENU: { key: Page; icon: string; label: string; sublabel: string; role: string[]; color: string }[] = [
   { key: 'users', icon: 'people-alt', label: 'Kelola Pengguna', sublabel: 'Manajemen akun', role: ['admin', 'super_admin'], color: '#60a5fa' },
   { key: 'owner-requests', icon: 'inventory', label: 'Pengajuan Owner', sublabel: 'Review & approve', role: ['admin', 'super_admin'], color: '#f59e0b' },
-  { key: 'fields-pending', icon: 'pending-actions', label: 'Lapangan Pending', sublabel: 'Verifikasi lapangan', role: ['super_admin'], color: '#a78bfa' },
-  { key: 'fields-trashed', icon: 'auto-delete', label: 'Sampah Lapangan', sublabel: 'Kelola data terhapus', role: ['super_admin'], color: '#f87171' },
 ];
 
 const PAGE_TITLES: Record<Page, string> = {
   'users': 'Kelola Pengguna',
   'owner-requests': 'Pengajuan Owner',
-  'fields-pending': 'Lapangan Pending',
-  'fields-trashed': 'Sampah Lapangan',
 };
 
 export default function AdminDashboardScreen() {
@@ -79,8 +73,6 @@ export default function AdminDashboardScreen() {
     switch (currentPage) {
       case 'users': return <UserPage />;
       case 'owner-requests': return <OwnerRequestPage />;
-      case 'fields-pending': return <PendingFieldsPage />;
-      case 'fields-trashed': return <TrashedFieldsPage />;
       default: return <UserPage />;
     }
   };
