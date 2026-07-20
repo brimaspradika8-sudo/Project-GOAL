@@ -83,11 +83,13 @@ class FieldService
             'owner_id'       => $user->id,
             'name'           => $data['name'],
             'sport_type'     => $data['sport_type'],
-            'location'       => $data['location'],
+            'location'       => $data['location'] ?? null,
             'description'    => $data['description'] ?? null,
             'price_per_hour' => $data['price_per_hour'] ?? null,
             'image_url'      => $data['image_url'] ?? null,
-            'status'         => 'pending',
+            'status'         => 'approved',
+            'approved_by'    => $user->id,
+            'approved_at'    => now(),
         ]);
     }
 
@@ -109,26 +111,6 @@ class FieldService
     public function delete(Field $field): bool
     {
         return $field->delete();
-    }
-
-    public function forceDelete(Field $field): bool
-    {
-        return $field->forceDelete();
-    }
-
-    public function restore(Field $field): Field
-    {
-        $field->restore();
-
-        return $field->fresh('owner:id,name');
-    }
-
-    public function listTrashed(): LengthAwarePaginator
-    {
-        return Field::onlyTrashed()
-            ->with('owner:id,name')
-            ->latest()
-            ->paginate(15);
     }
 
     public function approve(Field $field, User $approver, string $status): Field

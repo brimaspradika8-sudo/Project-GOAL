@@ -70,6 +70,7 @@ export const SHADOWS = {
     shadowOpacity: 0.04,
     shadowRadius: 2,
     elevation: 1,
+    boxShadow: '0px 1px 2px rgba(0,0,0,0.04)',
   },
   sm: {
     shadowColor: '#000',
@@ -77,6 +78,7 @@ export const SHADOWS = {
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 2,
+    boxShadow: '0px 1px 3px rgba(0,0,0,0.05)',
   },
   md: {
     shadowColor: '#000',
@@ -84,6 +86,7 @@ export const SHADOWS = {
     shadowOpacity: 0.07,
     shadowRadius: 8,
     elevation: 4,
+    boxShadow: '0px 2px 8px rgba(0,0,0,0.07)',
   },
   lg: {
     shadowColor: '#000',
@@ -91,6 +94,7 @@ export const SHADOWS = {
     shadowOpacity: 0.09,
     shadowRadius: 14,
     elevation: 6,
+    boxShadow: '0px 4px 14px rgba(0,0,0,0.09)',
   },
   xl: {
     shadowColor: '#000',
@@ -98,6 +102,7 @@ export const SHADOWS = {
     shadowOpacity: 0.11,
     shadowRadius: 24,
     elevation: 8,
+    boxShadow: '0px 8px 24px rgba(0,0,0,0.11)',
   },
   primary: {
     shadowColor: '#007a4f',
@@ -105,6 +110,7 @@ export const SHADOWS = {
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
+    boxShadow: '0px 3px 8px rgba(0,122,79,0.20)',
   },
   authPrimary: {
     shadowColor: '#1a56db',
@@ -112,6 +118,7 @@ export const SHADOWS = {
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
+    boxShadow: '0px 3px 8px rgba(26,86,219,0.20)',
   },
 };
 

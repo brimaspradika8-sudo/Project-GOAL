@@ -16,7 +16,7 @@ class StoreFieldRequest extends FormRequest
         return [
             'name'            => 'required|string|max:255',
             'sport_type'      => 'required|string|max:50',
-            'location'        => 'required|string|max:255',
+            'location'        => 'nullable|string|max:255',
             'description'     => 'nullable|string|max:1000',
             'price_per_hour'  => 'nullable|integer|min:0',
             'image_url'       => 'nullable|string|max:2048',
