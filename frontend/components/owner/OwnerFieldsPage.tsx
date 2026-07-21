@@ -164,7 +164,7 @@ export default function OwnerFieldsPage() {
         return;
       }
       setShowCreate(false);
-      Alert.alert('Berhasil', 'Lapangan berhasil ditambahkan dan sudah aktif.');
+      Alert.alert('Berhasil', 'Lapangan berhasil ditambahkan dan menunggu approval Super Admin.');
       await useFieldStore.getState().clearCache().catch(() => {});
       fetchFields();
     } catch {
@@ -301,7 +301,7 @@ export default function OwnerFieldsPage() {
                 <MaterialIcons name="sports-soccer" size={40} color="#334155" />
               </View>
               <Text style={st.emptyTitle}>Belum ada lapangan</Text>
-              <Text style={st.emptyDesc}>Ketuk tombol "Baru" di ujung atas untuk mulai menambahkan aset Anda.</Text>
+              <Text style={st.emptyDesc}>Ketuk tombol &quot;Baru&quot; di ujung atas untuk mulai menambahkan aset Anda.</Text>
             </View>
           ) : (
             fields.map((f: any) => {

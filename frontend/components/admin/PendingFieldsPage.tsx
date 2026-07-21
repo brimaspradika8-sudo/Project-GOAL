@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  ActivityIndicator, Alert, RefreshControl,
+  ActivityIndicator, Alert, RefreshControl, Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -13,6 +13,7 @@ export default function PendingFieldsPage() {
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [submittingId, setSubmittingId] = useState<number | null>(null);
 
   const fetchFields = useCallback(async () => {
     try {
@@ -33,19 +34,44 @@ export default function PendingFieldsPage() {
   useEffect(() => { fetchFields(); }, [fetchFields]);
   const onRefresh = () => { setRefreshing(true); fetchFields(); };
 
+  const approveField = async (id: number) => {
+    setSubmittingId(id);
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const res = await fetch(`${API_BASE_URL}/fields/${id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: 'approved' }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const message = data.errors
+          ? Object.values(data.errors).flat().join(' ')
+          : data.message || 'Gagal menyetujui lapangan.';
+        throw new Error(message);
+      }
+
+      Alert.alert('Berhasil', 'Lapangan disetujui.');
+      fetchFields();
+    } catch (e: any) {
+      Alert.alert('Gagal', e.message || 'Gagal menyetujui lapangan.');
+    } finally {
+      setSubmittingId(null);
+    }
+  };
+
   const handleApprove = (id: number, name: string) => {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Setujui "${name}"?`)) {
+        approveField(id);
+      }
+      return;
+    }
+
     Alert.alert('Setujui Lapangan', `Setujui "${name}"?`, [
       { text: 'Batal', style: 'cancel' },
-      {
-        text: 'Setujui', onPress: async () => {
-          const token = await AsyncStorage.getItem(TOKEN_KEY);
-          const res = await fetch(`${API_BASE_URL}/fields/${id}/approve`, {
-            method: 'POST', headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) { Alert.alert('Berhasil', 'Lapangan disetujui.'); fetchFields(); }
-          else Alert.alert('Error', 'Gagal menyetujui.');
-        },
-      },
+      { text: 'Setujui', onPress: () => approveField(id) },
     ]);
   };
 
@@ -104,20 +130,21 @@ export default function PendingFieldsPage() {
             <MaterialIcons name="chevron-right" size={20} color="#334155" />
           </View>
 
-          {f.address && (
+          {f.location && (
             <View style={st.addressRow}>
               <MaterialIcons name="location-on" size={13} color="#475569" />
-              <Text style={st.addressText} numberOfLines={1}>{f.address}</Text>
+              <Text style={st.addressText} numberOfLines={1}>{f.location}</Text>
             </View>
           )}
 
           <TouchableOpacity
-            style={st.approveBtn}
+            style={[st.approveBtn, submittingId === f.id && st.disabledBtn]}
             onPress={() => handleApprove(f.id, f.name)}
             activeOpacity={0.8}
+            disabled={submittingId === f.id}
           >
             <MaterialIcons name="verified" size={16} color="#fff" />
-            <Text style={st.approveBtnText}>Setujui Lapangan</Text>
+            <Text style={st.approveBtnText}>{submittingId === f.id ? 'Menyetujui...' : 'Setujui Lapangan'}</Text>
           </TouchableOpacity>
         </TouchableOpacity>
       ))}
@@ -164,4 +191,5 @@ const st = StyleSheet.create({
     borderWidth: 1, borderColor: '#166534',
   },
   approveBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  disabledBtn: { opacity: 0.6 },
 });

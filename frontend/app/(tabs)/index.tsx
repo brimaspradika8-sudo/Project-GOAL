@@ -15,12 +15,13 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useProfileStore } from '../../store/profileStore';
-import { useFieldStore } from '../../store/fieldStore';
+import { Field, useFieldStore } from '../../store/fieldStore';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../../components/goalTheme';
 import { CATEGORIES } from '../../data/venues';
 import { SafeImage } from '../../components/SafeImage';
 import { SkeletonVenueList, SkeletonHorizontalCards, SkeletonProfile } from '../../components/Skeleton';
 import { useDebounce } from '../../hooks/useDebounce';
+import { API_BASE_URL } from '../../lib/api';
 
 
 const SPORT_MAP: Record<string, string> = {
@@ -43,10 +44,16 @@ function formatPrice(price: number | null): string {
   return `Rp${price.toLocaleString('id-ID')}`;
 }
 
+function getSportFilter(category: string): string | undefined {
+  if (category === 'Semua') return undefined;
+  return SPORT_MAP[category] || category.toLowerCase();
+}
+
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { profile, loading, fetchProfile } = useProfileStore();
   const { fields, fetchFields } = useFieldStore();
+  const [popularFields, setPopularFields] = useState<Field[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [activeCategory, setActiveCategory] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,26 +63,41 @@ export default function HomeScreen() {
     if (!profile) fetchProfile();
   }, [profile, fetchProfile]);
 
+  const fetchPopularFields = useCallback(async () => {
+    const params = new URLSearchParams({ page: '1' });
+    const res = await fetch(`${API_BASE_URL}/fields?${params.toString()}`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) throw new Error('Gagal memuat venue populer');
+    const body = await res.json();
+    setPopularFields(body.data ?? []);
+  }, []);
+
   useEffect(() => {
-    const sport = SPORT_MAP[activeCategory] || activeCategory.toLowerCase();
+    const sport = getSportFilter(activeCategory);
     fetchFields(sport, debouncedSearch || undefined);
   }, [activeCategory, debouncedSearch, fetchFields]);
 
+  useEffect(() => {
+    fetchPopularFields().catch(() => {});
+  }, [fetchPopularFields]);
+
   useFocusEffect(
     useCallback(() => {
-      const sport = SPORT_MAP[activeCategory] || activeCategory.toLowerCase();
+      const sport = getSportFilter(activeCategory);
       fetchFields(sport, debouncedSearch || undefined);
-    }, [activeCategory, debouncedSearch, fetchFields])
+      fetchPopularFields().catch(() => {});
+    }, [activeCategory, debouncedSearch, fetchFields, fetchPopularFields])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    const sport = activeCategory === 'Semua' ? undefined : SPORT_MAP[activeCategory] || activeCategory.toLowerCase();
-    await Promise.all([fetchProfile(), fetchFields(sport, debouncedSearch || undefined)]);
+    const sport = getSportFilter(activeCategory);
+    await Promise.all([fetchProfile(), fetchFields(sport, debouncedSearch || undefined), fetchPopularFields()]);
     setRefreshing(false);
   };
 
-  const filteredVenues = useMemo(() => fields.slice(0, 5), [fields]);
+  const filteredVenues = useMemo(() => popularFields.slice(0, 5), [popularFields]);
   const rekomendasi = useMemo(() => fields.slice(0, 4), [fields]);
 
   const isDesktop = width >= 900;

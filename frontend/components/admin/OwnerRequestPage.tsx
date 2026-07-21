@@ -171,11 +171,11 @@ export default function OwnerRequestPage() {
 
             {/* Actions */}
             <View style={st.actions}>
-              <TouchableOpacity style={st.approveBtn} onPress={() => handleApprove(r.id, r.name)} activeOpacity={0.8}>
+              <TouchableOpacity style={[st.approveBtn, submitting && st.disabledBtn]} onPress={() => handleApprove(r.id, r.name)} activeOpacity={0.8} disabled={submitting}>
                 <MaterialIcons name="check-circle" size={16} color="#fff" />
                 <Text style={st.approveBtnText}>Setujui</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={st.rejectBtn} onPress={() => setRejectModal({ id: r.id, visible: true })} activeOpacity={0.8}>
+              <TouchableOpacity style={[st.rejectBtn, submitting && st.disabledBtn]} onPress={() => setRejectModal({ id: r.id, visible: true })} activeOpacity={0.8} disabled={submitting}>
                 <MaterialIcons name="cancel" size={16} color="#f87171" />
                 <Text style={st.rejectBtnText}>Tolak</Text>
               </TouchableOpacity>
@@ -194,7 +194,7 @@ export default function OwnerRequestPage() {
               </View>
               <Text style={st.modalTitle}>Alasan Penolakan</Text>
             </View>
-            <Text style={st.modalSub}>Opsional — akan dikirim ke pemohon.</Text>
+            <Text style={st.modalSub}>Wajib diisi dan akan dikirim ke pemohon.</Text>
             <TextInput
               style={st.modalInput}
               placeholder="Contoh: Data tidak lengkap..."
@@ -266,6 +266,7 @@ const st = StyleSheet.create({
     borderWidth: 1, borderColor: '#7f1d1d',
   },
   rejectBtnText: { color: '#f87171', fontSize: 14, fontWeight: '700' },
+  disabledBtn: { opacity: 0.6 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', padding: 24 },
   modal: { backgroundColor: '#0d1117', borderRadius: 20, padding: 22, borderWidth: 1, borderColor: '#1e293b' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 6 },
@@ -286,3 +287,4 @@ const st = StyleSheet.create({
   confirmBtn: { paddingVertical: 11, paddingHorizontal: 24, borderRadius: 10, backgroundColor: '#7f1d1d' },
   confirmText: { color: '#fca5a5', fontSize: 14, fontWeight: '700' },
 });
+

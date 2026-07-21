@@ -171,10 +171,9 @@ export default function UserPage() {
   };
 
   // ── ROLE CHANGE ───────────────────────────────────────────
+  const loggedInUserRole = useProfileStore((state) => state.profile?.role);
+
   const handleRoleChange = (userId: number, currentRole: string) => {
-    const loggedInUserRole = useProfileStore.getState().profile?.role;
-    
-    // Hanya Super Admin yang dapat memberikan atau menghapus role super_admin.
     const allowedRoles = loggedInUserRole === 'super_admin'
       ? ['player', 'owner', 'admin', 'super_admin']
       : ['player', 'owner', 'admin'];
@@ -254,7 +253,6 @@ export default function UserPage() {
 
   const ownerCount = users.filter(u => (u.profile?.role || 'player') === 'owner').length;
   const userCount  = users.filter(u => (u.profile?.role || 'player') !== 'owner').length;
-  const loggedInUserRole = useProfileStore.getState().profile?.role;
 
   if (loading) {
     return (
