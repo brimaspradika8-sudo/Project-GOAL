@@ -7,6 +7,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import { useFieldStore } from '../../store/fieldStore';
 import { TOKEN_KEY } from '../../app/_layout';
 import { API_BASE_URL } from '../../lib/api';
 
@@ -19,6 +20,16 @@ const STATUS_CFG: Record<string, { label: string; bg: string; color: string }> =
 };
 
 const SPORT_OPTIONS = ['Futsal', 'Basket', 'Badminton', 'Voli', 'Tenis', 'Mini Soccer', 'Lainnya'];
+
+const SPORT_MAP: Record<string, string> = {
+  'Futsal': 'futsal',
+  'Basket': 'basketball',
+  'Badminton': 'badminton',
+  'Voli': 'volleyball',
+  'Tenis': 'tennis',
+  'Mini Soccer': 'mini_soccer',
+  'Lainnya': 'other',
+};
 
 const EMPTY_FORM = {
   name: '',
@@ -154,6 +165,7 @@ export default function OwnerFieldsPage() {
       }
       setShowCreate(false);
       Alert.alert('Berhasil', 'Lapangan berhasil ditambahkan dan sudah aktif.');
+      await useFieldStore.getState().clearCache().catch(() => {});
       fetchFields();
     } catch {
       setCreateError('Gagal terhubung ke server.');
@@ -216,6 +228,7 @@ export default function OwnerFieldsPage() {
       }
       setEditTarget(null);
       Alert.alert('Berhasil', 'Data lapangan berhasil diperbarui.');
+      await useFieldStore.getState().clearCache().catch(() => {});
       fetchFields();
     } catch {
       setEditError('Gagal terhubung ke server.');
@@ -233,6 +246,7 @@ export default function OwnerFieldsPage() {
       if (res.ok) {
         if (Platform.OS !== 'web') Alert.alert('Berhasil', 'Lapangan dihapus.');
         else alert('Lapangan dihapus.');
+        await useFieldStore.getState().clearCache().catch(() => {});
         fetchFields();
       } else {
         if (Platform.OS !== 'web') Alert.alert('Error', 'Gagal menghapus lapangan.');
@@ -316,7 +330,7 @@ export default function OwnerFieldsPage() {
                     </View>
                     <View style={st.detailRow}>
                       <MaterialIcons name="sports" size={14} color="#64748b" />
-                      <Text style={st.detailText}>{f.sport_type?.toUpperCase()}</Text>
+                      <Text style={st.detailText}>{(Object.keys(SPORT_MAP).find(k => SPORT_MAP[k] === f.sport_type) || f.sport_type)?.toUpperCase()}</Text>
                     </View>
                     {f.description ? (
                       <View style={st.detailRow}>
@@ -450,12 +464,12 @@ function FieldModal({
             <Text style={st.fieldLabel}>Jenis Olahraga</Text>
             <View style={st.sportRow}>
               {SPORT_OPTIONS.map(s => {
-                const active = form.sport_type.toLowerCase() === s.toLowerCase();
+                const active = form.sport_type === SPORT_MAP[s];
                 return (
                   <TouchableOpacity
                     key={s}
                     style={[st.sportChip, active && st.sportChipActive]}
-                    onPress={() => setForm(p => ({ ...p, sport_type: s.toLowerCase() }))}
+                    onPress={() => setForm(p => ({ ...p, sport_type: SPORT_MAP[s] }))}
                     activeOpacity={0.7}
                   >
                     <Text style={[st.sportChipText, active && st.sportChipTextActive]}>{s}</Text>

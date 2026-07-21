@@ -29,7 +29,7 @@ class UserController extends Controller
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
-            'role'     => 'nullable|in:owner,player,admin',
+            'role'     => 'nullable|in:owner,player,admin,super_admin',
         ]);
 
         $user = DB::transaction(function () use ($data) {
@@ -86,6 +86,14 @@ class UserController extends Controller
 
         if (!$user->profile) {
             return response()->json(['message' => 'Profil tidak ditemukan.'], 404);
+        }
+
+        // Ambil role user pengubah (current logged in user)
+        $currentUserRole = auth()->user()?->profile?->role;
+
+        // Hanya super_admin yang dapat mengubah user ke/dari super_admin
+        if (($user->profile->role === 'super_admin' || $request->role === 'super_admin') && $currentUserRole !== 'super_admin') {
+            return response()->json(['message' => 'Hanya Super Admin yang dapat mengelola role Super Admin.'], 403);
         }
 
         $user->profile->update(['role' => $request->role]);

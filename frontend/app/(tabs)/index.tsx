@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -12,7 +12,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useProfileStore } from '../../store/profileStore';
 import { useFieldStore } from '../../store/fieldStore';
@@ -24,6 +24,7 @@ import { useDebounce } from '../../hooks/useDebounce';
 
 
 const SPORT_MAP: Record<string, string> = {
+  'Semua': '',
   'Futsal': 'futsal',
   'Basket': 'basketball',
   'Badminton': 'badminton',
@@ -38,7 +39,7 @@ const DEFAULT_IMAGES: Record<string, string> = {
 };
 
 function formatPrice(price: number | null): string {
-  if (!price) return 'Hubungi';
+  if (price == null) return 'Hubungi';
   return `Rp${price.toLocaleString('id-ID')}`;
 }
 
@@ -47,7 +48,7 @@ export default function HomeScreen() {
   const { profile, loading, fetchProfile } = useProfileStore();
   const { fields, fetchFields } = useFieldStore();
   const [refreshing, setRefreshing] = useState(false);
-  const [activeCategory, setActiveCategory] = useState('Futsal');
+  const [activeCategory, setActiveCategory] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 300);
 
@@ -60,9 +61,17 @@ export default function HomeScreen() {
     fetchFields(sport, debouncedSearch || undefined);
   }, [activeCategory, debouncedSearch, fetchFields]);
 
+  useFocusEffect(
+    useCallback(() => {
+      const sport = SPORT_MAP[activeCategory] || activeCategory.toLowerCase();
+      fetchFields(sport, debouncedSearch || undefined);
+    }, [activeCategory, debouncedSearch, fetchFields])
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchProfile(), fetchFields()]);
+    const sport = activeCategory === 'Semua' ? undefined : SPORT_MAP[activeCategory] || activeCategory.toLowerCase();
+    await Promise.all([fetchProfile(), fetchFields(sport, debouncedSearch || undefined)]);
     setRefreshing(false);
   };
 
@@ -147,7 +156,7 @@ export default function HomeScreen() {
 
         <View style={styles.section}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-            {CATEGORIES.map((item) => {
+            {[{ label: 'Semua', icon: 'apps' as const }, ...CATEGORIES].map((item) => {
               const isActive = activeCategory === item.label;
               return (
                 <TouchableOpacity

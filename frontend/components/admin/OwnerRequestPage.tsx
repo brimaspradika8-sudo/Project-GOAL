@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
   ActivityIndicator, Alert, TextInput, RefreshControl, Modal,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -35,40 +36,71 @@ export default function OwnerRequestPage() {
   useEffect(() => { fetchRequests(); }, [fetchRequests]);
   const onRefresh = () => { setRefreshing(true); fetchRequests(); };
 
+  const reviewRequest = async (id: number, status: 'approved' | 'rejected', reason?: string) => {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const res = await fetch(`${API_BASE_URL}/owner-requests/${id}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status, ...(reason ? { reason } : {}) }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      const message = data.errors
+        ? Object.values(data.errors).flat().join(' ')
+        : data.message || 'Gagal memproses pengajuan.';
+      throw new Error(message);
+    }
+
+    return data;
+  };
+
+  const approveRequest = async (id: number) => {
+    setSubmitting(true);
+    try {
+      await reviewRequest(id, 'approved');
+      Alert.alert('Berhasil', 'Pengajuan disetujui!');
+      fetchRequests();
+    } catch (e: any) {
+      Alert.alert('Gagal', e.message || 'Gagal memproses pengajuan.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleApprove = (id: number, name: string) => {
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Setujui pengajuan dari "${name}"?`)) {
+        approveRequest(id);
+      }
+      return;
+    }
+
     Alert.alert('Setujui Pengajuan', `Setujui pengajuan dari "${name}"?`, [
       { text: 'Batal', style: 'cancel' },
-      {
-        text: 'Setujui', onPress: async () => {
-          const token = await AsyncStorage.getItem(TOKEN_KEY);
-          const res = await fetch(`${API_BASE_URL}/owner-requests/${id}/review`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ status: 'approved' }),
-          });
-          if (res.ok) { Alert.alert('Berhasil', 'Pengajuan disetujui!'); fetchRequests(); }
-          else { const d = await res.json(); Alert.alert('Error', d.message || 'Gagal.'); }
-        },
-      },
+      { text: 'Setujui', onPress: () => approveRequest(id) },
     ]);
   };
 
   const handleReject = async () => {
+    const reason = rejectReason.trim();
+    if (!reason) {
+      Alert.alert('Alasan wajib diisi', 'Tuliskan alasan penolakan terlebih dahulu.');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/owner-requests/${rejectModal.id}/review`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status: 'rejected', reason: rejectReason || undefined }),
-      });
-      if (res.ok) {
-        Alert.alert('Berhasil', 'Pengajuan ditolak.');
-        setRejectModal({ id: 0, visible: false });
-        setRejectReason('');
-        fetchRequests();
-      } else Alert.alert('Error', 'Gagal memproses.');
-    } finally { setSubmitting(false); }
+      await reviewRequest(rejectModal.id, 'rejected', reason);
+      Alert.alert('Berhasil', 'Pengajuan ditolak.');
+      setRejectModal({ id: 0, visible: false });
+      setRejectReason('');
+      fetchRequests();
+    } catch (e: any) {
+      Alert.alert('Gagal', e.message || 'Gagal memproses pengajuan.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {

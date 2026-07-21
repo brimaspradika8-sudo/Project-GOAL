@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { COLORS, SIZES, FONTS, SHADOWS } from '../../components/goalTheme';
 import { API_BASE_URL } from '../../lib/api';
 import { TOKEN_KEY } from '../_layout';
@@ -34,7 +34,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 };
 
 function formatPrice(price: number | null): string {
-  if (!price) return 'Hubungi';
+  if (price == null) return 'Hubungi';
   return `Rp${price.toLocaleString('id-ID')}`;
 }
 
@@ -79,6 +79,12 @@ export default function MyFieldsScreen() {
     fetchFields(1, false);
   }, [fetchFields]);
 
+  useFocusEffect(
+    useCallback(() => {
+      fetchFields(1, false);
+    }, [fetchFields])
+  );
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchFields(1, false);
@@ -106,7 +112,7 @@ export default function MyFieldsScreen() {
               const token = await AsyncStorage.getItem(TOKEN_KEY);
               const res = await fetch(`${API_BASE_URL}/fields/${field.id}`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
               });
               if (res.ok) {
                 setFields((prev) => prev.filter((f) => f.id !== field.id));
@@ -169,6 +175,12 @@ export default function MyFieldsScreen() {
             <MaterialIcons name="location-on" size={14} color={COLORS.textTertiary} />
             <Text style={styles.cardLocation} numberOfLines={1}>{item.location}</Text>
           </View>
+          {item.owner && (
+            <View style={styles.cardLocationRow}>
+              <MaterialIcons name="person" size={14} color={COLORS.textTertiary} />
+              <Text style={styles.cardLocation} numberOfLines={1}>{item.owner.name}</Text>
+            </View>
+          )}
           <View style={styles.cardTags}>
             <View style={styles.tag}>
               <Text style={styles.tagText}>{item.sport_type}</Text>

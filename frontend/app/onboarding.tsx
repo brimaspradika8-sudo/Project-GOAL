@@ -173,7 +173,7 @@ export default function OnboardingScreen() {
 
       const profile = await res.json();
       useProfileStore.setState({ profile, loading: false });
-      router.replace('/(tabs)/profile');
+      router.replace('/(tabs)');
     } catch {
       if (mountedRef.current) setSubmitError('Gagal terhubung ke server. Silakan coba lagi.');
     } finally {
