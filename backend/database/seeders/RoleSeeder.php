@@ -1,18 +1,8 @@
 <?php
-
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-
 $hash = Hash::make('123456');
 $hashAdmin = Hash::make('Admin123');
-
-DB::table('users')->insert([
-    'name'       => 'superadmin1',
-    'email'      => 'superadmin@test.com',
-    'password'   => $hash,
-    'created_at' => now(),
-    'updated_at' => now(),
-]);
 $uid = DB::getPdo()->lastInsertId();
 
 DB::table('profiles')->where('user_id', 1)->update([

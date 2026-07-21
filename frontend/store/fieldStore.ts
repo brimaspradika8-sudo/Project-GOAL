@@ -33,6 +33,7 @@ interface FieldState {
   fetchFields: (sport?: string, search?: string) => Promise<void>;
   fetchMore: () => Promise<void>;
   refreshFields: () => Promise<void>;
+  clearCache: () => Promise<void>;
   lastParams: { sport?: string; search?: string };
 }
 
@@ -127,5 +128,15 @@ export const useFieldStore = create<FieldState>((set, get) => ({
     const cacheKey = FIELDS_CACHE_KEY + (lastParams.sport ?? 'all') + '_' + (lastParams.search ?? '');
     await AsyncStorage.removeItem(cacheKey);
     await get().fetchFields(lastParams.sport, lastParams.search);
+  },
+
+  clearCache: async () => {
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const fieldKeys = keys.filter(k => k.startsWith(FIELDS_CACHE_KEY));
+      if (fieldKeys.length > 0) {
+        await AsyncStorage.multiRemove(fieldKeys);
+      }
+    } catch {}
   },
 }));

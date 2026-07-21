@@ -67,7 +67,7 @@ class FieldService
     public function listByOwner(User $user): LengthAwarePaginator
     {
         return Field::where('owner_id', $user->id)
-            ->with('approver:id,name')
+            ->with(['owner:id,name', 'approver:id,name'])
             ->latest()
             ->paginate(15);
     }

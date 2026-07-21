@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useProfileStore } from '../../store/profileStore';
 import { TOKEN_KEY } from '../../app/_layout';
 import { API_BASE_URL } from '../../lib/api';
 
@@ -16,11 +17,9 @@ const ROLE_CONFIG: Record<string, { label: string; color: string; bg: string }> 
   super_admin: { label: 'Super Admin', color: '#f59e0b', bg: '#451a03' },
 };
 
-const ROLES = ['player', 'owner', 'admin'];
-
 type Tab = 'user' | 'owner';
 
-const EMPTY_CREATE = { name: '', email: '', password: '' };
+const EMPTY_CREATE = { name: '', email: '', password: '', role: 'owner' };
 const EMPTY_EDIT   = { name: '', email: '', password: '' };
 
 export default function UserPage() {
@@ -74,10 +73,30 @@ export default function UserPage() {
     searchTimer.current = setTimeout(() => fetchUsers(text), 400);
   };
 
+  const updateUserRole = async (userId: number, role: string) => {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/role`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ role }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.message || 'Gagal memperbarui role.');
+    }
+
+    return data;
+  };
+
   // ── CREATE OWNER ──────────────────────────────────────────
   const handleCreate = async () => {
     if (!createForm.name.trim() || !createForm.email.trim() || !createForm.password.trim()) {
       setCreateError('Semua field wajib diisi.');
+      return;
+    }
+    if (createForm.password.length < 8) {
+      setCreateError('Password minimal 8 karakter.');
       return;
     }
     setCreateLoading(true);
@@ -87,7 +106,7 @@ export default function UserPage() {
       const res = await fetch(`${API_BASE_URL}/admin/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...createForm, role: 'owner' }),
+        body: JSON.stringify({ name: createForm.name, email: createForm.email, password: createForm.password, role: createForm.role }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -153,23 +172,51 @@ export default function UserPage() {
 
   // ── ROLE CHANGE ───────────────────────────────────────────
   const handleRoleChange = (userId: number, currentRole: string) => {
-    const options = ROLES.filter(r => r !== currentRole);
+    const loggedInUserRole = useProfileStore.getState().profile?.role;
+    
+    // Hanya Super Admin yang dapat memberikan atau menghapus role super_admin.
+    const allowedRoles = loggedInUserRole === 'super_admin'
+      ? ['player', 'owner', 'admin', 'super_admin']
+      : ['player', 'owner', 'admin'];
+
+    const options = allowedRoles.filter(r => r !== currentRole);
     Alert.alert('Ubah Role', 'Pilih role baru:', [
       ...options.map(r => ({
         text: ROLE_CONFIG[r]?.label ?? r,
         onPress: async () => {
-          const token = await AsyncStorage.getItem(TOKEN_KEY);
-          const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/role`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ role: r }),
-          });
-          if (res.ok) { Alert.alert('Berhasil', 'Role diperbarui.'); fetchUsers(search); }
-          else Alert.alert('Error', 'Gagal memperbarui role.');
+          try {
+            await updateUserRole(userId, r);
+            Alert.alert('Berhasil', 'Role diperbarui.');
+            fetchUsers(search);
+          } catch (e: any) {
+            Alert.alert('Gagal', e.message || 'Gagal terhubung ke server.');
+          }
         },
       })),
       { text: 'Batal', style: 'cancel' },
     ]);
+  };
+
+  const handleUpgradeSuperAdmin = (userId: number, name: string) => {
+    Alert.alert(
+      'Upgrade Super Admin',
+      `Jadikan "${name}" sebagai Super Admin? User ini akan punya akses penuh.`,
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Upgrade',
+          onPress: async () => {
+            try {
+              await updateUserRole(userId, 'super_admin');
+              Alert.alert('Berhasil', 'User berhasil di-upgrade menjadi Super Admin.');
+              fetchUsers(search);
+            } catch (e: any) {
+              Alert.alert('Gagal', e.message || 'Gagal upgrade Super Admin.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   // ── DELETE ────────────────────────────────────────────────
@@ -207,6 +254,7 @@ export default function UserPage() {
 
   const ownerCount = users.filter(u => (u.profile?.role || 'player') === 'owner').length;
   const userCount  = users.filter(u => (u.profile?.role || 'player') !== 'owner').length;
+  const loggedInUserRole = useProfileStore.getState().profile?.role;
 
   if (loading) {
     return (
@@ -312,6 +360,16 @@ export default function UserPage() {
                   <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#1e3a5f' }]} onPress={() => handleRoleChange(u.id, roleKey)}>
                     <MaterialIcons name="manage-accounts" size={17} color="#60a5fa" />
                   </TouchableOpacity>
+                  {loggedInUserRole === 'super_admin' && roleKey !== 'super_admin' && (
+                    <TouchableOpacity
+                      style={st.upgradeBtn}
+                      onPress={() => handleUpgradeSuperAdmin(u.id, u.name)}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialIcons name="admin-panel-settings" size={15} color="#f59e0b" />
+                      <Text style={st.upgradeBtnText}>Super Admin</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#2d0f0f' }]} onPress={() => handleDelete(u.id, u.name)}>
                     <MaterialIcons name="delete-outline" size={17} color="#f87171" />
                   </TouchableOpacity>
@@ -352,6 +410,27 @@ export default function UserPage() {
               secureTextEntry={!showCreatePwd}
               rightIcon={showCreatePwd ? 'visibility-off' : 'visibility'}
               onRightIconPress={() => setShowCreatePwd(p => !p)} />
+
+            <View style={st.roleSelectWrap}>
+              <Text style={st.fieldLabel}>Role</Text>
+              <View style={st.roleChipRow}>
+                {['owner', 'super_admin'].map(r => {
+                  const rc = ROLE_CONFIG[r];
+                  const active = createForm.role === r;
+                  return (
+                    <TouchableOpacity
+                      key={r}
+                      style={[st.roleChip, active && { backgroundColor: rc.bg, borderColor: rc.color }]}
+                      onPress={() => setCreateForm(p => ({ ...p, role: r }))}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[st.roleDot, { backgroundColor: rc.color }]} />
+                      <Text style={[st.roleChipText, active && { color: rc.color }]}>{rc.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
 
             <View style={st.sheetActions}>
               <TouchableOpacity style={st.cancelBtn} onPress={() => setShowCreate(false)}>
@@ -507,6 +586,18 @@ const st = StyleSheet.create({
   roleText: { fontSize: 10, fontWeight: '700' },
   actions: { flexDirection: 'row', gap: 6, marginLeft: 6 },
   actionBtn: { width: 34, height: 34, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  upgradeBtn: {
+    height: 34,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    backgroundColor: '#451a03',
+    borderWidth: 1,
+    borderColor: '#f59e0b55',
+  },
+  upgradeBtnText: { color: '#f59e0b', fontSize: 11, fontWeight: '800' },
 
   // Modal / Sheet
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' },
@@ -534,6 +625,20 @@ const st = StyleSheet.create({
     borderWidth: 1, borderColor: '#334155',
   },
   fieldInput: { flex: 1, color: '#e2e8f0', fontSize: 14, paddingVertical: 0 },
+  roleSelectWrap: { marginBottom: 14 },
+  roleChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  roleChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    backgroundColor: '#1e293b',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  roleChipText: { color: '#94a3b8', fontSize: 12, fontWeight: '700' },
 
   sheetActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
   cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: '#1e293b', alignItems: 'center', borderWidth: 1, borderColor: '#334155' },

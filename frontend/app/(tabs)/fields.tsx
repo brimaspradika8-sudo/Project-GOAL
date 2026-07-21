@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { COLORS, SIZES, FONTS, SHADOWS } from '../../components/goalTheme';
 import { useFieldStore, Field } from '../../store/fieldStore';
 import { SafeImage } from '../../components/SafeImage';
@@ -35,7 +35,7 @@ const DEFAULT_IMAGES: Record<string, string> = {
 };
 
 function formatPrice(price: number | null): string {
-  if (!price) return 'Hubungi';
+  if (price == null) return 'Hubungi';
   return `Rp${price.toLocaleString('id-ID')}`;
 }
 
@@ -94,6 +94,13 @@ export default function FieldsScreen() {
     const sport = activeFilter === 'Semua' ? undefined : SPORT_MAP[activeFilter] || activeFilter.toLowerCase();
     fetchFields(sport, debouncedSearch || undefined);
   }, [activeFilter, debouncedSearch, fetchFields]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const sport = activeFilter === 'Semua' ? undefined : SPORT_MAP[activeFilter] || activeFilter.toLowerCase();
+      fetchFields(sport, debouncedSearch || undefined);
+    }, [activeFilter, debouncedSearch, fetchFields])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -193,19 +200,6 @@ export default function FieldsScreen() {
         }}
         onEndReachedThreshold={0.4}
       />
-
-      <View style={styles.bottomSection}>
-        <View style={styles.sectionTitleRow}>
-          <Text style={styles.sectionTitle}>FAVORIT</Text>
-        </View>
-        <View style={styles.emptyCard}>
-          <View style={styles.emptyIconBox}>
-            <MaterialIcons name="favorite-border" size={28} color={COLORS.textTertiary} />
-          </View>
-          <Text style={styles.favTitle}>Belum ada lapangan favorit</Text>
-          <Text style={styles.favDesc}>Tap ikon hati di lapangan untuk menambahkannya ke favorit.</Text>
-        </View>
-      </View>
     </View>
   );
 }

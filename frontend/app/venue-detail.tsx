@@ -26,7 +26,7 @@ const DEFAULT_IMAGES: Record<string, string> = {
 };
 
 function formatPrice(price: number | null): string {
-  if (!price) return 'Hubungi';
+  if (price == null) return 'Hubungi';
   return `Rp${price.toLocaleString('id-ID')}`;
 }
 

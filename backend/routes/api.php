@@ -10,8 +10,6 @@ use App\Http\Controllers\Owner\OwnerRequestController;
 use App\Http\Controllers\Owner\AdminOwnerController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\UploadController;
-
-// Auth (public, rate limited)
 Route::middleware('throttle:10,1')->group(function () {
     Route::post('/auth/register',    [AuthController::class, 'register']);
     Route::post('/auth/login',       [AuthController::class, 'login']);
@@ -19,12 +17,9 @@ Route::middleware('throttle:10,1')->group(function () {
     Route::post('/auth/verify-token',    [PasswordResetController::class, 'token']);
     Route::post('/auth/reset-password',  [PasswordResetController::class, 'reset']);
 });
-
 Route::middleware('throttle:5,1')->group(function () {
     Route::post('/auth/forgot-password', [PasswordResetController::class, 'forgot']);
 });
-
-// Public — no auth required
 Route::get('/fields',                                   [FieldController::class, 'index']);
 Route::get('/fields/{id}',                              [FieldController::class, 'show']);
 Route::get('/me/onboarding/check-username',              [OnboardingController::class, 'checkUsername']);
