@@ -17,6 +17,7 @@ Route::middleware('throttle:10,1')->group(function () {
     Route::post('/auth/verify-token',    [PasswordResetController::class, 'token']);
     Route::post('/auth/reset-password',  [PasswordResetController::class, 'reset']);
 });
+
 Route::middleware('throttle:5,1')->group(function () {
     Route::post('/auth/forgot-password', [PasswordResetController::class, 'forgot']);
 });

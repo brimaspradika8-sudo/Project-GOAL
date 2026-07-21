@@ -11,20 +11,23 @@ import { TOKEN_KEY } from '../_layout';
 import { API_BASE_URL } from '../../lib/api';
 import UserPage from '../../components/admin/UserPage';
 import OwnerRequestPage from '../../components/admin/OwnerRequestPage';
+import PendingFieldsPage from '../../components/admin/PendingFieldsPage';
 
 const { width } = Dimensions.get('window');
 const SIDEBAR_WIDTH = Math.min(width * 0.78, 300);
 
-type Page = 'users' | 'owner-requests';
+type Page = 'users' | 'owner-requests' | 'pending-fields';
 
 const MENU: { key: Page; icon: string; label: string; sublabel: string; role: string[]; color: string }[] = [
   { key: 'users', icon: 'people-alt', label: 'Kelola Pengguna', sublabel: 'Manajemen akun', role: ['admin', 'super_admin'], color: '#60a5fa' },
   { key: 'owner-requests', icon: 'inventory', label: 'Pengajuan Owner', sublabel: 'Review & approve', role: ['admin', 'super_admin'], color: '#f59e0b' },
+  { key: 'pending-fields', icon: 'stadium', label: 'Approve Lapangan', sublabel: 'Verifikasi venue', role: ['super_admin'], color: '#a78bfa' },
 ];
 
 const PAGE_TITLES: Record<Page, string> = {
   'users': 'Kelola Pengguna',
   'owner-requests': 'Pengajuan Owner',
+  'pending-fields': 'Approve Lapangan',
 };
 
 export default function AdminDashboardScreen() {
@@ -73,6 +76,7 @@ export default function AdminDashboardScreen() {
     switch (currentPage) {
       case 'users': return <UserPage />;
       case 'owner-requests': return <OwnerRequestPage />;
+      case 'pending-fields': return <PendingFieldsPage />;
       default: return <UserPage />;
     }
   };

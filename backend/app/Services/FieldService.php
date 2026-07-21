@@ -79,6 +79,8 @@ class FieldService
 
     public function create(User $user, array $data): Field
     {
+        $isSuperAdmin = $user->profile?->role === 'super_admin';
+
         return Field::create([
             'owner_id'       => $user->id,
             'name'           => $data['name'],
@@ -87,9 +89,9 @@ class FieldService
             'description'    => $data['description'] ?? null,
             'price_per_hour' => $data['price_per_hour'] ?? null,
             'image_url'      => $data['image_url'] ?? null,
-            'status'         => 'approved',
-            'approved_by'    => $user->id,
-            'approved_at'    => now(),
+            'status'         => $isSuperAdmin ? 'approved' : 'pending',
+            'approved_by'    => $isSuperAdmin ? $user->id : null,
+            'approved_at'    => $isSuperAdmin ? now() : null,
         ]);
     }
 
