@@ -3,16 +3,19 @@ import React from 'react';
 import { StyleSheet, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { COLORS, SHADOWS } from '../../components/goalTheme';
+import { useTheme } from '../../lib/theme';
 
 export default function TabLayout() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textTertiary,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabelStyle: styles.tabLabel,
         tabBarItemStyle: styles.tabItem,
       }}
@@ -93,14 +96,19 @@ export default function TabLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   tabBar: {
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surface,
     borderTopWidth: 0,
+    borderTopColor: colors.outline,
     height: Platform.OS === 'ios' ? 88 : 64,
     paddingTop: Platform.OS === 'ios' ? 10 : 8,
     paddingBottom: Platform.OS === 'ios' ? 22 : 8,
-    ...SHADOWS.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 8,
   },
   tabLabel: {
     fontFamily: 'Montserrat',

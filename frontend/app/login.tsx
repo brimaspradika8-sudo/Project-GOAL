@@ -10,7 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
-import { API_BASE_URL } from '../lib/api';
+import { API_BASE_URL, getErrorMessage } from '../lib/api';
 import { TOKEN_KEY } from './_layout';
 import { useProfileStore } from '../store/profileStore';
 
@@ -31,21 +31,6 @@ async function parseApiResponse(res: Response) {
 }
 
 function getApiErrorMessage(data: any, status: number) {
-  if (typeof data?.message === 'string' && data.message.trim()) {
-    return data.message;
-  }
-
-  if (typeof data?.error === 'string' && data.error.trim()) {
-    return data.error;
-  }
-
-  if (data?.errors && typeof data.errors === 'object') {
-    const firstError = Object.values(data.errors)[0];
-    if (Array.isArray(firstError) && firstError[0]) {
-      return firstError[0];
-    }
-  }
-
   if (status === 401) {
     return 'Email atau password salah.';
   }
@@ -53,7 +38,8 @@ function getApiErrorMessage(data: any, status: number) {
   if (status >= 500) {
     return 'Server sedang tidak tersedia. Silakan coba lagi sebentar.';
   }
-  return 'Terjadi kesalahan sistem. Silakan coba lagi.';
+
+  return getErrorMessage(data, 'Terjadi kesalahan sistem. Silakan coba lagi.');
 }
 
 export default function LoginScreen() {

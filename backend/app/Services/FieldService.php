@@ -125,4 +125,24 @@ class FieldService
 
         return $field->fresh('owner:id,name', 'approver:id,name');
     }
+
+    public function listTrashed(): LengthAwarePaginator
+    {
+        return Field::onlyTrashed()
+            ->with('owner:id,name')
+            ->latest('deleted_at')
+            ->paginate(15);
+    }
+
+    public function restore(int $id): bool
+    {
+        $field = Field::onlyTrashed()->find($id);
+        return $field ? (bool)$field->restore() : false;
+    }
+
+    public function forceDelete(int $id): bool
+    {
+        $field = Field::onlyTrashed()->find($id);
+        return $field ? (bool)$field->forceDelete() : false;
+    }
 }

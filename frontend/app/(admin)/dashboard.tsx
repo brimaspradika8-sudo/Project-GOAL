@@ -1,4 +1,4 @@
-import AdminLayout from './_layout';
-export default function Dashboard() {
-  return <AdminLayout />;
+import { Redirect } from 'expo-router';
+export default function AdminDashboard() {
+  return <Redirect href="/(admin)/users" />;
 }

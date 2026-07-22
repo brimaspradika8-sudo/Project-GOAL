@@ -23,8 +23,8 @@ class PasswordResetController extends Controller
 
         if (!$user) {
             return response()->json([
-                'message' => 'Email tidak terdaftar di sistem kami.',
-            ], 404);
+                'message' => 'Tautan reset password telah dikirim ke email Anda jika terdaftar.',
+            ]);
         }
 
         $token = Password::broker('users')->createToken($user);
@@ -38,7 +38,6 @@ class PasswordResetController extends Controller
 
         return response()->json([
             'message' => 'Tautan reset password telah dikirim ke email Anda. Silakan cek inbox atau folder spam.',
-            'email' => $email
         ]);
     }
 

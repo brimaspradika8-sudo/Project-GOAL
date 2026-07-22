@@ -147,4 +147,36 @@ class FieldController extends Controller
         return response()->json(new FieldResource($field));
     }
 
+    public function trashed(): JsonResponse
+    {
+        $fields = $this->fieldService->listTrashed();
+
+        return $this->paginatedResponse($fields);
+    }
+
+    public function restore(int $id): JsonResponse
+    {
+        $success = $this->fieldService->restore($id);
+
+        if (!$success) {
+            return response()->json(['message' => 'Lapangan tidak ditemukan di tempat sampah.'], 404);
+        }
+
+        $this->fieldService->invalidateCache();
+
+        return response()->json(['message' => 'Lapangan berhasil dipulihkan.']);
+    }
+
+    public function forceDelete(int $id): JsonResponse
+    {
+        $success = $this->fieldService->forceDelete($id);
+
+        if (!$success) {
+            return response()->json(['message' => 'Lapangan tidak ditemukan di tempat sampah.'], 404);
+        }
+
+        $this->fieldService->invalidateCache();
+
+        return response()->json(['message' => 'Lapangan berhasil dihapus permanen.']);
+    }
 }

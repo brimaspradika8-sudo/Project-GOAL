@@ -36,6 +36,10 @@ export const COLORS = {
   shadowDark: 'rgba(0,0,0,0.10)',
   warmWhite: '#FFFFFF',
   cardBg: '#FFFFFF',
+  accentPurple: '#8B5CF6',
+  accentPurpleLight: '#F1EAFB',
+  accentOrange: '#E97A1F',
+  accentOrangeLight: '#FFF3E6',
 };
 
 export const AUTH_COLORS = {

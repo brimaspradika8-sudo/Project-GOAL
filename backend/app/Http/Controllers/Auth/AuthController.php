@@ -15,7 +15,6 @@ class AuthController extends Controller
     public function __construct(
         private AuthService $auth
     ) {}
-
     public function register(RegisterRequest $request): JsonResponse
     {
         try {
@@ -31,7 +30,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Registrasi gagal. Silakan coba lagi nanti.'], 500);
         }
     }
-
+    
     public function login(LoginRequest $request): JsonResponse
     {
         try {
@@ -48,6 +47,10 @@ class AuthController extends Controller
             return response()->json([
                 'message' => $e->getMessage(),
             ], 401);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Login gagal. Silakan coba lagi nanti.',
+            ], 500);
         }
     }
 

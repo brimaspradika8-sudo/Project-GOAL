@@ -1,25 +1,35 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  ActivityIndicator, Alert, RefreshControl,
+  Alert, RefreshControl,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TOKEN_KEY } from '../../app/_layout';
 import { API_BASE_URL } from '../../lib/api';
+import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { SkeletonCards } from '../Skeleton';
+import ConfirmActionModal from './ConfirmActionModal';
 
 export default function TrashedFieldsPage() {
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [restoreTarget, setRestoreTarget] = useState<{ id: number; name: string } | null>(null);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fetchFields = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/trashed/list`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          'Accept': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       setFields(data?.data ?? []);
     } catch {
       Alert.alert('Error', 'Gagal memuat data.');
@@ -33,42 +43,69 @@ export default function TrashedFieldsPage() {
   const onRefresh = () => { setRefreshing(true); fetchFields(); };
 
   const handleRestore = (id: number, name: string) => {
-    Alert.alert('Pulihkan Lapangan', `Pulihkan "${name}"?`, [
-      { text: 'Batal', style: 'cancel' },
-      {
-        text: 'Pulihkan', onPress: async () => {
-          const token = await AsyncStorage.getItem(TOKEN_KEY);
-          const res = await fetch(`${API_BASE_URL}/fields/${id}/restore`, {
-            method: 'POST', headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) { Alert.alert('Berhasil', 'Lapangan dipulihkan.'); fetchFields(); }
-          else Alert.alert('Error', 'Gagal memulihkan.');
+    setRestoreTarget({ id, name });
+  };
+
+  const confirmRestore = async () => {
+    if (!restoreTarget) return;
+    setRestoreLoading(true);
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const res = await fetch(`${API_BASE_URL}/fields/${restoreTarget.id}/restore`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
-      },
-    ]);
+      });
+      if (res.ok) {
+        setRestoreTarget(null);
+        Alert.alert('Berhasil', 'Lapangan dipulihkan.');
+        fetchFields();
+      } else {
+        Alert.alert('Error', 'Gagal memulihkan.');
+      }
+    } catch {
+      Alert.alert('Error', 'Tidak dapat terhubung ke server.');
+    } finally {
+      setRestoreLoading(false);
+    }
   };
 
   const handleForceDelete = (id: number, name: string) => {
-    Alert.alert('Hapus Permanen', `Hapus permanen "${name}"? Tidak bisa dibatalkan.`, [
-      { text: 'Batal', style: 'cancel' },
-      {
-        text: 'Hapus', style: 'destructive', onPress: async () => {
-          const token = await AsyncStorage.getItem(TOKEN_KEY);
-          const res = await fetch(`${API_BASE_URL}/fields/${id}/force`, {
-            method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) { Alert.alert('Berhasil', 'Lapangan dihapus permanen.'); fetchFields(); }
-          else Alert.alert('Error', 'Gagal menghapus.');
+    setDeleteTarget({ id, name });
+  };
+
+  const confirmForceDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}/force`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
-      },
-    ]);
+      });
+      if (res.ok) {
+        setDeleteTarget(null);
+        Alert.alert('Berhasil', 'Lapangan dihapus permanen.');
+        fetchFields();
+      } else {
+        Alert.alert('Error', 'Gagal menghapus.');
+      }
+    } catch {
+      Alert.alert('Error', 'Tidak dapat terhubung ke server.');
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   if (loading) {
     return (
-      <View style={st.loadingWrap}>
-        <ActivityIndicator size="large" color="#4ade80" />
-        <Text style={st.loadingText}>Memuat sampah...</Text>
+      <View style={st.screen}>
+        <SkeletonCards count={3} />
       </View>
     );
   }
@@ -77,7 +114,7 @@ export default function TrashedFieldsPage() {
     return (
       <View style={st.emptyWrap}>
         <View style={st.emptyIconWrap}>
-          <MaterialIcons name="delete-sweep" size={40} color="#334155" />
+          <MaterialIcons name="delete-sweep" size={40} color={COLORS.textTertiary} />
         </View>
         <Text style={st.emptyTitle}>Tempat Sampah Kosong</Text>
         <Text style={st.emptyDesc}>Tidak ada lapangan yang dihapus.</Text>
@@ -86,116 +123,157 @@ export default function TrashedFieldsPage() {
   }
 
   return (
-    <ScrollView
-      contentContainerStyle={st.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4ade80" colors={['#4ade80']} />}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={st.headerRow}>
-        <View style={st.countPill}>
-          <MaterialIcons name="auto-delete" size={12} color="#f87171" />
-          <Text style={st.countText}>{fields.length} lapangan terhapus</Text>
+    <View style={st.screen}>
+      <ScrollView
+        contentContainerStyle={st.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={st.headerRow}>
+          <View style={st.countPill}>
+            <MaterialIcons name="auto-delete" size={12} color={COLORS.error} />
+            <Text style={st.countText}>{fields.length} lapangan terhapus</Text>
+          </View>
+          <Text style={st.warningText}>Hati-hati — hapus permanen tidak bisa dikembalikan</Text>
         </View>
-        <Text style={st.warningText}>Hati-hati — hapus permanen tidak bisa dikembalikan</Text>
-      </View>
 
-      {fields.map((f: any) => (
-        <View key={f.id} style={st.card}>
-          <View style={st.cardMain}>
-            <View style={st.fieldIconWrap}>
-              <MaterialIcons name="delete" size={20} color="#f87171" />
-            </View>
-            <View style={st.cardInfo}>
-              <Text style={st.fieldName} numberOfLines={1}>{f.name}</Text>
-              <View style={st.tagRow}>
-                {f.sport_type && (
-                  <View style={st.sportTag}>
-                    <Text style={st.sportText}>{f.sport_type.toUpperCase()}</Text>
+        {fields.map((f: any) => (
+          <View key={f.id} style={st.card}>
+            <View style={st.cardMain}>
+              <View style={st.fieldIconWrap}>
+                <MaterialIcons name="delete" size={20} color={COLORS.error} />
+              </View>
+              <View style={st.cardInfo}>
+                <Text style={st.fieldName} numberOfLines={1}>{f.name}</Text>
+                <View style={st.tagRow}>
+                  {f.sport_type && (
+                    <View style={st.sportTag}>
+                      <Text style={st.sportText}>{f.sport_type.toUpperCase()}</Text>
+                    </View>
+                  )}
+                  <View style={st.deletedTag}>
+                    <Text style={st.deletedText}>Dihapus</Text>
                   </View>
-                )}
-                <View style={st.deletedTag}>
-                  <Text style={st.deletedText}>Dihapus</Text>
                 </View>
               </View>
             </View>
-          </View>
 
-          {f.deleted_at && (
-            <View style={st.deletedRow}>
-              <MaterialIcons name="schedule" size={12} color="#475569" />
-              <Text style={st.deletedAt}>Dihapus: {new Date(f.deleted_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
+            {f.deleted_at && (
+              <View style={st.deletedRow}>
+                <MaterialIcons name="schedule" size={12} color={COLORS.textSecondary} />
+                <Text style={st.deletedAt}>Dihapus: {new Date(f.deleted_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
+              </View>
+            )}
+
+            <View style={st.actions}>
+              <TouchableOpacity style={st.restoreBtn} onPress={() => handleRestore(f.id, f.name)} activeOpacity={0.8}>
+                <MaterialIcons name="restore" size={16} color={COLORS.primary} />
+                <Text style={st.restoreBtnText}>Pulihkan</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={st.deleteBtn} onPress={() => handleForceDelete(f.id, f.name)} activeOpacity={0.8}>
+                <MaterialIcons name="delete-forever" size={16} color={COLORS.error} />
+                <Text style={st.deleteBtnText}>Hapus Permanen</Text>
+              </TouchableOpacity>
             </View>
-          )}
-
-          <View style={st.actions}>
-            <TouchableOpacity style={st.restoreBtn} onPress={() => handleRestore(f.id, f.name)} activeOpacity={0.8}>
-              <MaterialIcons name="restore" size={16} color="#4ade80" />
-              <Text style={st.restoreBtnText}>Pulihkan</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={st.deleteBtn} onPress={() => handleForceDelete(f.id, f.name)} activeOpacity={0.8}>
-              <MaterialIcons name="delete-forever" size={16} color="#f87171" />
-              <Text style={st.deleteBtnText}>Hapus Permanen</Text>
-            </TouchableOpacity>
           </View>
-        </View>
-      ))}
-    </ScrollView>
+        ))}
+      </ScrollView>
+
+      {/* Restore Confirm Modal */}
+      <ConfirmActionModal
+        visible={!!restoreTarget}
+        title={`Pulihkan "${restoreTarget?.name ?? ''}"?`}
+        description="Lapangan akan dikembalikan dan terlihat oleh semua pengguna."
+        icon="restore"
+        iconColor={COLORS.primary}
+        iconBg={COLORS.primaryContainer}
+        loading={restoreLoading}
+        onCancel={() => setRestoreTarget(null)}
+        options={[{
+          label: 'Pulihkan',
+          icon: 'restore',
+          onPress: confirmRestore,
+        }]}
+      />
+
+      {/* Force Delete Confirm Modal */}
+      <ConfirmActionModal
+        visible={!!deleteTarget}
+        title={`Hapus permanen "${deleteTarget?.name ?? ''}"?`}
+        description="Tindakan ini tidak bisa dibatalkan. Lapangan akan dihapus selamanya."
+        icon="delete-forever"
+        iconColor={COLORS.error}
+        iconBg={COLORS.errorContainer}
+        loading={deleteLoading}
+        onCancel={() => setDeleteTarget(null)}
+        options={[{
+          label: 'Ya, Hapus Permanen',
+          icon: 'delete',
+          destructive: true,
+          onPress: confirmForceDelete,
+        }]}
+      />
+    </View>
   );
 }
 
 const st = StyleSheet.create({
-  container: { padding: 16, paddingBottom: 48 },
-  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 80 },
-  loadingText: { color: '#475569', fontSize: 14 },
+  screen: { flex: 1, backgroundColor: COLORS.background },
+  container: { padding: SIZES.gutter, paddingBottom: 48 },
+
   emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 100 },
   emptyIconWrap: {
-    width: 80, height: 80, borderRadius: 24, backgroundColor: '#0d1117',
-    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#1e293b', marginBottom: 4,
+    width: 80, height: 80, borderRadius: 24, backgroundColor: COLORS.surfaceContainerHigh,
+    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.outline, marginBottom: 4,
   },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#e2e8f0' },
-  emptyDesc: { fontSize: 13, color: '#475569' },
+  emptyTitle: { ...FONTS.titleLg, color: COLORS.text },
+  emptyDesc: { ...FONTS.bodyMd, color: COLORS.textSecondary },
+
   headerRow: { marginBottom: 14 },
   countPill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#2d0f0f', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
-    borderWidth: 1, borderColor: '#7f1d1d', alignSelf: 'flex-start', marginBottom: 6,
+    backgroundColor: COLORS.errorContainer, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
+    borderWidth: 1, borderColor: COLORS.error + '30', alignSelf: 'flex-start', marginBottom: 6,
   },
-  countText: { fontSize: 11, fontWeight: '700', color: '#f87171' },
-  warningText: { fontSize: 11, color: '#475569' },
+  countText: { ...FONTS.labelSm, color: COLORS.error },
+  warningText: { ...FONTS.bodySm, color: COLORS.textSecondary },
+
   card: {
-    backgroundColor: '#0d1117', borderRadius: 18, padding: 16, marginBottom: 12,
-    borderWidth: 1, borderColor: '#1e293b',
+    backgroundColor: COLORS.surface, borderRadius: 18, padding: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: COLORS.outline, ...SHADOWS.sm,
   },
   cardMain: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   fieldIconWrap: {
-    width: 44, height: 44, borderRadius: 13, backgroundColor: '#2d0f0f',
-    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#7f1d1d',
+    width: 44, height: 44, borderRadius: 13, backgroundColor: COLORS.errorContainer,
+    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.error + '30',
   },
   cardInfo: { flex: 1 },
-  fieldName: { fontSize: 15, fontWeight: '700', color: '#f1f5f9', marginBottom: 6 },
+  fieldName: { ...FONTS.titleLg, color: COLORS.text, marginBottom: 6 },
   tagRow: { flexDirection: 'row', gap: 6 },
   sportTag: {
-    backgroundColor: '#1e293b', borderRadius: 5, paddingVertical: 2, paddingHorizontal: 7,
+    backgroundColor: COLORS.surfaceContainerHigh, borderRadius: 5, paddingVertical: 2, paddingHorizontal: 7,
   },
-  sportText: { fontSize: 10, fontWeight: '700', color: '#94a3b8' },
+  sportText: { ...FONTS.labelSm, color: COLORS.textSecondary },
   deletedTag: {
-    backgroundColor: '#2d0f0f', borderRadius: 5, paddingVertical: 2, paddingHorizontal: 7,
-    borderWidth: 1, borderColor: '#7f1d1d',
+    backgroundColor: COLORS.errorContainer, borderRadius: 5, paddingVertical: 2, paddingHorizontal: 7,
+    borderWidth: 1, borderColor: COLORS.error + '30',
   },
-  deletedText: { fontSize: 10, fontWeight: '700', color: '#f87171' },
+  deletedText: { ...FONTS.labelSm, color: COLORS.error },
+
   deletedRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 14 },
-  deletedAt: { fontSize: 11, color: '#475569' },
+  deletedAt: { ...FONTS.bodySm, color: COLORS.textSecondary },
+
   actions: { flexDirection: 'row', gap: 10 },
   restoreBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    backgroundColor: '#052e16', paddingVertical: 11, borderRadius: 12,
-    borderWidth: 1, borderColor: '#166534',
+    backgroundColor: COLORS.primaryContainer, paddingVertical: 11, borderRadius: 12,
+    borderWidth: 1, borderColor: COLORS.primary + '30', minHeight: 44,
   },
-  restoreBtnText: { color: '#4ade80', fontSize: 13, fontWeight: '700' },
+  restoreBtnText: { ...FONTS.titleSm, color: COLORS.primary },
   deleteBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    backgroundColor: '#2d0f0f', paddingVertical: 11, borderRadius: 12,
-    borderWidth: 1, borderColor: '#7f1d1d',
+    backgroundColor: COLORS.errorContainer, paddingVertical: 11, borderRadius: 12,
+    borderWidth: 1, borderColor: COLORS.error + '30', minHeight: 44,
   },
-  deleteBtnText: { color: '#f87171', fontSize: 13, fontWeight: '700' },
+  deleteBtnText: { ...FONTS.titleSm, color: COLORS.error },
 });

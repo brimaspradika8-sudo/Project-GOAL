@@ -1,6 +1,6 @@
 <?php
 
-$isProduction = env('APP_ENV') === 'production';
+$isProduction = config('app.env') === 'production';
 
 $origins = $isProduction
     ? array_filter(array_map('trim', explode(',', env('FRONTEND_URL', ''))))
@@ -20,6 +20,7 @@ return [
     'allowed_origins' => $origins,
     'allowed_origins_patterns' => $isProduction ? [] : [
         '/^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|9\.\d+\.\d+\.\d+)(:\d+)?$/',
+        '/^https?:\/\/.*\.loca\.lt(:\d+)?$/',
     ],
     'allowed_headers' => ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
     'exposed_headers' => [],

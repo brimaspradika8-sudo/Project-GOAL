@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  ActivityIndicator, Alert, TextInput, RefreshControl, Modal,
-  Platform,
+  Alert, TextInput, RefreshControl, Modal,
+  Platform, ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TOKEN_KEY } from '../../app/_layout';
-import { API_BASE_URL } from '../../lib/api';
+import { API_BASE_URL, getErrorMessage } from '../../lib/api';
+import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { SkeletonCards } from '../Skeleton';
+import DashboardHeader from '../shared/DashboardHeader';
+import ConfirmActionModal from './ConfirmActionModal';
 
 export default function OwnerRequestPage() {
   const [requests, setRequests] = useState<any[]>([]);
@@ -16,6 +20,7 @@ export default function OwnerRequestPage() {
   const [rejectModal, setRejectModal] = useState<{ id: number; visible: boolean }>({ id: 0, visible: false });
   const [rejectReason, setRejectReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [approveTarget, setApproveTarget] = useState<{ id: number; name: string } | null>(null);
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -44,14 +49,9 @@ export default function OwnerRequestPage() {
       body: JSON.stringify({ status, ...(reason ? { reason } : {}) }),
     });
     const data = await res.json().catch(() => ({}));
-
     if (!res.ok) {
-      const message = data.errors
-        ? Object.values(data.errors).flat().join(' ')
-        : data.message || 'Gagal memproses pengajuan.';
-      throw new Error(message);
+      throw new Error(getErrorMessage(data, 'Gagal memproses pengajuan.'));
     }
-
     return data;
   };
 
@@ -69,17 +69,22 @@ export default function OwnerRequestPage() {
   };
 
   const handleApprove = (id: number, name: string) => {
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Setujui pengajuan dari "${name}"?`)) {
-        approveRequest(id);
-      }
-      return;
-    }
+    setApproveTarget({ id, name });
+  };
 
-    Alert.alert('Setujui Pengajuan', `Setujui pengajuan dari "${name}"?`, [
-      { text: 'Batal', style: 'cancel' },
-      { text: 'Setujui', onPress: () => approveRequest(id) },
-    ]);
+  const confirmApprove = async () => {
+    if (!approveTarget) return;
+    setSubmitting(true);
+    try {
+      await reviewRequest(approveTarget.id, 'approved');
+      setApproveTarget(null);
+      Alert.alert('Berhasil', 'Pengajuan disetujui!');
+      fetchRequests();
+    } catch (e: any) {
+      Alert.alert('Gagal', e.message || 'Gagal memproses pengajuan.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleReject = async () => {
@@ -88,7 +93,6 @@ export default function OwnerRequestPage() {
       Alert.alert('Alasan wajib diisi', 'Tuliskan alasan penolakan terlebih dahulu.');
       return;
     }
-
     setSubmitting(true);
     try {
       await reviewRequest(rejectModal.id, 'rejected', reason);
@@ -105,84 +109,99 @@ export default function OwnerRequestPage() {
 
   if (loading) {
     return (
-      <View style={st.loadingWrap}>
-        <ActivityIndicator size="large" color="#4ade80" />
-        <Text style={st.loadingText}>Memuat pengajuan...</Text>
-      </View>
-    );
-  }
-
-  if (requests.length === 0) {
-    return (
-      <View style={st.emptyWrap}>
-        <View style={st.emptyIconWrap}>
-          <MaterialIcons name="inventory" size={40} color="#1e293b" />
-        </View>
-        <Text style={st.emptyTitle}>Semua Beres!</Text>
-        <Text style={st.emptyDesc}>Tidak ada pengajuan yang menunggu.</Text>
+      <View style={st.screen}>
+        <DashboardHeader title="Pengajuan Owner" subtitle="Review permohonan owner baru" />
+        <SkeletonCards count={3} />
       </View>
     );
   }
 
   return (
     <>
-      <ScrollView
-        contentContainerStyle={st.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4ade80" colors={['#4ade80']} />}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={st.headerRow}>
-          <View style={st.countPill}>
-            <MaterialIcons name="pending-actions" size={12} color="#f59e0b" />
-            <Text style={st.countText}>{requests.length} menunggu review</Text>
-          </View>
-        </View>
+      <View style={st.screen}>
+        <DashboardHeader title="Pengajuan Owner" subtitle="Review permohonan owner baru" />
 
-        {requests.map((r: any) => (
-          <View key={r.id} style={st.card}>
-            {/* Card header */}
-            <View style={st.cardTop}>
-              <View style={st.businessIconWrap}>
-                <MaterialIcons name="store" size={20} color="#f59e0b" />
+        <ScrollView
+          contentContainerStyle={st.list}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Count pill */}
+          {requests.length > 0 && (
+            <View style={st.headerRow}>
+              <View style={st.countPill}>
+                <MaterialIcons name="pending-actions" size={12} color={COLORS.floodlight} />
+                <Text style={st.countText}>{requests.length} menunggu review</Text>
               </View>
-              <View style={st.cardTopInfo}>
-                <Text style={st.businessName} numberOfLines={1}>{r.business_name}</Text>
-                <View style={st.pendingBadge}>
-                  <View style={st.pulseDot} />
-                  <Text style={st.pendingText}>Menunggu</Text>
+            </View>
+          )}
+
+          {requests.length === 0 ? (
+            <View style={st.emptyWrap}>
+              <View style={st.emptyIconWrap}>
+                <MaterialIcons name="inventory" size={40} color={COLORS.textTertiary} />
+              </View>
+              <Text style={st.emptyTitle}>Semua Beres!</Text>
+              <Text style={st.emptyDesc}>Tidak ada pengajuan yang menunggu.</Text>
+            </View>
+          ) : (
+            requests.map((r: any) => (
+              <View key={r.id} style={st.card}>
+                {/* Card header */}
+                <View style={st.cardTop}>
+                  <View style={st.businessIconWrap}>
+                    <MaterialIcons name="store" size={20} color={COLORS.floodlight} />
+                  </View>
+                  <View style={st.cardTopInfo}>
+                    <Text style={st.businessName} numberOfLines={1}>{r.business_name}</Text>
+                    <View style={st.pendingBadge}>
+                      <View style={st.pulseDot} />
+                      <Text style={st.pendingText}>Menunggu</Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={st.divider} />
+
+                {/* Detail rows */}
+                {[
+                  { icon: 'person', label: r.name },
+                  { icon: 'mail', label: r.email },
+                  { icon: 'location-on', label: r.address },
+                  { icon: 'phone', label: r.phone },
+                ].map((row, i) => (
+                  <View key={i} style={st.detailRow}>
+                    <MaterialIcons name={row.icon as any} size={14} color={COLORS.textSecondary} />
+                    <Text style={st.detailText} numberOfLines={1}>{row.label}</Text>
+                  </View>
+                ))}
+
+                {/* Actions */}
+                <View style={st.actions}>
+                  <TouchableOpacity
+                    style={[st.approveBtn, submitting && st.disabledBtn]}
+                    onPress={() => handleApprove(r.id, r.name)}
+                    activeOpacity={0.8}
+                    disabled={submitting}
+                  >
+                    <MaterialIcons name="check-circle" size={16} color={COLORS.onPrimary} />
+                    <Text style={st.approveBtnText}>Setujui</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[st.rejectBtn, submitting && st.disabledBtn]}
+                    onPress={() => setRejectModal({ id: r.id, visible: true })}
+                    activeOpacity={0.8}
+                    disabled={submitting}
+                  >
+                    <MaterialIcons name="cancel" size={16} color={COLORS.error} />
+                    <Text style={st.rejectBtnText}>Tolak</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
-            </View>
-
-            <View style={st.divider} />
-
-            {/* Detail rows */}
-            {[
-              { icon: 'person', label: r.name },
-              { icon: 'mail', label: r.email },
-              { icon: 'location-on', label: r.address },
-              { icon: 'phone', label: r.phone },
-            ].map((row, i) => (
-              <View key={i} style={st.detailRow}>
-                <MaterialIcons name={row.icon as any} size={14} color="#475569" />
-                <Text style={st.detailText} numberOfLines={1}>{row.label}</Text>
-              </View>
-            ))}
-
-            {/* Actions */}
-            <View style={st.actions}>
-              <TouchableOpacity style={[st.approveBtn, submitting && st.disabledBtn]} onPress={() => handleApprove(r.id, r.name)} activeOpacity={0.8} disabled={submitting}>
-                <MaterialIcons name="check-circle" size={16} color="#fff" />
-                <Text style={st.approveBtnText}>Setujui</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[st.rejectBtn, submitting && st.disabledBtn]} onPress={() => setRejectModal({ id: r.id, visible: true })} activeOpacity={0.8} disabled={submitting}>
-                <MaterialIcons name="cancel" size={16} color="#f87171" />
-                <Text style={st.rejectBtnText}>Tolak</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+            ))
+          )}
+        </ScrollView>
+      </View>
 
       {/* Reject Modal */}
       <Modal visible={rejectModal.visible} transparent animationType="fade" onRequestClose={() => setRejectModal({ id: 0, visible: false })}>
@@ -190,7 +209,7 @@ export default function OwnerRequestPage() {
           <View style={st.modal}>
             <View style={st.modalHeader}>
               <View style={st.modalIconWrap}>
-                <MaterialIcons name="cancel" size={22} color="#f87171" />
+                <MaterialIcons name="cancel" size={22} color={COLORS.error} />
               </View>
               <Text style={st.modalTitle}>Alasan Penolakan</Text>
             </View>
@@ -198,93 +217,142 @@ export default function OwnerRequestPage() {
             <TextInput
               style={st.modalInput}
               placeholder="Contoh: Data tidak lengkap..."
-              placeholderTextColor="#334155"
+              placeholderTextColor={COLORS.textTertiary}
               multiline
               value={rejectReason}
               onChangeText={setRejectReason}
             />
             <View style={st.modalActions}>
-              <TouchableOpacity style={st.cancelBtn} onPress={() => { setRejectModal({ id: 0, visible: false }); setRejectReason(''); }}>
+              <TouchableOpacity
+                style={st.cancelBtn}
+                onPress={() => { setRejectModal({ id: 0, visible: false }); setRejectReason(''); }}
+              >
                 <Text style={st.cancelText}>Batal</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[st.confirmBtn, submitting && { opacity: 0.6 }]} onPress={handleReject} disabled={submitting}>
-                <Text style={st.confirmText}>{submitting ? 'Menolak...' : 'Tolak'}</Text>
+              <TouchableOpacity
+                style={[st.confirmBtn, submitting && { opacity: 0.6 }]}
+                onPress={handleReject}
+                disabled={submitting}
+              >
+                {submitting
+                  ? <ActivityIndicator color={COLORS.onPrimary} size="small" />
+                  : <Text style={st.confirmText}>Tolak</Text>}
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+
+      {/* Approve Confirm Modal */}
+      <ConfirmActionModal
+        visible={!!approveTarget}
+        title={`Setujui "${approveTarget?.name ?? ''}"?`}
+        description="Pengajuan owner akan disetujui dan user akan mendapatkan akses owner."
+        icon="check-circle"
+        iconColor={COLORS.primary}
+        iconBg={COLORS.primaryContainer}
+        loading={submitting}
+        onCancel={() => setApproveTarget(null)}
+        options={[{
+          label: 'Setujui',
+          icon: 'check',
+          onPress: confirmApprove,
+        }]}
+      />
     </>
   );
 }
 
 const st = StyleSheet.create({
-  container: { padding: 16, paddingBottom: 48 },
-  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 80 },
-  loadingText: { color: '#475569', fontSize: 14 },
-  emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 100 },
-  emptyIconWrap: {
-    width: 80, height: 80, borderRadius: 24, backgroundColor: '#0d1117',
-    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#1e293b', marginBottom: 4,
-  },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#e2e8f0' },
-  emptyDesc: { fontSize: 13, color: '#475569' },
+  screen: { flex: 1, backgroundColor: COLORS.background },
+  list: { padding: SIZES.gutter, paddingBottom: 60 },
+
   headerRow: { flexDirection: 'row', marginBottom: 14 },
   countPill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#451a03', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
-    borderWidth: 1, borderColor: '#92400e',
+    backgroundColor: COLORS.floodlight + '20', borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 5,
+    borderWidth: 1, borderColor: COLORS.floodlight + '50',
   },
-  countText: { fontSize: 11, fontWeight: '700', color: '#f59e0b' },
+  countText: { ...FONTS.labelSm, color: '#92400e' },
+
+  emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12 },
+  emptyIconWrap: {
+    width: 80, height: 80, borderRadius: 24,
+    backgroundColor: COLORS.surfaceContainerHigh,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: COLORS.outline, marginBottom: 4,
+  },
+  emptyTitle: { ...FONTS.titleLg, color: COLORS.text },
+  emptyDesc: { ...FONTS.bodyMd, color: COLORS.textSecondary },
+
   card: {
-    backgroundColor: '#0d1117', borderRadius: 18, padding: 16, marginBottom: 14,
-    borderWidth: 1, borderColor: '#1e293b',
+    backgroundColor: COLORS.surface, borderRadius: 18, padding: 16, marginBottom: 14,
+    borderWidth: 1, borderColor: COLORS.outline, ...SHADOWS.sm,
   },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
   businessIconWrap: {
-    width: 44, height: 44, borderRadius: 13, backgroundColor: '#451a03',
-    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#92400e',
+    width: 44, height: 44, borderRadius: 13,
+    backgroundColor: COLORS.floodlight + '20',
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: COLORS.floodlight + '40',
   },
   cardTopInfo: { flex: 1 },
-  businessName: { fontSize: 15, fontWeight: '700', color: '#f1f5f9', marginBottom: 5 },
+  businessName: { ...FONTS.titleLg, color: COLORS.text, marginBottom: 5 },
   pendingBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
-  pulseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#f59e0b' },
-  pendingText: { fontSize: 11, fontWeight: '600', color: '#f59e0b' },
-  divider: { height: 1, backgroundColor: '#1e293b', marginBottom: 12 },
+  pulseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.floodlight },
+  pendingText: { ...FONTS.labelMd, color: '#92400e' },
+  divider: { height: 1, backgroundColor: COLORS.outline, marginBottom: 12 },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 7 },
-  detailText: { fontSize: 13, color: '#94a3b8', flex: 1 },
+  detailText: { ...FONTS.bodyMd, color: COLORS.textSecondary, flex: 1 },
+
   actions: { flexDirection: 'row', gap: 10, marginTop: 14 },
   approveBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    backgroundColor: '#14532d', paddingVertical: 11, borderRadius: 12,
-    borderWidth: 1, borderColor: '#166534',
+    backgroundColor: COLORS.primary, paddingVertical: 12, borderRadius: 12,
+    minHeight: 46,
   },
-  approveBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  approveBtnText: { ...FONTS.titleSm, color: COLORS.onPrimary },
   rejectBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    backgroundColor: '#2d0f0f', paddingVertical: 11, borderRadius: 12,
-    borderWidth: 1, borderColor: '#7f1d1d',
+    backgroundColor: COLORS.errorContainer, paddingVertical: 12, borderRadius: 12,
+    borderWidth: 1, borderColor: COLORS.error + '30',
+    minHeight: 46,
   },
-  rejectBtnText: { color: '#f87171', fontSize: 14, fontWeight: '700' },
+  rejectBtnText: { ...FONTS.titleSm, color: COLORS.error },
   disabledBtn: { opacity: 0.6 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', padding: 24 },
-  modal: { backgroundColor: '#0d1117', borderRadius: 20, padding: 22, borderWidth: 1, borderColor: '#1e293b' },
+
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
+  modal: {
+    backgroundColor: COLORS.surface, borderRadius: 20, padding: 22,
+    borderWidth: 1, borderColor: COLORS.outline, ...SHADOWS.lg,
+  },
   modalHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 6 },
   modalIconWrap: {
-    width: 38, height: 38, borderRadius: 11, backgroundColor: '#2d0f0f',
+    width: 38, height: 38, borderRadius: 11,
+    backgroundColor: COLORS.errorContainer,
     justifyContent: 'center', alignItems: 'center',
   },
-  modalTitle: { fontSize: 17, fontWeight: '800', color: '#f1f5f9' },
-  modalSub: { fontSize: 12, color: '#475569', marginBottom: 16, marginLeft: 50 },
+  modalTitle: { ...FONTS.headlineSm, color: COLORS.text },
+  modalSub: { ...FONTS.bodySm, color: COLORS.textSecondary, marginBottom: 16, marginLeft: 50 },
   modalInput: {
-    backgroundColor: '#1e293b', borderRadius: 12, padding: 14, color: '#e2e8f0',
-    fontSize: 14, minHeight: 90, textAlignVertical: 'top', marginBottom: 16,
-    borderWidth: 1, borderColor: '#334155',
+    backgroundColor: COLORS.surfaceContainerLow, borderRadius: 12, padding: 14,
+    color: COLORS.text, fontSize: 14, minHeight: 90,
+    textAlignVertical: 'top', marginBottom: 16,
+    borderWidth: 1, borderColor: COLORS.outline,
   },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
-  cancelBtn: { paddingVertical: 11, paddingHorizontal: 20, borderRadius: 10, backgroundColor: '#1e293b' },
-  cancelText: { color: '#64748b', fontSize: 14, fontWeight: '600' },
-  confirmBtn: { paddingVertical: 11, paddingHorizontal: 24, borderRadius: 10, backgroundColor: '#7f1d1d' },
-  confirmText: { color: '#fca5a5', fontSize: 14, fontWeight: '700' },
+  cancelBtn: {
+    paddingVertical: 11, paddingHorizontal: 20, borderRadius: 10,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderWidth: 1, borderColor: COLORS.outline,
+    minHeight: 44, justifyContent: 'center',
+  },
+  cancelText: { ...FONTS.titleSm, color: COLORS.textSecondary },
+  confirmBtn: {
+    paddingVertical: 11, paddingHorizontal: 24, borderRadius: 10,
+    backgroundColor: COLORS.error, minHeight: 44, justifyContent: 'center', alignItems: 'center',
+  },
+  confirmText: { ...FONTS.titleSm, color: COLORS.onPrimary },
 });
-

@@ -1,4 +1,4 @@
 import { Redirect } from 'expo-router';
 export default function AdminIndex() {
-  return <Redirect href="/(admin)/dashboard" />;
+  return <Redirect href="/(admin)/users" />;
 }

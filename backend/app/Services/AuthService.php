@@ -21,7 +21,7 @@ class AuthService
             ]
         );
 
-        $token = $user->createToken('app-token', ['*'], now()->addDay())->plainTextToken;
+            $token = $user->createToken('app-token', ['*'], now()->addMonth())->plainTextToken;
 
         return [
             'token' => $token,
@@ -37,16 +37,15 @@ class AuthService
     {
         $email = strtolower(trim($email));
 
-        // Find or create local user record
-        $user = User::firstOrCreate(
-            ['email' => $email],
-            [
-                'name'     => $email,
-                'password' => Hash::make($password),
-            ]
-        );
+        $user = User::where('email', $email)->first();
 
-        $token = $user->createToken('Mobile App', ['*'], now()->addMonths(3))->plainTextToken;
+        if (!$user || !Hash::check($password, $user->password)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'email' => ['Email atau password salah.'],
+            ])->status(401);
+        }
+
+        $token = $user->createToken('Mobile App', ['*'], now()->addMonth())->plainTextToken;
 
         return [
             'token' => $token,

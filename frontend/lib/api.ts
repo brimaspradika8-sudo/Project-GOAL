@@ -54,3 +54,23 @@ export function getApiBaseUrl() {
 }
 
 export const API_BASE_URL = getApiBaseUrl();
+
+export function getErrorMessage(data: any, fallbackMessage: string = 'Terjadi kesalahan.'): string {
+  if (data?.errors && typeof data.errors === 'object') {
+    const errorList = Object.values(data.errors).flat().filter(Boolean);
+    if (errorList.length > 0) {
+      return errorList.join('. ');
+    }
+  }
+
+  if (typeof data?.message === 'string' && data.message.trim() && data.message !== 'Validasi gagal.') {
+    return data.message;
+  }
+
+  if (typeof data?.error === 'string' && data.error.trim()) {
+    return data.error;
+  }
+
+  return fallbackMessage;
+}
+

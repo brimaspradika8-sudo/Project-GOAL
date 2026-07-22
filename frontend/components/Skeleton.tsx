@@ -94,6 +94,31 @@ export function SkeletonProfile() {
   );
 }
 
+/** Satu baris item list (untuk halaman admin/owner) */
+export function SkeletonListItem() {
+  return (
+    <View style={styles.listItem}>
+      <Skeleton width={44} height={44} borderRadius={13} />
+      <View style={styles.listItemBody}>
+        <Skeleton width="65%" height={14} borderRadius={6} />
+        <Skeleton width="45%" height={11} borderRadius={6} />
+      </View>
+      <Skeleton width={60} height={30} borderRadius={8} />
+    </View>
+  );
+}
+
+/** N buah SkeletonListItem — digunakan sebagai pengganti ActivityIndicator */
+export function SkeletonCards({ count = 4 }: { count?: number }) {
+  return (
+    <View style={styles.cardsList}>
+      {Array.from({ length: count }).map((_, i) => (
+        <SkeletonListItem key={i} />
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   skeleton: {
     backgroundColor: COLORS.surfaceContainerLow,
@@ -143,5 +168,24 @@ const styles = StyleSheet.create({
   },
   profileText: {
     gap: 8,
+  },
+  listItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: COLORS.outline,
+  },
+  listItemBody: {
+    flex: 1,
+    gap: 8,
+  },
+  cardsList: {
+    padding: 16,
+    paddingTop: 8,
   },
 });

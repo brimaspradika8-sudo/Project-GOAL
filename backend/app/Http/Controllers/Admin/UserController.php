@@ -101,13 +101,19 @@ class UserController extends Controller
         return response()->json(['message' => 'Role berhasil diperbarui.', 'role' => $request->role]);
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
         if ((int) auth()->id() === $id) {
             return response()->json(['message' => 'Anda tidak bisa menghapus akun Anda sendiri.'], 403);
         }
 
-        $user = User::findOrFail($id);
+        $user = User::with('profile')->findOrFail($id);
+
+        $currentUserRole = $request->user()?->profile?->role;
+
+        if ($user->profile && $user->profile->role === 'super_admin' && $currentUserRole !== 'super_admin') {
+            return response()->json(['message' => 'Hanya Super Admin yang dapat menghapus akun Super Admin.'], 403);
+        }
 
         if ($user->profile) {
             $user->profile->delete();

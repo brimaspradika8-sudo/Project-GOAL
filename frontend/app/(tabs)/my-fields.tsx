@@ -19,6 +19,7 @@ import { TOKEN_KEY } from '../_layout';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeImage } from '../../components/SafeImage';
 import type { Field } from '../../store/fieldStore';
+import { useTheme } from '../../lib/theme';
 
 const DEFAULT_IMAGES: Record<string, string> = {
   futsal: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
@@ -45,6 +46,7 @@ export default function MyFieldsScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
+  const { colors } = useTheme();
 
   const fetchFields = useCallback(async (pageNum: number = 1, append = false) => {
     try {
@@ -210,8 +212,8 @@ export default function MyFieldsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Lapangan Saya</Text>
@@ -234,8 +236,8 @@ export default function MyFieldsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
         onEndReached={onEndReached}
