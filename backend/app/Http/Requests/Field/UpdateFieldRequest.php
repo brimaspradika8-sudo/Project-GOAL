@@ -16,10 +16,10 @@ class UpdateFieldRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'name'            => 'sometimes|required|string|max:255',
+            'name'            => 'sometimes|required|string|min:5|max:50',
             'sport_type'      => ['sometimes', 'required', 'string', 'max:50', Rule::in(SportType::values())],
             'location'        => 'nullable|string|max:255',
-            'description'     => 'nullable|string|max:1000',
+            'description'     => 'nullable|string|min:50|max:255',
             'price_per_hour'  => ['nullable', 'numeric', 'min:0'],
             'image_url'       => 'nullable|string|max:2048',
         ];
@@ -41,9 +41,24 @@ class UpdateFieldRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'sport_type.in'       => 'Jenis olahraga tidak valid. Pilih salah satu kategori yang tersedia.',
-            'price_per_hour.numeric' => 'Harga harus berupa angka.',
-            'image.max'           => 'Ukuran gambar maksimal 5 MB.',
+            'name.required'           => 'Nama lapangan wajib diisi saat diperbarui.',
+            'name.string'             => 'Nama lapangan harus berupa teks.',
+            'name.min'                => 'Nama lapangan minimal 5 karakter.',
+            'name.max'                => 'Nama lapangan tidak boleh lebih dari 50 karakter.',
+            'sport_type.required'     => 'Jenis olahraga wajib diisi saat diperbarui.',
+            'sport_type.string'       => 'Jenis olahraga harus berupa teks.',
+            'sport_type.max'          => 'Jenis olahraga tidak boleh lebih dari 50 karakter.',
+            'sport_type.in'           => 'Jenis olahraga tidak valid. Pilih salah satu kategori yang tersedia.',
+            'location.string'         => 'Lokasi harus berupa teks.',
+            'location.max'            => 'Lokasi tidak boleh lebih dari 255 karakter.',
+            'description.string'      => 'Deskripsi harus berupa teks.',
+            'description.min'         => 'Deskripsi minimal 50 karakter jika diisi.',
+            'description.max'         => 'Deskripsi tidak boleh lebih dari 255 karakter.',
+            'price_per_hour.numeric'  => 'Harga harus berupa angka.',
+            'price_per_hour.min'      => 'Harga per jam tidak boleh kurang dari batas minimum.',
+            'price_per_hour.max'      => 'Harga per jam terlalu besar dan tidak wajar.',
+            'image_url.string'        => 'URL gambar harus berupa teks.',
+            'image_url.max'           => 'URL gambar tidak boleh lebih dari 2048 karakter.',
         ];
     }
 }
