@@ -7,6 +7,8 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProfileStore } from '../../store/profileStore';
+import { Colors } from '../../constants/theme';
+import { useColorScheme } from '../../hooks/use-color-scheme';
 import { TOKEN_KEY } from '../../app/_layout';
 import { API_BASE_URL } from '../../lib/api';
 
@@ -23,6 +25,8 @@ const EMPTY_CREATE = { name: '', email: '', password: '', role: 'owner' };
 const EMPTY_EDIT   = { name: '', email: '', password: '' };
 
 export default function UserPage() {
+  const colorScheme = useColorScheme();
+  const palette = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -256,9 +260,9 @@ export default function UserPage() {
 
   if (loading) {
     return (
-      <View style={st.loadingWrap}>
-        <ActivityIndicator size="large" color="#4ade80" />
-        <Text style={st.loadingText}>Memuat pengguna...</Text>
+      <View style={[st.loadingWrap, { backgroundColor: palette.background }] }>
+        <ActivityIndicator size="large" color={palette.tint} />
+        <Text style={[st.loadingText, { color: palette.icon }]}>Memuat pengguna...</Text>
       </View>
     );
   }
@@ -266,12 +270,12 @@ export default function UserPage() {
   return (
     <>
       <ScrollView
-        contentContainerStyle={st.container}
+        contentContainerStyle={[st.container, { backgroundColor: palette.background }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4ade80" colors={['#4ade80']} />}
         showsVerticalScrollIndicator={false}
       >
         {/* Search */}
-        <View style={[st.searchWrap, focused && st.searchFocused]}>
+        <View style={[st.searchWrap, focused && st.searchFocused, { backgroundColor: colorScheme === 'dark' ? st.searchWrap.backgroundColor : '#f2f4f6', borderColor: colorScheme === 'dark' ? st.searchWrap.borderColor : '#e6e9ee' }]}>
           <MaterialIcons name="search" size={19} color={focused ? '#4ade80' : '#475569'} />
           <TextInput
             style={st.searchInput}
@@ -341,15 +345,15 @@ export default function UserPage() {
                     <Text style={[st.avatarText, { color: rc.color }]}>{(u.name || '?').charAt(0).toUpperCase()}</Text>
                   </View>
                   <View style={st.info}>
-                    <Text style={st.name} numberOfLines={1}>{u.name}</Text>
-                    <Text style={st.email} numberOfLines={1}>{u.email}</Text>
+                    <Text style={[st.name, { color: palette.text }]} numberOfLines={1}>{u.name}</Text>
+                    <Text style={[st.email, { color: palette.icon }]} numberOfLines={1}>{u.email}</Text>
                     <View style={[st.roleBadge, { backgroundColor: rc.bg, borderColor: rc.color + '40' }]}>
                       <View style={[st.roleDot, { backgroundColor: rc.color }]} />
                       <Text style={[st.roleText, { color: rc.color }]}>{rc.label}</Text>
                     </View>
                   </View>
                 </View>
-                <View style={st.actions}>
+                <View style={[st.actions]}>
                   {activeTab === 'owner' && (
                     <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#022c22' }]} onPress={() => openEdit(u)}>
                       <MaterialIcons name="edit" size={16} color="#34d399" />
@@ -382,13 +386,13 @@ export default function UserPage() {
       <Modal visible={showCreate} transparent animationType="slide" onRequestClose={() => setShowCreate(false)}>
         <KeyboardAvoidingView style={st.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setShowCreate(false)} />
-          <View style={st.sheet}>
+          <View style={[st.sheet, { backgroundColor: palette.background, borderColor: colorScheme === 'dark' ? '#1e293b' : '#e6e9ee' }]}>
             <View style={st.sheetHandle} />
             <View style={st.sheetHeader}>
               <View style={st.sheetIconWrap}>
                 <MaterialIcons name="person-add-alt-1" size={20} color="#34d399" />
               </View>
-              <Text style={st.sheetTitle}>Tambah Owner</Text>
+              <Text style={[st.sheetTitle, { color: palette.text }]}>Tambah Owner</Text>
             </View>
 
             {createError ? (
@@ -448,13 +452,13 @@ export default function UserPage() {
       <Modal visible={!!editTarget} transparent animationType="slide" onRequestClose={() => setEditTarget(null)}>
         <KeyboardAvoidingView style={st.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setEditTarget(null)} />
-          <View style={st.sheet}>
+          <View style={[st.sheet, { backgroundColor: palette.background, borderColor: colorScheme === 'dark' ? '#1e293b' : '#e6e9ee' }]}>
             <View style={st.sheetHandle} />
             <View style={st.sheetHeader}>
               <View style={[st.sheetIconWrap, { backgroundColor: '#1e3a5f' }]}>
                 <MaterialIcons name="edit" size={20} color="#60a5fa" />
               </View>
-              <Text style={st.sheetTitle}>Edit Owner</Text>
+              <Text style={[st.sheetTitle, { color: palette.text }]}>Edit Owner</Text>
             </View>
 
             {editError ? (

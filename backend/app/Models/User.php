@@ -40,7 +40,6 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserSportPreference::class);
     }
-
     public function ownerRequests(): HasMany
     {
         return $this->hasMany(OwnerRequest::class);

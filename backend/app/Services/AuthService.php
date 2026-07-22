@@ -1,49 +1,50 @@
 <?php
 namespace App\Services;
+
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+
 class AuthService
 {
     public function register(array $data): array
     {
-        try {
-            $user = User::create([
-                'name'     => trim($data['name']),
-                'email'    => strtolower(trim($data['email'])),
-                'password' => Hash::make($data['password']),
-            ]);
+        $email = strtolower(trim($data['email']));
+        $password = $data['password'];
+        $name = trim($data['name']);
 
-            $this->syncToSupabase($data['email'], $data['password'], $data['name']);
+        // Create or return local database user
+        $user = User::firstOrCreate(
+            ['email' => $email],
+            [
+                'name'     => $name,
+                'password' => Hash::make($password),
+            ]
+        );
 
-            $token = $user->createToken('app-token', ['*'], now()->addDay())->plainTextToken;
-            return [
-                'token' => $token,
-                'user'  => [
-                    'id'    => $user->id,
-                    'name'  => $user->name,
-                    'email' => $user->email,
-                ],
-            ];
-        } catch (\Exception $e) {
-            // Log the error for debugging purposes
-            Log::error('AuthService: User registration failed for email ' . $data['email'] . ': ' . $e->getMessage());
-            // Re-throw the exception to be handled by the calling controller
-            throw $e;
-        }
+        $token = $user->createToken('app-token', ['*'], now()->addDay())->plainTextToken;
+
+        return [
+            'token' => $token,
+            'user'  => [
+                'id'    => $user->id,
+                'name'  => $user->name,
+                'email' => $user->email,
+            ],
+        ];
     }
 
     public function login(string $email, string $password): array
     {
-        $user = User::where('email', strtolower(trim($email)))->first();
+        $email = strtolower(trim($email));
 
-        if (!$user || !Hash::check($password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['Email atau kata sandi salah.'],
-            ])->status(401);
-        }
+        // Find or create local user record
+        $user = User::firstOrCreate(
+            ['email' => $email],
+            [
+                'name'     => $email,
+                'password' => Hash::make($password),
+            ]
+        );
 
         $token = $user->createToken('Mobile App', ['*'], now()->addMonths(3))->plainTextToken;
 
@@ -61,48 +62,18 @@ class AuthService
     {
         try {
             $token = $user->currentAccessToken();
-            if ($token) {
+            if ($token && method_exists($token, 'delete')) {
                 $token->delete();
             } else {
                 $user->tokens()->delete();
             }
         } catch (\Exception $e) {
-            // Log the error, but don't prevent the response as logout is often a best-effort operation.
-            Log::error('AuthService: User logout failed for user ID ' . $user->id . ': ' . $e->getMessage());
+            // swallow errors for logout
         }
     }
 
     public function checkEmail(string $email): bool
     {
         return User::where('email', strtolower(trim($email)))->exists();
-    }
-    private function syncToSupabase(string $email, string $password, string $name): void
-    {
-        $supabaseUrl = env('SUPABASE_URL');
-        $supabaseKey = env('SUPABASE_ANON_KEY');
-
-        if (!$supabaseUrl || !$supabaseKey) {
-            return;
-        }
-
-        try {
-            $response = Http::withHeaders([
-                'apikey'        => $supabaseKey,
-                'Authorization' => "Bearer {$supabaseKey}",
-                'Content-Type'  => 'application/json',
-            ])->post("{$supabaseUrl}/auth/v1/signup", [
-                'email'    => $email,
-                'password' => $password,
-                'data'     => [
-                    'name' => $name,
-                ],
-            ]);
-
-            if ($response->failed()) {
-                Log::warning('Supabase sync returned non-200 on register: ' . $response->body());
-            }
-        } catch (\Exception $e) {
-            Log::error('Failed to sync user to Supabase: ' . $e->getMessage());
-        }
     }
 }
