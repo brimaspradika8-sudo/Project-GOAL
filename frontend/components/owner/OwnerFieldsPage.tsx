@@ -8,6 +8,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useFieldStore } from '../../store/fieldStore';
+import { Colors } from '../../constants/theme';
+import { useColorScheme } from '../../hooks/use-color-scheme';
 import { TOKEN_KEY } from '../../app/_layout';
 import { API_BASE_URL } from '../../lib/api';
 
@@ -41,6 +43,8 @@ const EMPTY_FORM = {
 };
 
 export default function OwnerFieldsPage() {
+  const colorScheme = useColorScheme();
+  const palette = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -269,24 +273,24 @@ export default function OwnerFieldsPage() {
 
   if (loading) {
     return (
-      <View style={st.loadingWrap}>
-        <ActivityIndicator size="large" color="#4ade80" />
-        <Text style={st.loadingText}>Memuat venue Anda...</Text>
+      <View style={[st.loadingWrap, { backgroundColor: palette.background }] }>
+        <ActivityIndicator size="large" color={palette.tint} />
+        <Text style={[st.loadingText, { color: palette.icon }]}>Memuat venue Anda...</Text>
       </View>
     );
   }
 
   return (
     <>
-      <View style={st.container}>
+      <View style={[st.container, { backgroundColor: palette.background }] }>
         <View style={st.headerBar}>
           <View>
-            <Text style={st.pageTitle}>Venue Anda</Text>
-            <Text style={st.pageSubtitle}>Kelola aset properti olahraga Anda.</Text>
+            <Text style={[st.pageTitle, { color: palette.text }]}>Venue Anda</Text>
+            <Text style={[st.pageSubtitle, { color: palette.icon }]}>Kelola aset properti olahraga Anda.</Text>
           </View>
-          <TouchableOpacity style={st.addBtn} activeOpacity={0.8} onPress={openCreate}>
-            <MaterialIcons name="add" size={20} color="#064e3b" />
-            <Text style={st.addBtnText}>Baru</Text>
+          <TouchableOpacity style={[st.addBtn, { backgroundColor: palette.tint }]} activeOpacity={0.8} onPress={openCreate}>
+            <MaterialIcons name="add" size={20} color={palette.background === '#fff' ? '#064e3b' : palette.background} />
+            <Text style={[st.addBtnText, { color: palette.background === '#fff' ? '#064e3b' : palette.background }]}>Baru</Text>
           </TouchableOpacity>
         </View>
 
@@ -300,8 +304,8 @@ export default function OwnerFieldsPage() {
               <View style={st.emptyIcon}>
                 <MaterialIcons name="sports-soccer" size={40} color="#334155" />
               </View>
-              <Text style={st.emptyTitle}>Belum ada lapangan</Text>
-              <Text style={st.emptyDesc}>Ketuk tombol &quot;Baru&quot; di ujung atas untuk mulai menambahkan aset Anda.</Text>
+              <Text style={[st.emptyTitle, { color: palette.text }]}>Belum ada lapangan</Text>
+              <Text style={[st.emptyDesc, { color: palette.icon }]}>Ketuk tombol &quot;Baru&quot; di ujung atas untuk mulai menambahkan aset Anda.</Text>
             </View>
           ) : (
             fields.map((f: any) => {
@@ -311,7 +315,7 @@ export default function OwnerFieldsPage() {
                 ? `Rp${Number(f.price_per_hour).toLocaleString('id-ID')}`
                 : 'Hubungi';
               return (
-                <View key={f.id} style={st.card}>
+                <View key={f.id} style={[st.card, { backgroundColor: palette.background, borderColor: colorScheme === 'dark' ? '#1e293b' : '#e6e9ee' }]}>
                   <View style={st.cardImgWrap}>
                     <Image source={{ uri: img }} style={st.cardImg} />
                     <View style={st.cardOverlay}>
@@ -323,14 +327,14 @@ export default function OwnerFieldsPage() {
                   </View>
                   <View style={st.cardBody}>
                     <View style={st.cardTop}>
-                      <Text style={st.name} numberOfLines={1}>{f.name}</Text>
+                      <Text style={[st.name, { color: palette.text }]} numberOfLines={1}>{f.name}</Text>
                       <View style={st.pricePill}>
-                        <Text style={st.price}>{priceStr}<Text style={st.priceSub}>/jam</Text></Text>
+                        <Text style={[st.price, { color: palette.tint }]}>{priceStr}<Text style={[st.priceSub, { color: palette.icon }]}>/jam</Text></Text>
                       </View>
                     </View>
                     <View style={st.detailRow}>
                       <MaterialIcons name="sports" size={14} color="#64748b" />
-                      <Text style={st.detailText}>{(Object.keys(SPORT_MAP).find(k => SPORT_MAP[k] === f.sport_type) || f.sport_type)?.toUpperCase()}</Text>
+                      <Text style={[st.detailText, { color: palette.icon }]}>{(Object.keys(SPORT_MAP).find(k => SPORT_MAP[k] === f.sport_type) || f.sport_type)?.toUpperCase()}</Text>
                     </View>
                     {f.description ? (
                       <View style={st.detailRow}>
@@ -339,11 +343,11 @@ export default function OwnerFieldsPage() {
                       </View>
                     ) : null}
                     <View style={st.actions}>
-                      <TouchableOpacity style={st.editBtn} activeOpacity={0.8} onPress={() => openEdit(f)}>
-                        <MaterialIcons name="edit" size={16} color="#e2e8f0" />
-                        <Text style={st.editBtnText}>Edit Venue</Text>
+                      <TouchableOpacity style={[st.editBtn, { backgroundColor: colorScheme === 'dark' ? '#1e293b' : '#f1f5f9' }]} activeOpacity={0.8} onPress={() => openEdit(f)}>
+                        <MaterialIcons name="edit" size={16} color={colorScheme === 'dark' ? '#e2e8f0' : '#0f172a'} />
+                        <Text style={[st.editBtnText, { color: colorScheme === 'dark' ? '#e2e8f0' : '#0f172a' }]}>Edit Venue</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={st.delBtn} activeOpacity={0.8} onPress={() => handleDelete(f.id, f.name)}>
+                      <TouchableOpacity style={[st.delBtn, { backgroundColor: '#450a0a' }]} activeOpacity={0.8} onPress={() => handleDelete(f.id, f.name)}>
                         <MaterialIcons name="delete-outline" size={18} color="#f87171" />
                       </TouchableOpacity>
                     </View>
