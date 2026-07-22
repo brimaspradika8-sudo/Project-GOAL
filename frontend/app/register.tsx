@@ -9,7 +9,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
-import { API_BASE_URL } from '../lib/api';
+import { API_BASE_URL, getErrorMessage } from '../lib/api';
 import { TOKEN_KEY } from './_layout';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -82,8 +82,7 @@ export default function RegisterScreen() {
           setTimeout(() => router.replace('/login'), 1500);
         }
       } else {
-        const msg = data.message || (typeof data.errors === 'object' ? Object.values(data.errors).flat().join(', ') : 'Gagal mendaftar.');
-        showMessage(msg, 'error');
+        showMessage(getErrorMessage(data, 'Gagal mendaftar.'), 'error');
       }
     } catch (err: any) {
       showMessage(err?.message || 'Terjadi kesalahan sistem.', 'error');

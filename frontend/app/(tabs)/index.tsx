@@ -22,6 +22,7 @@ import { SafeImage } from '../../components/SafeImage';
 import { SkeletonVenueList, SkeletonHorizontalCards, SkeletonProfile } from '../../components/Skeleton';
 import { useDebounce } from '../../hooks/useDebounce';
 import { API_BASE_URL } from '../../lib/api';
+import { useTheme } from '../../lib/theme';
 
 
 const SPORT_MAP: Record<string, string> = {
@@ -58,6 +59,7 @@ export default function HomeScreen() {
   const [activeCategory, setActiveCategory] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 300);
+  const { colors } = useTheme();
 
   useEffect(() => {
     if (!profile) fetchProfile();
@@ -107,7 +109,7 @@ export default function HomeScreen() {
   if (loading && !refreshing) {
     return (
       <View style={styles.skeletonContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+        <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <SkeletonProfile />
           <View style={{ height: 16 }} />
@@ -121,7 +123,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
 
       <View style={styles.topBar}>
         <View style={[styles.pageShell, styles.topBarShell]}>
@@ -144,7 +146,7 @@ export default function HomeScreen() {
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.pageShell}>

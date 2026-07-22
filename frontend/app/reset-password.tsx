@@ -9,7 +9,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
-import { API_BASE_URL } from '../lib/api';
+import { API_BASE_URL, getErrorMessage } from '../lib/api';
 
 export default function ResetPasswordScreen() {
   const params = useLocalSearchParams<{ token?: string; email?: string }>();
@@ -67,7 +67,7 @@ export default function ResetPasswordScreen() {
         showMessage('Password berhasil diperbarui! Mengarahkan ke login...', 'success');
         setTimeout(() => router.replace('/login'), 2000);
       } else {
-        showMessage(data.message || 'Token tidak valid atau sudah kedaluwarsa.', 'error');
+        showMessage(getErrorMessage(data, 'Token tidak valid atau sudah kedaluwarsa.'), 'error');
       }
     } catch {
       showMessage('Terjadi kesalahan sistem. Silakan coba lagi.', 'error');

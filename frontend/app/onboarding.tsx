@@ -156,7 +156,7 @@ export default function OnboardingScreen() {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/me/onboarding`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ username, sports: selectedSports, region, avatar_url: avatarUrl }),
         signal: controller.signal,
       });
@@ -197,8 +197,22 @@ export default function OnboardingScreen() {
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets[0]?.uri) {
-        setAvatarUrl(result.assets[0].uri);
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const mime = asset.mimeType || '';
+        const uri = asset.uri;
+        const ext = uri.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+        const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
+        if (!allowedMimes.includes(mime) && !allowedExts.includes(ext)) {
+          Alert.alert('Format Tidak Didukung', 'Foto harus berformat JPG, JPEG, PNG, atau WEBP.');
+          return;
+        }
+        if ((asset.fileSize ?? 0) > 5 * 1024 * 1024) {
+          Alert.alert('Ukuran Terlalu Besar', 'Ukuran foto maksimal 5MB.');
+          return;
+        }
+        setAvatarUrl(uri);
       }
     } catch {
       Alert.alert('Kesalahan', 'Gagal membuka galeri. Silakan coba lagi.');

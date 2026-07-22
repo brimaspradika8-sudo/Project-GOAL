@@ -9,7 +9,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
-import { API_BASE_URL } from '../lib/api';
+import { API_BASE_URL, getErrorMessage } from '../lib/api';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -50,7 +50,7 @@ export default function ForgotPasswordScreen() {
       const data = await res.json();
 
       if (!res.ok) {
-        showMessage(data.message || 'Gagal mengirim tautan reset.', 'error');
+        showMessage(getErrorMessage(data, 'Gagal mengirim tautan reset.'), 'error');
         setLoading(false);
         return;
       }

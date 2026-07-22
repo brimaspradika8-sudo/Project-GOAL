@@ -10,7 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
-import { API_BASE_URL } from '../lib/api';
+import { API_BASE_URL, getErrorMessage } from '../lib/api';
 import { TOKEN_KEY } from './_layout';
 
 export default function ChangePasswordScreen() {
@@ -59,7 +59,7 @@ export default function ChangePasswordScreen() {
         showMessage('Password berhasil diperbarui!', 'success');
         setTimeout(() => router.back(), 1500);
       } else {
-        showMessage(data.message || data.errors?.current_password?.[0] || 'Gagal memperbarui password.', 'error');
+        showMessage(getErrorMessage(data, 'Gagal memperbarui password.'), 'error');
       }
     } catch {
       showMessage('Terjadi kesalahan sistem.', 'error');

@@ -34,6 +34,10 @@ class AdminOwnerController extends Controller
             return response()->json(['message' => 'Pengajuan sudah diproses sebelumnya.'], 422);
         }
 
+        if ($ownerRequest->user_id === $request->user()->id) {
+            return response()->json(['message' => 'Tidak dapat memproses pengajuan sendiri.'], 422);
+        }
+
         if ($request->status === 'approved') {
             $result = $this->ownerRequestService->approve(
                 $ownerRequest,

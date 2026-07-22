@@ -18,6 +18,7 @@ import { useFieldStore, Field } from '../../store/fieldStore';
 import { SafeImage } from '../../components/SafeImage';
 import { SkeletonVenueList } from '../../components/Skeleton';
 import { useDebounce } from '../../hooks/useDebounce';
+import { useTheme } from '../../lib/theme';
 
 const FILTERS = ['Semua', 'Futsal', 'Basket', 'Badminton', 'Mini Soccer', 'Tenis'];
 const SPORT_MAP: Record<string, string> = {
@@ -89,6 +90,7 @@ export default function FieldsScreen() {
   const debouncedSearch = useDebounce(search, 400);
   const { fields, loading, loadingMore, meta, fetchFields, fetchMore, refreshFields } = useFieldStore();
   const [refreshing, setRefreshing] = useState(false);
+  const { colors } = useTheme();
 
   useEffect(() => {
     const sport = activeFilter === 'Semua' ? undefined : SPORT_MAP[activeFilter] || activeFilter.toLowerCase();
@@ -176,8 +178,8 @@ export default function FieldsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
       <FlatList
         data={fields}
         keyExtractor={(item) => String(item.id)}
@@ -191,8 +193,8 @@ export default function FieldsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
         onEndReached={() => {

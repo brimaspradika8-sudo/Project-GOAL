@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
   ActivityIndicator, Alert, RefreshControl, Image,
@@ -8,43 +8,39 @@ import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useFieldStore } from '../../store/fieldStore';
-import { Colors } from '../../constants/theme';
-import { useColorScheme } from '../../hooks/use-color-scheme';
 import { TOKEN_KEY } from '../../app/_layout';
-import { API_BASE_URL } from '../../lib/api';
+import { API_BASE_URL, getErrorMessage } from '../../lib/api';
+import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { SkeletonCards } from '../Skeleton';
+import DashboardHeader from '../shared/DashboardHeader';
+import {
+  SPORT_OPTIONS, SPORT_MAP,
+  type FieldFormErrors, type FieldFormData,
+  EMPTY_ERRORS, validateAllFields, hasErrors,
+  validateFieldName, validateFieldSportType, validateFieldPrice,
+  validateFieldImage, validateFieldImageSize, validateFieldDescription,
+  mimeFromExt,
+} from '../../lib/fieldValidation';
 
 const IMG_PLACEHOLDER = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop';
 
 const STATUS_CFG: Record<string, { label: string; bg: string; color: string }> = {
-  approved: { label: 'Aktif',    bg: 'rgba(6,78,59,0.5)', color: '#34d399' },
-  pending:  { label: 'Menunggu', bg: 'rgba(69,26,3,0.6)', color: '#f59e0b' },
-  rejected: { label: 'Ditolak', bg: 'rgba(69,10,10,0.6)', color: '#f87171' },
+  approved: { label: 'Aktif',    bg: COLORS.primaryContainer, color: COLORS.primary },
+  pending:  { label: 'Menunggu', bg: COLORS.floodlight + '25', color: '#92400e' },
+  rejected: { label: 'Ditolak',  bg: COLORS.errorContainer,    color: COLORS.error },
 };
 
-const SPORT_OPTIONS = ['Futsal', 'Basket', 'Badminton', 'Voli', 'Tenis', 'Mini Soccer', 'Lainnya'];
-
-const SPORT_MAP: Record<string, string> = {
-  'Futsal': 'futsal',
-  'Basket': 'basketball',
-  'Badminton': 'badminton',
-  'Voli': 'volleyball',
-  'Tenis': 'tennis',
-  'Mini Soccer': 'mini_soccer',
-  'Lainnya': 'other',
-};
-
-const EMPTY_FORM = {
+const EMPTY_FORM: FieldFormData = {
   name: '',
   sport_type: '',
   description: '',
   price_per_hour: '',
-  image_url: '',   // final URL after upload
-  image_uri: '',   // local preview uri
+  image_url: '',
+  image_uri: '',
+  image_mime: '',
 };
 
 export default function OwnerFieldsPage() {
-  const colorScheme = useColorScheme();
-  const palette = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,19 +49,26 @@ export default function OwnerFieldsPage() {
   const [createForm, setCreateForm] = useState(EMPTY_FORM);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [createErrors, setCreateErrors] = useState<FieldFormErrors>(EMPTY_ERRORS);
+  const createTouched = useRef<Record<string, boolean>>({});
 
   const [editTarget, setEditTarget] = useState<any | null>(null);
   const [editForm, setEditForm] = useState(EMPTY_FORM);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [editErrors, setEditErrors] = useState<FieldFormErrors>(EMPTY_ERRORS);
+  const editTouched = useRef<Record<string, boolean>>({});
 
   const fetchFields = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/my/list`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          'Accept': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       setFields(data?.data ?? []);
     } catch {
       Alert.alert('Error', 'Gagal memuat data lapangan.');
@@ -78,7 +81,78 @@ export default function OwnerFieldsPage() {
   useEffect(() => { fetchFields(); }, [fetchFields]);
   const onRefresh = () => { setRefreshing(true); fetchFields(); };
 
-  const pickImage = async (setForm: React.Dispatch<React.SetStateAction<typeof EMPTY_FORM>>) => {
+  const validateSingleField = (
+    key: keyof FieldFormData,
+    value: string,
+    form: FieldFormData,
+    isCreate: boolean,
+  ) => {
+    let err = '';
+    switch (key) {
+      case 'name': err = validateFieldName(value); break;
+      case 'sport_type': err = validateFieldSportType(value); break;
+      case 'price_per_hour': err = validateFieldPrice(value); break;
+      case 'description': err = validateFieldDescription(value); break;
+      case 'image_uri': err = validateFieldImage(value, form.image_url, form.image_mime); break;
+    }
+    if (isCreate) {
+      setCreateErrors(prev => ({ ...prev, [key]: err }));
+    } else {
+      setEditErrors(prev => ({ ...prev, [key]: err }));
+    }
+  };
+
+  const onFormFieldChange = (
+    key: keyof FieldFormData,
+    value: string,
+    isCreate: boolean,
+  ) => {
+    const touchedRef = isCreate ? createTouched : editTouched;
+    const shouldValidate = touchedRef.current[key] || key === 'sport_type' || key === 'image_uri';
+    if (isCreate) {
+      setCreateForm(p => {
+        const next = { ...p, [key]: value };
+        if (shouldValidate) {
+          validateSingleField(key, value, next, true);
+        }
+        return next;
+      });
+    } else {
+      setEditForm(p => {
+        const next = { ...p, [key]: value };
+        if (shouldValidate) {
+          validateSingleField(key, value, next, false);
+        }
+        return next;
+      });
+    }
+  };
+
+  const onFieldBlur = (key: keyof FieldFormData, isCreate: boolean) => {
+    const touchedRef = isCreate ? createTouched : editTouched;
+    touchedRef.current[key] = true;
+    const form = isCreate ? createForm : editForm;
+    validateSingleField(key, form[key], form, isCreate);
+  };
+
+  const onAllFieldsTouched = (isCreate: boolean) => {
+    const touchedRef = isCreate ? createTouched : editTouched;
+    const fields: (keyof FieldFormData)[] = ['name', 'sport_type', 'price_per_hour', 'image_uri', 'description'];
+    fields.forEach(f => { touchedRef.current[f] = true; });
+    const form = isCreate ? createForm : editForm;
+    const errs = validateAllFields(form);
+    if (isCreate) {
+      setCreateErrors(errs);
+    } else {
+      setEditErrors(errs);
+    }
+  };
+
+  const pickImage = async (
+    setForm: React.Dispatch<React.SetStateAction<FieldFormData>>,
+    setErrors: React.Dispatch<React.SetStateAction<FieldFormErrors>>,
+    isCreate: boolean,
+  ) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Izin Ditolak', 'Diperlukan akses ke galeri foto.');
@@ -91,49 +165,43 @@ export default function OwnerFieldsPage() {
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
-      setForm(p => ({ ...p, image_uri: result.assets[0].uri, image_url: '' }));
-    }
-  };
+      const asset = result.assets[0];
+      const uri = asset.uri;
+      const mime = asset.mimeType || '';
+      const ext = uri.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
 
-  const uploadImage = async (uri: string, token: string): Promise<string | null> => {
-    try {
-      const formData = new FormData();
-      const filename = uri.split('/').pop() || 'photo.jpg';
-      const ext = filename.split('.').pop()?.toLowerCase() || 'jpg';
-      const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
-
-      if (Platform.OS === 'web') {
-        const response = await fetch(uri);
-        const blob = await response.blob();
-        formData.append('image', blob, filename);
-      } else {
-        formData.append('image', { uri, name: filename, type: mime } as any);
+      const typeErr = validateFieldImage(uri, '', mime || ext);
+      if (typeErr) {
+        setErrors(prev => ({ ...prev, image: typeErr }));
+        return;
       }
 
-      const res = await fetch(`${API_BASE_URL}/upload/image`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) return null;
-      return data.url;
-    } catch {
-      return null;
+      const sizeErr = validateFieldImageSize(asset.fileSize ?? 0);
+      if (sizeErr) {
+        setErrors(prev => ({ ...prev, image: sizeErr }));
+        return;
+      }
+
+      const finalMime = mime || mimeFromExt(ext);
+      setForm(p => ({ ...p, image_uri: uri, image_url: '', image_mime: finalMime }));
+      setErrors(prev => ({ ...prev, image: '' }));
     }
   };
 
   const openCreate = () => {
     setCreateForm(EMPTY_FORM);
     setCreateError(null);
+    setCreateErrors(EMPTY_ERRORS);
+    createTouched.current = {};
     setShowCreate(true);
   };
 
   const handleCreate = async () => {
-    if (!createForm.name.trim() || !createForm.sport_type.trim()) {
-      setCreateError('Nama dan jenis olahraga wajib diisi.');
-      return;
-    }
+    onAllFieldsTouched(true);
+    const errs = validateAllFields(createForm);
+    setCreateErrors(errs);
+    if (hasErrors(errs)) return;
+
     setCreateLoading(true);
     setCreateError(null);
     try {
@@ -141,7 +209,7 @@ export default function OwnerFieldsPage() {
 
       let imageUrl = createForm.image_url;
       if (createForm.image_uri && !imageUrl) {
-        const uploaded = await uploadImage(createForm.image_uri, token!);
+        const uploaded = await uploadImage(createForm.image_uri, token!, createForm.image_mime);
         if (!uploaded) { setCreateError('Gagal mengunggah foto. Coba lagi.'); return; }
         imageUrl = uploaded;
       }
@@ -156,15 +224,16 @@ export default function OwnerFieldsPage() {
 
       const res = await fetch(`${API_BASE_URL}/fields`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(body),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const msg = data.errors
-          ? Object.values(data.errors).flat().join(' ')
-          : data.message || 'Gagal menambah lapangan.';
-        setCreateError(msg);
+        setCreateError(getErrorMessage(data, 'Gagal menambah lapangan.'));
         return;
       }
       setShowCreate(false);
@@ -187,16 +256,20 @@ export default function OwnerFieldsPage() {
       price_per_hour: f.price_per_hour ? String(f.price_per_hour) : '',
       image_url:      f.image_url || '',
       image_uri:      '',
+      image_mime:     '',
     });
     setEditError(null);
+    setEditErrors(EMPTY_ERRORS);
+    editTouched.current = {};
   };
 
   const handleEdit = async () => {
     if (!editTarget) return;
-    if (!editForm.name.trim() || !editForm.sport_type.trim()) {
-      setEditError('Nama dan jenis olahraga wajib diisi.');
-      return;
-    }
+    onAllFieldsTouched(false);
+    const errs = validateAllFields(editForm);
+    setEditErrors(errs);
+    if (hasErrors(errs)) return;
+
     setEditLoading(true);
     setEditError(null);
     try {
@@ -204,7 +277,7 @@ export default function OwnerFieldsPage() {
 
       let imageUrl = editForm.image_url;
       if (editForm.image_uri) {
-        const uploaded = await uploadImage(editForm.image_uri, token!);
+        const uploaded = await uploadImage(editForm.image_uri, token!, editForm.image_mime);
         if (!uploaded) { setEditError('Gagal mengunggah foto. Coba lagi.'); return; }
         imageUrl = uploaded;
       }
@@ -219,15 +292,16 @@ export default function OwnerFieldsPage() {
 
       const res = await fetch(`${API_BASE_URL}/fields/${editTarget.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(body),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const msg = data.errors
-          ? Object.values(data.errors).flat().join(' ')
-          : data.message || 'Gagal menyimpan perubahan.';
-        setEditError(msg);
+        setEditError(getErrorMessage(data, 'Gagal menyimpan perubahan.'));
         return;
       }
       setEditTarget(null);
@@ -241,29 +315,55 @@ export default function OwnerFieldsPage() {
     }
   };
 
+  const uploadImage = async (uri: string, token: string, mime?: string): Promise<string | null> => {
+    try {
+      const formData = new FormData();
+      const filename = uri.split('/').pop() || 'photo.jpg';
+      const ext = filename.split('.').pop()?.toLowerCase() || 'jpg';
+      const finalMime = mime || mimeFromExt(ext);
+
+      if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        formData.append('image', blob, filename);
+      } else {
+        formData.append('image', { uri, name: filename, type: finalMime } as any);
+      }
+
+      const res = await fetch(`${API_BASE_URL}/upload/image`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return null;
+      return data.url;
+    } catch {
+      return null;
+    }
+  };
+
   const handleDelete = (id: number, name: string) => {
     const doDelete = async () => {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/${id}`, {
-        method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
       });
       if (res.ok) {
-        if (Platform.OS !== 'web') Alert.alert('Berhasil', 'Lapangan dihapus.');
-        else alert('Lapangan dihapus.');
+        Alert.alert('Berhasil', 'Lapangan dihapus.');
         await useFieldStore.getState().clearCache().catch(() => {});
         fetchFields();
       } else {
-        if (Platform.OS !== 'web') Alert.alert('Error', 'Gagal menghapus lapangan.');
-        else alert('Gagal menghapus lapangan.');
+        Alert.alert('Error', 'Gagal menghapus lapangan.');
       }
     };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Apakah Anda yakin ingin menghapus lapangan "${name}"?`)) {
-        doDelete();
-      }
-      return;
-    }
 
     Alert.alert('Hapus Lapangan', `Apakah Anda yakin ingin menghapus lapangan "${name}"?`, [
       { text: 'Batal', style: 'cancel' },
@@ -271,41 +371,64 @@ export default function OwnerFieldsPage() {
     ]);
   };
 
+  const activeCount = fields.filter(f => f.status === 'approved').length;
+  const pendingCount = fields.filter(f => f.status === 'pending').length;
+
   if (loading) {
     return (
-      <View style={[st.loadingWrap, { backgroundColor: palette.background }] }>
-        <ActivityIndicator size="large" color={palette.tint} />
-        <Text style={[st.loadingText, { color: palette.icon }]}>Memuat venue Anda...</Text>
+      <View style={st.screen}>
+        <DashboardHeader title="Kelola Lapangan" subtitle="Kelola aset lapangan olahraga Anda" />
+        <SkeletonCards count={3} />
       </View>
     );
   }
 
   return (
     <>
-      <View style={[st.container, { backgroundColor: palette.background }] }>
-        <View style={st.headerBar}>
-          <View>
-            <Text style={[st.pageTitle, { color: palette.text }]}>Venue Anda</Text>
-            <Text style={[st.pageSubtitle, { color: palette.icon }]}>Kelola aset properti olahraga Anda.</Text>
+      <View style={st.screen}>
+        <DashboardHeader
+          title="Kelola Lapangan"
+          subtitle="Kelola aset lapangan olahraga Anda"
+          right={
+            <TouchableOpacity style={st.headerAddBtn} activeOpacity={0.8} onPress={openCreate}>
+              <MaterialIcons name="add" size={20} color={COLORS.primary} />
+            </TouchableOpacity>
+          }
+        />
+
+        <View style={st.statsRow}>
+          <View style={st.statItem}>
+            <Text style={st.statNum}>{fields.length}</Text>
+            <Text style={st.statLabel}>Total Lapangan</Text>
           </View>
-          <TouchableOpacity style={[st.addBtn, { backgroundColor: palette.tint }]} activeOpacity={0.8} onPress={openCreate}>
-            <MaterialIcons name="add" size={20} color={palette.background === '#fff' ? '#064e3b' : palette.background} />
-            <Text style={[st.addBtnText, { color: palette.background === '#fff' ? '#064e3b' : palette.background }]}>Baru</Text>
-          </TouchableOpacity>
+          <View style={st.statDivider} />
+          <View style={st.statItem}>
+            <Text style={[st.statNum, { color: COLORS.primary }]}>{activeCount}</Text>
+            <Text style={st.statLabel}>Aktif</Text>
+          </View>
+          <View style={st.statDivider} />
+          <View style={st.statItem}>
+            <Text style={[st.statNum, { color: COLORS.floodlight }]}>{pendingCount}</Text>
+            <Text style={st.statLabel}>Menunggu</Text>
+          </View>
         </View>
 
         <ScrollView
           contentContainerStyle={st.contentList}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4ade80" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
           showsVerticalScrollIndicator={false}
         >
           {fields.length === 0 ? (
             <View style={st.emptyWrap}>
               <View style={st.emptyIcon}>
-                <MaterialIcons name="sports-soccer" size={40} color="#334155" />
+                <MaterialIcons name="sports-soccer" size={40} color={COLORS.textTertiary} />
               </View>
-              <Text style={[st.emptyTitle, { color: palette.text }]}>Belum ada lapangan</Text>
-              <Text style={[st.emptyDesc, { color: palette.icon }]}>Ketuk tombol &quot;Baru&quot; di ujung atas untuk mulai menambahkan aset Anda.</Text>
+              <Text style={st.emptyTitle}>Belum ada lapangan</Text>
+              <Text style={st.emptyDesc}>Mulai tambahkan aset lapangan Anda untuk menerima booking.</Text>
+              <TouchableOpacity style={st.emptyAddBtn} activeOpacity={0.85} onPress={openCreate}>
+                <MaterialIcons name="add" size={18} color={COLORS.onPrimary} />
+                <Text style={st.emptyAddText}>Tambah Lapangan Pertama</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             fields.map((f: any) => {
@@ -315,7 +438,7 @@ export default function OwnerFieldsPage() {
                 ? `Rp${Number(f.price_per_hour).toLocaleString('id-ID')}`
                 : 'Hubungi';
               return (
-                <View key={f.id} style={[st.card, { backgroundColor: palette.background, borderColor: colorScheme === 'dark' ? '#1e293b' : '#e6e9ee' }]}>
+                <View key={f.id} style={st.card}>
                   <View style={st.cardImgWrap}>
                     <Image source={{ uri: img }} style={st.cardImg} />
                     <View style={st.cardOverlay}>
@@ -327,28 +450,37 @@ export default function OwnerFieldsPage() {
                   </View>
                   <View style={st.cardBody}>
                     <View style={st.cardTop}>
-                      <Text style={[st.name, { color: palette.text }]} numberOfLines={1}>{f.name}</Text>
+                      <Text style={st.name} numberOfLines={1}>{f.name}</Text>
                       <View style={st.pricePill}>
-                        <Text style={[st.price, { color: palette.tint }]}>{priceStr}<Text style={[st.priceSub, { color: palette.icon }]}>/jam</Text></Text>
+                        <Text style={st.price}>{priceStr}<Text style={st.priceSub}>/jam</Text></Text>
                       </View>
                     </View>
                     <View style={st.detailRow}>
-                      <MaterialIcons name="sports" size={14} color="#64748b" />
-                      <Text style={[st.detailText, { color: palette.icon }]}>{(Object.keys(SPORT_MAP).find(k => SPORT_MAP[k] === f.sport_type) || f.sport_type)?.toUpperCase()}</Text>
+                      <MaterialIcons name="sports" size={14} color={COLORS.textSecondary} />
+                      <Text style={st.detailText}>{(Object.keys(SPORT_MAP).find(k => SPORT_MAP[k] === f.sport_type) || f.sport_type)?.toUpperCase()}</Text>
                     </View>
                     {f.description ? (
                       <View style={st.detailRow}>
-                        <MaterialIcons name="notes" size={14} color="#64748b" />
+                        <MaterialIcons name="notes" size={14} color={COLORS.textSecondary} />
                         <Text style={st.detailText} numberOfLines={2}>{f.description}</Text>
                       </View>
                     ) : null}
                     <View style={st.actions}>
-                      <TouchableOpacity style={[st.editBtn, { backgroundColor: colorScheme === 'dark' ? '#1e293b' : '#f1f5f9' }]} activeOpacity={0.8} onPress={() => openEdit(f)}>
-                        <MaterialIcons name="edit" size={16} color={colorScheme === 'dark' ? '#e2e8f0' : '#0f172a'} />
-                        <Text style={[st.editBtnText, { color: colorScheme === 'dark' ? '#e2e8f0' : '#0f172a' }]}>Edit Venue</Text>
+                      <TouchableOpacity
+                        style={st.editBtn}
+                        activeOpacity={0.8}
+                        onPress={() => openEdit(f)}
+                      >
+                        <MaterialIcons name="edit" size={16} color={COLORS.primary} />
+                        <Text style={st.editBtnText}>Edit Venue</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={[st.delBtn, { backgroundColor: '#450a0a' }]} activeOpacity={0.8} onPress={() => handleDelete(f.id, f.name)}>
-                        <MaterialIcons name="delete-outline" size={18} color="#f87171" />
+                      <TouchableOpacity
+                        style={st.delBtn}
+                        activeOpacity={0.8}
+                        onPress={() => handleDelete(f.id, f.name)}
+                        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                      >
+                        <MaterialIcons name="delete-outline" size={18} color={COLORS.error} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -364,17 +496,19 @@ export default function OwnerFieldsPage() {
         visible={showCreate}
         title="Penambahan Venue"
         iconName="add-business"
-        iconColor="#4ade80"
-        iconBg="rgba(74,222,128,0.1)"
+        iconColor={COLORS.primary}
+        iconBg={COLORS.primaryContainer}
         form={createForm}
-        setForm={setCreateForm}
+        errors={createErrors}
         error={createError}
         loading={createLoading}
-        onPickImage={() => pickImage(setCreateForm)}
+        onFieldChange={(key, val) => onFormFieldChange(key, val, true)}
+        onFieldBlur={(key) => onFieldBlur(key, true)}
+        onPickImage={() => pickImage(setCreateForm, setCreateErrors, true)}
         onClose={() => setShowCreate(false)}
         onSubmit={handleCreate}
         submitLabel="Simpan Lapangan"
-        submitBg="#4ade80"
+        submitBg={COLORS.primary}
       />
 
       {/* ── EDIT MODAL ── */}
@@ -382,17 +516,19 @@ export default function OwnerFieldsPage() {
         visible={!!editTarget}
         title="Edit Venue"
         iconName="edit"
-        iconColor="#60a5fa"
-        iconBg="rgba(96,165,250,0.1)"
+        iconColor="#6d28d9"
+        iconBg="#ede9fe"
         form={editForm}
-        setForm={setEditForm}
+        errors={editErrors}
         error={editError}
         loading={editLoading}
-        onPickImage={() => pickImage(setEditForm)}
+        onFieldChange={(key, val) => onFormFieldChange(key, val, false)}
+        onFieldBlur={(key) => onFieldBlur(key, false)}
+        onPickImage={() => pickImage(setEditForm, setEditErrors, false)}
         onClose={() => setEditTarget(null)}
         onSubmit={handleEdit}
         submitLabel="Simpan Perubahan"
-        submitBg="#3b82f6"
+        submitBg="#6d28d9"
       />
     </>
   );
@@ -401,20 +537,24 @@ export default function OwnerFieldsPage() {
 // ── Field Form Modal ──────────────────────────────────────────────────────────
 function FieldModal({
   visible, title, iconName, iconColor, iconBg,
-  form, setForm, error, loading,
-  onPickImage, onClose, onSubmit, submitLabel, submitBg,
+  form, errors, error, loading,
+  onFieldChange, onFieldBlur, onPickImage, onClose, onSubmit, submitLabel, submitBg,
 }: {
   visible: boolean; title: string;
   iconName: string; iconColor: string; iconBg: string;
-  form: typeof EMPTY_FORM;
-  setForm: React.Dispatch<React.SetStateAction<typeof EMPTY_FORM>>;
+  form: FieldFormData;
+  errors: FieldFormErrors;
   error: string | null; loading: boolean;
+  onFieldChange: (key: keyof FieldFormData, val: string) => void;
+  onFieldBlur: (key: keyof FieldFormData) => void;
   onPickImage: () => void;
   onClose: () => void; onSubmit: () => void;
   submitLabel: string; submitBg: string;
 }) {
-  const set = (key: keyof typeof EMPTY_FORM) => (val: string) => setForm(p => ({ ...p, [key]: val }));
+  const set = (key: keyof FieldFormData) => (val: string) => onFieldChange(key, val);
+  const blur = (key: keyof FieldFormData) => () => onFieldBlur(key);
   const previewUri = form.image_uri || form.image_url || null;
+  const isSubmitDisabled = loading || hasErrors(errors);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -428,14 +568,14 @@ function FieldModal({
               <MaterialIcons name={iconName as any} size={22} color={iconColor} />
             </View>
             <Text style={st.sheetTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose} style={st.sheetClose}>
-              <MaterialIcons name="close" size={20} color="#64748b" />
+            <TouchableOpacity onPress={onClose} style={st.sheetClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <MaterialIcons name="close" size={20} color={COLORS.textSecondary} />
             </TouchableOpacity>
           </View>
 
           {error ? (
             <View style={st.errorBox}>
-              <MaterialIcons name="error-outline" size={16} color="#fca5a5" />
+              <MaterialIcons name="error-outline" size={16} color={COLORS.error} />
               <Text style={st.errorText}>{error}</Text>
             </View>
           ) : null}
@@ -443,7 +583,7 @@ function FieldModal({
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             {/* Image picker */}
             <Text style={st.fieldLabel}>Foto Venue (Utama)</Text>
-            <TouchableOpacity style={st.imagePicker} onPress={onPickImage} activeOpacity={0.8}>
+            <TouchableOpacity style={[st.imagePicker, errors.image && st.imagePickerError]} onPress={onPickImage} activeOpacity={0.8}>
               {previewUri ? (
                 <>
                   <Image source={{ uri: previewUri }} style={st.imagePreview} />
@@ -455,25 +595,35 @@ function FieldModal({
               ) : (
                 <View style={st.imageEmpty}>
                   <View style={st.imgDashedCircle}>
-                    <MaterialIcons name="add-photo-alternate" size={26} color="#64748b" />
+                    <MaterialIcons name="add-photo-alternate" size={26} color={COLORS.primary} />
                   </View>
                   <Text style={st.imageEmptyText}>Tap untuk memilih foto</Text>
                   <Text style={st.imageEmptyHint}>Dari Galeri perangkat Anda (Maks 5MB)</Text>
                 </View>
               )}
             </TouchableOpacity>
+            {errors.image ? <FieldError message={errors.image} /> : null}
 
-            <FField label="Nama Lapangan" icon="stadium" value={form.name} onChangeText={set('name')} placeholder="Contoh: Futsal Arena Gemilang" />
+            {/* Nama Lapangan */}
+            <FField
+              label="Nama Lapangan" icon="stadium"
+              value={form.name}
+              onChangeText={set('name')}
+              onBlur={blur('name')}
+              placeholder="Contoh: Futsal Arena Gemilang"
+              error={errors.name}
+            />
 
+            {/* Jenis Olahraga */}
             <Text style={st.fieldLabel}>Jenis Olahraga</Text>
-            <View style={st.sportRow}>
+            <View style={[st.sportRow, errors.sport_type && st.sportRowError]}>
               {SPORT_OPTIONS.map(s => {
                 const active = form.sport_type === SPORT_MAP[s];
                 return (
                   <TouchableOpacity
                     key={s}
                     style={[st.sportChip, active && st.sportChipActive]}
-                    onPress={() => setForm(p => ({ ...p, sport_type: SPORT_MAP[s] }))}
+                    onPress={() => onFieldChange('sport_type', SPORT_MAP[s])}
                     activeOpacity={0.7}
                   >
                     <Text style={[st.sportChipText, active && st.sportChipTextActive]}>{s}</Text>
@@ -481,16 +631,40 @@ function FieldModal({
                 );
               })}
             </View>
+            {errors.sport_type ? <FieldError message={errors.sport_type} /> : null}
 
-            <FField label="Deskripsi" icon="notes" value={form.description} onChangeText={set('description')} placeholder="Fasilitas yang tersedia..." multiline />
-            <FField label="Sewa Per Jam (Rp)" icon="payments" value={form.price_per_hour} onChangeText={set('price_per_hour')} placeholder="Contoh: 150000" keyboardType="numeric" />
+            {/* Deskripsi */}
+            <FField
+              label="Deskripsi" icon="notes"
+              value={form.description}
+              onChangeText={set('description')}
+              onBlur={blur('description')}
+              placeholder="Fasilitas yang tersedia..."
+              multiline
+              error={errors.description}
+            />
+
+            {/* Harga */}
+            <FField
+              label="Sewa Per Jam (Rp)" icon="payments"
+              value={form.price_per_hour}
+              onChangeText={set('price_per_hour')}
+              onBlur={blur('price_per_hour')}
+              placeholder="Contoh: 150000"
+              keyboardType="numeric"
+              error={errors.price_per_hour}
+            />
           </ScrollView>
 
           <View style={st.sheetActions}>
-            <TouchableOpacity style={[st.submitBtn, { backgroundColor: submitBg }, loading && { opacity: 0.6 }]} onPress={onSubmit} disabled={loading}>
+            <TouchableOpacity
+              style={[st.submitBtn, { backgroundColor: submitBg }, isSubmitDisabled && { opacity: 0.5 }]}
+              onPress={onSubmit}
+              disabled={isSubmitDisabled}
+            >
               {loading
-                ? <ActivityIndicator color="#0f172a" size="small" />
-                : <Text style={[st.submitText, submitBg === '#4ade80' ? { color: '#064e3b' } : { color: '#fff' }]}>{submitLabel}</Text>}
+                ? <ActivityIndicator color={COLORS.onPrimary} size="small" />
+                : <Text style={st.submitText}>{submitLabel}</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -499,102 +673,161 @@ function FieldModal({
   );
 }
 
-function FField({ label, icon, value, onChangeText, placeholder, keyboardType, multiline }: {
+// ── Inline error message ──────────────────────────────────────────────────────
+function FieldError({ message }: { message: string }) {
+  if (!message) return null;
+  return (
+    <View style={st.fieldErrorRow}>
+      <MaterialIcons name="warning" size={13} color={COLORS.error} />
+      <Text style={st.fieldErrorText}>{message}</Text>
+    </View>
+  );
+}
+
+// ── Text input field ──────────────────────────────────────────────────────────
+function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboardType, multiline, error }: {
   label: string; icon: string; value: string;
   onChangeText: (v: string) => void;
+  onBlur?: () => void;
   placeholder?: string; keyboardType?: any; multiline?: boolean;
+  error?: string;
 }) {
   return (
     <View style={st.fieldWrap}>
       <Text style={st.fieldLabel}>{label}</Text>
-      <View style={[st.fieldRow, multiline && { alignItems: 'flex-start', paddingTop: 14 }]}>
-        <MaterialIcons name={icon as any} size={18} color="#64748b" style={{ marginRight: 12, marginTop: multiline ? 2 : 0 }} />
+      <View style={[
+        st.fieldRow,
+        multiline && { alignItems: 'flex-start', paddingTop: 14 },
+        error && st.fieldRowError,
+      ]}>
+        <MaterialIcons name={icon as any} size={18} color={error ? COLORS.error : COLORS.textSecondary} style={{ marginRight: 12, marginTop: multiline ? 2 : 0 }} />
         <TextInput
           style={[st.fieldInput, multiline && { minHeight: 80, textAlignVertical: 'top' }]}
           value={value}
           onChangeText={onChangeText}
+          onBlur={onBlur}
           placeholder={placeholder ?? label}
-          placeholderTextColor="#475569"
+          placeholderTextColor={COLORS.textTertiary}
           keyboardType={keyboardType}
           multiline={multiline}
         />
       </View>
+      {error ? <FieldError message={error} /> : null}
     </View>
   );
 }
 
 const st = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#090d14' }, // Premium deep dark
-  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  loadingText: { color: '#64748b', fontSize: 13, fontWeight: '500' },
+  screen: { flex: 1, backgroundColor: COLORS.background },
 
-  headerBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, backgroundColor: '#0d121c',
-    borderBottomWidth: 1, borderBottomColor: '#1e293b',
+  headerAddBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: COLORS.surfaceWhite,
+    justifyContent: 'center', alignItems: 'center',
+    ...SHADOWS.xs,
   },
-  pageTitle: { fontSize: 22, fontWeight: '800', color: '#f8fafc', marginBottom: 2 },
-  pageSubtitle: { fontSize: 13, color: '#64748b' },
-  addBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#4ade80', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 12,
-    shadowColor: '#4ade80', shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width:0, height:4 }, elevation: 4,
+
+  statsRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    marginHorizontal: SIZES.gutter, marginTop: 14,
+    borderRadius: SIZES.borderRadius, borderWidth: 1,
+    borderColor: COLORS.outline, paddingVertical: 12, paddingHorizontal: 16,
+    ...SHADOWS.xs,
   },
-  addBtnText: { fontSize: 14, fontWeight: '800', color: '#064e3b' },
+  statItem: { flex: 1, alignItems: 'center' },
+  statNum: { ...FONTS.headlineSm, color: COLORS.text },
+  statLabel: { ...FONTS.bodySm, color: COLORS.textSecondary, marginTop: 2 },
+  statDivider: { width: 1, height: 28, backgroundColor: COLORS.outline },
 
-  contentList: { padding: 20, paddingBottom: 100 },
-  emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12 },
-  emptyIcon: { width: 80, height: 80, borderRadius: 24, backgroundColor: '#0d121c', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#1e293b' },
-  emptyTitle: { fontSize: 17, fontWeight: '700', color: '#f1f5f9' },
-  emptyDesc: { fontSize: 14, color: '#475569', textAlign: 'center', paddingHorizontal: 20 },
+  contentList: { padding: SIZES.gutter, paddingBottom: 60 },
+  emptyWrap: { alignItems: 'center', marginTop: 60, gap: 12 },
+  emptyIcon: {
+    width: 80, height: 80, borderRadius: 24,
+    backgroundColor: COLORS.surfaceContainerHigh,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: COLORS.outline,
+  },
+  emptyTitle: { ...FONTS.titleLg, color: COLORS.text },
+  emptyDesc: { ...FONTS.bodyMd, color: COLORS.textSecondary, textAlign: 'center', paddingHorizontal: 20 },
+  emptyAddBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: COLORS.primary, paddingHorizontal: 20, paddingVertical: 12,
+    borderRadius: SIZES.borderRadius, marginTop: 8, ...SHADOWS.primary,
+  },
+  emptyAddText: { ...FONTS.titleSm, color: COLORS.onPrimary },
 
-  card: { 
-    backgroundColor: '#0d121c', borderRadius: 20, marginBottom: 20, 
-    borderWidth: 1, borderColor: '#1e293b',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 5,
+  card: {
+    backgroundColor: COLORS.surface, borderRadius: 20, marginBottom: 16,
+    borderWidth: 1, borderColor: COLORS.outline,
+    ...SHADOWS.sm,
   },
   cardImgWrap: { borderTopLeftRadius: 19, borderTopRightRadius: 19, overflow: 'hidden' },
   cardImg: { width: '100%', height: 160 },
   cardOverlay: { position: 'absolute', top: 14, right: 14 },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, backdropFilter: 'blur(10px)' },
+  statusBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1,
+  },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
-  statusText: { fontSize: 11, fontWeight: '800' },
-  
+  statusText: { ...FONTS.labelSm },
+
   cardBody: { padding: 18 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  name: { fontSize: 17, fontWeight: '800', color: '#f8fafc', flex: 1, marginRight: 10 },
-  pricePill: { backgroundColor: 'rgba(74,222,128,0.1)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(74,222,128,0.2)' },
-  price: { fontSize: 14, fontWeight: '800', color: '#4ade80' },
-  priceSub: { fontSize: 10, fontWeight: '600', color: '#64748b' },
-  
-  detailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
-  detailText: { fontSize: 13, color: '#94a3b8', flex: 1, lineHeight: 18 },
-  
-  actions: { flexDirection: 'row', gap: 12, marginTop: 18, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#1e293b' },
-  editBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#1e293b', paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: '#334155' },
-  editBtnText: { color: '#e2e8f0', fontSize: 14, fontWeight: '700' },
-  delBtn: { width: 48, justifyContent: 'center', alignItems: 'center', backgroundColor: '#450a0a', borderRadius: 12, borderWidth: 1, borderColor: '#7f1d1d', paddingVertical: 12 },
-
-  // Modal styling (Premium)
-  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(5,8,12,0.85)' },
-  sheet: {
-    backgroundColor: '#0d121c', borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-    borderTopWidth: 1, borderColor: '#1e293b', maxHeight: '90%',
+  name: { ...FONTS.titleLg, color: COLORS.text, flex: 1, marginRight: 10 },
+  pricePill: {
+    backgroundColor: COLORS.primaryContainer, paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 10, borderWidth: 1, borderColor: COLORS.primary + '30',
   },
-  sheetHandle: { width: 48, height: 5, borderRadius: 3, backgroundColor: '#334155', alignSelf: 'center', marginBottom: 20 },
+  price: { ...FONTS.titleMd, color: COLORS.primary },
+  priceSub: { ...FONTS.bodySm, color: COLORS.textSecondary },
+
+  detailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
+  detailText: { ...FONTS.bodyMd, color: COLORS.textSecondary, flex: 1 },
+
+  actions: {
+    flexDirection: 'row', gap: 12, marginTop: 14, paddingTop: 14,
+    borderTopWidth: 1, borderTopColor: COLORS.outline,
+  },
+  editBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: COLORS.primaryContainer, paddingVertical: 12,
+    borderRadius: 12, borderWidth: 1, borderColor: COLORS.primary + '30',
+    minHeight: 44,
+  },
+  editBtnText: { ...FONTS.titleSm, color: COLORS.primary },
+  delBtn: {
+    width: 44, height: 44, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: COLORS.errorContainer, borderRadius: 12,
+    borderWidth: 1, borderColor: COLORS.error + '30',
+  },
+
+  // Modal styling
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
+  sheet: {
+    backgroundColor: COLORS.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    borderTopWidth: 1, borderColor: COLORS.outline, maxHeight: '90%',
+  },
+  sheetHandle: { width: 48, height: 5, borderRadius: 3, backgroundColor: COLORS.outline, alignSelf: 'center', marginBottom: 20 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
   sheetIconWrap: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  sheetTitle: { fontSize: 19, fontWeight: '800', color: '#f8fafc', flex: 1 },
-  sheetClose: { padding: 6, backgroundColor: '#1e293b', borderRadius: 20 },
-  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(127,29,29,0.5)', borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#991b1b' },
-  errorText: { color: '#fca5a5', fontSize: 13, flex: 1, fontWeight: '500' },
+  sheetTitle: { ...FONTS.headlineSm, color: COLORS.text, flex: 1 },
+  sheetClose: { padding: 6, backgroundColor: COLORS.surfaceContainerLow, borderRadius: 20 },
+  errorBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: COLORS.errorContainer, borderRadius: 12,
+    padding: 14, marginBottom: 16, borderWidth: 1, borderColor: COLORS.error + '30',
+  },
+  errorText: { color: COLORS.error, ...FONTS.bodySm, flex: 1 },
 
   // Image picker
   imagePicker: {
-    borderRadius: 16, overflow: 'hidden', marginBottom: 20,
-    backgroundColor: '#111827', borderWidth: 2, borderStyle: 'dashed', borderColor: '#334155',
+    borderRadius: 16, overflow: 'hidden', marginBottom: 6,
+    backgroundColor: COLORS.surfaceContainerLow, borderWidth: 2,
+    borderStyle: 'dashed', borderColor: COLORS.outline,
   },
+  imagePickerError: { borderColor: COLORS.error },
   imagePreview: { width: '100%', height: 180 },
   imageEditOverlay: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -602,25 +835,47 @@ const st = StyleSheet.create({
     flexDirection: 'row', gap: 8, paddingVertical: 12,
   },
   imageEditText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  imageEmpty: { alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 40 },
-  imgDashedCircle: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#1e293b', justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
-  imageEmptyText: { color: '#94a3b8', fontSize: 14, fontWeight: '600' },
-  imageEmptyHint: { color: '#475569', fontSize: 12 },
+  imageEmpty: { alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 36 },
+  imgDashedCircle: {
+    width: 50, height: 50, borderRadius: 25,
+    backgroundColor: COLORS.primaryContainer, justifyContent: 'center',
+    alignItems: 'center', marginBottom: 4,
+  },
+  imageEmptyText: { ...FONTS.titleSm, color: COLORS.text },
+  imageEmptyHint: { ...FONTS.bodySm, color: COLORS.textSecondary },
 
   // Sport chips
-  sportRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
-  sportChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, backgroundColor: '#1e293b', borderWidth: 1, borderColor: '#334155' },
-  sportChipActive: { backgroundColor: 'rgba(74,222,128,0.15)', borderColor: '#4ade80' },
-  sportChipText: { fontSize: 13, fontWeight: '600', color: '#94a3b8' },
-  sportChipTextActive: { color: '#4ade80', fontWeight: '700' },
+  sportRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 6 },
+  sportRowError: { borderColor: COLORS.error },
+  sportChip: {
+    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12,
+    backgroundColor: COLORS.surfaceContainerLow, borderWidth: 1, borderColor: COLORS.outline,
+  },
+  sportChipActive: { backgroundColor: COLORS.primaryContainer, borderColor: COLORS.primary },
+  sportChipText: { ...FONTS.labelMd, color: COLORS.textSecondary },
+  sportChipTextActive: { color: COLORS.primary, fontWeight: '700' },
 
   // Field input
   fieldWrap: { marginBottom: 16 },
-  fieldLabel: { fontSize: 12, fontWeight: '800', color: '#64748b', marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' },
-  fieldRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e293b', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: '#334155' },
-  fieldInput: { flex: 1, color: '#f1f5f9', fontSize: 15, paddingVertical: 0 },
+  fieldLabel: { ...FONTS.labelSm, color: COLORS.textSecondary, marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' },
+  fieldRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: COLORS.surfaceContainerLow, borderRadius: 14,
+    paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1.5, borderColor: COLORS.outline,
+  },
+  fieldRowError: { borderColor: COLORS.error, backgroundColor: COLORS.errorContainer + '30' },
+  fieldInput: { flex: 1, color: COLORS.text, fontSize: 15, paddingVertical: 0 },
+
+  fieldErrorRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    marginTop: 6, paddingHorizontal: 4,
+  },
+  fieldErrorText: { ...FONTS.bodySm, color: COLORS.error, flex: 1 },
 
   sheetActions: { marginTop: 10 },
-  submitBtn: { width: '100%', paddingVertical: 16, borderRadius: 14, alignItems: 'center', shadowOpacity: 0.2, shadowRadius: 10, shadowOffset: { width:0, height:4 }, elevation: 3 },
-  submitText: { fontSize: 16, fontWeight: '800' },
+  submitBtn: {
+    width: '100%', paddingVertical: 16, borderRadius: 14,
+    alignItems: 'center', minHeight: 50, justifyContent: 'center',
+  },
+  submitText: { ...FONTS.titleSm, color: COLORS.onPrimary },
 });

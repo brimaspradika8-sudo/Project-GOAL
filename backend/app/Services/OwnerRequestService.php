@@ -48,7 +48,7 @@ class OwnerRequestService
             ]);
 
             Profile::where('user_id', $request->user_id)
-                ->update(['role' => 'owner']);
+                ->update(['role' => 'owner', 'is_owner_verified' => true]);
 
             return $request->fresh('user:id,name,email');
         });

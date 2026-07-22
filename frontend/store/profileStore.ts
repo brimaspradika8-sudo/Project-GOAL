@@ -4,6 +4,8 @@ import { API_BASE_URL } from '../lib/api';
 import { TOKEN_KEY } from '../app/_layout';
 
 export interface Profile {
+  id: number;
+  user_id: number;
   full_name?: string | null;
   email?: string | null;
   username: string;
@@ -56,7 +58,10 @@ export const useProfileStore = create<ProfileState>((set) => ({
       activeTimeout = timeout;
 
       const res = await fetch(`${API_BASE_URL}/me`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
         signal: controller.signal,
       });
 

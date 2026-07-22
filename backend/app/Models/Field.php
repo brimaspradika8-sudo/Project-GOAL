@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Field extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'fields';
     protected $fillable = [
         'owner_id',

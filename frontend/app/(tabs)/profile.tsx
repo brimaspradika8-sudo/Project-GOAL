@@ -23,6 +23,10 @@ import { TOKEN_KEY } from '../_layout';
 import { API_BASE_URL } from '../../lib/api';
 import { COLORS, SIZES, FONTS, SHADOWS } from '../../components/goalTheme';
 import AuthInput from '../../components/AuthInput';
+import ThemeToggle from '../../components/ThemeToggle';
+import { useTheme } from '../../lib/theme';
+import ConfirmDialog from '../../components/shared/ConfirmDialog';
+import { useToastStore } from '../../store/toastStore';
 
 const SPORT_ICONS: Record<string, string> = {
   futsal: 'sports-soccer',
@@ -40,6 +44,9 @@ type OwnerRequestStatus = 'none' | 'pending' | 'approved' | 'rejected';
 export default function ProfileScreen() {
   const { width } = useWindowDimensions();
   const { profile, clearProfile, fetchProfile } = useProfileStore();
+  const { colors } = useTheme();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const [ownerStatus, setOwnerStatus] = useState<OwnerRequestStatus>('none');
   const [ownerRequestData, setOwnerRequestData] = useState<any>(null);
   const [showOwnerModal, setShowOwnerModal] = useState(false);
@@ -116,7 +123,7 @@ export default function ProfileScreen() {
       setShowOwnerModal(false);
       setOwnerStatus('pending');
       setOwnerRequestData(data);
-      Alert.alert('Berhasil', 'Pengajuan owner berhasil dikirim. Menunggu persetujuan admin.');
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Pengajuan owner berhasil dikirim. Menunggu persetujuan admin.' });
     } catch {
       setSubmitError('Gagal terhubung ke server.');
     } finally {
@@ -125,38 +132,27 @@ export default function ProfileScreen() {
   }
 
   const handleSignOut = () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Yakin ingin keluar dari akun?')) {
-        AsyncStorage.removeItem(TOKEN_KEY);
-        clearProfile();
-        router.replace('/login');
-      }
-      return;
-    }
+    setShowLogoutConfirm(true);
+  };
 
-    Alert.alert('Keluar Akun', 'Yakin ingin keluar dari akun?', [
-      { text: 'Batal', style: 'cancel' },
-      {
-        text: 'Keluar',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const token = await AsyncStorage.getItem(TOKEN_KEY);
-            if (token) {
-              await fetch(`${API_BASE_URL}/auth/logout`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}` },
-              }).catch(() => {});
-            }
-            await AsyncStorage.removeItem(TOKEN_KEY);
-            clearProfile();
-            router.replace('/login');
-          } catch {
-            Alert.alert('Gagal', 'Terjadi kesalahan saat keluar akun.');
-          }
-        },
-      },
-    ]);
+  const doActualLogout = async () => {
+    setLogoutLoading(true);
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      if (token) {
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {});
+      }
+      await AsyncStorage.removeItem(TOKEN_KEY);
+      await clearProfile();
+      router.replace('/login');
+    } catch {
+      useToastStore.getState().show({ type: 'error', title: 'Gagal', description: 'Terjadi kesalahan saat keluar akun.' });
+    } finally {
+      setLogoutLoading(false);
+    }
   };
 
   const role = profile?.role;
@@ -278,8 +274,8 @@ export default function ProfileScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -287,13 +283,16 @@ export default function ProfileScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
       >
         <View style={styles.pageShell}>
-        <Text style={styles.pageTitle}>Profil</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.pageTitle}>Profil</Text>
+          <ThemeToggle />
+        </View>
 
         <View style={[styles.profileGrid, isDesktop && styles.profileGridDesktop]}>
         <View style={styles.profileColumn}>
@@ -357,7 +356,7 @@ export default function ProfileScreen() {
             <MaterialIcons name="chevron-right" size={20} color={COLORS.outline} />
           </TouchableOpacity>
           <View style={styles.divider} />
-          <TouchableOpacity style={styles.settingRow} activeOpacity={0.8} onPress={() => Alert.alert('Segera Hadir', 'Fitur notifikasi akan segera tersedia.')}>
+          <TouchableOpacity style={styles.settingRow} activeOpacity={0.8} onPress={() => useToastStore.getState().show({ type: 'info', title: 'Segera Hadir', description: 'Fitur notifikasi akan segera tersedia.' })}>
             <View style={styles.settingIconBox}>
               <MaterialIcons name="notifications-none" size={20} color={COLORS.primary} />
             </View>
@@ -373,7 +372,7 @@ export default function ProfileScreen() {
             <MaterialIcons name="chevron-right" size={20} color={COLORS.outline} />
           </TouchableOpacity>
           <View style={styles.divider} />
-          <TouchableOpacity style={styles.settingRow} activeOpacity={0.8} onPress={() => Alert.alert('Segera Hadir', 'Pusat bantuan akan segera tersedia.')}>
+          <TouchableOpacity style={styles.settingRow} activeOpacity={0.8} onPress={() => useToastStore.getState().show({ type: 'info', title: 'Segera Hadir', description: 'Pusat bantuan akan segera tersedia.' })}>
             <View style={styles.settingIconBox}>
               <MaterialIcons name="help-outline" size={20} color={COLORS.primary} />
             </View>
@@ -460,6 +459,17 @@ export default function ProfileScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <ConfirmDialog
+        visible={showLogoutConfirm}
+        title="Keluar Akun"
+        description="Yakin ingin keluar dari akun?"
+        confirmLabel="Keluar"
+        destructive
+        loading={logoutLoading}
+        onConfirm={doActualLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </View>
   );
 }

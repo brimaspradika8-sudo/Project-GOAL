@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
@@ -13,6 +13,9 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { API_BASE_URL } from '../lib/api';
 import { useProfileStore } from '../store/profileStore';
 import { ToastProvider } from '../components/Toast';
+import { ThemeProvider, useTheme } from '../lib/theme';
+import AppToast from '../components/shared/AppToast';
+import { useToastStore } from '../store/toastStore';
 
 export const TOKEN_KEY = 'auth_token';
 
@@ -21,7 +24,10 @@ async function fetchProfile(token: string) {
   const timeout = setTimeout(() => controller.abort(), 20000);
   try {
     const res = await fetch(`${API_BASE_URL}/me`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
       signal: controller.signal,
     });
     if (!res.ok) return null;
@@ -33,8 +39,24 @@ async function fetchProfile(token: string) {
   }
 }
 
+function AppToastWrapper() {
+  const { visible, type, title, description, durationMs, hide } = useToastStore();
+  return <AppToast visible={visible} type={type} title={title} description={description} durationMs={durationMs} onDismiss={hide} />;
+}
+
 export default function RootLayout() {
+  return (
+    <ErrorBoundary>
+      <ThemeProvider>
+        <RootLayoutInner />
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
+}
+
+function RootLayoutInner() {
   const colorScheme = useColorScheme();
+  const { resolved, colors } = useTheme();
   const [showSplash, setShowSplash] = useState(true);
   const [isReady, setIsReady] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Memuat...');
@@ -116,9 +138,9 @@ export default function RootLayout() {
   }, [showSplash, routeByProfile, routeToLogin]);
 
   return (
-    <ErrorBoundary>
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <NavThemeProvider value={resolved === 'dark' ? DarkTheme : DefaultTheme}>
       <ToastProvider />
+      <AppToastWrapper />
       {showSplash ? (
         <SplashScreen onFinish={onSplashFinish} />
       ) : (
@@ -128,7 +150,7 @@ export default function RootLayout() {
               headerShown: false,
               animation: 'fade',
               animationDuration: 250,
-              contentStyle: { backgroundColor: '#f7f8fb' },
+              contentStyle: { backgroundColor: colors.background },
             }}
             initialRouteName="login"
           >
@@ -150,9 +172,8 @@ export default function RootLayout() {
           )}
         </>
       )}
-      <StatusBar style="dark" />
-    </ThemeProvider>
-    </ErrorBoundary>
+      <StatusBar style={resolved === 'dark' ? 'light' : 'dark'} />
+    </NavThemeProvider>
   );
 }
 

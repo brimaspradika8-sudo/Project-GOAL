@@ -1,22 +1,25 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  ActivityIndicator, Alert, TextInput, RefreshControl,
-  Modal, KeyboardAvoidingView, Platform,
+  Alert, TextInput, RefreshControl,
+  Modal, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProfileStore } from '../../store/profileStore';
-import { Colors } from '../../constants/theme';
-import { useColorScheme } from '../../hooks/use-color-scheme';
 import { TOKEN_KEY } from '../../app/_layout';
-import { API_BASE_URL } from '../../lib/api';
+import { API_BASE_URL, getErrorMessage } from '../../lib/api';
+import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { useDebounce } from '../../hooks/useDebounce';
+import { SkeletonCards } from '../Skeleton';
+import DashboardHeader from '../shared/DashboardHeader';
+import ConfirmActionModal from './ConfirmActionModal';
 
 const ROLE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  player:      { label: 'Pemain',      color: '#60a5fa', bg: '#1e3a5f' },
-  owner:       { label: 'Pemilik',     color: '#34d399', bg: '#064e3b' },
-  admin:       { label: 'Admin',       color: '#a78bfa', bg: '#2e1065' },
-  super_admin: { label: 'Super Admin', color: '#f59e0b', bg: '#451a03' },
+  player:      { label: 'Pemain',      color: '#1d6fab', bg: '#dbeafe' },
+  owner:       { label: 'Pemilik',     color: COLORS.primary, bg: COLORS.primaryContainer },
+  admin:       { label: 'Admin',       color: '#6d28d9', bg: '#ede9fe' },
+  super_admin: { label: 'Super Admin', color: '#92400e', bg: '#fef3c7' },
 };
 
 type Tab = 'user' | 'owner';
@@ -25,8 +28,6 @@ const EMPTY_CREATE = { name: '', email: '', password: '', role: 'owner' };
 const EMPTY_EDIT   = { name: '', email: '', password: '' };
 
 export default function UserPage() {
-  const colorScheme = useColorScheme();
-  const palette = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -34,21 +35,31 @@ export default function UserPage() {
   const [focused, setFocused] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('user');
 
-  // Create modal
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState(EMPTY_CREATE);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [showCreatePwd, setShowCreatePwd] = useState(false);
 
-  // Edit modal
   const [editTarget, setEditTarget] = useState<any | null>(null);
   const [editForm, setEditForm] = useState(EMPTY_EDIT);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [showEditPwd, setShowEditPwd] = useState(false);
 
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [upgradeTarget, setUpgradeTarget] = useState<{ id: number; name: string; currentRole: string } | null>(null);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
+
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const debouncedSearch = useDebounce(search, 400);
+
+  const loggedInUserRole = useProfileStore((state) => state.profile?.role);
+  const loggedInUserId = useProfileStore((state) => state.profile?.user_id);
+  const isSuperAdmin = loggedInUserRole === 'super_admin';
 
   const fetchUsers = useCallback(async (q?: string) => {
     try {
@@ -69,13 +80,11 @@ export default function UserPage() {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  const onRefresh = () => { setRefreshing(true); fetchUsers(search); };
+  useEffect(() => {
+    if (!loading) fetchUsers(debouncedSearch);
+  }, [debouncedSearch]);
 
-  const onSearchChange = (text: string) => {
-    setSearch(text);
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => fetchUsers(text), 400);
-  };
+  const onRefresh = () => { setRefreshing(true); fetchUsers(search); };
 
   const updateUserRole = async (userId: number, role: string) => {
     const token = await AsyncStorage.getItem(TOKEN_KEY);
@@ -85,15 +94,11 @@ export default function UserPage() {
       body: JSON.stringify({ role }),
     });
     const data = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      throw new Error(data.message || 'Gagal memperbarui role.');
-    }
-
+    if (!res.ok) throw new Error(data.message || 'Gagal memperbarui role.');
     return data;
   };
 
-  // ── CREATE OWNER ──────────────────────────────────────────
+  // ── CREATE ──────────────────────────────────────────────
   const handleCreate = async () => {
     if (!createForm.name.trim() || !createForm.email.trim() || !createForm.password.trim()) {
       setCreateError('Semua field wajib diisi.');
@@ -114,15 +119,12 @@ export default function UserPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        const msg = data.errors
-          ? Object.values(data.errors).flat().join(' ')
-          : data.message || 'Gagal membuat owner.';
-        setCreateError(msg);
+        setCreateError(getErrorMessage(data, 'Gagal membuat user.'));
         return;
       }
       setShowCreate(false);
       setCreateForm(EMPTY_CREATE);
-      Alert.alert('Berhasil', 'Owner baru berhasil ditambahkan.');
+      Alert.alert('Berhasil', 'User baru berhasil ditambahkan.');
       fetchUsers(search);
     } catch {
       setCreateError('Gagal terhubung ke server.');
@@ -131,7 +133,7 @@ export default function UserPage() {
     }
   };
 
-  // ── EDIT OWNER ────────────────────────────────────────────
+  // ── EDIT (ungu) ─────────────────────────────────────────
   const openEdit = (u: any) => {
     setEditTarget(u);
     setEditForm({ name: u.name || '', email: u.email || '', password: '' });
@@ -158,14 +160,11 @@ export default function UserPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        const msg = data.errors
-          ? Object.values(data.errors).flat().join(' ')
-          : data.message || 'Gagal menyimpan perubahan.';
-        setEditError(msg);
+        setEditError(getErrorMessage(data, 'Gagal menyimpan perubahan.'));
         return;
       }
       setEditTarget(null);
-      Alert.alert('Berhasil', 'Data owner berhasil diperbarui.');
+      Alert.alert('Berhasil', 'Data user berhasil diperbarui.');
       fetchUsers(search);
     } catch {
       setEditError('Gagal terhubung ke server.');
@@ -174,81 +173,50 @@ export default function UserPage() {
     }
   };
 
-  // ── ROLE CHANGE ───────────────────────────────────────────
-  const loggedInUserRole = useProfileStore((state) => state.profile?.role);
-
-  const handleRoleChange = (userId: number, currentRole: string) => {
-    const allowedRoles = loggedInUserRole === 'super_admin'
-      ? ['player', 'owner', 'admin', 'super_admin']
-      : ['player', 'owner', 'admin'];
-
-    const options = allowedRoles.filter(r => r !== currentRole);
-    Alert.alert('Ubah Role', 'Pilih role baru:', [
-      ...options.map(r => ({
-        text: ROLE_CONFIG[r]?.label ?? r,
-        onPress: async () => {
-          try {
-            await updateUserRole(userId, r);
-            Alert.alert('Berhasil', 'Role diperbarui.');
-            fetchUsers(search);
-          } catch (e: any) {
-            Alert.alert('Gagal', e.message || 'Gagal terhubung ke server.');
-          }
-        },
-      })),
-      { text: 'Batal', style: 'cancel' },
-    ]);
+  // ── UPGRADE (oranye) ────────────────────────────────────
+  const handleUpgrade = async (newRole: string) => {
+    if (!upgradeTarget) return;
+    setUpgradeLoading(true);
+    setUpgradeError(null);
+    try {
+      await updateUserRole(upgradeTarget.id, newRole);
+      setUpgradeTarget(null);
+      Alert.alert('Berhasil', `Role berhasil diubah menjadi ${ROLE_CONFIG[newRole]?.label ?? newRole}.`);
+      fetchUsers(search);
+    } catch (e: any) {
+      setUpgradeError(e.message || 'Gagal memperbarui role.');
+    } finally {
+      setUpgradeLoading(false);
+    }
   };
 
-  const handleUpgradeSuperAdmin = (userId: number, name: string) => {
-    Alert.alert(
-      'Upgrade Super Admin',
-      `Jadikan "${name}" sebagai Super Admin? User ini akan punya akses penuh.`,
-      [
-        { text: 'Batal', style: 'cancel' },
-        {
-          text: 'Upgrade',
-          onPress: async () => {
-            try {
-              await updateUserRole(userId, 'super_admin');
-              Alert.alert('Berhasil', 'User berhasil di-upgrade menjadi Super Admin.');
-              fetchUsers(search);
-            } catch (e: any) {
-              Alert.alert('Gagal', e.message || 'Gagal upgrade Super Admin.');
-            }
-          },
-        },
-      ]
-    );
+  // ── DELETE (merah) ──────────────────────────────────────
+  const handleDeleteUser = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const res = await fetch(`${API_BASE_URL}/admin/users/${deleteTarget.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDeleteError(data.message || 'Gagal menghapus user.');
+        return;
+      }
+      setDeleteTarget(null);
+      Alert.alert('Berhasil', 'User dihapus.');
+      fetchUsers(search);
+    } catch {
+      setDeleteError('Tidak dapat terhubung ke server.');
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
-  // ── DELETE ────────────────────────────────────────────────
-  const handleDelete = (userId: number, name: string) => {
-    Alert.alert('Hapus User', `Hapus "${name}"?`, [
-      { text: 'Batal', style: 'cancel' },
-      {
-        text: 'Hapus', style: 'destructive', onPress: async () => {
-          try {
-            const token = await AsyncStorage.getItem(TOKEN_KEY);
-            const res = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
-              method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
-            });
-            if (res.ok) {
-              Alert.alert('Berhasil', 'User dihapus.');
-              fetchUsers(search);
-            } else {
-              const d = await res.json().catch(() => ({}));
-              Alert.alert('Gagal', d.message || 'Gagal menghapus user.');
-            }
-          } catch {
-            Alert.alert('Error Koneksi', 'Tidak dapat terhubung ke server.');
-          }
-        },
-      },
-    ]);
-  };
-
-  // Filter sesuai tab
+  // ── Filter ──────────────────────────────────────────────
   const filteredUsers = users.filter(u => {
     const role = u.profile?.role || 'player';
     if (activeTab === 'owner') return role === 'owner';
@@ -260,47 +228,62 @@ export default function UserPage() {
 
   if (loading) {
     return (
-      <View style={[st.loadingWrap, { backgroundColor: palette.background }] }>
-        <ActivityIndicator size="large" color={palette.tint} />
-        <Text style={[st.loadingText, { color: palette.icon }]}>Memuat pengguna...</Text>
+      <View style={st.screen}>
+        <DashboardHeader title="Kelola Pengguna" subtitle="Manajemen user & owner" />
+        <SkeletonCards count={5} />
       </View>
     );
   }
 
   return (
     <>
-      <ScrollView
-        contentContainerStyle={[st.container, { backgroundColor: palette.background }]}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4ade80" colors={['#4ade80']} />}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Search */}
-        <View style={[st.searchWrap, focused && st.searchFocused, { backgroundColor: colorScheme === 'dark' ? st.searchWrap.backgroundColor : '#f2f4f6', borderColor: colorScheme === 'dark' ? st.searchWrap.borderColor : '#e6e9ee' }]}>
-          <MaterialIcons name="search" size={19} color={focused ? '#4ade80' : '#475569'} />
-          <TextInput
-            style={st.searchInput}
-            placeholder="Cari nama atau email..."
-            placeholderTextColor="#334155"
-            value={search}
-            onChangeText={onSearchChange}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => { setSearch(''); fetchUsers(); }}>
-              <MaterialIcons name="close" size={15} color="#64748b" />
-            </TouchableOpacity>
-          )}
+      <View style={st.screen}>
+        <DashboardHeader title="Kelola Pengguna" subtitle="Manajemen user & owner" />
+
+        <View style={st.searchWrap}>
+          <View style={[st.searchBox, focused && st.searchBoxFocused]}>
+            <MaterialIcons name="search" size={19} color={focused ? COLORS.primary : COLORS.textTertiary} />
+            <TextInput
+              style={st.searchInput}
+              placeholder="Cari nama atau email..."
+              placeholderTextColor={COLORS.textTertiary}
+              value={search}
+              onChangeText={setSearch}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
-        {/* Tabs */}
+        <View style={st.statsRow}>
+          <View style={st.statItem}>
+            <Text style={st.statNum}>{userCount}</Text>
+            <Text style={st.statLabel}>Pengguna</Text>
+          </View>
+          <View style={st.statDivider} />
+          <View style={st.statItem}>
+            <Text style={st.statNum}>{ownerCount}</Text>
+            <Text style={st.statLabel}>Owner</Text>
+          </View>
+          <View style={st.statDivider} />
+          <View style={st.statItem}>
+            <Text style={st.statNum}>{users.length}</Text>
+            <Text style={st.statLabel}>Total</Text>
+          </View>
+        </View>
+
         <View style={st.tabRow}>
           <TouchableOpacity
             style={[st.tab, activeTab === 'user' && st.tabActive]}
             onPress={() => setActiveTab('user')}
             activeOpacity={0.75}
           >
-            <MaterialIcons name="person" size={15} color={activeTab === 'user' ? '#60a5fa' : '#475569'} />
+            <MaterialIcons name="person" size={15} color={activeTab === 'user' ? COLORS.primary : COLORS.textTertiary} />
             <Text style={[st.tabLabel, activeTab === 'user' && st.tabLabelActive]}>Pengguna</Text>
             <View style={[st.tabBadge, activeTab === 'user' && st.tabBadgeActive]}>
               <Text style={[st.tabBadgeText, activeTab === 'user' && st.tabBadgeTextActive]}>{userCount}</Text>
@@ -312,92 +295,128 @@ export default function UserPage() {
             onPress={() => setActiveTab('owner')}
             activeOpacity={0.75}
           >
-            <MaterialIcons name="store" size={15} color={activeTab === 'owner' ? '#34d399' : '#475569'} />
-            <Text style={[st.tabLabel, activeTab === 'owner' && st.tabLabelOwner]}>Owner</Text>
-            <View style={[st.tabBadge, activeTab === 'owner' && st.tabBadgeOwner]}>
-              <Text style={[st.tabBadgeText, activeTab === 'owner' && st.tabBadgeTextOwner]}>{ownerCount}</Text>
+            <MaterialIcons name="store" size={15} color={activeTab === 'owner' ? COLORS.primary : COLORS.textTertiary} />
+            <Text style={[st.tabLabel, activeTab === 'owner' && st.tabLabelActive]}>Owner</Text>
+            <View style={[st.tabBadge, activeTab === 'owner' && st.tabOwnerBadgeActive]}>
+              <Text style={[st.tabBadgeText, activeTab === 'owner' && st.tabBadgeTextActive]}>{ownerCount}</Text>
             </View>
           </TouchableOpacity>
         </View>
 
-        {/* Add Owner Button (only on Owner tab) */}
         {activeTab === 'owner' && (
-          <TouchableOpacity style={st.addBtn} onPress={() => { setCreateError(null); setCreateForm(EMPTY_CREATE); setShowCreate(true); }} activeOpacity={0.8}>
-            <MaterialIcons name="add-circle-outline" size={17} color="#34d399" />
+          <TouchableOpacity
+            style={st.addBtn}
+            onPress={() => { setCreateError(null); setCreateForm(EMPTY_CREATE); setShowCreate(true); }}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name="add-circle-outline" size={17} color={COLORS.primary} />
             <Text style={st.addBtnText}>Tambah Owner Baru</Text>
           </TouchableOpacity>
         )}
 
-        {/* List */}
-        {filteredUsers.length === 0 ? (
-          <View style={st.emptyWrap}>
-            <MaterialIcons name={activeTab === 'owner' ? 'store' : 'person-search'} size={52} color="#1e293b" />
-            <Text style={st.emptyText}>{activeTab === 'owner' ? 'Belum ada owner terdaftar.' : 'Tidak ada hasil.'}</Text>
-          </View>
-        ) : (
-          filteredUsers.map((u: any) => {
-            const roleKey = u.profile?.role || 'player';
-            const rc = ROLE_CONFIG[roleKey] ?? ROLE_CONFIG.player;
-            return (
-              <View key={u.id} style={st.card}>
-                <View style={st.cardLeft}>
-                  <View style={[st.avatar, { backgroundColor: rc.bg, borderColor: rc.color + '55' }]}>
-                    <Text style={[st.avatarText, { color: rc.color }]}>{(u.name || '?').charAt(0).toUpperCase()}</Text>
-                  </View>
-                  <View style={st.info}>
-                    <Text style={[st.name, { color: palette.text }]} numberOfLines={1}>{u.name}</Text>
-                    <Text style={[st.email, { color: palette.icon }]} numberOfLines={1}>{u.email}</Text>
-                    <View style={[st.roleBadge, { backgroundColor: rc.bg, borderColor: rc.color + '40' }]}>
-                      <View style={[st.roleDot, { backgroundColor: rc.color }]} />
-                      <Text style={[st.roleText, { color: rc.color }]}>{rc.label}</Text>
+        <ScrollView
+          contentContainerStyle={st.list}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
+          showsVerticalScrollIndicator={false}
+        >
+          {filteredUsers.length === 0 ? (
+            <View style={st.emptyWrap}>
+              <View style={st.emptyIcon}>
+                <MaterialIcons name={activeTab === 'owner' ? 'store' : 'person-search'} size={40} color={COLORS.textTertiary} />
+              </View>
+              <Text style={st.emptyTitle}>{activeTab === 'owner' ? 'Belum ada owner terdaftar.' : 'Tidak ada hasil.'}</Text>
+              {activeTab === 'owner' && (
+                <TouchableOpacity
+                  style={st.emptyAction}
+                  onPress={() => { setCreateError(null); setCreateForm(EMPTY_CREATE); setShowCreate(true); }}
+                >
+                  <MaterialIcons name="add" size={16} color={COLORS.onPrimary} />
+                  <Text style={st.emptyActionText}>Tambah Owner</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : (
+            filteredUsers.map((u: any) => {
+              const roleKey = u.profile?.role || 'player';
+              const rc = ROLE_CONFIG[roleKey] ?? ROLE_CONFIG.player;
+              const isOwnRow = u.id === loggedInUserId;
+
+              return (
+                <View key={u.id} style={st.card}>
+                  <View style={st.cardLeft}>
+                    <View style={[st.avatar, { backgroundColor: rc.bg }]}>
+                      <Text style={[st.avatarText, { color: rc.color }]}>{(u.name || '?').charAt(0).toUpperCase()}</Text>
+                    </View>
+                    <View style={st.info}>
+                      <Text style={st.name} numberOfLines={1}>{u.name}</Text>
+                      <Text style={st.email} numberOfLines={1}>{u.email}</Text>
+                      <View style={[st.roleBadge, { backgroundColor: rc.bg }]}>
+                        <View style={[st.roleDot, { backgroundColor: rc.color }]} />
+                        <Text style={[st.roleText, { color: rc.color }]}>{rc.label}</Text>
+                      </View>
                     </View>
                   </View>
-                </View>
-                <View style={[st.actions]}>
-                  {activeTab === 'owner' && (
-                    <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#022c22' }]} onPress={() => openEdit(u)}>
-                      <MaterialIcons name="edit" size={16} color="#34d399" />
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#1e3a5f' }]} onPress={() => handleRoleChange(u.id, roleKey)}>
-                    <MaterialIcons name="manage-accounts" size={17} color="#60a5fa" />
-                  </TouchableOpacity>
-                  {loggedInUserRole === 'super_admin' && roleKey !== 'super_admin' && (
+                  <View style={st.actions}>
+                    {/* Ungu — Edit User (semua baris) */}
                     <TouchableOpacity
-                      style={st.upgradeBtn}
-                      onPress={() => handleUpgradeSuperAdmin(u.id, u.name)}
-                      activeOpacity={0.8}
+                      style={[st.actionBtn, { backgroundColor: COLORS.accentPurpleLight }]}
+                      onPress={() => openEdit(u)}
+                      hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                     >
-                      <MaterialIcons name="admin-panel-settings" size={15} color="#f59e0b" />
-                      <Text style={st.upgradeBtnText}>Super Admin</Text>
+                      <MaterialIcons name="edit" size={16} color={COLORS.accentPurple} />
                     </TouchableOpacity>
-                  )}
-                  <TouchableOpacity style={[st.actionBtn, { backgroundColor: '#2d0f0f' }]} onPress={() => handleDelete(u.id, u.name)}>
-                    <MaterialIcons name="delete-outline" size={17} color="#f87171" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          })
-        )}
-      </ScrollView>
 
-      {/* ── CREATE OWNER MODAL ── */}
+                    {/* Oranye — Upgrade Role (admin + super_admin, bukan baris super_admin) */}
+                    {(loggedInUserRole === 'admin' || isSuperAdmin) && roleKey !== 'super_admin' && (
+                      <TouchableOpacity
+                        style={[st.actionBtn, { backgroundColor: COLORS.accentOrangeLight }]}
+                        onPress={() => {
+                          setUpgradeTarget({ id: u.id, name: u.name, currentRole: roleKey });
+                          setUpgradeError(null);
+                        }}
+                        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                      >
+                        <MaterialIcons name="admin-panel-settings" size={15} color={COLORS.accentOrange} />
+                      </TouchableOpacity>
+                    )}
+
+                    {/* Merah — Hapus User */}
+                    {!isOwnRow && (
+                      <TouchableOpacity
+                        style={[st.actionBtn, { backgroundColor: COLORS.errorContainer }]}
+                        onPress={() => {
+                          setDeleteTarget({ id: u.id, name: u.name });
+                          setDeleteError(null);
+                        }}
+                        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                      >
+                        <MaterialIcons name="delete-outline" size={17} color={COLORS.error} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              );
+            })
+          )}
+        </ScrollView>
+      </View>
+
+      {/* ── CREATE MODAL ── */}
       <Modal visible={showCreate} transparent animationType="slide" onRequestClose={() => setShowCreate(false)}>
         <KeyboardAvoidingView style={st.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setShowCreate(false)} />
-          <View style={[st.sheet, { backgroundColor: palette.background, borderColor: colorScheme === 'dark' ? '#1e293b' : '#e6e9ee' }]}>
+          <View style={st.sheet}>
             <View style={st.sheetHandle} />
             <View style={st.sheetHeader}>
               <View style={st.sheetIconWrap}>
-                <MaterialIcons name="person-add-alt-1" size={20} color="#34d399" />
+                <MaterialIcons name="person-add-alt-1" size={20} color={COLORS.primary} />
               </View>
-              <Text style={[st.sheetTitle, { color: palette.text }]}>Tambah Owner</Text>
+              <Text style={st.sheetTitle}>Tambah User</Text>
             </View>
 
             {createError ? (
               <View style={st.errorBox}>
-                <MaterialIcons name="error-outline" size={14} color="#f87171" />
+                <MaterialIcons name="error-outline" size={14} color={COLORS.error} />
                 <Text style={st.errorText}>{createError}</Text>
               </View>
             ) : null}
@@ -440,7 +459,7 @@ export default function UserPage() {
               </TouchableOpacity>
               <TouchableOpacity style={[st.submitBtn, createLoading && { opacity: 0.6 }]} onPress={handleCreate} disabled={createLoading}>
                 {createLoading
-                  ? <ActivityIndicator color="#fff" size="small" />
+                  ? <ActivityIndicator color={COLORS.onPrimary} size="small" />
                   : <Text style={st.submitText}>Tambah</Text>}
               </TouchableOpacity>
             </View>
@@ -448,22 +467,22 @@ export default function UserPage() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* ── EDIT OWNER MODAL ── */}
+      {/* ── EDIT MODAL ── */}
       <Modal visible={!!editTarget} transparent animationType="slide" onRequestClose={() => setEditTarget(null)}>
         <KeyboardAvoidingView style={st.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setEditTarget(null)} />
-          <View style={[st.sheet, { backgroundColor: palette.background, borderColor: colorScheme === 'dark' ? '#1e293b' : '#e6e9ee' }]}>
+          <View style={st.sheet}>
             <View style={st.sheetHandle} />
             <View style={st.sheetHeader}>
-              <View style={[st.sheetIconWrap, { backgroundColor: '#1e3a5f' }]}>
-                <MaterialIcons name="edit" size={20} color="#60a5fa" />
+              <View style={[st.sheetIconWrap, { backgroundColor: COLORS.accentPurpleLight }]}>
+                <MaterialIcons name="edit" size={20} color={COLORS.accentPurple} />
               </View>
-              <Text style={[st.sheetTitle, { color: palette.text }]}>Edit Owner</Text>
+              <Text style={st.sheetTitle}>Edit User</Text>
             </View>
 
             {editError ? (
               <View style={st.errorBox}>
-                <MaterialIcons name="error-outline" size={14} color="#f87171" />
+                <MaterialIcons name="error-outline" size={14} color={COLORS.error} />
                 <Text style={st.errorText}>{editError}</Text>
               </View>
             ) : null}
@@ -484,20 +503,68 @@ export default function UserPage() {
               <TouchableOpacity style={st.cancelBtn} onPress={() => setEditTarget(null)}>
                 <Text style={st.cancelText}>Batal</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[st.submitBtn, { backgroundColor: '#1e4976' }, editLoading && { opacity: 0.6 }]} onPress={handleEdit} disabled={editLoading}>
+              <TouchableOpacity style={[st.submitBtn, { backgroundColor: COLORS.accentPurple }, editLoading && { opacity: 0.6 }]} onPress={handleEdit} disabled={editLoading}>
                 {editLoading
-                  ? <ActivityIndicator color="#fff" size="small" />
+                  ? <ActivityIndicator color={COLORS.onPrimary} size="small" />
                   : <Text style={st.submitText}>Simpan</Text>}
               </TouchableOpacity>
             </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* ── UPGRADE ROLE MODAL ── */}
+      <ConfirmActionModal
+        visible={!!upgradeTarget}
+        title={`Upgrade Role — ${upgradeTarget?.name ?? ''}`}
+        description="Pilih role baru untuk user ini."
+        icon="admin-panel-settings"
+        iconColor={COLORS.accentOrange}
+        iconBg={COLORS.accentOrangeLight}
+        loading={upgradeLoading}
+        error={upgradeError}
+        onCancel={() => setUpgradeTarget(null)}
+        options={[
+          ...(upgradeTarget?.currentRole !== 'owner'
+            ? [{
+                label: 'Jadikan Owner',
+                icon: 'store',
+                onPress: () => handleUpgrade('owner'),
+              }]
+            : []),
+          ...(isSuperAdmin && upgradeTarget?.currentRole !== 'super_admin'
+            ? [{
+                label: 'Jadikan Super Admin',
+                icon: 'shield',
+                color: COLORS.accentOrange,
+                onPress: () => handleUpgrade('super_admin'),
+              }]
+            : []),
+        ]}
+      />
+
+      {/* ── DELETE CONFIRM MODAL ── */}
+      <ConfirmActionModal
+        visible={!!deleteTarget}
+        title={`Hapus "${deleteTarget?.name ?? ''}"?`}
+        description="Tindakan ini tidak bisa dibatalkan. User dan semua data terkait akan dihapus permanen."
+        icon="delete-forever"
+        iconColor={COLORS.error}
+        iconBg={COLORS.errorContainer}
+        loading={deleteLoading}
+        error={deleteError}
+        onCancel={() => setDeleteTarget(null)}
+        options={[{
+          label: 'Ya, Hapus',
+          icon: 'delete',
+          destructive: true,
+          onPress: handleDeleteUser,
+        }]}
+      />
     </>
   );
 }
 
-// ── Reusable field input ──────────────────────────────────────────────────────
 function FormField({ label, icon, value, onChangeText, keyboardType, autoCapitalize, secureTextEntry, rightIcon, onRightIconPress, placeholder }: {
   label: string; icon: string; value: string;
   onChangeText: (v: string) => void;
@@ -510,7 +577,7 @@ function FormField({ label, icon, value, onChangeText, keyboardType, autoCapital
     <View style={st.fieldWrap}>
       <Text style={st.fieldLabel}>{label}</Text>
       <View style={st.fieldRow}>
-        <MaterialIcons name={icon as any} size={17} color="#475569" style={{ marginRight: 10 }} />
+        <MaterialIcons name={icon as any} size={17} color={COLORS.textSecondary} style={{ marginRight: 10 }} />
         <TextInput
           style={st.fieldInput}
           value={value}
@@ -519,11 +586,11 @@ function FormField({ label, icon, value, onChangeText, keyboardType, autoCapital
           autoCapitalize={autoCapitalize ?? 'sentences'}
           secureTextEntry={secureTextEntry}
           placeholder={placeholder ?? label}
-          placeholderTextColor="#334155"
+          placeholderTextColor={COLORS.textTertiary}
         />
         {rightIcon && (
-          <TouchableOpacity onPress={onRightIconPress}>
-            <MaterialIcons name={rightIcon as any} size={17} color="#475569" />
+          <TouchableOpacity onPress={onRightIconPress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <MaterialIcons name={rightIcon as any} size={17} color={COLORS.textSecondary} />
           </TouchableOpacity>
         )}
       </View>
@@ -532,119 +599,128 @@ function FormField({ label, icon, value, onChangeText, keyboardType, autoCapital
 }
 
 const st = StyleSheet.create({
-  container: { padding: 16, paddingBottom: 48 },
-  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 80 },
-  loadingText: { color: '#475569', fontSize: 14 },
-
-  searchWrap: {
+  screen: { flex: 1, backgroundColor: COLORS.background },
+  searchWrap: { paddingHorizontal: SIZES.gutter, paddingTop: 14, paddingBottom: 4 },
+  searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#0d1117', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12,
-    marginBottom: 12, borderWidth: 1.5, borderColor: '#1e293b',
+    backgroundColor: COLORS.surface, borderRadius: 14,
+    paddingHorizontal: 14, paddingVertical: 11,
+    borderWidth: 1.5, borderColor: COLORS.outline,
   },
-  searchFocused: { borderColor: '#4ade80', backgroundColor: '#061910' },
-  searchInput: { flex: 1, color: '#e2e8f0', fontSize: 14, paddingVertical: 0 },
+  searchBoxFocused: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryContainer },
+  searchInput: { flex: 1, color: COLORS.text, fontSize: 14, paddingVertical: 0 },
 
-  tabRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  statsRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    marginHorizontal: SIZES.gutter, marginTop: 10,
+    borderRadius: SIZES.borderRadius, borderWidth: 1,
+    borderColor: COLORS.outline, paddingVertical: 12, paddingHorizontal: 16,
+    ...SHADOWS.xs,
+  },
+  statItem: { flex: 1, alignItems: 'center' },
+  statNum: { ...FONTS.headlineSm, color: COLORS.text },
+  statLabel: { ...FONTS.bodySm, color: COLORS.textSecondary, marginTop: 2 },
+  statDivider: { width: 1, height: 28, backgroundColor: COLORS.outline },
+
+  tabRow: { flexDirection: 'row', gap: 10, marginHorizontal: SIZES.gutter, marginTop: 12, marginBottom: 4 },
   tab: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 7, paddingVertical: 11, borderRadius: 12,
-    backgroundColor: '#0d1117', borderWidth: 1.5, borderColor: '#1e293b',
+    backgroundColor: COLORS.surface, borderWidth: 1.5, borderColor: COLORS.outline,
   },
-  tabActive:      { backgroundColor: '#0f233d', borderColor: '#1e4976' },
-  tabOwnerActive: { backgroundColor: '#022c22', borderColor: '#065f46' },
-  tabLabel:        { fontSize: 13, fontWeight: '700', color: '#475569' },
-  tabLabelActive:  { color: '#60a5fa' },
-  tabLabelOwner:   { color: '#34d399' },
-  tabBadge:        { backgroundColor: '#1e293b', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, minWidth: 24, alignItems: 'center' },
-  tabBadgeActive:  { backgroundColor: '#1e3a5f' },
-  tabBadgeOwner:   { backgroundColor: '#064e3b' },
-  tabBadgeText:     { fontSize: 11, fontWeight: '800', color: '#475569' },
-  tabBadgeTextActive: { color: '#60a5fa' },
-  tabBadgeTextOwner:  { color: '#34d399' },
+  tabActive:      { backgroundColor: COLORS.primaryContainer, borderColor: COLORS.primary + '60' },
+  tabOwnerActive: { backgroundColor: COLORS.primaryContainer, borderColor: COLORS.primary + '60' },
+  tabLabel:        { ...FONTS.titleSm, color: COLORS.textTertiary },
+  tabLabelActive:  { color: COLORS.primary },
+  tabBadge:        { backgroundColor: COLORS.surfaceContainerHigh, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, minWidth: 24, alignItems: 'center' },
+  tabBadgeActive:  { backgroundColor: COLORS.primary + '20' },
+  tabOwnerBadgeActive: { backgroundColor: COLORS.primary + '20' },
+  tabBadgeText:     { ...FONTS.labelSm, color: COLORS.textSecondary },
+  tabBadgeTextActive: { color: COLORS.primary },
 
   addBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#022c22', borderRadius: 12, borderWidth: 1.5, borderColor: '#065f46',
-    paddingVertical: 12, marginBottom: 14,
+    backgroundColor: COLORS.primaryContainer, borderRadius: 12,
+    borderWidth: 1.5, borderColor: COLORS.primary + '50',
+    paddingVertical: 12, marginHorizontal: SIZES.gutter, marginTop: 10,
   },
-  addBtnText: { color: '#34d399', fontSize: 13, fontWeight: '700' },
+  addBtnText: { ...FONTS.titleSm, color: COLORS.primary },
+
+  list: { padding: SIZES.gutter, paddingBottom: 60 },
 
   emptyWrap: { alignItems: 'center', marginTop: 60, gap: 12 },
-  emptyText: { color: '#334155', fontSize: 14 },
+  emptyIcon: {
+    width: 80, height: 80, borderRadius: 24,
+    backgroundColor: COLORS.surfaceContainerHigh,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: COLORS.outline,
+  },
+  emptyTitle: { ...FONTS.titleMd, color: COLORS.textSecondary },
+  emptyAction: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: COLORS.primary, paddingHorizontal: 20, paddingVertical: 12,
+    borderRadius: SIZES.borderRadius,
+  },
+  emptyActionText: { ...FONTS.titleSm, color: COLORS.onPrimary },
 
   card: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#0d1117', borderRadius: 16, padding: 14, marginBottom: 10,
-    borderWidth: 1, borderColor: '#1e293b',
+    backgroundColor: COLORS.surface, borderRadius: 16, padding: 14, marginBottom: 10,
+    borderWidth: 1, borderColor: COLORS.outline,
+    ...SHADOWS.xs,
   },
   cardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  avatar: { width: 46, height: 46, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 13, borderWidth: 1.5 },
-  avatarText: { fontSize: 18, fontWeight: '800' },
+  avatar: { width: 46, height: 46, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 13 },
+  avatarText: { ...FONTS.headlineSm, fontSize: 18 },
   info: { flex: 1 },
-  name: { fontSize: 14, fontWeight: '700', color: '#e2e8f0', marginBottom: 2 },
-  email: { fontSize: 12, color: '#475569', marginBottom: 6 },
-  roleBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 6, paddingVertical: 3, paddingHorizontal: 8, alignSelf: 'flex-start', borderWidth: 1 },
+  name: { ...FONTS.titleMd, color: COLORS.text, marginBottom: 2 },
+  email: { ...FONTS.bodySm, color: COLORS.textSecondary, marginBottom: 6 },
+  roleBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 6, paddingVertical: 3, paddingHorizontal: 8, alignSelf: 'flex-start' },
   roleDot: { width: 5, height: 5, borderRadius: 3 },
-  roleText: { fontSize: 10, fontWeight: '700' },
+  roleText: { ...FONTS.labelSm },
   actions: { flexDirection: 'row', gap: 6, marginLeft: 6 },
-  actionBtn: { width: 34, height: 34, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-  upgradeBtn: {
-    height: 34,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    backgroundColor: '#451a03',
-    borderWidth: 1,
-    borderColor: '#f59e0b55',
-  },
-  upgradeBtnText: { color: '#f59e0b', fontSize: 11, fontWeight: '800' },
+  actionBtn: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
 
-  // Modal / Sheet
-  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
   sheet: {
-    backgroundColor: '#0d1117', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    backgroundColor: COLORS.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: 20, paddingBottom: Platform.OS === 'ios' ? 36 : 24,
-    borderWidth: 1, borderColor: '#1e293b',
+    borderWidth: 1, borderColor: COLORS.outline,
   },
-  sheetHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: '#334155', alignSelf: 'center', marginBottom: 18 },
+  sheetHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: COLORS.outline, alignSelf: 'center', marginBottom: 18 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 18 },
   sheetIconWrap: {
-    width: 40, height: 40, borderRadius: 12, backgroundColor: '#022c22',
+    width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.primaryContainer,
     justifyContent: 'center', alignItems: 'center',
   },
-  sheetTitle: { fontSize: 18, fontWeight: '800', color: '#f1f5f9' },
+  sheetTitle: { ...FONTS.headlineSm, color: COLORS.text },
 
-  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#2d0f0f', borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#7f1d1d' },
-  errorText: { color: '#fca5a5', fontSize: 12, flex: 1 },
+  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.errorContainer, borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: COLORS.error + '30' },
+  errorText: { ...FONTS.bodySm, color: COLORS.error, flex: 1 },
 
   fieldWrap: { marginBottom: 14 },
-  fieldLabel: { fontSize: 11, fontWeight: '700', color: '#475569', marginBottom: 6, letterSpacing: 0.5, textTransform: 'uppercase' },
+  fieldLabel: { ...FONTS.labelSm, color: COLORS.textSecondary, marginBottom: 6, letterSpacing: 0.5, textTransform: 'uppercase' },
   fieldRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#1e293b', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
-    borderWidth: 1, borderColor: '#334155',
+    backgroundColor: COLORS.surfaceContainerLow, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 12,
+    borderWidth: 1, borderColor: COLORS.outline,
   },
-  fieldInput: { flex: 1, color: '#e2e8f0', fontSize: 14, paddingVertical: 0 },
+  fieldInput: { flex: 1, color: COLORS.text, fontSize: 14, paddingVertical: 0 },
   roleSelectWrap: { marginBottom: 14 },
   roleChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   roleChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    backgroundColor: '#1e293b',
-    borderWidth: 1,
-    borderColor: '#334155',
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderWidth: 1, borderColor: COLORS.outline,
   },
-  roleChipText: { color: '#94a3b8', fontSize: 12, fontWeight: '700' },
+  roleChipText: { ...FONTS.labelMd, color: COLORS.textSecondary },
 
   sheetActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: '#1e293b', alignItems: 'center', borderWidth: 1, borderColor: '#334155' },
-  cancelText: { color: '#64748b', fontSize: 14, fontWeight: '700' },
-  submitBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: '#064e3b', alignItems: 'center' },
-  submitText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: COLORS.surfaceContainerLow, alignItems: 'center', borderWidth: 1, borderColor: COLORS.outline },
+  cancelText: { ...FONTS.titleSm, color: COLORS.textSecondary },
+  submitBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: COLORS.primary, alignItems: 'center' },
+  submitText: { ...FONTS.titleSm, color: COLORS.onPrimary },
 });
