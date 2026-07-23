@@ -126,19 +126,25 @@ export const SHADOWS = {
   },
 };
 
+import { Platform } from 'react-native';
+
+export const FONT_FAMILY = Platform.OS === 'web'
+  ? '"Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+  : 'System';
+
 export const FONTS = {
-  headlineLg: { fontFamily: 'Montserrat', fontSize: 28, fontWeight: '700' as const, lineHeight: 34 },
-  headlineMd: { fontFamily: 'Montserrat', fontSize: 20, fontWeight: '700' as const, lineHeight: 26 },
-  headlineSm: { fontFamily: 'Montserrat', fontSize: 16, fontWeight: '700' as const, lineHeight: 22 },
-  titleLg: { fontFamily: 'Montserrat', fontSize: 16, fontWeight: '600' as const, lineHeight: 22 },
-  titleMd: { fontFamily: 'Montserrat', fontSize: 14, fontWeight: '600' as const, lineHeight: 20 },
-  titleSm: { fontFamily: 'Montserrat', fontSize: 13, fontWeight: '600' as const, lineHeight: 18 },
-  bodyLg: { fontFamily: 'Montserrat', fontSize: 16, fontWeight: '400' as const, lineHeight: 24 },
-  bodyMd: { fontFamily: 'Montserrat', fontSize: 14, fontWeight: '400' as const, lineHeight: 20 },
-  bodySm: { fontFamily: 'Montserrat', fontSize: 12, fontWeight: '400' as const, lineHeight: 16 },
-  labelLg: { fontFamily: 'Montserrat', fontSize: 14, fontWeight: '600' as const, lineHeight: 18 },
-  labelMd: { fontFamily: 'Montserrat', fontSize: 12, fontWeight: '600' as const, lineHeight: 16 },
-  labelSm: { fontFamily: 'Montserrat', fontSize: 10, fontWeight: '700' as const, lineHeight: 14 },
-  buttonLg: { fontFamily: 'Montserrat', fontSize: 16, fontWeight: '700' as const, lineHeight: 20 },
-  buttonMd: { fontFamily: 'Montserrat', fontSize: 14, fontWeight: '600' as const, lineHeight: 18 },
+  headlineLg: { fontFamily: FONT_FAMILY, fontSize: 28, fontWeight: '700' as const, lineHeight: 34 },
+  headlineMd: { fontFamily: FONT_FAMILY, fontSize: 20, fontWeight: '700' as const, lineHeight: 26 },
+  headlineSm: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '700' as const, lineHeight: 22 },
+  titleLg: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '600' as const, lineHeight: 22 },
+  titleMd: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '600' as const, lineHeight: 20 },
+  titleSm: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600' as const, lineHeight: 18 },
+  bodyLg: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '400' as const, lineHeight: 24 },
+  bodyMd: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '400' as const, lineHeight: 20 },
+  bodySm: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '400' as const, lineHeight: 16 },
+  labelLg: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '600' as const, lineHeight: 18 },
+  labelMd: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '600' as const, lineHeight: 16 },
+  labelSm: { fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '700' as const, lineHeight: 14 },
+  buttonLg: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '700' as const, lineHeight: 20 },
+  buttonMd: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '600' as const, lineHeight: 18 },
 };

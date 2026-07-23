@@ -16,7 +16,7 @@ import { router, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useProfileStore } from '../../store/profileStore';
 import { Field, useFieldStore } from '../../store/fieldStore';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../../components/goalTheme';
+import { COLORS, FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
 import { CATEGORIES } from '../../data/venues';
 import { SafeImage } from '../../components/SafeImage';
 import { SkeletonVenueList, SkeletonHorizontalCards, SkeletonProfile } from '../../components/Skeleton';
@@ -156,17 +156,13 @@ export default function HomeScreen() {
             <Text style={styles.heroTitle}>Temukan lapangan terbaik hari ini</Text>
             <Text style={styles.heroText}>Cari venue, cek status, lalu lanjut booking dari satu tempat.</Text>
           </View>
-          <TouchableOpacity style={styles.heroButton} activeOpacity={0.85} onPress={() => router.push('/(tabs)/fields')}>
-            <MaterialIcons name="stadium" size={18} color="#ffffff" />
-            <Text style={styles.heroButtonText}>Cari Lapangan</Text>
-          </TouchableOpacity>
         </View>
 
         <View style={styles.searchBar}>
-          <MaterialIcons name="search" size={20} color={COLORS.textTertiary} />
+          <MaterialIcons name="search" size={22} color={COLORS.primary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Cari lapangan atau venue"
+            placeholder="Cari lapangan atau venue..."
             placeholderTextColor={COLORS.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -190,7 +186,7 @@ export default function HomeScreen() {
                   onPress={() => setActiveCategory(item.label)}
                 >
                   <View style={[styles.categoryIconWrap, isActive && styles.categoryIconWrapActive]}>
-                    <MaterialIcons name={item.icon} size={22} color={isActive ? '#ffffff' : COLORS.onSurfaceVariant} />
+                    <MaterialIcons name={item.icon} size={26} color={isActive ? '#ffffff' : COLORS.onSurfaceVariant} />
                   </View>
                   <Text style={[styles.categoryLabel, isActive && styles.categoryLabelActive]}>{item.label}</Text>
                 </TouchableOpacity>
@@ -203,6 +199,7 @@ export default function HomeScreen() {
           <SafeImage
             source={{ uri: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?q=80&w=800&auto=format&fit=crop' }}
             style={styles.promoImage}
+            resizeMode="cover"
             fallbackSize={32}
           />
           <View style={styles.promoGradient} />
@@ -249,7 +246,7 @@ export default function HomeScreen() {
                   onPress={() => router.push({ pathname: '/venue-detail', params: { id: String(item.id) } })}
                 >
                   <View style={styles.venueImageWrap}>
-                    <SafeImage source={{ uri: imgUrl }} style={styles.venueImage} fallbackSize={32} />
+                    <SafeImage source={{ uri: imgUrl }} style={styles.venueImage} resizeMode="cover" fallbackSize={32} />
                     <View style={styles.venueImageOverlay} />
                     <View style={[styles.statusBadge, { backgroundColor: isApproved ? COLORS.primary : COLORS.error }]}>
                       <Text style={styles.statusText}>{isApproved ? 'Tersedia' : 'Menunggu'}</Text>
@@ -373,7 +370,7 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 22,
     fontWeight: '800',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: COLORS.primary,
     letterSpacing: 1,
   },
@@ -436,22 +433,6 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 6,
   },
-  heroButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLORS.primary,
-    borderRadius: SIZES.borderRadius,
-    paddingHorizontal: 18,
-    paddingVertical: 13,
-    marginTop: 16,
-    ...SHADOWS.primary,
-  },
-  heroButtonText: {
-    ...FONTS.buttonMd,
-    color: '#ffffff',
-  },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -460,16 +441,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: 'rgba(30, 138, 76, 0.15)',
     marginTop: 16,
     marginBottom: 8,
     gap: 10,
-    ...SHADOWS.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: COLORS.text,
   },
   section: {
@@ -484,13 +469,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 17,
     fontWeight: '700',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: COLORS.text,
   },
   sectionLink: {
     fontSize: 13,
     fontWeight: '600',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: COLORS.primary,
   },
   categoryScroll: {
@@ -502,9 +487,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   categoryIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
     backgroundColor: COLORS.surfaceWhite,
     alignItems: 'center',
     justifyContent: 'center',
@@ -520,7 +505,7 @@ const styles = StyleSheet.create({
   categoryLabel: {
     fontSize: 11,
     fontWeight: '600',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: COLORS.onSurfaceVariant,
   },
   categoryLabelActive: {

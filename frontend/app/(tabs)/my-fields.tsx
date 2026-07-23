@@ -215,6 +215,9 @@ export default function MyFieldsScreen() {
       <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
 
       <View style={styles.header}>
+        <TouchableOpacity style={styles.backBtn} activeOpacity={0.8} onPress={() => router.push('/(tabs)')}>
+          <MaterialIcons name="arrow-back" size={20} color={COLORS.text} />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Lapangan Saya</Text>
       </View>
 
