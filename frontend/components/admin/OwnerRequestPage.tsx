@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  Alert, TextInput, RefreshControl, Modal,
+  TextInput, RefreshControl, Modal,
   Platform, ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -11,7 +11,8 @@ import { API_BASE_URL, getErrorMessage } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
-import ConfirmActionModal from './ConfirmActionModal';
+import ConfirmDialog from '../shared/ConfirmDialog';
+import { useToastStore } from '../../store/toastStore';
 
 export default function OwnerRequestPage() {
   const [requests, setRequests] = useState<any[]>([]);
@@ -31,7 +32,7 @@ export default function OwnerRequestPage() {
       const data = await res.json();
       setRequests(data?.data ?? []);
     } catch {
-      Alert.alert('Error', 'Gagal memuat pengajuan.');
+      useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Gagal memuat pengajuan.' });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -59,10 +60,10 @@ export default function OwnerRequestPage() {
     setSubmitting(true);
     try {
       await reviewRequest(id, 'approved');
-      Alert.alert('Berhasil', 'Pengajuan disetujui!');
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Pengajuan disetujui!' });
       fetchRequests();
     } catch (e: any) {
-      Alert.alert('Gagal', e.message || 'Gagal memproses pengajuan.');
+      useToastStore.getState().show({ type: 'error', title: 'Gagal', description: e.message || 'Gagal memproses pengajuan.' });
     } finally {
       setSubmitting(false);
     }
@@ -78,10 +79,10 @@ export default function OwnerRequestPage() {
     try {
       await reviewRequest(approveTarget.id, 'approved');
       setApproveTarget(null);
-      Alert.alert('Berhasil', 'Pengajuan disetujui!');
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Pengajuan disetujui!' });
       fetchRequests();
     } catch (e: any) {
-      Alert.alert('Gagal', e.message || 'Gagal memproses pengajuan.');
+      useToastStore.getState().show({ type: 'error', title: 'Gagal', description: e.message || 'Gagal memproses pengajuan.' });
     } finally {
       setSubmitting(false);
     }
@@ -90,18 +91,18 @@ export default function OwnerRequestPage() {
   const handleReject = async () => {
     const reason = rejectReason.trim();
     if (!reason) {
-      Alert.alert('Alasan wajib diisi', 'Tuliskan alasan penolakan terlebih dahulu.');
+      useToastStore.getState().show({ type: 'error', title: 'Alasan wajib diisi', description: 'Tuliskan alasan penolakan terlebih dahulu.' });
       return;
     }
     setSubmitting(true);
     try {
       await reviewRequest(rejectModal.id, 'rejected', reason);
-      Alert.alert('Berhasil', 'Pengajuan ditolak.');
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Pengajuan ditolak.' });
       setRejectModal({ id: 0, visible: false });
       setRejectReason('');
       fetchRequests();
     } catch (e: any) {
-      Alert.alert('Gagal', e.message || 'Gagal memproses pengajuan.');
+      useToastStore.getState().show({ type: 'error', title: 'Gagal', description: e.message || 'Gagal memproses pengajuan.' });
     } finally {
       setSubmitting(false);
     }
@@ -244,7 +245,7 @@ export default function OwnerRequestPage() {
       </Modal>
 
       {/* Approve Confirm Modal */}
-      <ConfirmActionModal
+      <ConfirmDialog
         visible={!!approveTarget}
         title={`Setujui "${approveTarget?.name ?? ''}"?`}
         description="Pengajuan owner akan disetujui dan user akan mendapatkan akses owner."
@@ -253,11 +254,8 @@ export default function OwnerRequestPage() {
         iconBg={COLORS.primaryContainer}
         loading={submitting}
         onCancel={() => setApproveTarget(null)}
-        options={[{
-          label: 'Setujui',
-          icon: 'check',
-          onPress: confirmApprove,
-        }]}
+        confirmLabel="Setujui"
+        onConfirm={confirmApprove}
       />
     </>
   );

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  Alert, RefreshControl, Modal,
+  RefreshControl, Modal,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -12,7 +12,8 @@ import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
 import TrashedFieldsPage from './TrashedFieldsPage';
-import ConfirmActionModal from './ConfirmActionModal';
+import ConfirmDialog from '../shared/ConfirmDialog';
+import { useToastStore } from '../../store/toastStore';
 
 export default function PendingFieldsPage() {
   const [fields, setFields] = useState<any[]>([]);
@@ -34,7 +35,7 @@ export default function PendingFieldsPage() {
       const data = await res.json().catch(() => ({}));
       setFields(data?.data ?? []);
     } catch {
-      Alert.alert('Error', 'Gagal memuat data.');
+      useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Gagal memuat data.' });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -63,10 +64,10 @@ export default function PendingFieldsPage() {
         throw new Error(getErrorMessage(data, 'Gagal menyetujui lapangan.'));
       }
 
-      Alert.alert('Berhasil', 'Lapangan disetujui.');
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Lapangan disetujui.' });
       fetchFields();
     } catch (e: any) {
-      Alert.alert('Gagal', e.message || 'Gagal menyetujui lapangan.');
+      useToastStore.getState().show({ type: 'error', title: 'Gagal', description: e.message || 'Gagal menyetujui lapangan.' });
     } finally {
       setSubmittingId(null);
     }
@@ -97,10 +98,10 @@ export default function PendingFieldsPage() {
       }
 
       setApproveTarget(null);
-      Alert.alert('Berhasil', 'Lapangan disetujui.');
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Lapangan disetujui.' });
       fetchFields();
     } catch (e: any) {
-      Alert.alert('Gagal', e.message || 'Gagal menyetujui lapangan.');
+      useToastStore.getState().show({ type: 'error', title: 'Gagal', description: e.message || 'Gagal menyetujui lapangan.' });
     } finally {
       setSubmittingId(null);
     }
@@ -225,7 +226,7 @@ export default function PendingFieldsPage() {
       </Modal>
 
       {/* Approve Confirm Modal */}
-      <ConfirmActionModal
+      <ConfirmDialog
         visible={!!approveTarget}
         title={`Setujui "${approveTarget?.name ?? ''}"?`}
         description="Lapangan akan disetujui dan terlihat oleh semua pengguna."
@@ -234,11 +235,8 @@ export default function PendingFieldsPage() {
         iconBg={COLORS.primaryContainer}
         loading={submittingId !== null}
         onCancel={() => setApproveTarget(null)}
-        options={[{
-          label: 'Setujui Lapangan',
-          icon: 'verified',
-          onPress: confirmApprove,
-        }]}
+        confirmLabel="Setujui Lapangan"
+        onConfirm={confirmApprove}
       />
     </>
   );

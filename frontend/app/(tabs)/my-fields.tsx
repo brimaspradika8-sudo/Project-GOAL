@@ -9,7 +9,6 @@ import {
   StatusBar,
   RefreshControl,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -20,6 +19,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeImage } from '../../components/SafeImage';
 import type { Field } from '../../store/fieldStore';
 import { useTheme } from '../../lib/theme';
+import ConfirmDialog from '../../components/shared/ConfirmDialog';
+import { useToastStore } from '../../store/toastStore';
 
 const DEFAULT_IMAGES: Record<string, string> = {
   futsal: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
@@ -47,6 +48,8 @@ export default function MyFieldsScreen() {
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const { colors } = useTheme();
+  const [deleteTarget, setDeleteTarget] = useState<Field | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fetchFields = useCallback(async (pageNum: number = 1, append = false) => {
     try {
@@ -101,31 +104,27 @@ export default function MyFieldsScreen() {
   }, [page, lastPage, loadingMore, fetchFields]);
 
   const handleDelete = (field: Field) => {
-    Alert.alert(
-      'Hapus Lapangan',
-      `Yakin ingin menghapus "${field.name}"?`,
-      [
-        { text: 'Batal', style: 'cancel' },
-        {
-          text: 'Hapus',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const token = await AsyncStorage.getItem(TOKEN_KEY);
-              const res = await fetch(`${API_BASE_URL}/fields/${field.id}`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-              });
-              if (res.ok) {
-                setFields((prev) => prev.filter((f) => f.id !== field.id));
-              }
-            } catch {
-              Alert.alert('Gagal', 'Terjadi kesalahan saat menghapus.');
-            }
-          },
-        },
-      ]
-    );
+    setDeleteTarget(field);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      });
+      if (res.ok) {
+        setFields((prev) => prev.filter((f) => f.id !== deleteTarget.id));
+        setDeleteTarget(null);
+      }
+    } catch {
+      useToastStore.getState().show({ type: 'error', title: 'Gagal', description: 'Terjadi kesalahan saat menghapus.' });
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   const renderFooter = () => {
@@ -242,6 +241,17 @@ export default function MyFieldsScreen() {
         }
         onEndReached={onEndReached}
         onEndReachedThreshold={0.4}
+      />
+
+      <ConfirmDialog
+        visible={!!deleteTarget}
+        title={`Hapus "${deleteTarget?.name ?? ''}"?`}
+        description="Yakin ingin menghapus lapangan ini? Tindakan ini tidak bisa dibatalkan."
+        destructive
+        loading={deleteLoading}
+        confirmLabel="Ya, Hapus"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </View>
   );

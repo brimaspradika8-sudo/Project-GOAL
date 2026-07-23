@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  Alert, RefreshControl,
+  RefreshControl,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -9,7 +9,8 @@ import { TOKEN_KEY } from '../../app/_layout';
 import { API_BASE_URL } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
-import ConfirmActionModal from './ConfirmActionModal';
+import ConfirmDialog from '../shared/ConfirmDialog';
+import { useToastStore } from '../../store/toastStore';
 
 export default function TrashedFieldsPage() {
   const [fields, setFields] = useState<any[]>([]);
@@ -32,7 +33,7 @@ export default function TrashedFieldsPage() {
       const data = await res.json().catch(() => ({}));
       setFields(data?.data ?? []);
     } catch {
-      Alert.alert('Error', 'Gagal memuat data.');
+      useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Gagal memuat data.' });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -60,13 +61,13 @@ export default function TrashedFieldsPage() {
       });
       if (res.ok) {
         setRestoreTarget(null);
-        Alert.alert('Berhasil', 'Lapangan dipulihkan.');
+        useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Lapangan dipulihkan.' });
         fetchFields();
       } else {
-        Alert.alert('Error', 'Gagal memulihkan.');
+        useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Gagal memulihkan.' });
       }
     } catch {
-      Alert.alert('Error', 'Tidak dapat terhubung ke server.');
+      useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Tidak dapat terhubung ke server.' });
     } finally {
       setRestoreLoading(false);
     }
@@ -90,13 +91,13 @@ export default function TrashedFieldsPage() {
       });
       if (res.ok) {
         setDeleteTarget(null);
-        Alert.alert('Berhasil', 'Lapangan dihapus permanen.');
+        useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Lapangan dihapus permanen.' });
         fetchFields();
       } else {
-        Alert.alert('Error', 'Gagal menghapus.');
+        useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Gagal menghapus.' });
       }
     } catch {
-      Alert.alert('Error', 'Tidak dapat terhubung ke server.');
+      useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Tidak dapat terhubung ke server.' });
     } finally {
       setDeleteLoading(false);
     }
@@ -180,7 +181,7 @@ export default function TrashedFieldsPage() {
       </ScrollView>
 
       {/* Restore Confirm Modal */}
-      <ConfirmActionModal
+      <ConfirmDialog
         visible={!!restoreTarget}
         title={`Pulihkan "${restoreTarget?.name ?? ''}"?`}
         description="Lapangan akan dikembalikan dan terlihat oleh semua pengguna."
@@ -189,15 +190,12 @@ export default function TrashedFieldsPage() {
         iconBg={COLORS.primaryContainer}
         loading={restoreLoading}
         onCancel={() => setRestoreTarget(null)}
-        options={[{
-          label: 'Pulihkan',
-          icon: 'restore',
-          onPress: confirmRestore,
-        }]}
+        confirmLabel="Pulihkan"
+        onConfirm={confirmRestore}
       />
 
       {/* Force Delete Confirm Modal */}
-      <ConfirmActionModal
+      <ConfirmDialog
         visible={!!deleteTarget}
         title={`Hapus permanen "${deleteTarget?.name ?? ''}"?`}
         description="Tindakan ini tidak bisa dibatalkan. Lapangan akan dihapus selamanya."
@@ -206,12 +204,9 @@ export default function TrashedFieldsPage() {
         iconBg={COLORS.errorContainer}
         loading={deleteLoading}
         onCancel={() => setDeleteTarget(null)}
-        options={[{
-          label: 'Ya, Hapus Permanen',
-          icon: 'delete',
-          destructive: true,
-          onPress: confirmForceDelete,
-        }]}
+        confirmLabel="Ya, Hapus Permanen"
+        destructive
+        onConfirm={confirmForceDelete}
       />
     </View>
   );
