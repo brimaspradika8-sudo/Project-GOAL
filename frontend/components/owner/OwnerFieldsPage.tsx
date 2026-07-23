@@ -5,6 +5,7 @@ import {
   Modal, KeyboardAvoidingView, Platform, TextInput,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useFieldStore } from '../../store/fieldStore';
@@ -383,7 +384,7 @@ export default function OwnerFieldsPage() {
   if (loading) {
     return (
       <View style={st.screen}>
-        <DashboardHeader title="Kelola Lapangan" subtitle="Kelola aset lapangan olahraga Anda" />
+        <DashboardHeader title="Kelola Lapangan" subtitle="Kelola aset lapangan olahraga Anda" onBack={() => router.push('/(tabs)')} />
         <SkeletonCards count={3} />
       </View>
     );
@@ -395,6 +396,7 @@ export default function OwnerFieldsPage() {
         <DashboardHeader
           title="Kelola Lapangan"
           subtitle="Kelola aset lapangan olahraga Anda"
+          onBack={() => router.push('/(tabs)')}
           right={
             <TouchableOpacity style={st.headerAddBtn} activeOpacity={0.8} onPress={openCreate}>
               <MaterialIcons name="add" size={20} color={COLORS.primary} />
@@ -484,9 +486,9 @@ export default function OwnerFieldsPage() {
                         style={st.delBtn}
                         activeOpacity={0.8}
                         onPress={() => handleDelete(f.id, f.name)}
-                        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                       >
-                        <MaterialIcons name="delete-outline" size={18} color={COLORS.error} />
+                        <MaterialIcons name="delete-outline" size={16} color={COLORS.error} />
+                        <Text style={st.delBtnText}>Hapus</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -599,27 +601,31 @@ function FieldModal({
 
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             {/* Image picker */}
-            <Text style={st.fieldLabel}>Foto Venue (Utama)</Text>
-            <TouchableOpacity style={[st.imagePicker, errors.image && st.imagePickerError]} onPress={onPickImage} activeOpacity={0.8}>
-              {previewUri ? (
-                <>
-                  <Image source={{ uri: previewUri }} style={st.imagePreview} />
-                  <View style={st.imageEditOverlay}>
-                    <MaterialIcons name="photo-camera" size={20} color="#fff" />
-                    <Text style={st.imageEditText}>Ganti Foto</Text>
+            <View style={st.fieldWrap}>
+              <Text style={st.fieldLabel}>Foto Venue (Utama)</Text>
+              <TouchableOpacity style={[st.imagePicker, errors.image && st.imagePickerError]} onPress={onPickImage} activeOpacity={0.8}>
+                {previewUri ? (
+                  <View style={st.imagePreviewWrap}>
+                    <Image source={{ uri: previewUri }} style={st.imagePreview} resizeMode="cover" />
+                    <View style={st.imageEditOverlay}>
+                      <MaterialIcons name="photo-camera" size={18} color="#fff" />
+                      <Text style={st.imageEditText}>Ganti Foto</Text>
+                    </View>
                   </View>
-                </>
-              ) : (
-                <View style={st.imageEmpty}>
-                  <View style={st.imgDashedCircle}>
-                    <MaterialIcons name="add-photo-alternate" size={26} color={COLORS.primary} />
+                ) : (
+                  <View style={st.imageEmpty}>
+                    <View style={st.imgDashedCircle}>
+                      <MaterialIcons name="add-photo-alternate" size={22} color={COLORS.primary} />
+                    </View>
+                    <View style={st.imageEmptyTextCol}>
+                      <Text style={st.imageEmptyText}>Tap untuk memilih foto</Text>
+                      <Text style={st.imageEmptyHint}>Format JPG, PNG, WEBP (Maks 5MB)</Text>
+                    </View>
                   </View>
-                  <Text style={st.imageEmptyText}>Tap untuk memilih foto</Text>
-                  <Text style={st.imageEmptyHint}>Dari Galeri perangkat Anda (Maks 5MB)</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-            {errors.image ? <FieldError message={errors.image} /> : null}
+                )}
+              </TouchableOpacity>
+              {errors.image ? <FieldError message={errors.image} /> : null}
+            </View>
 
             {/* Nama Lapangan */}
             <FField
@@ -632,23 +638,25 @@ function FieldModal({
             />
 
             {/* Jenis Olahraga */}
-            <Text style={st.fieldLabel}>Jenis Olahraga</Text>
-            <View style={[st.sportRow, errors.sport_type && st.sportRowError]}>
-              {SPORT_OPTIONS.map(s => {
-                const active = form.sport_type === SPORT_MAP[s];
-                return (
-                  <TouchableOpacity
-                    key={s}
-                    style={[st.sportChip, active && st.sportChipActive]}
-                    onPress={() => onFieldChange('sport_type', SPORT_MAP[s])}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[st.sportChipText, active && st.sportChipTextActive]}>{s}</Text>
-                  </TouchableOpacity>
-                );
-              })}
+            <View style={st.fieldWrap}>
+              <Text style={st.fieldLabel}>Jenis Olahraga</Text>
+              <View style={[st.sportRow, errors.sport_type && st.sportRowError]}>
+                {SPORT_OPTIONS.map(s => {
+                  const active = form.sport_type === SPORT_MAP[s];
+                  return (
+                    <TouchableOpacity
+                      key={s}
+                      style={[st.sportChip, active && st.sportChipActive]}
+                      onPress={() => onFieldChange('sport_type', SPORT_MAP[s])}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[st.sportChipText, active && st.sportChipTextActive]}>{s}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {errors.sport_type ? <FieldError message={errors.sport_type} /> : null}
             </View>
-            {errors.sport_type ? <FieldError message={errors.sport_type} /> : null}
 
             {/* Deskripsi */}
             <FField
@@ -747,9 +755,9 @@ const st = StyleSheet.create({
   statsRow: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.surface,
-    marginHorizontal: SIZES.gutter, marginTop: 14,
+    marginHorizontal: SIZES.gutter, marginTop: 8,
     borderRadius: SIZES.borderRadius, borderWidth: 1,
-    borderColor: COLORS.outline, paddingVertical: 12, paddingHorizontal: 16,
+    borderColor: COLORS.outline, paddingVertical: 8, paddingHorizontal: 16,
     ...SHADOWS.xs,
   },
   statItem: { flex: 1, alignItems: 'center' },
@@ -803,33 +811,60 @@ const st = StyleSheet.create({
   detailText: { ...FONTS.bodyMd, color: COLORS.textSecondary, flex: 1 },
 
   actions: {
-    flexDirection: 'row', gap: 12, marginTop: 14, paddingTop: 14,
-    borderTopWidth: 1, borderTopColor: COLORS.outline,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.outline,
   },
   editBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: COLORS.primaryContainer, paddingVertical: 12,
-    borderRadius: 12, borderWidth: 1, borderColor: COLORS.primary + '30',
-    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#ecfdf5',
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
   },
-  editBtnText: { ...FONTS.titleSm, color: COLORS.primary },
+  editBtnText: { ...FONTS.titleSm, fontSize: 12, color: COLORS.primary },
   delBtn: {
-    width: 44, height: 44, justifyContent: 'center', alignItems: 'center',
-    backgroundColor: COLORS.errorContainer, borderRadius: 12,
-    borderWidth: 1, borderColor: COLORS.error + '30',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#fef2f2',
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fecaca',
   },
+  delBtnText: { ...FONTS.titleSm, fontSize: 12, color: COLORS.error },
 
   // Modal styling
-  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   sheet: {
     backgroundColor: COLORS.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    padding: 24, paddingBottom: Platform.OS === 'ios' ? 36 : 24,
     borderTopWidth: 1, borderColor: COLORS.outline, maxHeight: '90%',
+    maxWidth: 640, width: '100%', alignSelf: 'center',
+    ...(Platform.OS === 'web' ? {
+      borderBottomLeftRadius: 28,
+      borderBottomRightRadius: 28,
+      marginBottom: 'auto',
+      marginTop: 'auto',
+    } : {}),
   },
-  sheetHandle: { width: 48, height: 5, borderRadius: 3, backgroundColor: COLORS.outline, alignSelf: 'center', marginBottom: 20 },
-  sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
-  sheetIconWrap: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  sheetTitle: { ...FONTS.headlineSm, color: COLORS.text, flex: 1 },
+  sheetHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: COLORS.outline, alignSelf: 'center', marginBottom: 18 },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 18 },
+  sheetIconWrap: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  sheetTitle: { ...FONTS.headlineSm, fontSize: 18, color: COLORS.text, flex: 1 },
   sheetClose: { padding: 6, backgroundColor: COLORS.surfaceContainerLow, borderRadius: 20 },
   errorBox: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
@@ -840,48 +875,51 @@ const st = StyleSheet.create({
 
   // Image picker
   imagePicker: {
-    borderRadius: 16, overflow: 'hidden', marginBottom: 6,
-    backgroundColor: COLORS.surfaceContainerLow, borderWidth: 2,
+    borderRadius: 16, overflow: 'hidden',
+    backgroundColor: COLORS.surfaceContainerLow, borderWidth: 1.5,
     borderStyle: 'dashed', borderColor: COLORS.outline,
+    minHeight: 90, justifyContent: 'center',
   },
   imagePickerError: { borderColor: COLORS.error },
-  imagePreview: { width: '100%', height: 180 },
+  imagePreviewWrap: { width: '100%', height: 130, position: 'relative' },
+  imagePreview: { width: '100%', height: '100%' },
   imageEditOverlay: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center',
-    flexDirection: 'row', gap: 8, paddingVertical: 12,
+    backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'row', gap: 6, paddingVertical: 8,
   },
-  imageEditText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  imageEmpty: { alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 36 },
+  imageEditText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  imageEmpty: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 16 },
+  imageEmptyTextCol: { flex: 1 },
   imgDashedCircle: {
-    width: 50, height: 50, borderRadius: 25,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: COLORS.primaryContainer, justifyContent: 'center',
-    alignItems: 'center', marginBottom: 4,
+    alignItems: 'center',
   },
-  imageEmptyText: { ...FONTS.titleSm, color: COLORS.text },
-  imageEmptyHint: { ...FONTS.bodySm, color: COLORS.textSecondary },
+  imageEmptyText: { ...FONTS.titleSm, fontSize: 13, color: COLORS.text },
+  imageEmptyHint: { ...FONTS.bodySm, fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
 
   // Sport chips
-  sportRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 6 },
+  sportRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   sportRowError: { borderColor: COLORS.error },
   sportChip: {
-    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12,
+    paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20,
     backgroundColor: COLORS.surfaceContainerLow, borderWidth: 1, borderColor: COLORS.outline,
   },
-  sportChipActive: { backgroundColor: COLORS.primaryContainer, borderColor: COLORS.primary },
-  sportChipText: { ...FONTS.labelMd, color: COLORS.textSecondary },
-  sportChipTextActive: { color: COLORS.primary, fontWeight: '700' },
+  sportChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  sportChipText: { ...FONTS.labelMd, fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
+  sportChipTextActive: { color: '#ffffff', fontWeight: '700' },
 
   // Field input
-  fieldWrap: { marginBottom: 16 },
-  fieldLabel: { ...FONTS.labelSm, color: COLORS.textSecondary, marginBottom: 8, letterSpacing: 0.5, textTransform: 'uppercase' },
+  fieldWrap: { marginBottom: 20 },
+  fieldLabel: { ...FONTS.labelSm, fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 10, letterSpacing: 0.6, textTransform: 'uppercase' },
   fieldRow: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.surfaceContainerLow, borderRadius: 14,
-    paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1.5, borderColor: COLORS.outline,
+    paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1.5, borderColor: COLORS.outline,
   },
   fieldRowError: { borderColor: COLORS.error, backgroundColor: COLORS.errorContainer + '30' },
-  fieldInput: { flex: 1, color: COLORS.text, fontSize: 15, paddingVertical: 0 },
+  fieldInput: { flex: 1, color: COLORS.text, fontSize: 14, paddingVertical: 0 },
 
   fieldErrorRow: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -889,10 +927,19 @@ const st = StyleSheet.create({
   },
   fieldErrorText: { ...FONTS.bodySm, color: COLORS.error, flex: 1 },
 
-  sheetActions: { marginTop: 10 },
-  submitBtn: {
-    width: '100%', paddingVertical: 16, borderRadius: 14,
-    alignItems: 'center', minHeight: 50, justifyContent: 'center',
+  sheetActions: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.outline,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
   },
-  submitText: { ...FONTS.titleSm, color: COLORS.onPrimary },
+  submitBtn: {
+    maxWidth: 320, width: '100%', paddingVertical: 14, paddingHorizontal: 24,
+    borderRadius: 14, alignItems: 'center', minHeight: 48, justifyContent: 'center',
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15, shadowRadius: 6, elevation: 3,
+  },
+  submitText: { ...FONTS.titleSm, fontSize: 14, fontWeight: '700', color: COLORS.onPrimary },
 });

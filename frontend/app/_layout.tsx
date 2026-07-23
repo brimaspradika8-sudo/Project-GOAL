@@ -17,7 +17,20 @@ import { ThemeProvider, useTheme } from '../lib/theme';
 import AppToast from '../components/shared/AppToast';
 import { useToastStore } from '../store/toastStore';
 
+import { Platform } from 'react-native';
+
 export const TOKEN_KEY = 'auth_token';
+
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const fontLinkId = 'google-fonts-plus-jakarta';
+  if (!document.getElementById(fontLinkId)) {
+    const link = document.createElement('link');
+    link.id = fontLinkId;
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap';
+    document.head.appendChild(link);
+  }
+}
 
 async function fetchProfile(token: string) {
   const controller = new AbortController();

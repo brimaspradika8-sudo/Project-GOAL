@@ -25,7 +25,10 @@ class FieldService
         }
 
         if ($sport) {
-            $query->where('sport_type', $sport);
+            $query->where(function ($q) use ($sport) {
+                $q->where('sport_type', $sport)
+                  ->orWhereRaw('LOWER(sport_type) = ?', [strtolower($sport)]);
+            });
         }
 
         return $query->latest()->paginate(15, ['*'], 'page', $page);
@@ -37,12 +40,15 @@ class FieldService
             return $this->listApproved($search, $sport, $page);
         }
 
-        $cacheKey = $this->cachePrefix . 'approved_' . ($sport ?? 'all');
+        $cacheKey = $this->cachePrefix . 'approved_' . strtolower($sport ?? 'all');
 
         return Cache::remember($cacheKey, $this->cacheTtl, function () use ($sport) {
             return Field::approved()
                 ->with('owner:id,name')
-                ->when($sport, fn ($q) => $q->where('sport_type', $sport))
+                ->when($sport, fn ($q) => $q->where(function ($sq) use ($sport) {
+                    $sq->where('sport_type', $sport)
+                       ->orWhereRaw('LOWER(sport_type) = ?', [strtolower($sport)]);
+                }))
                 ->latest()
                 ->paginate(15);
         });
@@ -51,7 +57,7 @@ class FieldService
     public function invalidateCache(): void
     {
         Cache::forget($this->cachePrefix . 'approved_all');
-        foreach (['futsal', 'basketball', 'badminton', 'mini_soccer', 'tennis'] as $sport) {
+        foreach (['futsal', 'basketball', 'basket', 'badminton', 'mini_soccer', 'tennis', 'tenis', 'volleyball', 'voli', 'other', 'lainnya'] as $sport) {
             Cache::forget($this->cachePrefix . 'approved_' . $sport);
         }
     }

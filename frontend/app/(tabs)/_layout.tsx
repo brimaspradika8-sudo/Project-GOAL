@@ -96,10 +96,12 @@ export default function TabLayout() {
   );
 }
 
+import { FONT_FAMILY } from '../../components/goalTheme';
+
 const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   tabBar: {
     backgroundColor: colors.surface,
-    borderTopWidth: 0,
+    borderTopWidth: Platform.OS === 'web' ? 1 : 0,
     borderTopColor: colors.outline,
     height: Platform.OS === 'ios' ? 88 : 64,
     paddingTop: Platform.OS === 'ios' ? 10 : 8,
@@ -109,9 +111,21 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 8,
+    ...(Platform.OS === 'web' ? {
+      maxWidth: 640,
+      width: '100%' as any,
+      marginHorizontal: 'auto' as any,
+      alignSelf: 'center' as any,
+      borderTopWidth: 1,
+      borderLeftWidth: 1,
+      borderRightWidth: 1,
+      borderColor: colors.outline,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+    } : {}),
   },
   tabLabel: {
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 0.3,

@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { COLORS, FONTS, SHADOWS } from '../goalTheme';
 import ThemeToggle from '../ThemeToggle';
 import { useTheme } from '../../lib/theme';
@@ -8,10 +10,20 @@ interface DashboardHeaderProps {
   title: string;
   subtitle?: string;
   right?: React.ReactNode;
+  showBack?: boolean;
+  onBack?: () => void;
 }
 
-export default function DashboardHeader({ title, subtitle, right }: DashboardHeaderProps) {
+export default function DashboardHeader({ title, subtitle, right, showBack = true, onBack }: DashboardHeaderProps) {
   const { colors } = useTheme();
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      router.push('/(tabs)');
+    }
+  };
 
   return (
     <View style={[st.wrap, { backgroundColor: colors.primary }]}>
@@ -19,6 +31,12 @@ export default function DashboardHeader({ title, subtitle, right }: DashboardHea
       <View style={st.blobBottomRight} />
 
       <View style={st.content}>
+        {showBack ? (
+          <TouchableOpacity style={st.backBtn} activeOpacity={0.8} onPress={handleBack}>
+            <MaterialIcons name="arrow-back" size={20} color={colors.primary} />
+          </TouchableOpacity>
+        ) : null}
+
         <View style={st.textGroup}>
           <Text style={[st.title, { color: colors.onPrimary }]} numberOfLines={1}>{title}</Text>
           {subtitle ? (
@@ -36,8 +54,8 @@ export default function DashboardHeader({ title, subtitle, right }: DashboardHea
 
 const st = StyleSheet.create({
   wrap: {
-    paddingTop: Platform.OS === 'ios' ? 56 : 44,
-    paddingBottom: 24,
+    paddingTop: Platform.OS === 'ios' ? 44 : 26,
+    paddingBottom: 16,
     paddingHorizontal: 20,
     overflow: 'hidden',
     position: 'relative',
@@ -70,6 +88,16 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     zIndex: 1,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.surfaceWhite,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    ...SHADOWS.xs,
   },
   textGroup: {
     flex: 1,
