@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView,
-  StyleSheet, Alert, Platform,
+  StyleSheet,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -23,45 +23,28 @@ export default function AdminProfilePage() {
   const { profile, clearProfile } = useProfileStore();
   const role = profile?.role ?? 'admin';
   const initials = (profile?.full_name || profile?.username || 'A').charAt(0).toUpperCase();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
 
-  const handleSignOut = () => {
-    const doLogout = async () => {
-      try {
-        const token = await AsyncStorage.getItem(TOKEN_KEY);
-        if (token) {
-          await fetch(`${API_BASE_URL}/auth/logout`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}` },
-          }).catch(() => {});
-        }
-        await AsyncStorage.removeItem(TOKEN_KEY);
-        await clearProfile();
-        router.dismissAll();
-        router.replace('/login');
-      } catch {
-        if (Platform.OS === 'web') {
-          alert('Terjadi kesalahan saat keluar akun.');
-        } else {
-          Alert.alert('Gagal', 'Terjadi kesalahan saat keluar akun.');
-        }
+  const doActualLogout = async () => {
+    setLogoutLoading(true);
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      if (token) {
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => {});
       }
-    };
-
-    if (Platform.OS === 'web') {
-      if (window.confirm('Yakin ingin keluar dari akun?')) {
-        doLogout();
-      }
-      return;
+      await AsyncStorage.removeItem(TOKEN_KEY);
+      await clearProfile();
+      router.dismissAll();
+      router.replace('/login');
+    } catch {
+      useToastStore.getState().show({ type: 'error', title: 'Gagal', description: 'Terjadi kesalahan saat keluar akun.' });
+    } finally {
+      setLogoutLoading(false);
     }
-
-    Alert.alert('Keluar Akun', 'Yakin ingin keluar dari akun?', [
-      { text: 'Batal', style: 'cancel' },
-      {
-        text: 'Keluar',
-        style: 'destructive',
-        onPress: doLogout,
-      },
-    ]);
   };
 
   const MENU_ITEMS = [
@@ -73,7 +56,7 @@ export default function AdminProfilePage() {
     {
       icon: 'help-outline' as const,
       label: 'Pusat Bantuan',
-      onPress: () => Alert.alert('Segera Hadir', 'Pusat bantuan akan segera tersedia.'),
+      onPress: () => useToastStore.getState().show({ type: 'info', title: 'Segera Hadir', description: 'Pusat bantuan akan segera tersedia.' }),
     },
   ];
 
@@ -128,13 +111,24 @@ export default function AdminProfilePage() {
         </View>
 
         {/* Sign out */}
-        <TouchableOpacity style={st.signOutBtn} onPress={handleSignOut} activeOpacity={0.8}>
+        <TouchableOpacity style={st.signOutBtn} onPress={() => setShowLogoutConfirm(true)} activeOpacity={0.8}>
           <MaterialIcons name="logout" size={20} color={COLORS.error} />
           <Text style={st.signOutText}>Keluar Akun</Text>
         </TouchableOpacity>
 
         <Text style={st.version}>GOAL v1.0.0</Text>
       </ScrollView>
+
+      <ConfirmDialog
+        visible={showLogoutConfirm}
+        title="Keluar Akun"
+        description="Yakin ingin keluar dari akun?"
+        confirmLabel="Keluar"
+        destructive
+        loading={logoutLoading}
+        onConfirm={doActualLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </View>
   );
 }

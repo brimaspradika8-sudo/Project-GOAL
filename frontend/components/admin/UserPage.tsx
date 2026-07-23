@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  Alert, TextInput, RefreshControl,
+  TextInput, RefreshControl,
   Modal, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -13,7 +13,8 @@ import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { useDebounce } from '../../hooks/useDebounce';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
-import ConfirmActionModal from './ConfirmActionModal';
+import ConfirmDialog from '../shared/ConfirmDialog';
+import { useToastStore } from '../../store/toastStore';
 
 const ROLE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   player:      { label: 'Pemain',      color: '#1d6fab', bg: '#dbeafe' },
@@ -71,7 +72,7 @@ export default function UserPage() {
       const data = await res.json();
       setUsers(data?.data ?? []);
     } catch {
-      Alert.alert('Error', 'Gagal memuat data pengguna.');
+      useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Gagal memuat data pengguna.' });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -124,7 +125,7 @@ export default function UserPage() {
       }
       setShowCreate(false);
       setCreateForm(EMPTY_CREATE);
-      Alert.alert('Berhasil', 'User baru berhasil ditambahkan.');
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'User baru berhasil ditambahkan.' });
       fetchUsers(search);
     } catch {
       setCreateError('Gagal terhubung ke server.');
@@ -164,7 +165,7 @@ export default function UserPage() {
         return;
       }
       setEditTarget(null);
-      Alert.alert('Berhasil', 'Data user berhasil diperbarui.');
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Data user berhasil diperbarui.' });
       fetchUsers(search);
     } catch {
       setEditError('Gagal terhubung ke server.');
@@ -181,7 +182,7 @@ export default function UserPage() {
     try {
       await updateUserRole(upgradeTarget.id, newRole);
       setUpgradeTarget(null);
-      Alert.alert('Berhasil', `Role berhasil diubah menjadi ${ROLE_CONFIG[newRole]?.label ?? newRole}.`);
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: `Role berhasil diubah menjadi ${ROLE_CONFIG[newRole]?.label ?? newRole}.` });
       fetchUsers(search);
     } catch (e: any) {
       setUpgradeError(e.message || 'Gagal memperbarui role.');
@@ -207,7 +208,7 @@ export default function UserPage() {
         return;
       }
       setDeleteTarget(null);
-      Alert.alert('Berhasil', 'User dihapus.');
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'User dihapus.' });
       fetchUsers(search);
     } catch {
       setDeleteError('Tidak dapat terhubung ke server.');
@@ -514,7 +515,7 @@ export default function UserPage() {
       </Modal>
 
       {/* ── UPGRADE ROLE MODAL ── */}
-      <ConfirmActionModal
+      <ConfirmDialog
         visible={!!upgradeTarget}
         title={`Upgrade Role — ${upgradeTarget?.name ?? ''}`}
         description="Pilih role baru untuk user ini."
@@ -544,22 +545,16 @@ export default function UserPage() {
       />
 
       {/* ── DELETE CONFIRM MODAL ── */}
-      <ConfirmActionModal
+      <ConfirmDialog
         visible={!!deleteTarget}
         title={`Hapus "${deleteTarget?.name ?? ''}"?`}
         description="Tindakan ini tidak bisa dibatalkan. User dan semua data terkait akan dihapus permanen."
-        icon="delete-forever"
-        iconColor={COLORS.error}
-        iconBg={COLORS.errorContainer}
+        destructive
         loading={deleteLoading}
         error={deleteError}
         onCancel={() => setDeleteTarget(null)}
-        options={[{
-          label: 'Ya, Hapus',
-          icon: 'delete',
-          destructive: true,
-          onPress: handleDeleteUser,
-        }]}
+        confirmLabel="Ya, Hapus"
+        onConfirm={handleDeleteUser}
       />
     </>
   );

@@ -7,7 +7,6 @@ import {
   ScrollView,
   Platform,
   StatusBar,
-  Alert,
   Image,
   Modal,
   ActivityIndicator,

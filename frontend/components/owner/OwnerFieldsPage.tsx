@@ -13,6 +13,8 @@ import { API_BASE_URL, getErrorMessage } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
+import ConfirmDialog from '../shared/ConfirmDialog';
+import { useToastStore } from '../../store/toastStore';
 import {
   SPORT_OPTIONS, SPORT_MAP,
   type FieldFormErrors, type FieldFormData,
@@ -71,7 +73,7 @@ export default function OwnerFieldsPage() {
       const data = await res.json().catch(() => ({}));
       setFields(data?.data ?? []);
     } catch {
-      Alert.alert('Error', 'Gagal memuat data lapangan.');
+      useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Gagal memuat data lapangan.' });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -237,7 +239,7 @@ export default function OwnerFieldsPage() {
         return;
       }
       setShowCreate(false);
-      Alert.alert('Berhasil', 'Lapangan berhasil ditambahkan dan menunggu approval Super Admin.');
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Lapangan berhasil ditambahkan dan menunggu approval Super Admin.' });
       await useFieldStore.getState().clearCache().catch(() => {});
       fetchFields();
     } catch {
@@ -305,7 +307,7 @@ export default function OwnerFieldsPage() {
         return;
       }
       setEditTarget(null);
-      Alert.alert('Berhasil', 'Data lapangan berhasil diperbarui.');
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Data lapangan berhasil diperbarui.' });
       await useFieldStore.getState().clearCache().catch(() => {});
       fetchFields();
     } catch {
@@ -346,29 +348,33 @@ export default function OwnerFieldsPage() {
     }
   };
 
-  const handleDelete = (id: number, name: string) => {
-    const doDelete = async () => {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/fields/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Accept': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (res.ok) {
-        Alert.alert('Berhasil', 'Lapangan dihapus.');
-        await useFieldStore.getState().clearCache().catch(() => {});
-        fetchFields();
-      } else {
-        Alert.alert('Error', 'Gagal menghapus lapangan.');
-      }
-    };
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
-    Alert.alert('Hapus Lapangan', `Apakah Anda yakin ingin menghapus lapangan "${name}"?`, [
-      { text: 'Batal', style: 'cancel' },
-      { text: 'Hapus', style: 'destructive', onPress: doDelete },
-    ]);
+  const handleDelete = (id: number, name: string) => {
+    setDeleteTarget({ id, name });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}`, {
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (res.ok) {
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Lapangan dihapus.' });
+      setDeleteTarget(null);
+      await useFieldStore.getState().clearCache().catch(() => {});
+      fetchFields();
+    } else {
+      useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Gagal menghapus lapangan.' });
+    }
+    setDeleteLoading(false);
   };
 
   const activeCount = fields.filter(f => f.status === 'approved').length;
@@ -529,6 +535,17 @@ export default function OwnerFieldsPage() {
         onSubmit={handleEdit}
         submitLabel="Simpan Perubahan"
         submitBg="#6d28d9"
+      />
+
+      <ConfirmDialog
+        visible={!!deleteTarget}
+        title={`Hapus "${deleteTarget?.name ?? ''}"?`}
+        description="Apakah Anda yakin ingin menghapus lapangan ini? Tindakan ini tidak bisa dibatalkan."
+        destructive
+        loading={deleteLoading}
+        confirmLabel="Ya, Hapus"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </>
   );
