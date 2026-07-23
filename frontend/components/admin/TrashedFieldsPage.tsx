@@ -4,7 +4,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from '../../lib/secureStorage';
 import { TOKEN_KEY } from '../../app/_layout';
 import { API_BASE_URL } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
@@ -23,7 +23,7 @@ export default function TrashedFieldsPage() {
 
   const fetchFields = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/trashed/list`, {
         headers: {
           'Accept': 'application/json',
@@ -51,7 +51,7 @@ export default function TrashedFieldsPage() {
     if (!restoreTarget) return;
     setRestoreLoading(true);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/${restoreTarget.id}/restore`, {
         method: 'POST',
         headers: {
@@ -81,7 +81,7 @@ export default function TrashedFieldsPage() {
     if (!deleteTarget) return;
     setDeleteLoading(true);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}/force`, {
         method: 'DELETE',
         headers: {

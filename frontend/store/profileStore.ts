@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from '../lib/secureStorage';
 import { API_BASE_URL } from '../lib/api';
 import { TOKEN_KEY } from '../app/_layout';
 
@@ -46,7 +47,7 @@ export const useProfileStore = create<ProfileState>((set) => ({
     }
 
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (!token) {
         set({ profile: null, loading: false });
         return;

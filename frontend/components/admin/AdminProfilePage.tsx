@@ -4,7 +4,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from '../../lib/secureStorage';
 import { router } from 'expo-router';
 import { useProfileStore } from '../../store/profileStore';
 import { TOKEN_KEY } from '../../app/_layout';
@@ -29,14 +29,14 @@ export default function AdminProfilePage() {
   const doActualLogout = async () => {
     setLogoutLoading(true);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (token) {
         await fetch(`${API_BASE_URL}/auth/logout`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         }).catch(() => {});
       }
-      await AsyncStorage.removeItem(TOKEN_KEY);
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
       await clearProfile();
       router.dismissAll();
       router.replace('/login');

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Platform, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from '../../lib/secureStorage';
 import { useProfileStore } from '../../store/profileStore';
 import { TOKEN_KEY } from '../_layout';
 import { API_BASE_URL } from '../../lib/api';
@@ -21,7 +21,7 @@ export default function AdminTabLayout() {
   useEffect(() => {
     const fetchBadges = async () => {
       try {
-        const token = await AsyncStorage.getItem(TOKEN_KEY);
+        const token = await SecureStore.getItemAsync(TOKEN_KEY);
         if (!token) return;
         const headers = {
           'Accept': 'application/json',
@@ -53,7 +53,7 @@ export default function AdminTabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: [styles.tabBar, { backgroundColor: colors.surface, borderTopColor: colors.outline }],
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: colors.adminAccent,
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabelStyle: styles.tabLabel,
         tabBarItemStyle: styles.tabItem,

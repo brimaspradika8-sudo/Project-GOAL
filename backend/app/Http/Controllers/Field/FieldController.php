@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Http\Controllers\Field;
-
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Field\StoreFieldRequest;
 use App\Http\Requests\Field\UpdateFieldRequest;
@@ -84,7 +83,7 @@ class FieldController extends Controller
             return response()->json(['message' => 'Anda bukan pemilik lapangan ini.'], 403);
         }
 
-        $field = $this->fieldService->update($field, $request->validated());
+        $field = $this->fieldService->update($field, $request->validated(), $isAdmin);
 
         $this->fieldService->invalidateCache();
 
@@ -139,7 +138,8 @@ class FieldController extends Controller
         $field = $this->fieldService->approve(
             $field,
             $request->user(),
-            $request->status
+            $request->status,
+            $request->reason
         );
 
         $this->fieldService->invalidateCache();

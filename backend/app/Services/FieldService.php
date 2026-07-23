@@ -57,7 +57,11 @@ class FieldService
     public function invalidateCache(): void
     {
         Cache::forget($this->cachePrefix . 'approved_all');
+<<<<<<< HEAD
         foreach (['futsal', 'basketball', 'basket', 'badminton', 'mini_soccer', 'tennis', 'tenis', 'volleyball', 'voli', 'other', 'lainnya'] as $sport) {
+=======
+        foreach (config('goal.sport_types', []) as $sport) {
+>>>>>>> 80644d4 (fix backend)
             Cache::forget($this->cachePrefix . 'approved_' . $sport);
         }
     }
@@ -101,11 +105,11 @@ class FieldService
         ]);
     }
 
-    public function update(Field $field, array $data): Field
+    public function update(Field $field, array $data, bool $isAdmin = false): Field
     {
         $field->update($data);
 
-        if ($field->status === 'rejected') {
+        if ($field->status === 'rejected' || ($field->status === 'approved' && !$isAdmin)) {
             $field->update([
                 'status'      => 'pending',
                 'approved_by' => null,
@@ -121,12 +125,13 @@ class FieldService
         return $field->delete();
     }
 
-    public function approve(Field $field, User $approver, string $status): Field
+    public function approve(Field $field, User $approver, string $status, ?string $reason = null): Field
     {
         $field->update([
-            'status'      => $status,
-            'approved_by' => $approver->id,
-            'approved_at' => now(),
+            'status'           => $status,
+            'approved_by'      => $approver->id,
+            'approved_at'      => now(),
+            'rejection_reason' => $status === 'rejected' ? $reason : null,
         ]);
 
         return $field->fresh('owner:id,name', 'approver:id,name');

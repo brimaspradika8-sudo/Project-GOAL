@@ -7,7 +7,7 @@ import {
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from '../lib/secureStorage';
 import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage } from '../lib/api';
@@ -47,7 +47,7 @@ export default function ChangePasswordScreen() {
 
     setLoading(true);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/me/password`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${token}` },
