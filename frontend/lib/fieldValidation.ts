@@ -1,16 +1,6 @@
 export const SPORT_OPTIONS = ['Futsal', 'Basket', 'Badminton', 'Voli', 'Tenis', 'Mini Soccer', 'Lainnya'];
 
-export const SPORT_MAP: Record<string, string> = {
-  'Futsal': 'futsal',
-  'Basket': 'basketball',
-  'Badminton': 'badminton',
-  'Voli': 'volleyball',
-  'Tenis': 'tennis',
-  'Mini Soccer': 'mini_soccer',
-  'Lainnya': 'other',
-};
-
-export const VALID_SPORT_VALUES = Object.values(SPORT_MAP);
+export const VALID_SPORT_VALUES = [...SPORT_OPTIONS];
 
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
 const ALLOWED_IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp'];

@@ -5,8 +5,12 @@ import {
   Modal, KeyboardAvoidingView, Platform, TextInput,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+<<<<<<< HEAD
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+=======
+import * as SecureStore from '../../lib/secureStorage';
+>>>>>>> 80644d4 (fix backend)
 import * as ImagePicker from 'expo-image-picker';
 import { useFieldStore } from '../../store/fieldStore';
 import { TOKEN_KEY } from '../../app/_layout';
@@ -17,7 +21,7 @@ import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
 import {
-  SPORT_OPTIONS, SPORT_MAP,
+  SPORT_OPTIONS,
   type FieldFormErrors, type FieldFormData,
   EMPTY_ERRORS, validateAllFields, hasErrors,
   validateFieldName, validateFieldSportType, validateFieldPrice,
@@ -64,7 +68,7 @@ export default function OwnerFieldsPage() {
 
   const fetchFields = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/my/list`, {
         headers: {
           'Accept': 'application/json',
@@ -111,20 +115,31 @@ export default function OwnerFieldsPage() {
     isCreate: boolean,
   ) => {
     const touchedRef = isCreate ? createTouched : editTouched;
-    const shouldValidate = touchedRef.current[key] || key === 'sport_type' || key === 'image_uri';
+    const errorsRec = isCreate ? (createErrors as Record<string, string>) : (editErrors as Record<string, string>);
+    const instantKeys: (keyof FieldFormData)[] = ['sport_type', 'image_uri'];
     if (isCreate) {
       setCreateForm(p => {
         const next = { ...p, [key]: value };
-        if (shouldValidate) {
+        if (instantKeys.includes(key)) {
           validateSingleField(key, value, next, true);
+        } else if (touchedRef.current[key] && errorsRec[key]) {
+          const err = key === 'name' ? validateFieldName(value)
+            : key === 'price_per_hour' ? validateFieldPrice(value)
+            : key === 'description' ? validateFieldDescription(value) : '';
+          if (!err) setCreateErrors(prev => ({ ...prev, [key]: '' }));
         }
         return next;
       });
     } else {
       setEditForm(p => {
         const next = { ...p, [key]: value };
-        if (shouldValidate) {
+        if (instantKeys.includes(key)) {
           validateSingleField(key, value, next, false);
+        } else if (touchedRef.current[key] && errorsRec[key]) {
+          const err = key === 'name' ? validateFieldName(value)
+            : key === 'price_per_hour' ? validateFieldPrice(value)
+            : key === 'description' ? validateFieldDescription(value) : '';
+          if (!err) setEditErrors(prev => ({ ...prev, [key]: '' }));
         }
         return next;
       });
@@ -194,7 +209,7 @@ export default function OwnerFieldsPage() {
   const openCreate = () => {
     setCreateForm(EMPTY_FORM);
     setCreateError(null);
-    setCreateErrors(EMPTY_ERRORS);
+    setCreateErrors(validateAllFields(EMPTY_FORM));
     createTouched.current = {};
     setShowCreate(true);
   };
@@ -208,7 +223,7 @@ export default function OwnerFieldsPage() {
     setCreateLoading(true);
     setCreateError(null);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
 
       let imageUrl = createForm.image_url;
       if (createForm.image_uri && !imageUrl) {
@@ -276,7 +291,7 @@ export default function OwnerFieldsPage() {
     setEditLoading(true);
     setEditError(null);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
 
       let imageUrl = editForm.image_url;
       if (editForm.image_uri) {
@@ -359,7 +374,7 @@ export default function OwnerFieldsPage() {
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleteLoading(true);
-    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const token = await SecureStore.getItemAsync(TOKEN_KEY);
     const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}`, {
       method: 'DELETE',
       headers: {
@@ -465,7 +480,7 @@ export default function OwnerFieldsPage() {
                     </View>
                     <View style={st.detailRow}>
                       <MaterialIcons name="sports" size={14} color={COLORS.textSecondary} />
-                      <Text style={st.detailText}>{(Object.keys(SPORT_MAP).find(k => SPORT_MAP[k] === f.sport_type) || f.sport_type)?.toUpperCase()}</Text>
+                      <Text style={st.detailText}>{(SPORT_OPTIONS.includes(f.sport_type) ? f.sport_type : f.sport_type)?.toUpperCase()}</Text>
                     </View>
                     {f.description ? (
                       <View style={st.detailRow}>
@@ -577,7 +592,7 @@ function FieldModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={st.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={st.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
         <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={onClose} />
         <View style={st.sheet}>
           <View style={st.sheetHandle} />
@@ -638,6 +653,7 @@ function FieldModal({
             />
 
             {/* Jenis Olahraga */}
+<<<<<<< HEAD
             <View style={st.fieldWrap}>
               <Text style={st.fieldLabel}>Jenis Olahraga</Text>
               <View style={[st.sportRow, errors.sport_type && st.sportRowError]}>
@@ -656,6 +672,23 @@ function FieldModal({
                 })}
               </View>
               {errors.sport_type ? <FieldError message={errors.sport_type} /> : null}
+=======
+            <Text style={st.fieldLabel}>Jenis Olahraga</Text>
+            <View style={[st.sportRow, errors.sport_type && st.sportRowError]}>
+              {SPORT_OPTIONS.map(s => {
+                const active = form.sport_type === s;
+                return (
+                  <TouchableOpacity
+                    key={s}
+                    style={[st.sportChip, active && st.sportChipActive]}
+                    onPress={() => onFieldChange('sport_type', s)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[st.sportChipText, active && st.sportChipTextActive]}>{s}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+>>>>>>> 80644d4 (fix backend)
             </View>
 
             {/* Deskripsi */}

@@ -24,9 +24,12 @@ class AuthController extends Controller
                 'message' => 'Registrasi berhasil.',
                 ...$result,
             ], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
+            
         } catch (\Exception $e) {
-            // Catch any unexpected errors during registration and return a generic error message
-            // The actual error details are logged in AuthService.
             return response()->json(['message' => 'Registrasi gagal. Silakan coba lagi nanti.'], 500);
         }
     }
@@ -65,6 +68,8 @@ class AuthController extends Controller
 
     public function checkEmail(CheckEmailRequest $request): JsonResponse
     {
-        return response()->json(['message' => 'Request diterima.']);
+        $exists = $this->auth->checkEmail($request->email);
+
+        return response()->json(['exists' => $exists]);
     }
 }

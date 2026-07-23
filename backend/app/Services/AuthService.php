@@ -12,16 +12,19 @@ class AuthService
         $password = $data['password'];
         $name = trim($data['name']);
 
-        // Create or return local database user
-        $user = User::firstOrCreate(
-            ['email' => $email],
-            [
-                'name'     => $name,
-                'password' => Hash::make($password),
-            ]
-        );
+        if (User::where('email', $email)->exists()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'email' => ['Email sudah terdaftar.'],
+            ]);
+        }
 
-            $token = $user->createToken('app-token', ['*'], now()->addMonth())->plainTextToken;
+        $user = User::create([
+            'name'     => $name,
+            'email'    => $email,
+            'password' => Hash::make($password),
+        ]);
+
+        $token = $user->createToken('app-token', ['*'], now()->addMonth())->plainTextToken;
 
         return [
             'token' => $token,

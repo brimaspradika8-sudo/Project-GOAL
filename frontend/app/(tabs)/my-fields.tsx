@@ -15,7 +15,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { COLORS, SIZES, FONTS, SHADOWS } from '../../components/goalTheme';
 import { API_BASE_URL } from '../../lib/api';
 import { TOKEN_KEY } from '../_layout';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from '../../lib/secureStorage';
 import { SafeImage } from '../../components/SafeImage';
 import type { Field } from '../../store/fieldStore';
 import { useTheme } from '../../lib/theme';
@@ -23,9 +23,9 @@ import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
 
 const DEFAULT_IMAGES: Record<string, string> = {
-  futsal: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
-  basketball: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop',
-  badminton: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?q=80&w=800&auto=format&fit=crop',
+  Futsal: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
+  Basket: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop',
+  Badminton: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?q=80&w=800&auto=format&fit=crop',
   default: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
 };
 
@@ -53,7 +53,7 @@ export default function MyFieldsScreen() {
 
   const fetchFields = useCallback(async (pageNum: number = 1, append = false) => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (!token) return;
 
       const controller = new AbortController();
@@ -111,7 +111,7 @@ export default function MyFieldsScreen() {
     if (!deleteTarget) return;
     setDeleteLoading(true);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },

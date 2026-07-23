@@ -13,7 +13,7 @@ export default function OwnerTabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: [styles.tabBar, { backgroundColor: colors.surface, borderTopColor: colors.outline }],
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: colors.ownerAccent,
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabelStyle: styles.tabLabel,
         tabBarItemStyle: styles.tabItem,

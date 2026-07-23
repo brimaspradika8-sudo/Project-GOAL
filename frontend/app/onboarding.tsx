@@ -19,7 +19,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from '../lib/secureStorage';
 import { router } from 'expo-router';
 import { API_BASE_URL } from '../lib/api';
 import { useProfileStore } from '../store/profileStore';
@@ -123,14 +123,14 @@ export default function OnboardingScreen() {
 
   async function handleSignOut() {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (token) {
         await fetch(`${API_BASE_URL}/auth/logout`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         }).catch(() => {});
       }
-      await AsyncStorage.removeItem(TOKEN_KEY);
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
       useProfileStore.getState().clearProfile();
       router.replace('/login');
     } catch {}
@@ -153,7 +153,7 @@ export default function OnboardingScreen() {
     const timeout = setTimeout(() => controller.abort(), 8000);
 
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/me/onboarding`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },

@@ -7,7 +7,7 @@ import { StyleSheet, View } from 'react-native';
 import LoadingScreen from '../components/LoadingScreen';
 import SplashScreen from '../components/SplashScreen';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from '../lib/secureStorage';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { API_BASE_URL } from '../lib/api';
@@ -93,7 +93,7 @@ function RootLayoutInner() {
     const profile = await fetchProfile(token);
 
     if (!profile) {
-      await AsyncStorage.removeItem(TOKEN_KEY);
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
       useProfileStore.getState().clearProfile();
       routeToLogin();
       return;
@@ -124,7 +124,7 @@ function RootLayoutInner() {
     const initialize = async () => {
       setLoadingMessage('Memeriksa sesi');
 
-      const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
+      const storedToken = await SecureStore.getItemAsync(TOKEN_KEY);
       if (storedToken) {
         const profile = await fetchProfile(storedToken);
         if (profile) {
@@ -137,7 +137,7 @@ function RootLayoutInner() {
             router.replace('/(tabs)');
           }
         } else {
-          await AsyncStorage.removeItem(TOKEN_KEY);
+          await SecureStore.deleteItemAsync(TOKEN_KEY);
           routeToLogin();
         }
       } else {

@@ -22,6 +22,7 @@ class Field extends Model
         'status',
         'approved_by',
         'approved_at',
+        'rejection_reason',
     ];
 
     protected $casts = [
