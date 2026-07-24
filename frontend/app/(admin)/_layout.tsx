@@ -1,19 +1,21 @@
 import { Tabs } from 'expo-router';
 import React, { useState, useEffect } from 'react';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import * as SecureStore from '../../lib/secureStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProfileStore } from '../../store/profileStore';
 import { TOKEN_KEY } from '../_layout';
 import { API_BASE_URL } from '../../lib/api';
 import { useTheme } from '../../lib/theme';
+import Sidebar, { SidebarItem } from '../../components/web/Sidebar';
 
 export default function AdminTabLayout() {
   const profile = useProfileStore((s) => s.profile);
   const { colors } = useTheme();
   const role = profile?.role || '';
   const isSuperAdmin = role === 'super_admin';
+  const isWeb = Platform.OS === 'web';
 
   const [ownerRequestBadge, setOwnerRequestBadge] = useState<number | undefined>(undefined);
   const [pendingFieldsBadge, setPendingFieldsBadge] = useState<number | undefined>(undefined);
@@ -21,7 +23,7 @@ export default function AdminTabLayout() {
   useEffect(() => {
     const fetchBadges = async () => {
       try {
-        const token = await SecureStore.getItemAsync(TOKEN_KEY);
+        const token = await AsyncStorage.getItem(TOKEN_KEY);
         if (!token) return;
         const headers = {
           'Accept': 'application/json',
@@ -48,12 +50,91 @@ export default function AdminTabLayout() {
     fetchBadges();
   }, [isSuperAdmin]);
 
+  const sidebarItems: SidebarItem[] = [
+    { href: '/(admin)/users', label: 'Kelola Pengguna', icon: 'people-alt' },
+    { href: '/(admin)/owner-requests', label: 'Pengajuan Owner', icon: 'inventory' },
+    ...(isSuperAdmin ? [{ href: '/(admin)/pending-fields', label: 'Kelola Lapangan', icon: 'stadium' }] : []),
+    { href: '/(admin)/profile', label: 'Profile', icon: 'person' },
+  ];
+
+  if (isWeb) {
+    return (
+      <View style={styles.webRoot}>
+        <Sidebar
+          title="Admin Panel"
+          accentColor={colors.accentPurple}
+          items={sidebarItems}
+        />
+        <View style={styles.webContent}>
+          <Tabs
+            tabBar={() => null}
+            screenOptions={{
+              headerShown: false,
+              tabBarActiveTintColor: colors.primary,
+              tabBarInactiveTintColor: colors.textTertiary,
+              tabBarLabelStyle: styles.tabLabel,
+              tabBarItemStyle: styles.tabItem,
+            }}
+          >
+            <Tabs.Screen
+              name="users"
+              options={{
+                title: 'Pengguna',
+                tabBarIcon: ({ color }) => (
+                  <MaterialIcons name="people-alt" size={24} color={color} />
+                ),
+              }}
+              listeners={{ tabPress: () => Haptics.selectionAsync() }}
+            />
+            <Tabs.Screen
+              name="owner-requests"
+              options={{
+                title: 'Pengajuan',
+                tabBarIcon: ({ color }) => (
+                  <MaterialIcons name="inventory" size={24} color={color} />
+                ),
+                tabBarBadge: ownerRequestBadge,
+                tabBarBadgeStyle: ownerRequestBadge ? styles.badge : undefined,
+              }}
+              listeners={{ tabPress: () => Haptics.selectionAsync() }}
+            />
+            <Tabs.Screen
+              name="pending-fields"
+              options={{
+                title: 'Lapangan',
+                tabBarIcon: ({ color }) => (
+                  <MaterialIcons name="stadium" size={24} color={color} />
+                ),
+                href: isSuperAdmin ? undefined : null,
+                tabBarBadge: isSuperAdmin ? pendingFieldsBadge : undefined,
+                tabBarBadgeStyle: isSuperAdmin && pendingFieldsBadge ? styles.badge : undefined,
+              }}
+              listeners={{ tabPress: () => Haptics.selectionAsync() }}
+            />
+            <Tabs.Screen
+              name="profile"
+              options={{
+                title: 'Profil',
+                tabBarIcon: ({ color }) => (
+                  <MaterialIcons name="person" size={24} color={color} />
+                ),
+              }}
+              listeners={{ tabPress: () => Haptics.selectionAsync() }}
+            />
+            <Tabs.Screen name="index" options={{ href: null }} />
+            <Tabs.Screen name="dashboard" options={{ href: null }} />
+          </Tabs>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: [styles.tabBar, { backgroundColor: colors.surface, borderTopColor: colors.outline }],
-        tabBarActiveTintColor: colors.adminAccent,
+        tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabelStyle: styles.tabLabel,
         tabBarItemStyle: styles.tabItem,
@@ -104,7 +185,6 @@ export default function AdminTabLayout() {
         }}
         listeners={{ tabPress: () => Haptics.selectionAsync() }}
       />
-      {/* Hide legacy screens */}
       <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen name="dashboard" options={{ href: null }} />
     </Tabs>
@@ -112,6 +192,14 @@ export default function AdminTabLayout() {
 }
 
 const styles = StyleSheet.create({
+  webRoot: {
+    flex: 1,
+    flexDirection: 'row',
+    height: '100%' as any,
+  },
+  webContent: {
+    flex: 1,
+  },
   tabBar: {
     borderTopWidth: 0,
     height: Platform.OS === 'ios' ? 88 : 64,

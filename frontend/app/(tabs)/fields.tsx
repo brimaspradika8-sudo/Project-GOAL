@@ -20,11 +20,18 @@ import { SkeletonVenueList } from '../../components/Skeleton';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useTheme } from '../../lib/theme';
 
-const FILTERS = ['Semua', 'Futsal', 'Basket', 'Badminton', 'Mini Soccer', 'Tenis', 'Voli', 'Lainnya'];
+const FILTERS = ['Semua', 'Futsal', 'Basket', 'Badminton', 'Mini Soccer', 'Tenis'];
+const SPORT_MAP: Record<string, string> = {
+  'Futsal': 'futsal',
+  'Basket': 'basketball',
+  'Badminton': 'badminton',
+  'Mini Soccer': 'mini_soccer',
+  'Tenis': 'tennis',
+};
 const DEFAULT_IMAGES: Record<string, string> = {
-  Futsal: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
-  Basket: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop',
-  Badminton: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?q=80&w=800&auto=format&fit=crop',
+  futsal: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
+  basketball: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop',
+  badminton: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?q=80&w=800&auto=format&fit=crop',
   default: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
 };
 
@@ -86,13 +93,13 @@ export default function FieldsScreen() {
   const { colors } = useTheme();
 
   useEffect(() => {
-    const sport = activeFilter === 'Semua' ? undefined : activeFilter;
+    const sport = activeFilter === 'Semua' ? undefined : SPORT_MAP[activeFilter] || activeFilter.toLowerCase();
     fetchFields(sport, debouncedSearch || undefined);
   }, [activeFilter, debouncedSearch, fetchFields]);
 
   useFocusEffect(
     useCallback(() => {
-      const sport = activeFilter === 'Semua' ? undefined : activeFilter;
+      const sport = activeFilter === 'Semua' ? undefined : SPORT_MAP[activeFilter] || activeFilter.toLowerCase();
       fetchFields(sport, debouncedSearch || undefined);
     }, [activeFilter, debouncedSearch, fetchFields])
   );

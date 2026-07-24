@@ -7,7 +7,7 @@ import {
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import * as SecureStore from '../lib/secureStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage } from '../lib/api';
@@ -94,7 +94,7 @@ export default function LoginScreen() {
       }
 
       if (data?.token) {
-        await SecureStore.setItemAsync(TOKEN_KEY, data.token);
+        await AsyncStorage.setItem(TOKEN_KEY, data.token);
 
         const profileRes = await fetch(`${API_BASE_URL}/me`, {
           headers: { Authorization: `Bearer ${data.token}` },

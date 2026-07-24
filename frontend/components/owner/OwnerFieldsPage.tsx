@@ -6,11 +6,16 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 =======
 import * as SecureStore from '../../lib/secureStorage';
 >>>>>>> 80644d4 (fix backend)
+=======
+import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+>>>>>>> 4ea81c7 (memeprbaiki ux)
 import * as ImagePicker from 'expo-image-picker';
 import { useFieldStore } from '../../store/fieldStore';
 import { TOKEN_KEY } from '../../app/_layout';
@@ -21,7 +26,7 @@ import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
 import {
-  SPORT_OPTIONS,
+  SPORT_OPTIONS, SPORT_MAP,
   type FieldFormErrors, type FieldFormData,
   EMPTY_ERRORS, validateAllFields, hasErrors,
   validateFieldName, validateFieldSportType, validateFieldPrice,
@@ -68,7 +73,7 @@ export default function OwnerFieldsPage() {
 
   const fetchFields = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/my/list`, {
         headers: {
           'Accept': 'application/json',
@@ -115,31 +120,20 @@ export default function OwnerFieldsPage() {
     isCreate: boolean,
   ) => {
     const touchedRef = isCreate ? createTouched : editTouched;
-    const errorsRec = isCreate ? (createErrors as Record<string, string>) : (editErrors as Record<string, string>);
-    const instantKeys: (keyof FieldFormData)[] = ['sport_type', 'image_uri'];
+    const shouldValidate = touchedRef.current[key] || key === 'sport_type' || key === 'image_uri';
     if (isCreate) {
       setCreateForm(p => {
         const next = { ...p, [key]: value };
-        if (instantKeys.includes(key)) {
+        if (shouldValidate) {
           validateSingleField(key, value, next, true);
-        } else if (touchedRef.current[key] && errorsRec[key]) {
-          const err = key === 'name' ? validateFieldName(value)
-            : key === 'price_per_hour' ? validateFieldPrice(value)
-            : key === 'description' ? validateFieldDescription(value) : '';
-          if (!err) setCreateErrors(prev => ({ ...prev, [key]: '' }));
         }
         return next;
       });
     } else {
       setEditForm(p => {
         const next = { ...p, [key]: value };
-        if (instantKeys.includes(key)) {
+        if (shouldValidate) {
           validateSingleField(key, value, next, false);
-        } else if (touchedRef.current[key] && errorsRec[key]) {
-          const err = key === 'name' ? validateFieldName(value)
-            : key === 'price_per_hour' ? validateFieldPrice(value)
-            : key === 'description' ? validateFieldDescription(value) : '';
-          if (!err) setEditErrors(prev => ({ ...prev, [key]: '' }));
         }
         return next;
       });
@@ -209,7 +203,7 @@ export default function OwnerFieldsPage() {
   const openCreate = () => {
     setCreateForm(EMPTY_FORM);
     setCreateError(null);
-    setCreateErrors(validateAllFields(EMPTY_FORM));
+    setCreateErrors(EMPTY_ERRORS);
     createTouched.current = {};
     setShowCreate(true);
   };
@@ -223,7 +217,7 @@ export default function OwnerFieldsPage() {
     setCreateLoading(true);
     setCreateError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
 
       let imageUrl = createForm.image_url;
       if (createForm.image_uri && !imageUrl) {
@@ -291,7 +285,7 @@ export default function OwnerFieldsPage() {
     setEditLoading(true);
     setEditError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
 
       let imageUrl = editForm.image_url;
       if (editForm.image_uri) {
@@ -374,7 +368,7 @@ export default function OwnerFieldsPage() {
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleteLoading(true);
-    const token = await SecureStore.getItemAsync(TOKEN_KEY);
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
     const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}`, {
       method: 'DELETE',
       headers: {
@@ -480,7 +474,7 @@ export default function OwnerFieldsPage() {
                     </View>
                     <View style={st.detailRow}>
                       <MaterialIcons name="sports" size={14} color={COLORS.textSecondary} />
-                      <Text style={st.detailText}>{(SPORT_OPTIONS.includes(f.sport_type) ? f.sport_type : f.sport_type)?.toUpperCase()}</Text>
+                      <Text style={st.detailText}>{(Object.keys(SPORT_MAP).find(k => SPORT_MAP[k] === f.sport_type) || f.sport_type)?.toUpperCase()}</Text>
                     </View>
                     {f.description ? (
                       <View style={st.detailRow}>
@@ -592,7 +586,7 @@ function FieldModal({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView style={st.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
+      <KeyboardAvoidingView style={st.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={onClose} />
         <View style={st.sheet}>
           <View style={st.sheetHandle} />
@@ -654,6 +648,9 @@ function FieldModal({
 
             {/* Jenis Olahraga */}
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 4ea81c7 (memeprbaiki ux)
             <View style={st.fieldWrap}>
               <Text style={st.fieldLabel}>Jenis Olahraga</Text>
               <View style={[st.sportRow, errors.sport_type && st.sportRowError]}>
@@ -672,6 +669,7 @@ function FieldModal({
                 })}
               </View>
               {errors.sport_type ? <FieldError message={errors.sport_type} /> : null}
+<<<<<<< HEAD
 =======
             <Text style={st.fieldLabel}>Jenis Olahraga</Text>
             <View style={[st.sportRow, errors.sport_type && st.sportRowError]}>
@@ -689,6 +687,8 @@ function FieldModal({
                 );
               })}
 >>>>>>> 80644d4 (fix backend)
+=======
+>>>>>>> 4ea81c7 (memeprbaiki ux)
             </View>
 
             {/* Deskripsi */}

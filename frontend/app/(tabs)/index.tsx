@@ -25,10 +25,18 @@ import { API_BASE_URL } from '../../lib/api';
 import { useTheme } from '../../lib/theme';
 
 
+const SPORT_MAP: Record<string, string> = {
+  'Semua': '',
+  'Futsal': 'futsal',
+  'Basket': 'basketball',
+  'Badminton': 'badminton',
+  'Mini Soccer': 'mini_soccer',
+  'Tenis': 'tennis',
+};
 const DEFAULT_IMAGES: Record<string, string> = {
-  Futsal: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
-  Basket: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop',
-  Badminton: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?q=80&w=800&auto=format&fit=crop',
+  futsal: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
+  basketball: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop',
+  badminton: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?q=80&w=800&auto=format&fit=crop',
   default: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
 };
 
@@ -39,7 +47,7 @@ function formatPrice(price: number | null): string {
 
 function getSportFilter(category: string): string | undefined {
   if (category === 'Semua') return undefined;
-  return category;
+  return SPORT_MAP[category] || category.toLowerCase();
 }
 
 export default function HomeScreen() {
