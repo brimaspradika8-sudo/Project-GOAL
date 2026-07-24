@@ -39,6 +39,7 @@ export default function TabLayout() {
             tabPress: () => Haptics.selectionAsync(),
           }}
         />
+
         <Tabs.Screen
           name="booking"
           options={{
@@ -51,6 +52,7 @@ export default function TabLayout() {
             tabPress: () => Haptics.selectionAsync(),
           }}
         />
+
         <Tabs.Screen
           name="matches"
           options={{
@@ -63,6 +65,7 @@ export default function TabLayout() {
             tabPress: () => Haptics.selectionAsync(),
           }}
         />
+
         <Tabs.Screen
           name="profile"
           options={{
@@ -75,18 +78,22 @@ export default function TabLayout() {
             tabPress: () => Haptics.selectionAsync(),
           }}
         />
+
         <Tabs.Screen
           name="my-fields"
           options={{ href: null }}
         />
+
         <Tabs.Screen
           name="fields"
           options={{ href: null }}
         />
+
         <Tabs.Screen
           name="explore"
           options={{ href: null }}
         />
+
         <Tabs.Screen
           name="admin"
           options={{ href: null }}
@@ -96,49 +103,45 @@ export default function TabLayout() {
   );
 }
 
-import { FONT_FAMILY } from '../../components/goalTheme';
-
-const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
-  webContainer: {
-    flex: 1,
-    minHeight: '100vh' as any,
-  },
-  tabBar: {
-    backgroundColor: colors.surface,
-<<<<<<< HEAD
-    borderTopWidth: Platform.OS === 'web' ? 1 : 0,
-    borderTopColor: colors.outline,
-=======
-    borderTopWidth: 0,
->>>>>>> 4ea81c7 (memeprbaiki ux)
-    height: Platform.OS === 'ios' ? 88 : 64,
-    paddingTop: Platform.OS === 'ios' ? 10 : 8,
-    paddingBottom: Platform.OS === 'ios' ? 22 : 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 8,
-    ...(Platform.OS === 'web' ? {
-      maxWidth: 640,
-      width: '100%' as any,
-      marginHorizontal: 'auto' as any,
-      alignSelf: 'center' as any,
-      borderTopWidth: 1,
-      borderLeftWidth: 1,
-      borderRightWidth: 1,
-      borderColor: colors.outline,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-    } : {}),
-  },
-  tabLabel: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-  tabItem: {
-    paddingVertical: 4,
-  },
-});
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
+  StyleSheet.create({
+    webContainer: {
+      flex: 1,
+      minHeight: '100vh' as any,
+    },
+    tabBar: {
+      backgroundColor: colors.surface,
+      borderTopWidth: 0,
+      height: Platform.OS === 'ios' ? 88 : 64,
+      paddingTop: Platform.OS === 'ios' ? 10 : 8,
+      paddingBottom: Platform.OS === 'ios' ? 22 : 8,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 8,
+      ...(Platform.OS === 'web'
+        ? {
+          maxWidth: 640,
+          width: '100%' as any,
+          marginHorizontal: 'auto' as any,
+          alignSelf: 'center' as any,
+          borderTopWidth: 1,
+          borderLeftWidth: 1,
+          borderRightWidth: 1,
+          borderColor: colors.outline,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+        }
+        : {}),
+    },
+    tabLabel: {
+      fontFamily: FONT_FAMILY,
+      fontSize: 10,
+      fontWeight: '600',
+      letterSpacing: 0.3,
+    },
+    tabItem: {
+      paddingVertical: 4,
+    },
+  });
