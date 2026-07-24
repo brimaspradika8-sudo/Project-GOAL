@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../lib/api';
-import { TOKEN_KEY } from '../app/_layout';
+import { TOKEN_KEY } from '../lib/auth';
 
 export interface Profile {
   id: number;

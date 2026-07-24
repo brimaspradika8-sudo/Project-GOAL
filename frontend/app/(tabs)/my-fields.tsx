@@ -14,7 +14,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { COLORS, SIZES, FONTS, SHADOWS } from '../../components/goalTheme';
 import { API_BASE_URL } from '../../lib/api';
-import { TOKEN_KEY } from '../_layout';
+import { TOKEN_KEY } from '../../lib/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeImage } from '../../components/SafeImage';
 import type { Field } from '../../store/fieldStore';
@@ -269,6 +269,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    maxWidth: 440,
+    alignSelf: 'center',
+    width: '100%',
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 56 : 40,
     paddingBottom: 12,
@@ -291,6 +294,9 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingBottom: 100,
+    maxWidth: 440,
+    alignSelf: 'center',
+    width: '100%',
   },
   subtitle: {
     ...FONTS.bodySm,

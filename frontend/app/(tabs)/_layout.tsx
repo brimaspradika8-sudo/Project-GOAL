@@ -3,6 +3,7 @@ import React from 'react';
 import { StyleSheet, Platform, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../lib/theme';
 import { FONT_FAMILY } from '../../components/goalTheme';
 import TopNavbar from '../../components/web/TopNavbar';
@@ -11,7 +12,8 @@ const isWeb = Platform.OS === 'web';
 
 export default function TabLayout() {
   const { colors } = useTheme();
-  const styles = makeStyles(colors);
+  const insets = useSafeAreaInsets();
+  const styles = makeStyles(colors, insets);
 
   return (
     <View style={isWeb ? styles.webContainer : undefined}>
@@ -96,24 +98,18 @@ export default function TabLayout() {
   );
 }
 
-import { FONT_FAMILY } from '../../components/goalTheme';
-
-const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], insets: { bottom: number }) => StyleSheet.create({
   webContainer: {
     flex: 1,
     minHeight: '100vh' as any,
   },
   tabBar: {
     backgroundColor: colors.surface,
-<<<<<<< HEAD
     borderTopWidth: Platform.OS === 'web' ? 1 : 0,
     borderTopColor: colors.outline,
-=======
-    borderTopWidth: 0,
->>>>>>> 4ea81c7 (memeprbaiki ux)
-    height: Platform.OS === 'ios' ? 88 : 64,
-    paddingTop: Platform.OS === 'ios' ? 10 : 8,
-    paddingBottom: Platform.OS === 'ios' ? 22 : 8,
+    height: 64 + insets.bottom,
+    paddingTop: 8,
+    paddingBottom: insets.bottom + 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.08,

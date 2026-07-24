@@ -5,9 +5,9 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProfileStore } from '../../store/profileStore';
-import { TOKEN_KEY } from '../_layout';
 import { API_BASE_URL } from '../../lib/api';
 import { useTheme } from '../../lib/theme';
+import { TOKEN_KEY } from '../../lib/auth';
 import Sidebar, { SidebarItem } from '../../components/web/Sidebar';
 
 export default function AdminTabLayout() {

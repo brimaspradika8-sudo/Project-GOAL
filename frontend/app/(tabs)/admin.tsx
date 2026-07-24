@@ -16,6 +16,6 @@ export default function AdminScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  container: { flex: 1, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', padding: 24, maxWidth: 440, alignSelf: 'center' },
   text: { color: '#999', fontSize: 15, textAlign: 'center', marginTop: 16, lineHeight: 22 },
 });

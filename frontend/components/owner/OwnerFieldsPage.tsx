@@ -5,20 +5,11 @@ import {
   Modal, KeyboardAvoidingView, Platform, TextInput,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-<<<<<<< HEAD
-<<<<<<< HEAD
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-=======
-import * as SecureStore from '../../lib/secureStorage';
->>>>>>> 80644d4 (fix backend)
-=======
-import { router } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
->>>>>>> 4ea81c7 (memeprbaiki ux)
 import * as ImagePicker from 'expo-image-picker';
 import { useFieldStore } from '../../store/fieldStore';
-import { TOKEN_KEY } from '../../app/_layout';
+import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, getErrorMessage } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
@@ -647,10 +638,6 @@ function FieldModal({
             />
 
             {/* Jenis Olahraga */}
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 4ea81c7 (memeprbaiki ux)
             <View style={st.fieldWrap}>
               <Text style={st.fieldLabel}>Jenis Olahraga</Text>
               <View style={[st.sportRow, errors.sport_type && st.sportRowError]}>
@@ -669,26 +656,6 @@ function FieldModal({
                 })}
               </View>
               {errors.sport_type ? <FieldError message={errors.sport_type} /> : null}
-<<<<<<< HEAD
-=======
-            <Text style={st.fieldLabel}>Jenis Olahraga</Text>
-            <View style={[st.sportRow, errors.sport_type && st.sportRowError]}>
-              {SPORT_OPTIONS.map(s => {
-                const active = form.sport_type === s;
-                return (
-                  <TouchableOpacity
-                    key={s}
-                    style={[st.sportChip, active && st.sportChipActive]}
-                    onPress={() => onFieldChange('sport_type', s)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[st.sportChipText, active && st.sportChipTextActive]}>{s}</Text>
-                  </TouchableOpacity>
-                );
-              })}
->>>>>>> 80644d4 (fix backend)
-=======
->>>>>>> 4ea81c7 (memeprbaiki ux)
             </View>
 
             {/* Deskripsi */}

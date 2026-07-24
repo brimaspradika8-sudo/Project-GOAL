@@ -52,6 +52,8 @@ const styles = StyleSheet.create({
   headerTitle: { ...FONTS.headlineSm, color: COLORS.text },
   center: {
     flex: 1, justifyContent: 'center', alignItems: 'center',
+    maxWidth: 440,
+    alignSelf: 'center',
     paddingHorizontal: 36,
     paddingBottom: Platform.OS === 'ios' ? 60 : 40,
     gap: 0,

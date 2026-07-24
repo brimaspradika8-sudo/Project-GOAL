@@ -1,22 +1,25 @@
 import React from 'react';
-import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, useWindowDimensions } from 'react-native';
 
 type LoadingScreenProps = {
   message?: string;
 };
 
 export default function LoadingScreen({ message = 'Menyiapkan arena' }: LoadingScreenProps) {
+  const { width } = useWindowDimensions();
+  const glowSize = Math.min(320, width * 0.85);
+
   return (
     <View style={styles.container}>
-      <View style={styles.glowTop} />
-      <View style={styles.glowBottom} />
+      <View style={[styles.glowTop, { width: glowSize, height: glowSize, borderRadius: glowSize / 2 }]} />
+      <View style={[styles.glowBottom, { width: glowSize * 1.1, height: glowSize * 1.1, borderRadius: (glowSize * 1.1) / 2 }]} />
 
       <View style={styles.brandWrap}>
         <Text style={styles.logo}>GOAL</Text>
         <Text style={styles.logoSub}>Game Organizer & Arena League</Text>
       </View>
 
-      <View style={styles.loaderCard}>
+      <View style={[styles.loaderCard, { maxWidth: Math.min(280, width * 0.75) }]}>
         <View style={styles.ball}>
           <Text style={styles.ballIcon}>⚽</Text>
         </View>
@@ -42,9 +45,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -120,
     left: -90,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
     backgroundColor: '#4be277',
     opacity: 0.12,
   },
@@ -52,9 +52,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: -110,
     bottom: -130,
-    width: 320,
-    height: 320,
-    borderRadius: 160,
     backgroundColor: '#38bdf8',
     opacity: 0.09,
   },
@@ -80,7 +77,6 @@ const styles = StyleSheet.create({
   },
   loaderCard: {
     width: '100%',
-    maxWidth: 280,
     minHeight: 178,
     alignItems: 'center',
     justifyContent: 'center',

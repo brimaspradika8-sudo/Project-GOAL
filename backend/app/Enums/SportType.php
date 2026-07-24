@@ -4,7 +4,6 @@ namespace App\Enums;
 
 class SportType
 {
-<<<<<<< HEAD
     public const FUTSAL = 'futsal';
     public const BADMINTON = 'badminton';
     public const BASKETBALL = 'basketball';
@@ -19,24 +18,11 @@ class SportType
 
     /**
      * Return all allowed sport type values (slugs and title cases).
-=======
-    public const FUTSAL = 'Futsal';
-    public const BADMINTON = 'Badminton';
-    public const BASKET = 'Basket';
-    public const MINI_SOCCER = 'Mini Soccer';
-    public const TENIS = 'Tenis';
-    public const VOLI = 'Voli';
-    public const LAINNYA = 'Lainnya';
-
-    /**
-     * Return all allowed sport type values from config.
->>>>>>> 80644d4 (fix backend)
      *
      * @return string[]
      */
     public static function values(): array
     {
-<<<<<<< HEAD
         return [
             'futsal',
             'badminton',
@@ -57,8 +43,5 @@ class SportType
             'Voli',
             'Lainnya',
         ];
-=======
-        return config('goal.sport_types', []);
->>>>>>> 80644d4 (fix backend)
     }
 }

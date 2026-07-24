@@ -254,12 +254,12 @@ export default function HomeScreen() {
                   </View>
                   <View style={styles.venueInfo}>
                     <View style={styles.venueTopRow}>
-                      <Text style={styles.venueName}>{item.name}</Text>
-                      <Text style={styles.venuePrice}>{formatPrice(item.price_per_hour)}/jam</Text>
+                      <Text style={styles.venueName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
+                      <Text style={styles.venuePrice} numberOfLines={1}>{formatPrice(item.price_per_hour)}/jam</Text>
                     </View>
                     <View style={styles.venueLocationRow}>
                       <MaterialIcons name="location-on" size={14} color={COLORS.textTertiary} />
-                      <Text style={styles.venueLocation}>{item.location}</Text>
+                      <Text style={styles.venueLocation} numberOfLines={1} ellipsizeMode="tail">{item.location}</Text>
                     </View>
                     <View style={styles.featureRow}>
                       <View style={styles.featureChip}>
@@ -291,10 +291,10 @@ export default function HomeScreen() {
                   <SafeImage source={{ uri: imgUrl }} style={styles.rekomImage} fallbackSize={24} />
                   <View style={styles.rekomOverlay} />
                   <View style={styles.rekomInfo}>
-                    <Text style={styles.rekomName}>{item.name}</Text>
+                    <Text style={styles.rekomName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
                     <View style={styles.rekomDistRow}>
                       <MaterialIcons name="near-me" size={12} color="rgba(255,255,255,0.8)" />
-                      <Text style={styles.rekomDist}>{item.location}</Text>
+                      <Text style={styles.rekomDist} numberOfLines={1} ellipsizeMode="tail">{item.location}</Text>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -311,7 +311,7 @@ export default function HomeScreen() {
             <View style={styles.sportChips}>
               {sports.map((sport) => (
                 <View key={sport} style={styles.sportChip}>
-                  <Text style={styles.sportChipText}>{sport}</Text>
+                  <Text style={styles.sportChipText} numberOfLines={1}>{sport}</Text>
                 </View>
               ))}
             </View>

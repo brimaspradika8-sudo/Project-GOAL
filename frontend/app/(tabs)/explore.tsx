@@ -115,6 +115,9 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 48,
     paddingHorizontal: 20,
     paddingBottom: 40,
+    maxWidth: 440,
+    alignSelf: 'center',
+    width: '100%',
   },
   title: {
     ...FONTS.headlineLg,
