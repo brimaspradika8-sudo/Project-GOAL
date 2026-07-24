@@ -4,7 +4,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import * as SecureStore from '../../lib/secureStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TOKEN_KEY } from '../../app/_layout';
 import { API_BASE_URL } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
@@ -26,7 +26,7 @@ export default function OwnerBookingsPage() {
 
   const fetchBookings = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/owner/bookings`, {
         headers: {
           'Accept': 'application/json',

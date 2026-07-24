@@ -50,10 +50,6 @@ export interface ThemeColors {
   accentPurpleLight: string;
   accentOrange: string;
   accentOrangeLight: string;
-  ownerAccent: string;
-  ownerAccentLight: string;
-  adminAccent: string;
-  adminAccentLight: string;
 }
 
 const LIGHT_COLORS: ThemeColors = {
@@ -98,10 +94,6 @@ const LIGHT_COLORS: ThemeColors = {
   accentPurpleLight: '#F1EAFB',
   accentOrange: '#E97A1F',
   accentOrangeLight: '#FFF3E6',
-  ownerAccent: '#7C3AED',
-  ownerAccentLight: '#EDE9FE',
-  adminAccent: '#D97706',
-  adminAccentLight: '#FEF3C7',
 };
 
 const DARK_COLORS: ThemeColors = {
@@ -146,10 +138,6 @@ const DARK_COLORS: ThemeColors = {
   accentPurpleLight: '#2D1F5E',
   accentOrange: '#FB923C',
   accentOrangeLight: '#4A2C10',
-  ownerAccent: '#A78BFA',
-  ownerAccentLight: '#2D1F5E',
-  adminAccent: '#FBBF24',
-  adminAccentLight: '#4A3810',
 };
 
 function getAutoMode(systemScheme: string | null | undefined): ResolvedMode {

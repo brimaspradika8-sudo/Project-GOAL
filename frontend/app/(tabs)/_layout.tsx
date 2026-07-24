@@ -1,108 +1,116 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet, Platform, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../lib/theme';
+import { FONT_FAMILY } from '../../components/goalTheme';
+import TopNavbar from '../../components/web/TopNavbar';
+
+const isWeb = Platform.OS === 'web';
 
 export default function TabLayout() {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textTertiary,
-        tabBarLabelStyle: styles.tabLabel,
-        tabBarItemStyle: styles.tabItem,
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Beranda',
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons name="home" size={24} color={color} />
-          ),
+    <View style={isWeb ? styles.webContainer : undefined}>
+      {isWeb && <TopNavbar />}
+      <Tabs
+        tabBar={isWeb ? () => null : undefined}
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: styles.tabBar,
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textTertiary,
+          tabBarLabelStyle: styles.tabLabel,
+          tabBarItemStyle: styles.tabItem,
         }}
-        listeners={{
-          tabPress: () => Haptics.selectionAsync(),
-        }}
-      />
-      <Tabs.Screen
-        name="booking"
-        options={{
-          title: 'Booking',
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons name="event-available" size={24} color={color} />
-          ),
-        }}
-        listeners={{
-          tabPress: () => Haptics.selectionAsync(),
-        }}
-      />
-      <Tabs.Screen
-        name="matches"
-        options={{
-          title: 'Match',
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons name="sports-soccer" size={24} color={color} />
-          ),
-        }}
-        listeners={{
-          tabPress: () => Haptics.selectionAsync(),
-        }}
-      />
+      >
         <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons name="person" size={24} color={color} />
-          ),
-        }}
-        listeners={{
-          tabPress: () => Haptics.selectionAsync(),
-        }}
-      />
-      <Tabs.Screen
-        name="my-fields"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="fields"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="admin"
-        options={{
-          href: null,
-        }}
-      />
-    </Tabs>
+          name="index"
+          options={{
+            title: 'Beranda',
+            tabBarIcon: ({ color }) => (
+              <MaterialIcons name="home" size={24} color={color} />
+            ),
+          }}
+          listeners={{
+            tabPress: () => Haptics.selectionAsync(),
+          }}
+        />
+        <Tabs.Screen
+          name="booking"
+          options={{
+            title: 'Booking',
+            tabBarIcon: ({ color }) => (
+              <MaterialIcons name="event-available" size={24} color={color} />
+            ),
+          }}
+          listeners={{
+            tabPress: () => Haptics.selectionAsync(),
+          }}
+        />
+        <Tabs.Screen
+          name="matches"
+          options={{
+            title: 'Match',
+            tabBarIcon: ({ color }) => (
+              <MaterialIcons name="sports-soccer" size={24} color={color} />
+            ),
+          }}
+          listeners={{
+            tabPress: () => Haptics.selectionAsync(),
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: 'Profile',
+            tabBarIcon: ({ color }) => (
+              <MaterialIcons name="person" size={24} color={color} />
+            ),
+          }}
+          listeners={{
+            tabPress: () => Haptics.selectionAsync(),
+          }}
+        />
+        <Tabs.Screen
+          name="my-fields"
+          options={{ href: null }}
+        />
+        <Tabs.Screen
+          name="fields"
+          options={{ href: null }}
+        />
+        <Tabs.Screen
+          name="explore"
+          options={{ href: null }}
+        />
+        <Tabs.Screen
+          name="admin"
+          options={{ href: null }}
+        />
+      </Tabs>
+    </View>
   );
 }
 
 import { FONT_FAMILY } from '../../components/goalTheme';
 
 const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
+  webContainer: {
+    flex: 1,
+    minHeight: '100vh' as any,
+  },
   tabBar: {
     backgroundColor: colors.surface,
+<<<<<<< HEAD
     borderTopWidth: Platform.OS === 'web' ? 1 : 0,
     borderTopColor: colors.outline,
+=======
+    borderTopWidth: 0,
+>>>>>>> 4ea81c7 (memeprbaiki ux)
     height: Platform.OS === 'ios' ? 88 : 64,
     paddingTop: Platform.OS === 'ios' ? 10 : 8,
     paddingBottom: Platform.OS === 'ios' ? 22 : 8,

@@ -5,7 +5,7 @@ import {
   Modal, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import * as SecureStore from '../../lib/secureStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProfileStore } from '../../store/profileStore';
 import { TOKEN_KEY } from '../../app/_layout';
 import { API_BASE_URL, getErrorMessage } from '../../lib/api';
@@ -26,7 +26,7 @@ const ROLE_CONFIG: Record<string, { label: string; color: string; bg: string }> 
 type Tab = 'user' | 'owner';
 
 const EMPTY_CREATE = { name: '', email: '', password: '', role: 'owner' };
-const EMPTY_EDIT   = { name: '', email: '', password: '', role: '' };
+const EMPTY_EDIT   = { name: '', email: '', password: '' };
 
 export default function UserPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -64,7 +64,7 @@ export default function UserPage() {
 
   const fetchUsers = useCallback(async (q?: string) => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
       const params = q ? `?search=${encodeURIComponent(q)}` : '';
       const res = await fetch(`${API_BASE_URL}/admin/users${params}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -88,7 +88,7 @@ export default function UserPage() {
   const onRefresh = () => { setRefreshing(true); fetchUsers(search); };
 
   const updateUserRole = async (userId: number, role: string) => {
-    const token = await SecureStore.getItemAsync(TOKEN_KEY);
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
     const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/role`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -112,7 +112,7 @@ export default function UserPage() {
     setCreateLoading(true);
     setCreateError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/admin/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -137,7 +137,7 @@ export default function UserPage() {
   // ── EDIT (ungu) ─────────────────────────────────────────
   const openEdit = (u: any) => {
     setEditTarget(u);
-    setEditForm({ name: u.name || '', email: u.email || '', password: '', role: u.profile?.role || 'player' });
+    setEditForm({ name: u.name || '', email: u.email || '', password: '' });
     setEditError(null);
     setShowEditPwd(false);
   };
@@ -151,7 +151,7 @@ export default function UserPage() {
     setEditLoading(true);
     setEditError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
       const body: any = { name: editForm.name, email: editForm.email };
       if (editForm.password.trim()) body.password = editForm.password;
       const res = await fetch(`${API_BASE_URL}/admin/users/${editTarget.id}`, {
@@ -163,10 +163,6 @@ export default function UserPage() {
       if (!res.ok) {
         setEditError(getErrorMessage(data, 'Gagal menyimpan perubahan.'));
         return;
-      }
-      const currentRole = editTarget.profile?.role || 'player';
-      if (editForm.role && editForm.role !== currentRole) {
-        await updateUserRole(editTarget.id, editForm.role);
       }
       setEditTarget(null);
       useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Data user berhasil diperbarui.' });
@@ -201,7 +197,7 @@ export default function UserPage() {
     setDeleteLoading(true);
     setDeleteError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/admin/users/${deleteTarget.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
@@ -503,29 +499,6 @@ export default function UserPage() {
               rightIcon={showEditPwd ? 'visibility-off' : 'visibility'}
               onRightIconPress={() => setShowEditPwd(p => !p)}
               placeholder="Kosongkan jika tidak diubah" />
-
-            {isSuperAdmin && (
-              <View style={st.roleSelectWrap}>
-                <Text style={st.fieldLabel}>Role</Text>
-                <View style={st.roleChipRow}>
-                  {['player', 'owner', 'admin', 'super_admin'].map(r => {
-                    const rc = ROLE_CONFIG[r];
-                    const active = editForm.role === r;
-                    return (
-                      <TouchableOpacity
-                        key={r}
-                        style={[st.roleChip, active && { backgroundColor: rc.bg, borderColor: rc.color }]}
-                        onPress={() => setEditForm(p => ({ ...p, role: r }))}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[st.roleDot, { backgroundColor: rc.color }]} />
-                        <Text style={[st.roleChipText, active && { color: rc.color }]}>{rc.label}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            )}
 
             <View style={st.sheetActions}>
               <TouchableOpacity style={st.cancelBtn} onPress={() => setEditTarget(null)}>

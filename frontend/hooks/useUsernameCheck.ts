@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import * as SecureStore from '../lib/secureStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../lib/api';
 import { TOKEN_KEY } from '../app/_layout';
 import { useDebouncedValue } from './useDebouncedValue';
@@ -39,7 +39,7 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
       if (!mountedRef.current) return;
       setStatus('checking');
       try {
-        const token = await SecureStore.getItemAsync(TOKEN_KEY);
+        const token = await AsyncStorage.getItem(TOKEN_KEY);
 
         const res = await fetch(
           `${API_BASE_URL}/me/onboarding/check-username?username=${encodeURIComponent(debouncedUsername)}`,

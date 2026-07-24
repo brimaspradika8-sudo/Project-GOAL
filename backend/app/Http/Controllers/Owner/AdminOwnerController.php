@@ -11,15 +11,13 @@ use Illuminate\Http\JsonResponse;
 
 class AdminOwnerController extends Controller
 {
-    public function __construct(
-        private OwnerRequestService $ownerRequestService
-    ) {}
+    public function __construct(private OwnerRequestService $ownerRequestService) {}
 
-    public function pending()
+    public function pending(): JsonResponse
     {
         $requests = $this->ownerRequestService->listPending();
 
-        return OwnerRequestResource::collection($requests);
+        return response()->json(OwnerRequestResource::collection($requests));
     }
 
     public function review(ReviewOwnerRequest $request, int $id): JsonResponse
@@ -30,28 +28,11 @@ class AdminOwnerController extends Controller
             return response()->json(['message' => 'Pengajuan tidak ditemukan.'], 404);
         }
 
-        if ($ownerRequest->status !== 'pending') {
-            return response()->json(['message' => 'Pengajuan sudah diproses sebelumnya.'], 422);
+        try {
+            $result = $this->ownerRequestService->review($ownerRequest, $request->user(), $request->status, $request->reason);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
-
-        if ($ownerRequest->user_id === $request->user()->id) {
-            return response()->json(['message' => 'Tidak dapat memproses pengajuan sendiri.'], 422);
-        }
-
-        if ($request->status === 'approved') {
-            $result = $this->ownerRequestService->approve(
-                $ownerRequest,
-                $request->user()
-            );
-
-            return response()->json(new OwnerRequestResource($result));
-        }
-
-        $result = $this->ownerRequestService->reject(
-            $ownerRequest,
-            $request->user(),
-            $request->reason
-        );
 
         return response()->json(new OwnerRequestResource($result));
     }

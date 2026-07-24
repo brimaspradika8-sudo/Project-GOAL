@@ -11,7 +11,7 @@ import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage } from '../lib/api';
 import { TOKEN_KEY } from './_layout';
-import * as SecureStore from '../lib/secureStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -75,7 +75,7 @@ export default function RegisterScreen() {
 
       if (res.ok) {
         if (data.token) {
-          await SecureStore.setItemAsync(TOKEN_KEY, data.token);
+          await AsyncStorage.setItem(TOKEN_KEY, data.token);
           router.replace('/(tabs)');
         } else {
           showMessage('Registrasi berhasil! Silakan masuk.', 'success');

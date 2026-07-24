@@ -10,17 +10,17 @@ use Illuminate\Support\Facades\Cache;
 class FieldService
 {
     private string $cachePrefix = 'fields_';
-    private int $cacheTtl = 300; // 5 minutes
+    private int $cacheTtl = 300;
 
     public function listApproved(?string $search = null, ?string $sport = null, int $page = 1): LengthAwarePaginator
     {
         $query = Field::approved()->with('owner:id,name');
 
         if ($search) {
-            $search = "%{$search}%";
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', $search)
-                  ->orWhere('location', 'ilike', $search);
+            $searchTerm = "%{$search}%";
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('name', 'ilike', $searchTerm)
+                    ->orWhere('location', 'ilike', $searchTerm);
             });
         }
 
@@ -58,8 +58,12 @@ class FieldService
     {
         Cache::forget($this->cachePrefix . 'approved_all');
 <<<<<<< HEAD
+<<<<<<< HEAD
         foreach (['futsal', 'basketball', 'basket', 'badminton', 'mini_soccer', 'tennis', 'tenis', 'volleyball', 'voli', 'other', 'lainnya'] as $sport) {
 =======
+=======
+
+>>>>>>> 4ea81c7 (memeprbaiki ux)
         foreach (config('goal.sport_types', []) as $sport) {
 >>>>>>> 80644d4 (fix backend)
             Cache::forget($this->cachePrefix . 'approved_' . $sport);
@@ -92,16 +96,16 @@ class FieldService
         $isSuperAdmin = $user->profile?->role === 'super_admin';
 
         return Field::create([
-            'owner_id'       => $user->id,
-            'name'           => $data['name'],
-            'sport_type'     => $data['sport_type'],
-            'location'       => $data['location'] ?? null,
-            'description'    => $data['description'] ?? null,
+            'owner_id' => $user->id,
+            'name' => $data['name'],
+            'sport_type' => $data['sport_type'],
+            'location' => $data['location'] ?? null,
+            'description' => $data['description'] ?? null,
             'price_per_hour' => $data['price_per_hour'] ?? null,
-            'image_url'      => $data['image_url'] ?? null,
-            'status'         => $isSuperAdmin ? 'approved' : 'pending',
-            'approved_by'    => $isSuperAdmin ? $user->id : null,
-            'approved_at'    => $isSuperAdmin ? now() : null,
+            'image_url' => $data['image_url'] ?? null,
+            'status' => $isSuperAdmin ? 'approved' : 'pending',
+            'approved_by' => $isSuperAdmin ? $user->id : null,
+            'approved_at' => $isSuperAdmin ? now() : null,
         ]);
     }
 
@@ -109,9 +113,11 @@ class FieldService
     {
         $field->update($data);
 
-        if ($field->status === 'rejected' || ($field->status === 'approved' && !$isAdmin)) {
+        $shouldResetApproval = $field->status === 'rejected' || ($field->status === 'approved' && !$isAdmin);
+
+        if ($shouldResetApproval) {
             $field->update([
-                'status'      => 'pending',
+                'status' => 'pending',
                 'approved_by' => null,
                 'approved_at' => null,
             ]);
@@ -128,9 +134,9 @@ class FieldService
     public function approve(Field $field, User $approver, string $status, ?string $reason = null): Field
     {
         $field->update([
-            'status'           => $status,
-            'approved_by'      => $approver->id,
-            'approved_at'      => now(),
+            'status' => $status,
+            'approved_by' => $approver->id,
+            'approved_at' => now(),
             'rejection_reason' => $status === 'rejected' ? $reason : null,
         ]);
 
@@ -148,12 +154,14 @@ class FieldService
     public function restore(int $id): bool
     {
         $field = Field::onlyTrashed()->find($id);
-        return $field ? (bool)$field->restore() : false;
+
+        return $field ? (bool) $field->restore() : false;
     }
 
     public function forceDelete(int $id): bool
     {
         $field = Field::onlyTrashed()->find($id);
-        return $field ? (bool)$field->forceDelete() : false;
+
+        return $field ? (bool) $field->forceDelete() : false;
     }
 }

@@ -15,7 +15,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import * as SecureStore from '../../lib/secureStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useProfileStore } from '../../store/profileStore';
 import { TOKEN_KEY } from '../_layout';
@@ -56,7 +56,7 @@ export default function ProfileScreen() {
 
   const fetchOwnerStatus = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
       if (!token) return;
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 20000);
@@ -102,7 +102,7 @@ export default function ProfileScreen() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/me/owner-request`, {
         method: 'POST',
         headers: {
@@ -137,14 +137,14 @@ export default function ProfileScreen() {
   const doActualLogout = async () => {
     setLogoutLoading(true);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
       if (token) {
         await fetch(`${API_BASE_URL}/auth/logout`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         }).catch(() => {});
       }
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await AsyncStorage.removeItem(TOKEN_KEY);
       await clearProfile();
       router.replace('/login');
     } catch {

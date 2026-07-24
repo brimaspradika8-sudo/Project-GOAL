@@ -20,13 +20,13 @@ class OwnerRequestService
     public function submit(User $user, array $data): OwnerRequest
     {
         return OwnerRequest::create([
-            'user_id'       => $user->id,
-            'name'          => $data['name'],
-            'email'         => $data['email'],
+            'user_id' => $user->id,
+            'name' => $data['name'],
+            'email' => $data['email'],
             'business_name' => $data['business_name'],
-            'address'       => $data['address'],
-            'phone'         => $data['phone'],
-            'status'        => 'pending',
+            'address' => $data['address'],
+            'phone' => $data['phone'],
+            'status' => 'pending',
         ]);
     }
 
@@ -38,32 +38,37 @@ class OwnerRequestService
             ->paginate(15);
     }
 
-    public function approve(OwnerRequest $request, User $reviewer): OwnerRequest
+    public function review(OwnerRequest $request, User $reviewer, string $status, ?string $reason = null): OwnerRequest
     {
-        return DB::transaction(function () use ($request, $reviewer) {
-            $request->update([
-                'status'      => 'approved',
-                'reviewed_by' => $reviewer->id,
-                'reviewed_at' => now(),
-            ]);
+        if ($request->status !== 'pending') {
+            throw new \RuntimeException('Pengajuan sudah diproses sebelumnya.');
+        }
 
-            Profile::where('user_id', $request->user_id)
-                ->update(['role' => 'owner', 'is_owner_verified' => true]);
+        if ($request->user_id === $reviewer->id) {
+            throw new \RuntimeException('Tidak dapat memproses pengajuan sendiri.');
+        }
+
+        return DB::transaction(function () use ($request, $reviewer, $status, $reason): OwnerRequest {
+            if ($status === 'approved') {
+                $request->update([
+                    'status' => 'approved',
+                    'reviewed_by' => $reviewer->id,
+                    'reviewed_at' => now(),
+                ]);
+
+                Profile::where('user_id', $request->user_id)
+                    ->update(['role' => 'owner', 'is_owner_verified' => true]);
+            } else {
+                $request->update([
+                    'status' => 'rejected',
+                    'rejection_reason' => $reason,
+                    'reviewed_by' => $reviewer->id,
+                    'reviewed_at' => now(),
+                ]);
+            }
 
             return $request->fresh('user:id,name,email');
         });
-    }
-
-    public function reject(OwnerRequest $request, User $reviewer, ?string $reason): OwnerRequest
-    {
-        $request->update([
-            'status'          => 'rejected',
-            'rejection_reason' => $reason,
-            'reviewed_by'     => $reviewer->id,
-            'reviewed_at'     => now(),
-        ]);
-
-        return $request->fresh('user:id,name,email');
     }
 
     public function listByUser(User $user): ?OwnerRequest

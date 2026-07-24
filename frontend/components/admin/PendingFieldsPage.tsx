@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  RefreshControl, Modal, TextInput, Platform,
-  KeyboardAvoidingView,
+  RefreshControl, Modal,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import * as SecureStore from '../../lib/secureStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TOKEN_KEY } from '../../app/_layout';
 import { API_BASE_URL, getErrorMessage } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
@@ -23,14 +22,10 @@ export default function PendingFieldsPage() {
   const [submittingId, setSubmittingId] = useState<number | null>(null);
   const [showTrashedModal, setShowTrashedModal] = useState(false);
   const [approveTarget, setApproveTarget] = useState<{ id: number; name: string } | null>(null);
-  const [rejectTarget, setRejectTarget] = useState<{ id: number; name: string } | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
-  const [rejectLoading, setRejectLoading] = useState(false);
-  const [rejectError, setRejectError] = useState<string | null>(null);
 
   const fetchFields = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/pending/list`, {
         headers: {
           'Accept': 'application/json',
@@ -53,7 +48,7 @@ export default function PendingFieldsPage() {
   const approveField = async (id: number) => {
     setSubmittingId(id);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/${id}/approve`, {
         method: 'POST',
         headers: {
@@ -86,7 +81,7 @@ export default function PendingFieldsPage() {
     if (!approveTarget) return;
     setSubmittingId(approveTarget.id);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/${approveTarget.id}/approve`, {
         method: 'POST',
         headers: {
@@ -109,48 +104,6 @@ export default function PendingFieldsPage() {
       useToastStore.getState().show({ type: 'error', title: 'Gagal', description: e.message || 'Gagal menyetujui lapangan.' });
     } finally {
       setSubmittingId(null);
-    }
-  };
-
-  const openReject = (id: number, name: string) => {
-    setRejectTarget({ id, name });
-    setRejectReason('');
-    setRejectError(null);
-  };
-
-  const confirmReject = async () => {
-    if (!rejectTarget) return;
-    if (!rejectReason.trim()) {
-      setRejectError('Alasan penolakan wajib diisi.');
-      return;
-    }
-    setRejectLoading(true);
-    setRejectError(null);
-    try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/fields/${rejectTarget.id}/approve`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: 'rejected', reason: rejectReason.trim() }),
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(getErrorMessage(data, 'Gagal menolak lapangan.'));
-      }
-
-      setRejectTarget(null);
-      setRejectReason('');
-      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Lapangan ditolak.' });
-      fetchFields();
-    } catch (e: any) {
-      useToastStore.getState().show({ type: 'error', title: 'Gagal', description: e.message || 'Gagal menolak lapangan.' });
-    } finally {
-      setRejectLoading(false);
     }
   };
 
@@ -246,27 +199,15 @@ export default function PendingFieldsPage() {
                   </View>
                 )}
 
-                <View style={st.btnRow}>
-                  <TouchableOpacity
-                    style={[st.rejectBtn, submittingId === f.id && st.disabledBtn]}
-                    onPress={() => openReject(f.id, f.name)}
-                    activeOpacity={0.8}
-                    disabled={submittingId === f.id}
-                  >
-                    <MaterialIcons name="close" size={16} color={COLORS.error} />
-                    <Text style={st.rejectBtnText}>Tolak</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[st.approveBtn, submittingId === f.id && st.disabledBtn]}
-                    onPress={() => handleApprove(f.id, f.name)}
-                    activeOpacity={0.8}
-                    disabled={submittingId === f.id}
-                  >
-                    <MaterialIcons name="verified" size={16} color={COLORS.onPrimary} />
-                    <Text style={st.approveBtnText}>{submittingId === f.id ? 'Menyetujui...' : 'Setujui'}</Text>
-                  </TouchableOpacity>
-                </View>
+                <TouchableOpacity
+                  style={[st.approveBtn, submittingId === f.id && st.disabledBtn]}
+                  onPress={() => handleApprove(f.id, f.name)}
+                  activeOpacity={0.8}
+                  disabled={submittingId === f.id}
+                >
+                  <MaterialIcons name="verified" size={16} color={COLORS.onPrimary} />
+                  <Text style={st.approveBtnText}>{submittingId === f.id ? 'Menyetujui...' : 'Setujui Lapangan'}</Text>
+                </TouchableOpacity>
               </TouchableOpacity>
             ))
           )}
@@ -297,57 +238,6 @@ export default function PendingFieldsPage() {
         confirmLabel="Setujui Lapangan"
         onConfirm={confirmApprove}
       />
-
-      {/* Reject Modal */}
-      <Modal visible={!!rejectTarget} transparent animationType="slide" onRequestClose={() => setRejectTarget(null)}>
-        <KeyboardAvoidingView style={st.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setRejectTarget(null)} />
-          <View style={st.sheet}>
-            <View style={st.sheetHandle} />
-            <View style={st.sheetHeader}>
-              <View style={[st.sheetIconWrap, { backgroundColor: COLORS.errorContainer }]}>
-                <MaterialIcons name="cancel" size={20} color={COLORS.error} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={st.sheetTitle}>Tolak Lapangan</Text>
-                <Text style={st.sheetSubtitle}>{rejectTarget?.name}</Text>
-              </View>
-            </View>
-
-            {rejectError ? (
-              <View style={st.errorBox}>
-                <MaterialIcons name="error-outline" size={14} color={COLORS.error} />
-                <Text style={st.errorText}>{rejectError}</Text>
-              </View>
-            ) : null}
-
-            <Text style={st.fieldLabel}>Alasan Penolakan</Text>
-            <TextInput
-              style={st.reasonInput}
-              value={rejectReason}
-              onChangeText={setRejectReason}
-              placeholder="Contoh: Foto tidak sesuai, harga tidak wajar..."
-              placeholderTextColor={COLORS.textTertiary}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-
-            <View style={st.sheetActions}>
-              <TouchableOpacity style={st.cancelBtn} onPress={() => setRejectTarget(null)}>
-                <Text style={st.cancelText}>Batal</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[st.submitRejectBtn, rejectLoading && { opacity: 0.6 }]}
-                onPress={confirmReject}
-                disabled={rejectLoading}
-              >
-                <Text style={st.submitRejectText}>{rejectLoading ? 'Menolak...' : 'Tolak Lapangan'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </>
   );
 }
@@ -408,20 +298,11 @@ const st = StyleSheet.create({
   addressText: { ...FONTS.bodySm, color: COLORS.textSecondary, flex: 1 },
 
   approveBtn: {
-    flex: 1,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: COLORS.primary, paddingVertical: 12, borderRadius: 12,
     minHeight: 46,
   },
   approveBtnText: { ...FONTS.titleSm, color: COLORS.onPrimary },
-  btnRow: { flexDirection: 'row', gap: 10 },
-  rejectBtn: {
-    flex: 1,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: COLORS.errorContainer, paddingVertical: 12, borderRadius: 12,
-    minHeight: 46, borderWidth: 1, borderColor: COLORS.error + '30',
-  },
-  rejectBtnText: { ...FONTS.titleSm, color: COLORS.error },
   disabledBtn: { opacity: 0.6 },
 
   modalHeaderBar: {
@@ -431,36 +312,4 @@ const st = StyleSheet.create({
   },
   closeBtn: { padding: 4 },
   modalHeaderTitle: { ...FONTS.headlineSm, color: COLORS.text },
-
-  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
-  sheet: {
-    backgroundColor: COLORS.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 20, paddingBottom: Platform.OS === 'ios' ? 36 : 24,
-    borderWidth: 1, borderColor: COLORS.outline,
-  },
-  sheetHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: COLORS.outline, alignSelf: 'center', marginBottom: 18 },
-  sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 18 },
-  sheetIconWrap: {
-    width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.primaryContainer,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  sheetTitle: { ...FONTS.headlineSm, color: COLORS.text },
-  sheetSubtitle: { ...FONTS.bodySm, color: COLORS.textSecondary, marginTop: 2 },
-
-  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.errorContainer, borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: COLORS.error + '30' },
-  errorText: { ...FONTS.bodySm, color: COLORS.error, flex: 1 },
-
-  fieldLabel: { ...FONTS.labelSm, color: COLORS.textSecondary, marginBottom: 6, letterSpacing: 0.5, textTransform: 'uppercase' },
-  reasonInput: {
-    backgroundColor: COLORS.surfaceContainerLow, borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 12,
-    borderWidth: 1, borderColor: COLORS.outline,
-    color: COLORS.text, fontSize: 14, minHeight: 80, marginBottom: 14,
-  },
-
-  sheetActions: { flexDirection: 'row', gap: 12, marginTop: 4 },
-  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: COLORS.surfaceContainerLow, alignItems: 'center', borderWidth: 1, borderColor: COLORS.outline },
-  cancelText: { ...FONTS.titleSm, color: COLORS.textSecondary },
-  submitRejectBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: COLORS.error, alignItems: 'center' },
-  submitRejectText: { ...FONTS.titleSm, color: '#FFFFFF' },
 });
