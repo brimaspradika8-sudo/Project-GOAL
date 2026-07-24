@@ -18,7 +18,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useProfileStore } from '../../store/profileStore';
-import { TOKEN_KEY } from '../_layout';
+import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL } from '../../lib/api';
 import { COLORS, SIZES, FONTS, SHADOWS } from '../../components/goalTheme';
 import AuthInput from '../../components/AuthInput';
@@ -184,7 +184,7 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.ownerCardInfo}>
                 <Text style={styles.ownerCardTitle}>Pengajuan Ditolak</Text>
-                <Text style={styles.ownerCardDesc}>{ownerRequestData?.rejection_reason ?? 'Ketuk untuk ajukan ulang.'}</Text>
+                <Text style={styles.ownerCardDesc} numberOfLines={2} ellipsizeMode="tail">{ownerRequestData?.rejection_reason ?? 'Ketuk untuk ajukan ulang.'}</Text>
               </View>
             </View>
             <MaterialIcons name="chevron-right" size={20} color={COLORS.error} />
@@ -301,11 +301,11 @@ export default function ProfileScreen() {
             style={styles.avatar}
           />
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{profile?.full_name ?? profile?.username ?? 'Pengguna'}</Text>
-            {profile?.username ? <Text style={styles.profileHandle}>@{profile.username}</Text> : null}
+            <Text style={styles.profileName} numberOfLines={1} ellipsizeMode="tail">{profile?.full_name ?? profile?.username ?? 'Pengguna'}</Text>
+            {profile?.username ? <Text style={styles.profileHandle} numberOfLines={1} ellipsizeMode="tail">@{profile.username}</Text> : null}
             <View style={styles.locationRow}>
               <MaterialIcons name="location-on" size={14} color={COLORS.textSecondary} />
-              <Text style={styles.locationText}>{profile?.region ?? 'Belum diatur'}</Text>
+              <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">{profile?.region ?? 'Belum diatur'}</Text>
             </View>
           </View>
           <TouchableOpacity style={styles.editButton} activeOpacity={0.8} onPress={() => router.push('/onboarding')}>

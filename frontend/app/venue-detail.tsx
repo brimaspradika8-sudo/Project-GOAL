@@ -9,6 +9,7 @@ import {
   StatusBar,
   RefreshControl,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -32,6 +33,7 @@ function formatPrice(price: number | null): string {
 
 export default function VenueDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { height: screenHeight } = useWindowDimensions();
   const [field, setField] = useState<Field | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +108,7 @@ export default function VenueDetailScreen() {
           />
         }
       >
-        <View style={styles.heroSection}>
+        <View style={[styles.heroSection, { height: Math.min(280, screenHeight * 0.4) }]}>
           <SafeImage source={{ uri: imgUrl }} style={styles.heroImage} fallbackSize={48} />
           <View style={styles.heroOverlay} />
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
@@ -125,10 +127,10 @@ export default function VenueDetailScreen() {
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.venueTitle}>{field.name}</Text>
+          <Text style={styles.venueTitle} numberOfLines={2} ellipsizeMode="tail">{field.name}</Text>
           <View style={styles.locationRow}>
             <MaterialIcons name="location-on" size={16} color={COLORS.primary} />
-            <Text style={styles.locationText}>{field.location}</Text>
+            <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">{field.location}</Text>
           </View>
 
           <View style={styles.infoRow}>
@@ -231,7 +233,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   heroSection: {
-    height: 280,
     position: 'relative',
   },
   heroImage: {
@@ -288,6 +289,9 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 20,
     paddingTop: 20,
+    maxWidth: 440,
+    alignSelf: 'center',
+    width: '100%',
   },
   venueTitle: {
     fontFamily: 'Montserrat',

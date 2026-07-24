@@ -1,17 +1,20 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, useWindowDimensions } from 'react-native';
 
 interface BackgroundPatternProps {
   variant?: 'login' | 'register' | 'auth';
 }
 
 export function BackgroundPattern({ variant = 'login' }: BackgroundPatternProps) {
+  const { width } = useWindowDimensions();
+  const base = Math.min(340, width * 0.9);
+
   return (
     <View style={styles.container} pointerEvents="none">
-      <View style={styles.circle1} />
-      <View style={styles.circle2} />
-      <View style={styles.circle3} />
-      {variant === 'register' && <View style={styles.circle4} />}
+      <View style={[styles.circle1, { width: base * 0.82, height: base * 0.82, borderRadius: (base * 0.82) / 2 }]} />
+      <View style={[styles.circle2, { width: base, height: base, borderRadius: base / 2 }]} />
+      <View style={[styles.circle3, { width: base * 0.53, height: base * 0.53, borderRadius: (base * 0.53) / 2 }]} />
+      {variant === 'register' && <View style={[styles.circle4, { width: base * 0.65, height: base * 0.65, borderRadius: (base * 0.65) / 2 }]} />}
       <View style={styles.dotsContainer}>
         {Array.from({ length: 7 }).map((_, row) => (
           <View key={row} style={styles.dotRow}>
@@ -39,9 +42,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -100,
     right: -80,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
     backgroundColor: '#007a4f',
     opacity: 0.04,
   },
@@ -49,9 +49,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -120,
     left: -100,
-    width: 340,
-    height: 340,
-    borderRadius: 170,
     backgroundColor: '#00449d',
     opacity: 0.035,
   },
@@ -59,9 +56,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '35%',
     right: -50,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
     backgroundColor: '#00A651',
     opacity: 0.03,
   },
@@ -69,9 +63,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: '25%',
     left: -70,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
     backgroundColor: '#007a4f',
     opacity: 0.03,
   },

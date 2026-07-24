@@ -88,7 +88,7 @@ export default function ForgotPasswordScreen() {
               </Animated.View>
               <Text style={styles.title}>TERKIRIM!</Text>
               <Text style={styles.subtitle}>Tautan reset password telah dikirim ke</Text>
-              <Text style={styles.emailHighlight}>{email}</Text>
+              <Text style={styles.emailHighlight} numberOfLines={1} ellipsizeMode="tail">{email}</Text>
             </Animated.View>
 
             <Animated.View style={[styles.glassCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>

@@ -11,7 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage } from '../lib/api';
-import { TOKEN_KEY } from './_layout';
+import { TOKEN_KEY } from '../lib/auth';
 import { useProfileStore } from '../store/profileStore';
 
 const RATE_LIMIT_MS = 5000;

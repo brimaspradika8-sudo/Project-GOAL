@@ -3,11 +3,14 @@ import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../lib/theme';
+import { TOKEN_KEY } from '../../lib/auth';
 import Sidebar, { SidebarItem } from '../../components/web/Sidebar';
 
 export default function OwnerTabLayout() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === 'web';
 
   const sidebarItems: SidebarItem[] = [
@@ -87,7 +90,7 @@ export default function OwnerTabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: [styles.tabBar, { backgroundColor: colors.surface, borderTopColor: colors.outline }],
+        tabBarStyle: [styles.tabBar, { backgroundColor: colors.surface, borderTopColor: colors.outline, height: 64 + insets.bottom, paddingTop: 8, paddingBottom: insets.bottom + 8 }],
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabelStyle: styles.tabLabel,
@@ -150,9 +153,6 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     borderTopWidth: 0,
-    height: Platform.OS === 'ios' ? 88 : 64,
-    paddingTop: Platform.OS === 'ios' ? 10 : 8,
-    paddingBottom: Platform.OS === 'ios' ? 22 : 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.08,
