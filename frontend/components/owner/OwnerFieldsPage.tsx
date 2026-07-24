@@ -499,7 +499,6 @@ export default function OwnerFieldsPage() {
         </ScrollView>
       </View>
 
-      {/* ── CREATE MODAL ── */}
       <FieldModal
         visible={showCreate}
         title="Penambahan Venue"
@@ -519,7 +518,6 @@ export default function OwnerFieldsPage() {
         submitBg={COLORS.primary}
       />
 
-      {/* ── EDIT MODAL ── */}
       <FieldModal
         visible={!!editTarget}
         title="Edit Venue"
@@ -553,7 +551,6 @@ export default function OwnerFieldsPage() {
   );
 }
 
-// ── Field Form Modal ──────────────────────────────────────────────────────────
 function FieldModal({
   visible, title, iconName, iconColor, iconBg,
   form, errors, error, loading,
@@ -600,7 +597,6 @@ function FieldModal({
           ) : null}
 
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            {/* Image picker */}
             <View style={st.fieldWrap}>
               <Text style={st.fieldLabel}>Foto Venue (Utama)</Text>
               <TouchableOpacity style={[st.imagePicker, errors.image && st.imagePickerError]} onPress={onPickImage} activeOpacity={0.8}>
@@ -627,7 +623,6 @@ function FieldModal({
               {errors.image ? <FieldError message={errors.image} /> : null}
             </View>
 
-            {/* Nama Lapangan */}
             <FField
               label="Nama Lapangan" icon="stadium"
               value={form.name}
@@ -637,10 +632,13 @@ function FieldModal({
               error={errors.name}
             />
 
+<<<<<<< HEAD
             {/* Jenis Olahraga */}
+=======
+>>>>>>> aff232dc93cf2184e6d170adfe3b9a684f69fe38
             <View style={st.fieldWrap}>
               <Text style={st.fieldLabel}>Jenis Olahraga</Text>
-              <View style={[st.sportRow, errors.sport_type && st.sportRowError]}>
+              <View style={[st.sportRow, errors.sport_type ? st.sportRowError : null]}>
                 {SPORT_OPTIONS.map(s => {
                   const active = form.sport_type === SPORT_MAP[s];
                   return (
@@ -648,7 +646,6 @@ function FieldModal({
                       key={s}
                       style={[st.sportChip, active && st.sportChipActive]}
                       onPress={() => onFieldChange('sport_type', SPORT_MAP[s])}
-                      activeOpacity={0.7}
                     >
                       <Text style={[st.sportChipText, active && st.sportChipTextActive]}>{s}</Text>
                     </TouchableOpacity>

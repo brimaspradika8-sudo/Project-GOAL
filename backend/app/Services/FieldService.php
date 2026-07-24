@@ -57,7 +57,11 @@ class FieldService
     public function invalidateCache(): void
     {
         Cache::forget($this->cachePrefix . 'approved_all');
+<<<<<<< HEAD
         foreach (['futsal', 'basketball', 'basket', 'badminton', 'mini_soccer', 'tennis', 'tenis', 'volleyball', 'voli', 'other', 'lainnya'] as $sport) {
+=======
+        foreach (config('goal.sport_types', []) as $sport) {
+>>>>>>> aff232dc93cf2184e6d170adfe3b9a684f69fe38
             Cache::forget($this->cachePrefix . 'approved_' . $sport);
         }
     }
