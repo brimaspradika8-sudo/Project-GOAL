@@ -24,6 +24,8 @@ import { useDebounce } from '../../hooks/useDebounce';
 import { API_BASE_URL } from '../../lib/api';
 import { useTheme } from '../../lib/theme';
 
+const isWeb = Platform.OS === 'web';
+
 
 const SPORT_MAP: Record<string, string> = {
   'Semua': '',
@@ -125,6 +127,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
 
+      {!isWeb && (
       <View style={styles.topBar}>
         <View style={[styles.pageShell, styles.topBarShell]}>
           <View style={styles.logoRow}>
@@ -143,6 +146,7 @@ export default function HomeScreen() {
           </View>
         </View>
       </View>
+      )}
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}

@@ -28,6 +28,13 @@ class UserController extends Controller
             'role' => 'nullable|in:owner,player,admin,super_admin',
         ]);
 
+        $currentUser = $request->user();
+        $requestedRole = $data['role'] ?? 'player';
+
+        if (in_array($requestedRole, ['admin', 'super_admin']) && $currentUser->profile?->role !== 'super_admin') {
+            return response()->json(['message' => 'Hanya Super Admin yang dapat membuat akun Admin/Super Admin.'], 403);
+        }
+
         $user = $this->userService->createUser($data);
 
         return response()->json($user, 201);

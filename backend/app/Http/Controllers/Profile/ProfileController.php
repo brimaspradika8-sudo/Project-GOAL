@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password as PasswordRule;
+use Illuminate\Validation\Rules\Rule;
 
 class ProfileController extends Controller
 {
@@ -28,7 +29,7 @@ class ProfileController extends Controller
         $validated = $request->validate([
             'full_name' => 'sometimes|string|max:100',
             'region'    => 'sometimes|string|max:100',
-            'avatar_url' => 'sometimes|nullable|url|max:500',
+            'avatar_url' => ['sometimes', 'nullable', 'url', 'max:500', Rule::startsWith([config('app.url') . '/storage/'])],
             'age'       => 'sometimes|nullable|integer|min:10|max:100',
         ]);
 
