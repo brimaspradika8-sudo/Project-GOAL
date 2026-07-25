@@ -9,6 +9,12 @@ class UploadController extends Controller
 {
     public function image(Request $request): JsonResponse
     {
+        $profile = $request->user()->profile;
+
+        if (!$profile || !in_array($profile->role, ['owner', 'super_admin'])) {
+            return response()->json(['message' => 'Anda tidak memiliki akses untuk mengupload gambar.'], 403);
+        }
+
         $request->validate([
             'image' => 'required|file|image|max:5120', // max 5MB
         ]);

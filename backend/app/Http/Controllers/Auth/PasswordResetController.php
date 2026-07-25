@@ -81,7 +81,7 @@ class PasswordResetController extends Controller
             ],
             function ($user, $password) {
                 $user->forceFill([
-                    'password'       => Hash::make($password),
+                    'password'       => $password,
                     'remember_token' => Str::random(60),
                 ])->save();
 

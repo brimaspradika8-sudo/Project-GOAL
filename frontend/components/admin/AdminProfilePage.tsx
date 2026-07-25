@@ -16,7 +16,6 @@ import { useToastStore } from '../../store/toastStore';
 import { useTheme } from '../../lib/theme';
 
 const ROLE_LABEL: Record<string, string> = {
-  admin:       'Admin',
   super_admin: 'Super Admin',
 };
 
@@ -24,7 +23,7 @@ export default function AdminProfilePage() {
   const { profile, clearProfile } = useProfileStore();
   const { colors, resolved } = useTheme();
   const st = makeStyles(colors, resolved);
-  const role = profile?.role ?? 'admin';
+  const role = profile?.role ?? 'super_admin';
   const initials = (profile?.full_name || profile?.username || 'A').charAt(0).toUpperCase();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
