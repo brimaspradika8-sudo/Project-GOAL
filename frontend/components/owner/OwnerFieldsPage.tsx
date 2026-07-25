@@ -632,10 +632,6 @@ function FieldModal({
               error={errors.name}
             />
 
-<<<<<<< HEAD
-            {/* Jenis Olahraga */}
-=======
->>>>>>> aff232dc93cf2184e6d170adfe3b9a684f69fe38
             <View style={st.fieldWrap}>
               <Text style={st.fieldLabel}>Jenis Olahraga</Text>
               <View style={[st.sportRow, errors.sport_type ? st.sportRowError : null]}>
