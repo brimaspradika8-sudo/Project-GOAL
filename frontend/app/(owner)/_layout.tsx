@@ -19,13 +19,13 @@ export default function OwnerTabLayout() {
 
   if (isWeb) {
     return (
-      <View style={styles.webRoot}>
+      <View style={[styles.webRoot, { backgroundColor: colors.background }]}>
         <Sidebar
           title="Owner Panel"
           accentColor={colors.accentOrange}
           items={sidebarItems}
         />
-        <View style={styles.webContent}>
+        <View style={[styles.webContent, { backgroundColor: colors.background }]}>
           <Tabs
             tabBar={() => null}
             screenOptions={{

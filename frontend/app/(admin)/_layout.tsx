@@ -59,13 +59,13 @@ export default function AdminTabLayout() {
 
   if (isWeb) {
     return (
-      <View style={styles.webRoot}>
+      <View style={[styles.webRoot, { backgroundColor: colors.background }]}>
         <Sidebar
           title="Admin Panel"
           accentColor={colors.accentPurple}
           items={sidebarItems}
         />
-        <View style={styles.webContent}>
+        <View style={[styles.webContent, { backgroundColor: colors.background }]}>
           <Tabs
             tabBar={() => null}
             screenOptions={{

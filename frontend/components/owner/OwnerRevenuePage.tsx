@@ -1,10 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import DashboardHeader from '../shared/DashboardHeader';
+import { useTheme } from '../../lib/theme';
 
 export default function OwnerRevenuePage() {
+  const { colors } = useTheme();
+  const st = makeStyles(colors);
+
   return (
     <View style={st.screen}>
       <DashboardHeader
@@ -14,7 +18,7 @@ export default function OwnerRevenuePage() {
       <View style={st.body}>
         <View style={st.card}>
           <View style={st.iconWrap}>
-            <MaterialIcons name="bar-chart" size={44} color={COLORS.primary} />
+            <MaterialIcons name="bar-chart" size={44} color={colors.primary} />
           </View>
           <Text style={st.title}>Segera Hadir</Text>
           <Text style={st.desc}>
@@ -39,14 +43,14 @@ export default function OwnerRevenuePage() {
   );
 }
 
-const st = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.background },
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.background },
   body: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SIZES.padding },
   card: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: SIZES.borderRadiusXl,
     borderWidth: 1,
-    borderColor: COLORS.outline,
+    borderColor: colors.outline,
     padding: 32,
     alignItems: 'center',
     width: '100%',
@@ -57,17 +61,17 @@ const st = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 28,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: colors.primaryContainer,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
     borderWidth: 2,
-    borderColor: COLORS.primary + '25',
+    borderColor: colors.primary + '25',
   },
-  title: { ...FONTS.headlineMd, color: COLORS.text, marginBottom: 10, textAlign: 'center' },
+  title: { ...FONTS.headlineMd, color: colors.text, marginBottom: 10, textAlign: 'center' },
   desc: {
     ...FONTS.bodyMd,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 24,
@@ -86,7 +90,7 @@ const st = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
-  featureText: { ...FONTS.bodyMd, color: COLORS.text },
+  featureText: { ...FONTS.bodyMd, color: colors.text },
 });

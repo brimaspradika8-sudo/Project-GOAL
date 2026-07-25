@@ -12,10 +12,16 @@ interface DashboardHeaderProps {
   right?: React.ReactNode;
   showBack?: boolean;
   onBack?: () => void;
+  titleColor?: string;
 }
 
-export default function DashboardHeader({ title, subtitle, right, showBack = true, onBack }: DashboardHeaderProps) {
-  const { colors } = useTheme();
+export default function DashboardHeader({ title, subtitle, right, showBack = true, onBack, titleColor }: DashboardHeaderProps) {
+  const { colors, resolved } = useTheme();
+  const headerBackground = resolved === 'dark' ? '#064E3B' : colors.primary;
+  const headerTextColor = '#FFFFFF';
+  const headerSubtextColor = 'rgba(255,255,255,0.82)';
+  const backButtonBackground = resolved === 'dark' ? 'rgba(255,255,255,0.16)' : colors.surface;
+  const backButtonIcon = resolved === 'dark' ? '#FFFFFF' : colors.primary;
 
   const handleBack = () => {
     if (onBack) {
@@ -26,21 +32,21 @@ export default function DashboardHeader({ title, subtitle, right, showBack = tru
   };
 
   return (
-    <View style={[st.wrap, { backgroundColor: colors.primary }]}>
+    <View style={[st.wrap, { backgroundColor: headerBackground }]}>
       <View style={st.blobTopLeft} />
       <View style={st.blobBottomRight} />
 
       <View style={st.content}>
         {showBack ? (
-          <TouchableOpacity style={st.backBtn} activeOpacity={0.8} onPress={handleBack}>
-            <MaterialIcons name="arrow-back" size={20} color={colors.primary} />
+          <TouchableOpacity style={[st.backBtn, { backgroundColor: backButtonBackground }]} activeOpacity={0.8} onPress={handleBack}>
+            <MaterialIcons name="arrow-back" size={20} color={backButtonIcon} />
           </TouchableOpacity>
         ) : null}
 
         <View style={st.textGroup}>
-          <Text style={[st.title, { color: colors.onPrimary }]} numberOfLines={1}>{title}</Text>
+          <Text style={[st.title, { color: titleColor ?? headerTextColor }]} numberOfLines={1}>{title}</Text>
           {subtitle ? (
-            <Text style={[st.subtitle, { color: 'rgba(255,255,255,0.78)' }]} numberOfLines={2}>{subtitle}</Text>
+            <Text style={[st.subtitle, { color: headerSubtextColor }]} numberOfLines={2}>{subtitle}</Text>
           ) : null}
         </View>
         <View style={st.rightSlot}>
