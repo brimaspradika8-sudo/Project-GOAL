@@ -6,7 +6,6 @@ use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 
 class UserService
 {
@@ -14,8 +13,9 @@ class UserService
     {
         return User::with('profile')
             ->when($search, function ($query, $value) {
-                $query->where('name', 'like', "%{$value}%")
-                    ->orWhere('email', 'like', "%{$value}%");
+                $escaped = str_replace(['%', '_'], ['\\%', '\\_'], $value);
+                $query->where('name', 'like', "%{$escaped}%")
+                    ->orWhere('email', 'like', "%{$escaped}%");
             })
             ->when($role, function ($query, $value) {
                 $query->whereHas('profile', function ($profileQuery) use ($value) {
@@ -32,7 +32,7 @@ class UserService
             $user = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
-                'password' => Hash::make($data['password']),
+                'password' => $data['password'],
             ]);
 
             Profile::create([
@@ -58,7 +58,7 @@ class UserService
         }
 
         if (!empty($data['password'] ?? null)) {
-            $user->password = Hash::make($data['password']);
+            $user->password = $data['password'];
         }
 
         $user->save();
@@ -84,13 +84,19 @@ class UserService
 
     public function updateRole(User $user, string $role, User $currentUser): void
     {
+        $validRoles = [Profile::ROLE_PLAYER, Profile::ROLE_OWNER, Profile::ROLE_SUPER_ADMIN];
+
+        if (!in_array($role, $validRoles)) {
+            throw new \RuntimeException('Role tidak valid.');
+        }
+
         $currentUserRole = $currentUser->profile?->role;
 
         if (($user->profile?->role === 'super_admin' || $role === 'super_admin') && $currentUserRole !== 'super_admin') {
             throw new \RuntimeException('Hanya Super Admin yang dapat mengelola role Super Admin.');
         }
 
-        $user->profile?->update(['role' => $role]);
+        $user->profile?->forceFill(['role' => $role])->save();
     }
 
     public function deleteUser(User $user, User $currentUser): void

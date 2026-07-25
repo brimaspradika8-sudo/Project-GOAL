@@ -57,11 +57,7 @@ class FieldService
     public function invalidateCache(): void
     {
         Cache::forget($this->cachePrefix . 'approved_all');
-<<<<<<< HEAD
-        foreach (['futsal', 'basketball', 'basket', 'badminton', 'mini_soccer', 'tennis', 'tenis', 'volleyball', 'voli', 'other', 'lainnya'] as $sport) {
-=======
         foreach (config('goal.sport_types', []) as $sport) {
->>>>>>> aff232dc93cf2184e6d170adfe3b9a684f69fe38
             Cache::forget($this->cachePrefix . 'approved_' . $sport);
         }
     }
@@ -91,7 +87,7 @@ class FieldService
     {
         $isSuperAdmin = $user->profile?->role === 'super_admin';
 
-        return Field::create([
+        $field = Field::create([
             'owner_id' => $user->id,
             'name' => $data['name'],
             'sport_type' => $data['sport_type'],
@@ -99,24 +95,33 @@ class FieldService
             'description' => $data['description'] ?? null,
             'price_per_hour' => $data['price_per_hour'] ?? null,
             'image_url' => $data['image_url'] ?? null,
+        ]);
+
+        $field->forceFill([
             'status' => $isSuperAdmin ? 'approved' : 'pending',
             'approved_by' => $isSuperAdmin ? $user->id : null,
             'approved_at' => $isSuperAdmin ? now() : null,
-        ]);
+        ])->save();
+
+        return $field;
     }
 
     public function update(Field $field, array $data, bool $isAdmin = false): Field
     {
-        $field->update($data);
+        $allowed = collect($data)->only([
+            'name', 'sport_type', 'location', 'description', 'price_per_hour', 'image_url',
+        ])->filter()->toArray();
+
+        $field->update($allowed);
 
         $shouldResetApproval = $field->status === 'rejected' || ($field->status === 'approved' && !$isAdmin);
 
         if ($shouldResetApproval) {
-            $field->update([
+            $field->forceFill([
                 'status' => 'pending',
                 'approved_by' => null,
                 'approved_at' => null,
-            ]);
+            ])->save();
         }
 
         return $field->fresh('owner:id,name');
@@ -129,12 +134,12 @@ class FieldService
 
     public function approve(Field $field, User $approver, string $status, ?string $reason = null): Field
     {
-        $field->update([
+        $field->forceFill([
             'status' => $status,
             'approved_by' => $approver->id,
             'approved_at' => now(),
             'rejection_reason' => $status === 'rejected' ? $reason : null,
-        ]);
+        ])->save();
 
         return $field->fresh('owner:id,name', 'approver:id,name');
     }

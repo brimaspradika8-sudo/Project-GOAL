@@ -228,7 +228,7 @@ export default function ProfileScreen() {
       );
     }
 
-    if (role === 'admin' || role === 'super_admin') {
+    if (role === 'super_admin') {
       return (
         <>
           <TouchableOpacity
@@ -316,11 +316,11 @@ export default function ProfileScreen() {
         {profile?.role && (
           <View style={styles.roleBadge}>
             <MaterialIcons
-              name={profile.role === 'super_admin' ? 'shield' : profile.role === 'admin' ? 'admin-panel-settings' : profile.role === 'owner' ? 'store' : 'person'}
+              name={profile.role === 'super_admin' ? 'shield' : profile.role === 'owner' ? 'store' : 'person'}
               size={14}
               color={COLORS.primary}
             />
-            <Text style={styles.roleBadgeText}>{profile.role === 'super_admin' ? 'SUPER ADMIN' : profile.role === 'owner' ? 'OWNER' : profile.role.toUpperCase()}</Text>
+            <Text style={styles.roleBadgeText}>{profile.role === 'super_admin' ? 'SUPER ADMIN' : profile.role === 'owner' ? 'OWNER' : 'PLAYER'}</Text>
           </View>
         )}
 

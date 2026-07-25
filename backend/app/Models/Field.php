@@ -19,10 +19,6 @@ class Field extends Model
         'description',
         'price_per_hour',
         'image_url',
-        'status',
-        'approved_by',
-        'approved_at',
-        'rejection_reason',
     ];
 
     protected $casts = [

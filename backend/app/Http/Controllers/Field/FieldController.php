@@ -77,7 +77,7 @@ class FieldController extends Controller
 
         $profile = $request->user()->profile;
         $isOwner = $field->owner_id === $request->user()->id;
-        $isAdmin = $profile && in_array($profile->role, ['admin', 'super_admin']);
+        $isAdmin = $profile && $profile->role === 'super_admin';
 
         if (!$isOwner && !$isAdmin) {
             return response()->json(['message' => 'Anda bukan pemilik lapangan ini.'], 403);
@@ -100,7 +100,7 @@ class FieldController extends Controller
 
         $profile = $request->user()->profile;
         $isOwner = $field->owner_id === $request->user()->id;
-        $isAdmin = $profile && in_array($profile->role, ['admin', 'super_admin']);
+        $isAdmin = $profile && $profile->role === 'super_admin';
 
         if (!$isOwner && !$isAdmin) {
             return response()->json(['message' => 'Anda bukan pemilik lapangan ini.'], 403);

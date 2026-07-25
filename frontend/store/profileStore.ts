@@ -13,7 +13,7 @@ export interface Profile {
   sports: string[];
   region: string;
   onboarding_completed: boolean;
-  role: 'player' | 'owner' | 'admin' | 'super_admin';
+  role: 'player' | 'owner' | 'super_admin';
   is_owner_verified: boolean;
   age?: number | null;
 }

@@ -20,15 +20,6 @@ class RoleSeeder extends Seeder
             ['role' => 'player', 'onboarding_completed' => true, 'username' => 'player1']
         );
 
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@example.com'],
-            ['name' => 'Admin One', 'password' => Hash::make('Admin123')]
-        );
-        Profile::firstOrCreate(
-            ['user_id' => $admin->id],
-            ['role' => 'admin', 'onboarding_completed' => true, 'username' => 'admin1']
-        );
-
         $superAdmin = User::firstOrCreate(
             ['email' => 'superadmin@example.com'],
             ['name' => 'Super Admin', 'password' => Hash::make('SuperAdmin123')]

@@ -21,6 +21,9 @@ return [
     'allowed_origins_patterns' => $isProduction ? [] : [
         '/^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|9\.\d+\.\d+\.\d+)(:\d+)?$/',
         '/^https?:\/\/.*\.loca\.lt(:\d+)?$/',
+        '/^https?:\/\/.*\.ngrok-free\.app$/',
+        '/^https?:\/\/.*\.ngrok\.app$/',
+        '/^https?:\/\/.*\.ngrok\.io$/',
     ],
     'allowed_headers' => ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
     'exposed_headers' => [],

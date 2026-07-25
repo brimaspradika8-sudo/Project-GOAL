@@ -19,7 +19,6 @@ import { useToastStore } from '../../store/toastStore';
 const ROLE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   player:      { label: 'Pemain',      color: '#1d6fab', bg: '#dbeafe' },
   owner:       { label: 'Pemilik',     color: COLORS.primary, bg: COLORS.primaryContainer },
-  admin:       { label: 'Admin',       color: '#6d28d9', bg: '#ede9fe' },
   super_admin: { label: 'Super Admin', color: '#92400e', bg: '#fef3c7' },
 };
 
@@ -367,8 +366,8 @@ export default function UserPage() {
                       <MaterialIcons name="edit" size={16} color={COLORS.accentPurple} />
                     </TouchableOpacity>
 
-                    {/* Oranye — Upgrade Role (admin + super_admin, bukan baris super_admin) */}
-                    {(loggedInUserRole === 'admin' || isSuperAdmin) && roleKey !== 'super_admin' && (
+                    {/* Oranye — Upgrade Role (super_admin only, bukan baris super_admin) */}
+                    {isSuperAdmin && roleKey !== 'super_admin' && (
                       <TouchableOpacity
                         style={[st.actionBtn, { backgroundColor: COLORS.accentOrangeLight }]}
                         onPress={() => {

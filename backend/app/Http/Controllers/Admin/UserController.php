@@ -25,14 +25,14 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
-            'role' => 'nullable|in:owner,player,admin,super_admin',
+            'role' => 'nullable|in:owner,player,super_admin',
         ]);
 
         $currentUser = $request->user();
         $requestedRole = $data['role'] ?? 'player';
 
-        if (in_array($requestedRole, ['admin', 'super_admin']) && $currentUser->profile?->role !== 'super_admin') {
-            return response()->json(['message' => 'Hanya Super Admin yang dapat membuat akun Admin/Super Admin.'], 403);
+        if ($requestedRole === 'super_admin' && $currentUser->profile?->role !== 'super_admin') {
+            return response()->json(['message' => 'Hanya Super Admin yang dapat membuat akun Super Admin.'], 403);
         }
 
         $user = $this->userService->createUser($data);
@@ -56,7 +56,7 @@ class UserController extends Controller
 
     public function updateRole(Request $request, int $id): JsonResponse
     {
-        $request->validate(['role' => 'required|in:player,owner,admin,super_admin']);
+        $request->validate(['role' => 'required|in:player,owner,super_admin']);
 
         $user = User::with('profile')->findOrFail($id);
 

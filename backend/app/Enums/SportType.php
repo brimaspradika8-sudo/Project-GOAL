@@ -17,7 +17,7 @@ class SportType
     public const LAINNYA = 'lainnya';
 
     /**
-     * Return all allowed sport type slugs.
+     * Return all allowed sport type values (slugs and title cases).
      *
      * @return string[]
      */

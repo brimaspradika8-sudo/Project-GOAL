@@ -105,7 +105,7 @@ function RootLayoutInner() {
 
     if (profile.onboarding_completed === false) {
       router.replace('/onboarding');
-    } else if (profile.role === 'admin' || profile.role === 'super_admin') {
+    } else if (profile.role === 'super_admin') {
       router.replace('/(admin)/dashboard');
     } else {
       router.replace('/(tabs)');
@@ -133,7 +133,7 @@ function RootLayoutInner() {
           useProfileStore.setState({ profile, loading: false });
           if (profile.onboarding_completed === false) {
             router.replace('/onboarding');
-          } else if (profile.role === 'admin' || profile.role === 'super_admin') {
+          } else if (profile.role === 'super_admin') {
             router.replace('/(admin)/dashboard');
           } else {
             router.replace('/(tabs)');
