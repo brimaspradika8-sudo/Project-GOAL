@@ -127,9 +127,9 @@ function ToastItem({ toast, onDismiss }: { toast: ToastData; onDismiss: (id: num
         </View>
 
         <View style={styles.textContainer}>
-          <Text style={[styles.title, { color: config.titleColor }]}>{toast.title}</Text>
+          <Text style={[styles.title, { color: config.titleColor }]} numberOfLines={1} ellipsizeMode="tail">{toast.title}</Text>
           {toast.message ? (
-            <Text style={[styles.message, { color: config.messageColor }]}>{toast.message}</Text>
+            <Text style={[styles.message, { color: config.messageColor }]} numberOfLines={2} ellipsizeMode="tail">{toast.message}</Text>
           ) : null}
         </View>
 

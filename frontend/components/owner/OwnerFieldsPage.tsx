@@ -9,14 +9,13 @@ import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useFieldStore } from '../../store/fieldStore';
-import { TOKEN_KEY } from '../../app/_layout';
-import { API_BASE_URL, getErrorMessage, getAssetUrl } from '../../lib/api';
+import { TOKEN_KEY } from '../../lib/auth';
+import { API_BASE_URL, getErrorMessage } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
-import { useTheme } from '../../lib/theme';
 import {
   SPORT_OPTIONS, SPORT_MAP,
   type FieldFormErrors, type FieldFormData,
@@ -45,8 +44,6 @@ const EMPTY_FORM: FieldFormData = {
 };
 
 export default function OwnerFieldsPage() {
-  const { colors, resolved } = useTheme();
-  const st = makeStyles(colors, resolved);
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -398,7 +395,6 @@ export default function OwnerFieldsPage() {
       <View style={st.screen}>
         <DashboardHeader
           title="Kelola Lapangan"
-          titleColor="#FFFFFF"
           subtitle="Kelola aset lapangan olahraga Anda"
           onBack={() => router.push('/(tabs)')}
           right={
@@ -452,7 +448,7 @@ export default function OwnerFieldsPage() {
               return (
                 <View key={f.id} style={st.card}>
                   <View style={st.cardImgWrap}>
-                    <Image source={{ uri: getAssetUrl(img) || IMG_PLACEHOLDER }} style={st.cardImg} />
+                    <Image source={{ uri: img }} style={st.cardImg} />
                     <View style={st.cardOverlay}>
                       <View style={[st.statusBadge, { backgroundColor: status.bg, borderColor: status.color + '40' }]}>
                         <View style={[st.statusDot, { backgroundColor: status.color }]} />
@@ -538,7 +534,7 @@ export default function OwnerFieldsPage() {
         onClose={() => setEditTarget(null)}
         onSubmit={handleEdit}
         submitLabel="Simpan Perubahan"
-        submitBg={COLORS.primary}
+        submitBg="#6d28d9"
       />
 
       <ConfirmDialog
@@ -571,11 +567,9 @@ function FieldModal({
   onClose: () => void; onSubmit: () => void;
   submitLabel: string; submitBg: string;
 }) {
-  const { colors, resolved } = useTheme();
-  const st = makeStyles(colors, resolved);
   const set = (key: keyof FieldFormData) => (val: string) => onFieldChange(key, val);
   const blur = (key: keyof FieldFormData) => () => onFieldBlur(key);
-  const previewUri = getAssetUrl(form.image_uri || form.image_url || null);
+  const previewUri = form.image_uri || form.image_url || null;
   const isSubmitDisabled = loading || hasErrors(errors);
 
   return (
@@ -638,6 +632,10 @@ function FieldModal({
               error={errors.name}
             />
 
+<<<<<<< HEAD
+            {/* Jenis Olahraga */}
+=======
+>>>>>>> aff232dc93cf2184e6d170adfe3b9a684f69fe38
             <View style={st.fieldWrap}>
               <Text style={st.fieldLabel}>Jenis Olahraga</Text>
               <View style={[st.sportRow, errors.sport_type ? st.sportRowError : null]}>
@@ -699,8 +697,6 @@ function FieldModal({
 
 // ── Inline error message ──────────────────────────────────────────────────────
 function FieldError({ message }: { message: string }) {
-  const { colors, resolved } = useTheme();
-  const st = makeStyles(colors, resolved);
   if (!message) return null;
   return (
     <View style={st.fieldErrorRow}>
@@ -718,8 +714,6 @@ function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboar
   placeholder?: string; keyboardType?: any; multiline?: boolean;
   error?: string;
 }) {
-  const { colors, resolved } = useTheme();
-  const st = makeStyles(colors, resolved);
   return (
     <View style={st.fieldWrap}>
       <Text style={st.fieldLabel}>{label}</Text>
@@ -745,49 +739,49 @@ function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboar
   );
 }
 
-const makeStyles = (colors: any, resolved: 'light' | 'dark') => StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0F172A' },
+const st = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: COLORS.background },
 
   headerAddBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: colors.surface,
+    backgroundColor: COLORS.surfaceWhite,
     justifyContent: 'center', alignItems: 'center',
     ...SHADOWS.xs,
   },
 
   statsRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#111827',
+    backgroundColor: COLORS.surface,
     marginHorizontal: SIZES.gutter, marginTop: 8,
     borderRadius: SIZES.borderRadius, borderWidth: 1,
-    borderColor: '#374151', paddingVertical: 8, paddingHorizontal: 16,
+    borderColor: COLORS.outline, paddingVertical: 8, paddingHorizontal: 16,
     ...SHADOWS.xs,
   },
   statItem: { flex: 1, alignItems: 'center' },
-  statNum: { ...FONTS.headlineSm, color: colors.text },
-  statLabel: { ...FONTS.bodySm, color: colors.textSecondary, marginTop: 2 },
-  statDivider: { width: 1, height: 28, backgroundColor: colors.outline },
+  statNum: { ...FONTS.headlineSm, color: COLORS.text },
+  statLabel: { ...FONTS.bodySm, color: COLORS.textSecondary, marginTop: 2 },
+  statDivider: { width: 1, height: 28, backgroundColor: COLORS.outline },
 
   contentList: { padding: SIZES.gutter, paddingBottom: 60 },
   emptyWrap: { alignItems: 'center', marginTop: 60, gap: 12 },
   emptyIcon: {
     width: 80, height: 80, borderRadius: 24,
-    backgroundColor: '#1F2937',
+    backgroundColor: COLORS.surfaceContainerHigh,
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: '#374151',
+    borderWidth: 1, borderColor: COLORS.outline,
   },
-  emptyTitle: { ...FONTS.titleLg, color: colors.text },
-  emptyDesc: { ...FONTS.bodyMd, color: colors.textSecondary, textAlign: 'center', paddingHorizontal: 20 },
+  emptyTitle: { ...FONTS.titleLg, color: COLORS.text },
+  emptyDesc: { ...FONTS.bodyMd, color: COLORS.textSecondary, textAlign: 'center', paddingHorizontal: 20 },
   emptyAddBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 12,
+    backgroundColor: COLORS.primary, paddingHorizontal: 20, paddingVertical: 12,
     borderRadius: SIZES.borderRadius, marginTop: 8, ...SHADOWS.primary,
   },
-  emptyAddText: { ...FONTS.titleSm, color: colors.onPrimary },
+  emptyAddText: { ...FONTS.titleSm, color: COLORS.onPrimary },
 
   card: {
-    backgroundColor: '#111827', borderRadius: 20, marginBottom: 16,
-    borderWidth: 1, borderColor: '#374151',
+    backgroundColor: COLORS.surface, borderRadius: 20, marginBottom: 16,
+    borderWidth: 1, borderColor: COLORS.outline,
     ...SHADOWS.sm,
   },
   cardImgWrap: { borderTopLeftRadius: 19, borderTopRightRadius: 19, overflow: 'hidden' },
@@ -802,16 +796,16 @@ const makeStyles = (colors: any, resolved: 'light' | 'dark') => StyleSheet.creat
 
   cardBody: { padding: 18 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  name: { ...FONTS.titleLg, color: '#F9FAFB', flex: 1, marginRight: 10 },
+  name: { ...FONTS.titleLg, color: COLORS.text, flex: 1, marginRight: 10 },
   pricePill: {
-    backgroundColor: colors.primaryContainer, paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 10, borderWidth: 1, borderColor: colors.primary + '30',
+    backgroundColor: COLORS.primaryContainer, paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 10, borderWidth: 1, borderColor: COLORS.primary + '30',
   },
-  price: { ...FONTS.titleMd, color: colors.primary },
-  priceSub: { ...FONTS.bodySm, color: colors.textSecondary },
+  price: { ...FONTS.titleMd, color: COLORS.primary },
+  priceSub: { ...FONTS.bodySm, color: COLORS.textSecondary },
 
   detailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
-  detailText: { ...FONTS.bodyMd, color: '#CBD5E1', flex: 1 },
+  detailText: { ...FONTS.bodyMd, color: COLORS.textSecondary, flex: 1 },
 
   actions: {
     flexDirection: 'row',
@@ -821,41 +815,41 @@ const makeStyles = (colors: any, resolved: 'light' | 'dark') => StyleSheet.creat
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.outline,
+    borderTopColor: COLORS.outline,
   },
   editBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: resolved === 'dark' ? '#1E293B' : '#ecfdf5',
+    backgroundColor: '#ecfdf5',
     paddingVertical: 9,
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: resolved === 'dark' ? colors.outline : '#bbf7d0',
+    borderColor: '#bbf7d0',
   },
-  editBtnText: { ...FONTS.titleSm, fontSize: 12, color: colors.primary },
+  editBtnText: { ...FONTS.titleSm, fontSize: 12, color: COLORS.primary },
   delBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: resolved === 'dark' ? '#271B1B' : '#fef2f2',
+    backgroundColor: '#fef2f2',
     paddingVertical: 9,
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: resolved === 'dark' ? colors.outline : '#fecaca',
+    borderColor: '#fecaca',
   },
-  delBtnText: { ...FONTS.titleSm, fontSize: 12, color: colors.error },
+  delBtnText: { ...FONTS.titleSm, fontSize: 12, color: COLORS.error },
 
   // Modal styling
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   sheet: {
-    backgroundColor: '#111827', borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    backgroundColor: COLORS.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
     padding: 24, paddingBottom: Platform.OS === 'ios' ? 36 : 24,
-    borderTopWidth: 1, borderColor: '#374151', maxHeight: '90%',
+    borderTopWidth: 1, borderColor: COLORS.outline, maxHeight: '90%',
     maxWidth: 640, width: '100%', alignSelf: 'center',
     ...(Platform.OS === 'web' ? {
       borderBottomLeftRadius: 28,
@@ -864,26 +858,26 @@ const makeStyles = (colors: any, resolved: 'light' | 'dark') => StyleSheet.creat
       marginTop: 'auto',
     } : {}),
   },
-  sheetHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: '#4B5563', alignSelf: 'center', marginBottom: 18 },
+  sheetHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: COLORS.outline, alignSelf: 'center', marginBottom: 18 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 18 },
   sheetIconWrap: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  sheetTitle: { ...FONTS.headlineSm, fontSize: 18, color: '#F9FAFB', flex: 1 },
-  sheetClose: { padding: 6, backgroundColor: '#1F2937', borderRadius: 20 },
+  sheetTitle: { ...FONTS.headlineSm, fontSize: 18, color: COLORS.text, flex: 1 },
+  sheetClose: { padding: 6, backgroundColor: COLORS.surfaceContainerLow, borderRadius: 20 },
   errorBox: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: colors.errorContainer, borderRadius: 12,
-    padding: 14, marginBottom: 16, borderWidth: 1, borderColor: colors.error + '30',
+    backgroundColor: COLORS.errorContainer, borderRadius: 12,
+    padding: 14, marginBottom: 16, borderWidth: 1, borderColor: COLORS.error + '30',
   },
-  errorText: { color: colors.error, ...FONTS.bodySm, flex: 1 },
+  errorText: { color: COLORS.error, ...FONTS.bodySm, flex: 1 },
 
   // Image picker
   imagePicker: {
     borderRadius: 16, overflow: 'hidden',
-    backgroundColor: '#1F2937', borderWidth: 1.5,
-    borderStyle: 'dashed', borderColor: '#374151',
+    backgroundColor: COLORS.surfaceContainerLow, borderWidth: 1.5,
+    borderStyle: 'dashed', borderColor: COLORS.outline,
     minHeight: 90, justifyContent: 'center',
   },
-  imagePickerError: { borderColor: colors.error },
+  imagePickerError: { borderColor: COLORS.error },
   imagePreviewWrap: { width: '100%', height: 130, position: 'relative' },
   imagePreview: { width: '100%', height: '100%' },
   imageEditOverlay: {
@@ -896,53 +890,53 @@ const makeStyles = (colors: any, resolved: 'light' | 'dark') => StyleSheet.creat
   imageEmptyTextCol: { flex: 1 },
   imgDashedCircle: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: colors.primaryContainer, justifyContent: 'center',
+    backgroundColor: COLORS.primaryContainer, justifyContent: 'center',
     alignItems: 'center',
   },
-  imageEmptyText: { ...FONTS.titleSm, fontSize: 13, color: '#F9FAFB' },
-  imageEmptyHint: { ...FONTS.bodySm, fontSize: 11, color: '#CBD5E1', marginTop: 2 },
+  imageEmptyText: { ...FONTS.titleSm, fontSize: 13, color: COLORS.text },
+  imageEmptyHint: { ...FONTS.bodySm, fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
 
   // Sport chips
   sportRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  sportRowError: { borderColor: colors.error },
+  sportRowError: { borderColor: COLORS.error },
   sportChip: {
     paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20,
-    backgroundColor: '#1F2937', borderWidth: 1, borderColor: '#374151',
+    backgroundColor: COLORS.surfaceContainerLow, borderWidth: 1, borderColor: COLORS.outline,
   },
-  sportChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  sportChipText: { ...FONTS.labelMd, fontSize: 12, color: '#CBD5E1', fontWeight: '600' },
-  sportChipTextActive: { color: colors.onPrimary, fontWeight: '700' },
+  sportChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  sportChipText: { ...FONTS.labelMd, fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
+  sportChipTextActive: { color: '#ffffff', fontWeight: '700' },
 
   // Field input
   fieldWrap: { marginBottom: 20 },
-  fieldLabel: { ...FONTS.labelSm, fontSize: 11, fontWeight: '700', color: '#CBD5E1', marginBottom: 10, letterSpacing: 0.6, textTransform: 'uppercase' },
+  fieldLabel: { ...FONTS.labelSm, fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 10, letterSpacing: 0.6, textTransform: 'uppercase' },
   fieldRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#1F2937', borderRadius: 14,
-    paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1.5, borderColor: '#374151',
+    backgroundColor: COLORS.surfaceContainerLow, borderRadius: 14,
+    paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1.5, borderColor: COLORS.outline,
   },
-  fieldRowError: { borderColor: colors.error, backgroundColor: colors.errorContainer + '30' },
-  fieldInput: { flex: 1, color: '#F9FAFB', fontSize: 14, paddingVertical: 0 },
+  fieldRowError: { borderColor: COLORS.error, backgroundColor: COLORS.errorContainer + '30' },
+  fieldInput: { flex: 1, color: COLORS.text, fontSize: 14, paddingVertical: 0 },
 
   fieldErrorRow: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     marginTop: 6, paddingHorizontal: 4,
   },
-  fieldErrorText: { ...FONTS.bodySm, color: colors.error, flex: 1 },
+  fieldErrorText: { ...FONTS.bodySm, color: COLORS.error, flex: 1 },
 
   sheetActions: {
     marginTop: 16,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.outline,
+    borderTopColor: COLORS.outline,
     flexDirection: 'row',
     justifyContent: 'flex-end',
   },
   submitBtn: {
     maxWidth: 320, width: '100%', paddingVertical: 14, paddingHorizontal: 24,
     borderRadius: 14, alignItems: 'center', minHeight: 48, justifyContent: 'center',
-    shadowColor: colors.primary, shadowOffset: { width: 0, height: 2 },
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15, shadowRadius: 6, elevation: 3,
   },
-  submitText: { ...FONTS.titleSm, fontSize: 14, fontWeight: '700', color: colors.onPrimary },
+  submitText: { ...FONTS.titleSm, fontSize: 14, fontWeight: '700', color: COLORS.onPrimary },
 });

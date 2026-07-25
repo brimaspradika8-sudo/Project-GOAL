@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity,
   ActivityIndicator, Animated, Easing, KeyboardAvoidingView,
-  Platform, ScrollView, Keyboard
+  Platform, ScrollView, Keyboard, useWindowDimensions
 } from 'react-native';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -10,10 +10,11 @@ import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage } from '../lib/api';
-import { TOKEN_KEY } from './_layout';
+import { TOKEN_KEY } from '../lib/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function RegisterScreen() {
+  const { width } = useWindowDimensions();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -113,7 +114,7 @@ export default function RegisterScreen() {
             <Animated.View style={{ transform: [{ scale: pulseAnim }], marginBottom: 12, shadowColor: '#4be277', shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }}>
               <MaterialIcons name="sports-soccer" size={56} color="#4be277" />
             </Animated.View>
-            <Text style={styles.title}>REGISTER</Text>
+            <Text style={[styles.title, { fontSize: Math.min(48, width * 0.13) }]}>REGISTER</Text>
             <Text style={styles.subtitle}>Join G.O.A.L and start playing</Text>
           </Animated.View>
 

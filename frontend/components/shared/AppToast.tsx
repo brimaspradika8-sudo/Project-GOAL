@@ -49,8 +49,8 @@ export default function AppToast({
         <MaterialIcons name={ICON_BY_TYPE[type]} size={20} color={ACCENT_BY_TYPE[type]} />
       </View>
       <View style={st.textWrap}>
-        <Text style={st.title}>{title}</Text>
-        {description ? <Text style={st.desc}>{description}</Text> : null}
+        <Text style={st.title} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
+        {description ? <Text style={st.desc} numberOfLines={2} ellipsizeMode="tail">{description}</Text> : null}
       </View>
       <TouchableOpacity onPress={onDismiss} hitSlop={8} style={st.closeBtn}>
         <MaterialIcons name="close" size={18} color={COLORS.textTertiary} />

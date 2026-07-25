@@ -24,6 +24,8 @@ import { useDebounce } from '../../hooks/useDebounce';
 import { API_BASE_URL } from '../../lib/api';
 import { useTheme } from '../../lib/theme';
 
+const isWeb = Platform.OS === 'web';
+
 
 const SPORT_MAP: Record<string, string> = {
   'Semua': '',
@@ -59,8 +61,7 @@ export default function HomeScreen() {
   const [activeCategory, setActiveCategory] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 300);
-  const { colors, resolved } = useTheme();
-  const isDarkMode = resolved === 'dark';
+  const { colors } = useTheme();
 
   useEffect(() => {
     if (!profile) fetchProfile();
@@ -109,8 +110,8 @@ export default function HomeScreen() {
 
   if (loading && !refreshing) {
     return (
-      <View style={[styles.skeletonContainer, { backgroundColor: colors.background }]}>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <View style={styles.skeletonContainer}>
+        <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <SkeletonProfile />
           <View style={{ height: 16 }} />
@@ -123,55 +124,56 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+    <View style={styles.container}>
+      <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
 
-      <View style={[styles.topBar, { backgroundColor: colors.background }]}>
+      {!isWeb && (
+      <View style={styles.topBar}>
         <View style={[styles.pageShell, styles.topBarShell]}>
           <View style={styles.logoRow}>
-            <View style={[styles.logoIconWrap, { backgroundColor: colors.primaryContainer }]}>
-              <MaterialIcons name="sports-soccer" size={20} color={colors.primary} />
+            <View style={styles.logoIconWrap}>
+              <MaterialIcons name="sports-soccer" size={20} color={COLORS.primary} />
             </View>
-            <Text style={[styles.logoText, { color: colors.primary }]}>GOAL</Text>
+            <Text style={styles.logoText}>GOAL</Text>
           </View>
           <View style={styles.topBarActions}>
-            <TouchableOpacity style={[styles.topBarBtn, { backgroundColor: colors.surfaceWhite, borderColor: colors.divider }]} activeOpacity={0.7}>
-              <MaterialIcons name="notifications-none" size={22} color={colors.onSurface} />
+            <TouchableOpacity style={styles.topBarBtn} activeOpacity={0.7}>
+              <MaterialIcons name="notifications-none" size={22} color={COLORS.onSurface} />
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.avatarBtn, { backgroundColor: colors.primaryContainer }]} activeOpacity={0.7} onPress={() => router.push('/(tabs)/profile')}>
-              <MaterialIcons name="person" size={20} color={colors.primary} />
+            <TouchableOpacity style={styles.avatarBtn} activeOpacity={0.7} onPress={() => router.push('/(tabs)/profile')}>
+              <MaterialIcons name="person" size={20} color={COLORS.primary} />
             </TouchableOpacity>
           </View>
         </View>
       </View>
+      )}
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
         showsVerticalScrollIndicator={false}
-        style={{ backgroundColor: colors.background }}
       >
         <View style={styles.pageShell}>
-        <View style={[styles.heroPanel, isDesktop && styles.heroPanelDesktop, { backgroundColor: colors.surfaceWhite, borderColor: colors.divider }]}>
+        <View style={[styles.heroPanel, isDesktop && styles.heroPanelDesktop]}>
           <View style={styles.heroCopy}>
-            <Text style={[styles.greeting, { color: colors.primary }]}>Halo, {userName}</Text>
-            <Text style={[styles.heroTitle, { color: colors.text }]}>Temukan lapangan terbaik hari ini</Text>
-            <Text style={[styles.heroText, { color: colors.textSecondary }]}>Cari venue, cek status, lalu lanjut booking dari satu tempat.</Text>
+            <Text style={styles.greeting}>Halo, {userName}</Text>
+            <Text style={styles.heroTitle}>Temukan lapangan terbaik hari ini</Text>
+            <Text style={styles.heroText}>Cari venue, cek status, lalu lanjut booking dari satu tempat.</Text>
           </View>
         </View>
 
-        <View style={[styles.searchBar, { backgroundColor: colors.surfaceWhite, borderColor: colors.outline }]}>
-          <MaterialIcons name="search" size={22} color={colors.primary} />
+        <View style={styles.searchBar}>
+          <MaterialIcons name="search" size={22} color={COLORS.primary} />
           <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
+            style={styles.searchInput}
             placeholder="Cari lapangan atau venue..."
-            placeholderTextColor={colors.textTertiary}
+            placeholderTextColor={COLORS.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <MaterialIcons name="close" size={18} color={colors.textTertiary} />
+              <MaterialIcons name="close" size={18} color={COLORS.textTertiary} />
             </TouchableOpacity>
           )}
         </View>
@@ -187,34 +189,53 @@ export default function HomeScreen() {
                   activeOpacity={0.7}
                   onPress={() => setActiveCategory(item.label)}
                 >
-                  <View
-                    style={[
-                      styles.categoryIconWrap,
-                      { backgroundColor: colors.surfaceWhite, borderColor: colors.divider },
-                      isActive && [styles.categoryIconWrapActive, { borderColor: colors.primary, backgroundColor: colors.primary }],
-                    ]}
-                  >
-                    <MaterialIcons name={item.icon} size={26} color={isActive ? '#ffffff' : colors.onSurfaceVariant} />
+                  <View style={[styles.categoryIconWrap, isActive && styles.categoryIconWrapActive]}>
+                    <MaterialIcons name={item.icon} size={26} color={isActive ? '#ffffff' : COLORS.onSurfaceVariant} />
                   </View>
-                  <Text style={[styles.categoryLabel, { color: colors.onSurfaceVariant }, isActive && [styles.categoryLabelActive, { color: colors.primary }]]}>{item.label}</Text>
+                  <Text style={[styles.categoryLabel, isActive && styles.categoryLabelActive]}>{item.label}</Text>
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
         </View>
 
+        <View style={styles.promoCard}>
+          <SafeImage
+            source={{ uri: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?q=80&w=800&auto=format&fit=crop' }}
+            style={styles.promoImage}
+            resizeMode="cover"
+            fallbackSize={32}
+          />
+          <View style={styles.promoGradient} />
+          <View style={styles.promoContent}>
+            <View style={styles.promoBadge}>
+              <Text style={styles.promoBadgeText}>PROMO SPESIAL</Text>
+            </View>
+            <Text style={styles.promoTitle}>Diskon 20%</Text>
+            <Text style={styles.promoDesc}>Booking lebih hemat di akhir pekan ini.</Text>
+            <TouchableOpacity style={styles.promoBtn} activeOpacity={0.8}>
+              <Text style={styles.promoBtnText}>Gunakan Sekarang</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.promoDots}>
+            <View style={[styles.dot, styles.dotActive]} />
+            <View style={styles.dot} />
+            <View style={styles.dot} />
+          </View>
+        </View>
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Venue Populer</Text>
+            <Text style={styles.sectionTitle}>Venue Populer</Text>
             <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/(tabs)/fields')}>
-              <Text style={[styles.sectionLink, { color: colors.primary }]}>Lihat Semua</Text>
+              <Text style={styles.sectionLink}>Lihat Semua</Text>
             </TouchableOpacity>
           </View>
 
           {filteredVenues.length === 0 ? (
             <View style={styles.emptyState}>
-              <MaterialIcons name="search-off" size={40} color={colors.textTertiary} />
-              <Text style={[styles.emptyText, { color: colors.textTertiary }]}>Tidak ada venue ditemukan</Text>
+              <MaterialIcons name="search-off" size={40} color={COLORS.textTertiary} />
+              <Text style={styles.emptyText}>Tidak ada venue ditemukan</Text>
             </View>
           ) : (
             <View style={[styles.venueGrid, isDesktop && styles.venueGridDesktop]}>
@@ -224,29 +245,29 @@ export default function HomeScreen() {
               return (
                 <TouchableOpacity
                   key={item.id}
-                  style={[styles.venueCard, isDesktop && styles.venueCardDesktop, { backgroundColor: colors.surfaceWhite, borderColor: colors.divider }]}
+                  style={[styles.venueCard, isDesktop && styles.venueCardDesktop]}
                   activeOpacity={0.85}
                   onPress={() => router.push({ pathname: '/venue-detail', params: { id: String(item.id) } })}
                 >
                   <View style={styles.venueImageWrap}>
                     <SafeImage source={{ uri: imgUrl }} style={styles.venueImage} resizeMode="cover" fallbackSize={32} />
                     <View style={styles.venueImageOverlay} />
-                    <View style={[styles.statusBadge, { backgroundColor: isApproved ? colors.primary : colors.error }]}>
+                    <View style={[styles.statusBadge, { backgroundColor: isApproved ? COLORS.primary : COLORS.error }]}>
                       <Text style={styles.statusText}>{isApproved ? 'Tersedia' : 'Menunggu'}</Text>
                     </View>
                   </View>
                   <View style={styles.venueInfo}>
                     <View style={styles.venueTopRow}>
-                      <Text style={[styles.venueName, { color: colors.text }]}>{item.name}</Text>
-                      <Text style={[styles.venuePrice, { color: colors.primary }]}>{formatPrice(item.price_per_hour)}/jam</Text>
+                      <Text style={styles.venueName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
+                      <Text style={styles.venuePrice} numberOfLines={1}>{formatPrice(item.price_per_hour)}/jam</Text>
                     </View>
                     <View style={styles.venueLocationRow}>
-                      <MaterialIcons name="location-on" size={14} color={colors.textTertiary} />
-                      <Text style={[styles.venueLocation, { color: colors.textSecondary }]}>{item.location}</Text>
+                      <MaterialIcons name="location-on" size={14} color={COLORS.textTertiary} />
+                      <Text style={styles.venueLocation} numberOfLines={1} ellipsizeMode="tail">{item.location}</Text>
                     </View>
                     <View style={styles.featureRow}>
-                      <View style={[styles.featureChip, { backgroundColor: colors.surfaceContainerLow }]}>
-                        <Text style={[styles.featureText, { color: colors.onSurfaceVariant }]}>{item.sport_type}</Text>
+                      <View style={styles.featureChip}>
+                        <Text style={styles.featureText}>{item.sport_type}</Text>
                       </View>
                     </View>
                   </View>
@@ -259,7 +280,7 @@ export default function HomeScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Rekomendasi Terdekat</Text>
+            <Text style={styles.sectionTitle}>Rekomendasi Terdekat</Text>
           </View>
           <View style={[styles.rekomGrid, isDesktop && styles.rekomGridDesktop]}>
             {rekomendasi.map((item) => {
@@ -274,10 +295,10 @@ export default function HomeScreen() {
                   <SafeImage source={{ uri: imgUrl }} style={styles.rekomImage} fallbackSize={24} />
                   <View style={styles.rekomOverlay} />
                   <View style={styles.rekomInfo}>
-                    <Text style={styles.rekomName}>{item.name}</Text>
+                    <Text style={styles.rekomName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
                     <View style={styles.rekomDistRow}>
                       <MaterialIcons name="near-me" size={12} color="rgba(255,255,255,0.8)" />
-                      <Text style={styles.rekomDist}>{item.location}</Text>
+                      <Text style={styles.rekomDist} numberOfLines={1} ellipsizeMode="tail">{item.location}</Text>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -288,13 +309,13 @@ export default function HomeScreen() {
 
         {sports.length > 0 && (
           <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Olahraga Favorit</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Olahraga Favorit</Text>
             </View>
             <View style={styles.sportChips}>
               {sports.map((sport) => (
-                <View key={sport} style={[styles.sportChip, { backgroundColor: colors.primaryContainer }]}>
-                  <Text style={[styles.sportChipText, { color: colors.primary }]}>{sport}</Text>
+                <View key={sport} style={styles.sportChip}>
+                  <Text style={styles.sportChipText} numberOfLines={1}>{sport}</Text>
                 </View>
               ))}
             </View>
@@ -305,7 +326,7 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      <TouchableOpacity style={[styles.fab, { backgroundColor: colors.primary, shadowColor: colors.primary }]} activeOpacity={0.85} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/(tabs)/fields'); }}>
+      <TouchableOpacity style={styles.fab} activeOpacity={0.85} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/(tabs)/fields'); }}>
         <MaterialIcons name="add" size={28} color="#ffffff" />
       </TouchableOpacity>
     </View>

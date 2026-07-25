@@ -1,5 +1,5 @@
 import React from 'react';
-import { Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
@@ -24,6 +24,8 @@ export default function AuthScreenLayout({
   iconColor = '#4be277',
 }: AuthScreenLayoutProps) {
   const { fadeAnim, slideAnim, pulseAnim, bgScaleAnim } = useAuthAnimations();
+  const { width } = useWindowDimensions();
+  const titleFontSize = Math.min(56, width * 0.15);
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -44,7 +46,7 @@ export default function AuthScreenLayout({
             <Animated.View style={{ transform: [{ scale: pulseAnim }], marginBottom: 12, shadowColor: iconColor, shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }}>
               <MaterialIcons name={iconName} size={72} color={iconColor} />
             </Animated.View>
-            <Text style={styles.title}>{title}</Text>
+            <Text style={[styles.title, { fontSize: titleFontSize }]}>{title}</Text>
             <Text style={styles.subtitle}>{subtitle}</Text>
           </Animated.View>
 

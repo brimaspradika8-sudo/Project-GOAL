@@ -39,7 +39,7 @@ class UserService
                 'user_id' => $user->id,
                 'email' => $data['email'],
                 'full_name' => $data['name'],
-                'role' => $data['role'] ?? 'owner',
+                'role' => $data['role'] ?? 'player',
                 'username' => 'user_' . $user->id,
             ]);
 
