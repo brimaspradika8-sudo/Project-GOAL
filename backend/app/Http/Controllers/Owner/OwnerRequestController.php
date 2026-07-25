@@ -20,7 +20,7 @@ class OwnerRequestController extends Controller
         $user = $request->user();
         $profile = $user->profile;
 
-        if ($profile && in_array($profile->role, ['owner', 'admin', 'super_admin'])) {
+        if ($profile && in_array($profile->role, ['owner', 'super_admin'])) {
             return response()->json([
                 'message' => 'Anda sudah memiliki peran yang memadai.',
             ], 422);

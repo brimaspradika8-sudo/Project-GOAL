@@ -57,7 +57,9 @@ class OwnerRequestService
                 ]);
 
                 Profile::where('user_id', $request->user_id)
-                    ->update(['role' => 'owner', 'is_owner_verified' => true]);
+                    ->first()
+                    ?->forceFill(['role' => 'owner', 'is_owner_verified' => true])
+                    ->save();
             } else {
                 $request->update([
                     'status' => 'rejected',

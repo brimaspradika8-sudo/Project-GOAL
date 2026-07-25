@@ -10,7 +10,6 @@ class Profile extends Model
 {
     const ROLE_PLAYER      = 'player';
     const ROLE_OWNER       = 'owner';
-    const ROLE_ADMIN       = 'admin';
     const ROLE_SUPER_ADMIN = 'super_admin';
 
     protected $table = 'profiles';
@@ -22,9 +21,7 @@ class Profile extends Model
         'full_name',
         'region',
         'avatar_url',
-        'role',
         'age',
-        'is_owner_verified',
         'onboarding_completed',
     ];
 
