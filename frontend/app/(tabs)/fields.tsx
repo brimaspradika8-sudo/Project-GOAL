@@ -58,7 +58,7 @@ function VenueCard({ item }: { item: Field }) {
       </View>
       <View style={styles.venueBody}>
         <View style={styles.venueHeader}>
-          <Text style={styles.venueName}>{item.name}</Text>
+          <Text style={styles.venueName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
           <View style={[styles.statusBadge, isApproved ? styles.badgeAvailable : styles.badgeFull]}>
             <View style={[styles.statusDot, isApproved ? styles.dotAvailable : styles.dotFull]} />
             <Text style={[styles.statusText, isApproved ? styles.textAvailable : styles.textFull]}>
@@ -68,16 +68,16 @@ function VenueCard({ item }: { item: Field }) {
         </View>
         <View style={styles.venueLocationRow}>
           <MaterialIcons name="location-on" size={14} color={colors.textTertiary} />
-          <Text style={styles.venueLocation}>{item.location}</Text>
+          <Text style={styles.venueLocation} numberOfLines={1} ellipsizeMode="tail">{item.location}</Text>
         </View>
         <Text style={styles.venuePrice}>{formatPrice(item.price_per_hour)}/jam</Text>
         <View style={styles.tagRow}>
           <View style={styles.featureTag}>
-            <Text style={styles.featureTagText}>{item.sport_type}</Text>
+            <Text style={styles.featureTagText} numberOfLines={1}>{item.sport_type}</Text>
           </View>
           {item.owner && (
             <View style={styles.featureTag}>
-              <Text style={styles.featureTagText}>{item.owner.name}</Text>
+              <Text style={styles.featureTagText} numberOfLines={1}>{item.owner.name}</Text>
             </View>
           )}
         </View>
@@ -147,10 +147,7 @@ export default function FieldsScreen() {
           const isActive = activeFilter === filter;
           return (
             <TouchableOpacity
-              style={[
-                styles.chip,
-                isActive && styles.chipActive
-              ]}
+              style={[styles.chip, isActive && styles.chipActive]}
               activeOpacity={0.75}
               onPress={() => setActiveFilter(filter)}
             >
@@ -221,6 +218,9 @@ const makeStyles = (colors: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 48,
     paddingHorizontal: 20,
     paddingBottom: 20,
+    maxWidth: 440,
+    alignSelf: 'center',
+    width: '100%',
   },
   title: {
     ...FONTS.headlineLg,

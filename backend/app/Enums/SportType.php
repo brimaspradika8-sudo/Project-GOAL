@@ -17,31 +17,24 @@ class SportType
     public const LAINNYA = 'lainnya';
 
     /**
-     * Return all allowed sport type values.
+     * Return all allowed sport type slugs.
      *
      * @return string[]
      */
     public static function values(): array
     {
         return [
-            'futsal',
-            'badminton',
-            'basketball',
-            'basket',
-            'mini_soccer',
-            'tennis',
-            'tenis',
-            'volleyball',
-            'voli',
-            'other',
-            'lainnya',
-            'Futsal',
-            'Badminton',
-            'Basket',
-            'Mini Soccer',
-            'Tenis',
-            'Voli',
-            'Lainnya',
+            self::FUTSAL,
+            self::BADMINTON,
+            self::BASKETBALL,
+            self::BASKET,
+            self::MINI_SOCCER,
+            self::TENNIS,
+            self::TENIS,
+            self::VOLLEYBALL,
+            self::VOLI,
+            self::OTHER,
+            self::LAINNYA,
         ];
     }
 }

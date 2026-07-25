@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import * as SecureStore from '../lib/secureStorage';
-import { TOKEN_KEY } from '../app/_layout';
+import { TOKEN_KEY } from '../lib/auth';
 import { API_BASE_URL } from '../lib/api';
 
 type AdminBadgeState = {

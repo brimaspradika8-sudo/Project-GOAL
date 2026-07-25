@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SHADOWS } from '../goalTheme';
 import ThemeToggle from '../ThemeToggle';
 import { useTheme } from '../../lib/theme';
@@ -17,6 +18,7 @@ interface DashboardHeaderProps {
 
 export default function DashboardHeader({ title, subtitle, right, showBack = true, onBack, titleColor }: DashboardHeaderProps) {
   const { colors, resolved } = useTheme();
+  const insets = useSafeAreaInsets();
   const headerBackground = resolved === 'dark' ? '#064E3B' : colors.primary;
   const headerTextColor = '#FFFFFF';
   const headerSubtextColor = 'rgba(255,255,255,0.82)';
@@ -32,13 +34,13 @@ export default function DashboardHeader({ title, subtitle, right, showBack = tru
   };
 
   return (
-    <View style={[st.wrap, { backgroundColor: headerBackground }]}>
+    <View style={[st.wrap, { backgroundColor: headerBackground, paddingTop: insets.top + 8 }]}>
       <View style={st.blobTopLeft} />
       <View style={st.blobBottomRight} />
 
       <View style={st.content}>
         {showBack ? (
-          <TouchableOpacity style={[st.backBtn, { backgroundColor: backButtonBackground }]} activeOpacity={0.8} onPress={handleBack}>
+          <TouchableOpacity style={[st.backBtn, { backgroundColor: backButtonBackground }]} activeOpacity={0.8} onPress={handleBack} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <MaterialIcons name="arrow-back" size={20} color={backButtonIcon} />
           </TouchableOpacity>
         ) : null}
@@ -60,7 +62,6 @@ export default function DashboardHeader({ title, subtitle, right, showBack = tru
 
 const st = StyleSheet.create({
   wrap: {
-    paddingTop: Platform.OS === 'ios' ? 44 : 26,
     paddingBottom: 16,
     paddingHorizontal: 20,
     overflow: 'hidden',
@@ -96,9 +97,9 @@ const st = StyleSheet.create({
     zIndex: 1,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: COLORS.surfaceWhite,
     justifyContent: 'center',
     alignItems: 'center',

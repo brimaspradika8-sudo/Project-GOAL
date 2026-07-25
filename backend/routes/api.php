@@ -32,7 +32,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     // Image upload
     Route::post('/upload/image', [UploadController::class, 'image']);
     // Owner upgrade request
-    Route::post('/me/owner-request',[OwnerRequestController::class, 'store']);
+    Route::post('/me/owner-request',[OwnerRequestController::class, 'store'])->middleware('throttle:5,1');
     Route::get('/me/owner-request', [OwnerRequestController::class, 'status']);
     // Fields - owner's own list
     Route::get('/fields/my/list', [FieldController::class, 'myFields']);

@@ -59,28 +59,28 @@ export default function ETicketScreen() {
             <View style={styles.ticketRow}>
               <View style={styles.ticketField}>
                 <Text style={styles.ticketLabel}>KODE TIKET</Text>
-                <Text style={styles.ticketValue}>{ticketCode}</Text>
+                <Text style={styles.ticketValue} numberOfLines={1} ellipsizeMode="tail">{ticketCode}</Text>
               </View>
             </View>
 
             <View style={styles.ticketRow}>
               <View style={styles.ticketField}>
                 <Text style={styles.ticketLabel}>VENUE</Text>
-                <Text style={styles.ticketValue}>Kinetic Stadium</Text>
+                <Text style={styles.ticketValue} numberOfLines={1} ellipsizeMode="tail">Kinetic Stadium</Text>
               </View>
             </View>
 
             <View style={styles.ticketRow}>
               <View style={styles.ticketField}>
                 <Text style={styles.ticketLabel}>LAPANGAN</Text>
-                <Text style={styles.ticketValue}>Lapangan A - Futsal</Text>
+                <Text style={styles.ticketValue} numberOfLines={1} ellipsizeMode="tail">Lapangan A - Futsal</Text>
               </View>
             </View>
 
             <View style={styles.ticketRow2}>
               <View style={styles.ticketField}>
                 <Text style={styles.ticketLabel}>TANGGAL</Text>
-                <Text style={styles.ticketValue}>Sabtu, 19 Juli 2025</Text>
+                <Text style={styles.ticketValue} numberOfLines={1} ellipsizeMode="tail">Sabtu, 19 Juli 2025</Text>
               </View>
               <View style={styles.ticketField}>
                 <Text style={styles.ticketLabel}>JAM</Text>
@@ -95,7 +95,7 @@ export default function ETicketScreen() {
               </View>
               <View style={styles.ticketField}>
                 <Text style={styles.ticketLabel}>TOTAL</Text>
-                <Text style={[styles.ticketValue, { color: COLORS.primary }]}>Rp150.000</Text>
+                <Text style={[styles.ticketValue, { color: COLORS.primary }]} numberOfLines={1} ellipsizeMode="tail">Rp150.000</Text>
               </View>
             </View>
           </View>
@@ -164,6 +164,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
+    maxWidth: 440,
+    alignSelf: 'center',
+    width: '100%',
   },
   successSection: {
     alignItems: 'center',

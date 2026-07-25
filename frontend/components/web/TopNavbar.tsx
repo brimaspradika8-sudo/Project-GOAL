@@ -57,12 +57,17 @@ export default function TopNavbar() {
           })}
         </View>
 
-        <Pressable
-          style={[styles.avatar, { backgroundColor: colors.primaryLight }]}
-          onPress={() => router.push('/profile')}
-        >
-          <MaterialIcons name="person" size={20} color={colors.primary} />
-        </Pressable>
+        <View style={styles.actions}>
+          <Pressable style={[styles.iconBtn, { backgroundColor: colors.surfaceWhite, borderColor: colors.divider }]}>
+            <MaterialIcons name="notifications-none" size={20} color={colors.onSurface} />
+          </Pressable>
+          <Pressable
+            style={[styles.avatar, { backgroundColor: colors.primaryLight }]}
+            onPress={() => router.push('/profile')}
+          >
+            <MaterialIcons name="person" size={20} color={colors.primary} />
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -118,12 +123,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginLeft: 'auto' as any,
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
   avatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 'auto' as any,
   },
 });

@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import LoadingScreen from '../components/LoadingScreen';
 import SplashScreen from '../components/SplashScreen';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -18,8 +19,7 @@ import AppToast from '../components/shared/AppToast';
 import { useToastStore } from '../store/toastStore';
 
 import { Platform } from 'react-native';
-
-export const TOKEN_KEY = 'auth_token';
+import { TOKEN_KEY } from '../lib/auth';
 
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   const fontLinkId = 'google-fonts-plus-jakarta';
@@ -59,11 +59,13 @@ function AppToastWrapper() {
 
 export default function RootLayout() {
   return (
-    <ErrorBoundary>
-      <ThemeProvider>
-        <RootLayoutInner />
-      </ThemeProvider>
-    </ErrorBoundary>
+    <SafeAreaProvider>
+      <ErrorBoundary>
+        <ThemeProvider>
+          <RootLayoutInner />
+        </ThemeProvider>
+      </ErrorBoundary>
+    </SafeAreaProvider>
   );
 }
 

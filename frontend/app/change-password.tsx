@@ -11,7 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage } from '../lib/api';
-import { TOKEN_KEY } from './_layout';
+import { TOKEN_KEY } from '../lib/auth';
 
 export default function ChangePasswordScreen() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -19,10 +19,8 @@ export default function ChangePasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
-
   const { fadeAnim, slideAnim, pulseAnim, bgScaleAnim } = useAuthAnimations();
   const messageAnim = useRef(new Animated.Value(0)).current;
-
   const showMessage = (text: string, type: 'error' | 'success') => {
     setMessage({ text, type });
     messageAnim.setValue(0);

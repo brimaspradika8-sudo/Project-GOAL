@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View, ViewStyle } from 'react-native';
+import { Animated, StyleSheet, View, ViewStyle, FlatList } from 'react-native';
 import { COLORS, SHADOWS } from './goalTheme';
 
 interface SkeletonProps {
@@ -68,17 +68,22 @@ export function SkeletonVenueList() {
 
 export function SkeletonHorizontalCards() {
   return (
-    <View style={styles.hRow}>
-      {[1, 2, 3].map((i) => (
-        <View key={i} style={styles.hCard}>
-          <Skeleton width={220} height={140} borderRadius={14} />
+    <FlatList
+      horizontal
+      data={[1, 2, 3]}
+      keyExtractor={(item) => String(item)}
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.hRow}
+      renderItem={() => (
+        <View style={styles.hCard}>
+          <Skeleton width={180} height={140} borderRadius={14} />
           <View style={styles.hCardBody}>
             <Skeleton width="80%" height={16} borderRadius={6} />
             <Skeleton width="60%" height={12} borderRadius={6} />
           </View>
         </View>
-      ))}
-    </View>
+      )}
+    />
   );
 }
 
@@ -149,12 +154,11 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   hRow: {
-    flexDirection: 'row',
     gap: 12,
     paddingLeft: 4,
   },
   hCard: {
-    width: 220,
+    width: 180,
   },
   hCardBody: {
     padding: 10,

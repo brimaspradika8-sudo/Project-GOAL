@@ -38,6 +38,8 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    maxWidth: 440,
+    alignSelf: 'center',
     paddingHorizontal: 36,
     paddingBottom: Platform.OS === 'ios' ? 60 : 40,
   },

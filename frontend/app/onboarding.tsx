@@ -19,12 +19,13 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { API_BASE_URL } from '../lib/api';
 import { useProfileStore } from '../store/profileStore';
 import { useUsernameCheck } from '../hooks/useUsernameCheck';
-import { TOKEN_KEY } from './_layout';
+import { TOKEN_KEY } from '../lib/auth';
 import { COLORS, FONTS, SHADOWS } from '../components/goalTheme';
 import AuthInput from '../components/AuthInput';
 
@@ -64,6 +65,7 @@ const CITIES_BY_PROVINCE: Record<string, string[]> = {
 
 export default function OnboardingScreen() {
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isDesktop = width >= 900;
   const [step, setStep] = useState(1);
   const [username, setUsername] = useState('');
@@ -382,7 +384,7 @@ export default function OnboardingScreen() {
         <View style={[styles.progressFill, { width: `${(step / TOTAL_STEPS) * 100}%` }]} />
       </View>
 
-      <View style={styles.header}>
+      <View style={[styles.header, { top: insets.top }]}>
         <TouchableOpacity style={[styles.iconButton, step === 1 && styles.iconButtonDisabled]} onPress={handleBack} disabled={step === 1} activeOpacity={0.75}>
           <MaterialIcons name="arrow-back" size={20} color={COLORS.text} />
         </TouchableOpacity>
@@ -394,7 +396,7 @@ export default function OnboardingScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 70 }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={[styles.pageShell, isDesktop && styles.pageShellDesktop]}>
           <View style={[styles.sidePanel, isDesktop && styles.sidePanelDesktop]}>
             <View style={styles.brandMark}>
@@ -428,7 +430,7 @@ export default function OnboardingScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <View style={styles.footerShell}>
           <TouchableOpacity
             style={[styles.ctaBtn, (step === 1 ? !canGoNext : !canSubmit) && styles.ctaBtnDisabled]}
@@ -563,7 +565,7 @@ const styles = StyleSheet.create({
   },
   header: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 18 : 10,
+    top: 0,
     left: 0,
     right: 0,
     zIndex: 20,
@@ -574,8 +576,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   iconButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     backgroundColor: COLORS.surfaceWhite,
     alignItems: 'center',
@@ -600,7 +602,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   scroll: {
-    paddingTop: Platform.OS === 'ios' ? 88 : 78,
+    paddingTop: 88,
     paddingHorizontal: 18,
     paddingBottom: 120,
   },
@@ -704,9 +706,9 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   avatarRing: {
-    width: 82,
-    height: 82,
-    borderRadius: 24,
+    width: 72,
+    height: 72,
+    borderRadius: 20,
     borderWidth: 2,
     borderColor: COLORS.primary,
     overflow: 'hidden',
@@ -931,7 +933,6 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.divider,
     paddingHorizontal: 18,
     paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 16,
   },
   footerShell: {
     width: '100%',

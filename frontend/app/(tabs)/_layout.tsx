@@ -3,6 +3,7 @@ import React from 'react';
 import { StyleSheet, Platform, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../lib/theme';
 import { FONT_FAMILY } from '../../components/goalTheme';
 import TopNavbar from '../../components/web/TopNavbar';
@@ -11,7 +12,8 @@ const isWeb = Platform.OS === 'web';
 
 export default function TabLayout() {
   const { colors } = useTheme();
-  const styles = makeStyles(colors);
+  const insets = useSafeAreaInsets();
+  const styles = makeStyles(colors, insets);
 
   return (
     <View style={isWeb ? styles.webContainer : undefined}>
@@ -103,45 +105,43 @@ export default function TabLayout() {
   );
 }
 
-const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) =>
-  StyleSheet.create({
-    webContainer: {
-      flex: 1,
-      minHeight: '100vh' as any,
-    },
-    tabBar: {
-      backgroundColor: colors.surface,
-      borderTopWidth: 0,
-      height: Platform.OS === 'ios' ? 88 : 64,
-      paddingTop: Platform.OS === 'ios' ? 10 : 8,
-      paddingBottom: Platform.OS === 'ios' ? 22 : 8,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: -2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 8,
-      elevation: 8,
-      ...(Platform.OS === 'web'
-        ? {
-          maxWidth: 640,
-          width: '100%' as any,
-          marginHorizontal: 'auto' as any,
-          alignSelf: 'center' as any,
-          borderTopWidth: 1,
-          borderLeftWidth: 1,
-          borderRightWidth: 1,
-          borderColor: colors.outline,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
-        }
-        : {}),
-    },
-    tabLabel: {
-      fontFamily: FONT_FAMILY,
-      fontSize: 10,
-      fontWeight: '600',
-      letterSpacing: 0.3,
-    },
-    tabItem: {
-      paddingVertical: 4,
-    },
-  });
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], insets: { bottom: number }) => StyleSheet.create({
+  webContainer: {
+    flex: 1,
+    minHeight: '100vh' as any,
+  },
+  tabBar: {
+    backgroundColor: colors.surface,
+    borderTopWidth: Platform.OS === 'web' ? 1 : 0,
+    borderTopColor: colors.outline,
+    height: 64 + insets.bottom,
+    paddingTop: 8,
+    paddingBottom: insets.bottom + 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 8,
+    ...(Platform.OS === 'web' ? {
+      maxWidth: 640,
+      width: '100%' as any,
+      marginHorizontal: 'auto' as any,
+      alignSelf: 'center' as any,
+      borderTopWidth: 1,
+      borderLeftWidth: 1,
+      borderRightWidth: 1,
+      borderColor: colors.outline,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+    } : {}),
+  },
+  tabLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  tabItem: {
+    paddingVertical: 4,
+  },
+});
