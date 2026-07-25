@@ -18,7 +18,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ title, accentColor, items }: SidebarProps) {
-  const { colors } = useTheme();
+  const { colors, resolved } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -27,6 +27,11 @@ export default function Sidebar({ title, accentColor, items }: SidebarProps) {
   const isActive = (href: string) => {
     return pathname === href || pathname.startsWith(href + '/');
   };
+
+  const activeBackground = resolved === 'dark' ? '#1E293B' : accentColor + '1A';
+  const activeColor = resolved === 'dark' ? '#FFFFFF' : accentColor;
+  const inactiveColor = resolved === 'dark' ? '#94A3B8' : colors.textSecondary;
+  const panelTitleColor = resolved === 'dark' ? '#CBD5E1' : colors.text;
 
   return (
     <View
@@ -40,7 +45,7 @@ export default function Sidebar({ title, accentColor, items }: SidebarProps) {
     >
       <View style={[styles.header, { borderBottomColor: colors.outline }]}>
         <Text style={[styles.logo, { color: colors.primary }]}>GOAL</Text>
-        <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+        <Text style={[styles.title, { color: panelTitleColor }]}>{title}</Text>
       </View>
 
       <View style={styles.menu}>
@@ -51,19 +56,19 @@ export default function Sidebar({ title, accentColor, items }: SidebarProps) {
               key={item.href}
               style={[
                 styles.menuItem,
-                active && { backgroundColor: accentColor + '1A' },
+                active && { backgroundColor: activeBackground },
               ]}
               onPress={() => router.push(item.href as any)}
             >
               <MaterialIcons
                 name={item.icon as any}
                 size={20}
-                color={active ? accentColor : colors.textSecondary}
+                color={active ? activeColor : inactiveColor}
               />
               <Text
                 style={[
                   styles.menuLabel,
-                  { color: active ? accentColor : colors.textSecondary },
+                  { color: active ? activeColor : inactiveColor },
                 ]}
               >
                 {item.label}

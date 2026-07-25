@@ -13,6 +13,7 @@ import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
+import { useTheme } from '../../lib/theme';
 
 const ROLE_LABEL: Record<string, string> = {
   admin:       'Admin',
@@ -21,6 +22,8 @@ const ROLE_LABEL: Record<string, string> = {
 
 export default function AdminProfilePage() {
   const { profile, clearProfile } = useProfileStore();
+  const { colors, resolved } = useTheme();
+  const st = makeStyles(colors, resolved);
   const role = profile?.role ?? 'admin';
   const initials = (profile?.full_name || profile?.username || 'A').charAt(0).toUpperCase();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -86,7 +89,7 @@ export default function AdminProfilePage() {
               <MaterialIcons
                 name={role === 'super_admin' ? 'shield' : 'admin-panel-settings'}
                 size={12}
-                color={COLORS.primary}
+                color={colors.primary}
               />
               <Text style={st.rolePillText}>{ROLE_LABEL[role] ?? role}</Text>
             </View>
@@ -133,17 +136,17 @@ export default function AdminProfilePage() {
   );
 }
 
-const st = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.background },
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark') => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: SIZES.padding, paddingBottom: 120 },
 
   avatarCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: COLORS.outline,
+    borderColor: colors.outline,
     padding: 18,
     marginBottom: 24,
     gap: 16,
@@ -153,36 +156,36 @@ const st = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 20,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: colors.primaryContainer,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: COLORS.primary + '30',
+    borderColor: colors.primary + '30',
   },
-  avatarText: { ...FONTS.headlineMd, color: COLORS.primary },
+  avatarText: { ...FONTS.headlineMd, color: colors.primary },
   profileInfo: { flex: 1 },
-  profileName: { ...FONTS.headlineSm, color: COLORS.text, marginBottom: 3 },
-  profileEmail: { ...FONTS.bodySm, color: COLORS.textSecondary, marginBottom: 8 },
+  profileName: { ...FONTS.headlineSm, color: colors.text, marginBottom: 3 },
+  profileEmail: { ...FONTS.bodySm, color: colors.textSecondary, marginBottom: 8 },
   rolePill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: colors.primaryContainer,
     paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 20, alignSelf: 'flex-start',
   },
-  rolePillText: { ...FONTS.labelSm, color: COLORS.primary },
+  rolePillText: { ...FONTS.labelSm, color: colors.primary },
 
   sectionTitle: {
     ...FONTS.labelSm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginBottom: 10,
   },
   menuCard: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: COLORS.outline,
+    borderColor: colors.outline,
     marginBottom: 24,
     paddingVertical: 4,
     ...SHADOWS.sm,
@@ -194,19 +197,19 @@ const st = StyleSheet.create({
   },
   menuIconBox: {
     width: 36, height: 36, borderRadius: 11,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: resolved === 'dark' ? colors.surfaceContainerHigh : colors.primaryContainer,
     justifyContent: 'center', alignItems: 'center',
   },
-  menuLabel: { flex: 1, ...FONTS.bodyMd, fontWeight: '600', color: COLORS.text },
-  divider: { height: 1, backgroundColor: COLORS.outline, marginHorizontal: 16 },
+  menuLabel: { flex: 1, ...FONTS.bodyMd, fontWeight: '600', color: colors.text },
+  divider: { height: 1, backgroundColor: colors.outline, marginHorizontal: 16 },
 
   signOutBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, borderRadius: SIZES.borderRadius,
-    borderWidth: 1.5, borderColor: COLORS.errorContainer,
+    borderWidth: 1.5, borderColor: colors.errorContainer,
     paddingVertical: 15, marginBottom: 20,
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
   },
-  signOutText: { ...FONTS.bodyMd, fontWeight: '700', color: COLORS.error },
-  version: { ...FONTS.bodySm, color: COLORS.outline, textAlign: 'center' },
+  signOutText: { ...FONTS.bodyMd, fontWeight: '700', color: colors.error },
+  version: { ...FONTS.bodySm, color: colors.outline, textAlign: 'center' },
 });

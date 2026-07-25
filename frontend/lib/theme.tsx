@@ -97,9 +97,9 @@ const LIGHT_COLORS: ThemeColors = {
 };
 
 const DARK_COLORS: ThemeColors = {
-  background: '#111827',
-  surface: '#1F2937',
-  surfaceWhite: '#1F2937',
+  background: '#0F172A',
+  surface: '#1E293B',
+  surfaceWhite: '#1E293B',
   surfaceContainer: '#1A2332',
   surfaceContainerLow: '#16202E',
   surfaceContainerLowest: '#0F1722',
@@ -132,8 +132,8 @@ const DARK_COLORS: ThemeColors = {
   divider: '#374151',
   shadow: 'rgba(0,0,0,0.3)',
   shadowDark: 'rgba(0,0,0,0.5)',
-  warmWhite: '#1F2937',
-  cardBg: '#1F2937',
+  warmWhite: '#1E293B',
+  cardBg: '#1E293B',
   accentPurple: '#A78BFA',
   accentPurpleLight: '#2D1F5E',
   accentOrange: '#FB923C',

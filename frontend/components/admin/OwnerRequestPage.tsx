@@ -13,8 +13,12 @@ import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
+import { useTheme } from '../../lib/theme';
 
 export default function OwnerRequestPage() {
+  const { colors, resolved } = useTheme();
+  const cardSurface = resolved === 'dark' ? '#1E293B' : colors.surface;
+  const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -110,7 +114,7 @@ export default function OwnerRequestPage() {
 
   if (loading) {
     return (
-      <View style={st.screen}>
+      <View style={[st.screen, { backgroundColor: colors.background }]}>
         <DashboardHeader title="Pengajuan Owner" subtitle="Review permohonan owner baru" />
         <SkeletonCards count={3} />
       </View>
@@ -119,19 +123,19 @@ export default function OwnerRequestPage() {
 
   return (
     <>
-      <View style={st.screen}>
+      <View style={[st.screen, { backgroundColor: colors.background }]}>
         <DashboardHeader title="Pengajuan Owner" subtitle="Review permohonan owner baru" />
 
         <ScrollView
           contentContainerStyle={st.list}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
           showsVerticalScrollIndicator={false}
         >
           {/* Count pill */}
           {requests.length > 0 && (
             <View style={st.headerRow}>
-              <View style={st.countPill}>
-                <MaterialIcons name="pending-actions" size={12} color={COLORS.floodlight} />
+              <View style={[st.countPill, { backgroundColor: colors.floodlight + '20', borderColor: colors.floodlight + '50' }]}>
+                <MaterialIcons name="pending-actions" size={12} color={colors.floodlight} />
                 <Text style={st.countText}>{requests.length} menunggu review</Text>
               </View>
             </View>
@@ -139,22 +143,22 @@ export default function OwnerRequestPage() {
 
           {requests.length === 0 ? (
             <View style={st.emptyWrap}>
-              <View style={st.emptyIconWrap}>
-                <MaterialIcons name="inventory" size={40} color={COLORS.textTertiary} />
+              <View style={[st.emptyIconWrap, { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outline }]}>
+                <MaterialIcons name="inventory" size={40} color={colors.textTertiary} />
               </View>
-              <Text style={st.emptyTitle}>Semua Beres!</Text>
-              <Text style={st.emptyDesc}>Tidak ada pengajuan yang menunggu.</Text>
+              <Text style={[st.emptyTitle, { color: colors.text }]}>Semua Beres!</Text>
+              <Text style={[st.emptyDesc, { color: colors.textSecondary }]}>Tidak ada pengajuan yang menunggu.</Text>
             </View>
           ) : (
             requests.map((r: any) => (
-              <View key={r.id} style={st.card}>
+              <View key={r.id} style={[st.card, { backgroundColor: cardSurface, borderColor: colors.outline }]}>
                 {/* Card header */}
                 <View style={st.cardTop}>
-                  <View style={st.businessIconWrap}>
-                    <MaterialIcons name="store" size={20} color={COLORS.floodlight} />
+                  <View style={[st.businessIconWrap, { backgroundColor: colors.floodlight + '20', borderColor: colors.floodlight + '40' }]}>
+                    <MaterialIcons name="store" size={20} color={colors.floodlight} />
                   </View>
                   <View style={st.cardTopInfo}>
-                    <Text style={st.businessName} numberOfLines={1}>{r.business_name}</Text>
+                    <Text style={[st.businessName, { color: colors.text }]} numberOfLines={1}>{r.business_name}</Text>
                     <View style={st.pendingBadge}>
                       <View style={st.pulseDot} />
                       <Text style={st.pendingText}>Menunggu</Text>
@@ -162,7 +166,7 @@ export default function OwnerRequestPage() {
                   </View>
                 </View>
 
-                <View style={st.divider} />
+                <View style={[st.divider, { backgroundColor: colors.outline }]} />
 
                 {/* Detail rows */}
                 {[
@@ -172,8 +176,8 @@ export default function OwnerRequestPage() {
                   { icon: 'phone', label: r.phone },
                 ].map((row, i) => (
                   <View key={i} style={st.detailRow}>
-                    <MaterialIcons name={row.icon as any} size={14} color={COLORS.textSecondary} />
-                    <Text style={st.detailText} numberOfLines={1}>{row.label}</Text>
+                    <MaterialIcons name={row.icon as any} size={14} color={colors.textSecondary} />
+                    <Text style={[st.detailText, { color: colors.textSecondary }]} numberOfLines={1}>{row.label}</Text>
                   </View>
                 ))}
 
@@ -189,7 +193,7 @@ export default function OwnerRequestPage() {
                     <Text style={st.approveBtnText}>Setujui</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[st.rejectBtn, submitting && st.disabledBtn]}
+                    style={[st.rejectBtn, { backgroundColor: resolved === 'dark' ? '#2A1F26' : colors.errorContainer, borderColor: colors.error + '30' }, submitting && st.disabledBtn]}
                     onPress={() => setRejectModal({ id: r.id, visible: true })}
                     activeOpacity={0.8}
                     disabled={submitting}
@@ -207,28 +211,28 @@ export default function OwnerRequestPage() {
       {/* Reject Modal */}
       <Modal visible={rejectModal.visible} transparent animationType="fade" onRequestClose={() => setRejectModal({ id: 0, visible: false })}>
         <View style={st.modalOverlay}>
-          <View style={st.modal}>
+          <View style={[st.modal, { backgroundColor: cardSurface, borderColor: colors.outline }]}>
             <View style={st.modalHeader}>
-              <View style={st.modalIconWrap}>
-                <MaterialIcons name="cancel" size={22} color={COLORS.error} />
+              <View style={[st.modalIconWrap, { backgroundColor: resolved === 'dark' ? '#3B1A1A' : colors.errorContainer }]}>
+                <MaterialIcons name="cancel" size={22} color={colors.error} />
               </View>
-              <Text style={st.modalTitle}>Alasan Penolakan</Text>
+              <Text style={[st.modalTitle, { color: colors.text }]}>Alasan Penolakan</Text>
             </View>
-            <Text style={st.modalSub}>Wajib diisi dan akan dikirim ke pemohon.</Text>
+            <Text style={[st.modalSub, { color: colors.textSecondary }]}>Wajib diisi dan akan dikirim ke pemohon.</Text>
             <TextInput
-              style={st.modalInput}
+              style={[st.modalInput, { backgroundColor: softSurface, color: colors.text, borderColor: colors.outline }]}
               placeholder="Contoh: Data tidak lengkap..."
-              placeholderTextColor={COLORS.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               multiline
               value={rejectReason}
               onChangeText={setRejectReason}
             />
             <View style={st.modalActions}>
               <TouchableOpacity
-                style={st.cancelBtn}
+                style={[st.cancelBtn, { backgroundColor: softSurface, borderColor: colors.outline }]}
                 onPress={() => { setRejectModal({ id: 0, visible: false }); setRejectReason(''); }}
               >
-                <Text style={st.cancelText}>Batal</Text>
+                <Text style={[st.cancelText, { color: colors.textSecondary }]}>Batal</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[st.confirmBtn, submitting && { opacity: 0.6 }]}

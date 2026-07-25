@@ -43,7 +43,8 @@ type OwnerRequestStatus = 'none' | 'pending' | 'approved' | 'rejected';
 export default function ProfileScreen() {
   const { width } = useWindowDimensions();
   const { profile, clearProfile, fetchProfile } = useProfileStore();
-  const { colors } = useTheme();
+  const { colors, resolved } = useTheme();
+  const isDarkMode = resolved === 'dark';
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [ownerStatus, setOwnerStatus] = useState<OwnerRequestStatus>('none');
@@ -156,19 +157,26 @@ export default function ProfileScreen() {
 
   const role = profile?.role;
   const isDesktop = width >= 900;
+  const cardSurface = isDarkMode ? '#1E293B' : colors.surfaceWhite;
+  const ownerGreenSurface = isDarkMode ? '#1E293B' : '#f0fdf4';
+  const ownerGreenBorder = isDarkMode ? colors.divider : '#bbf7d0';
+  const ownerRedSurface = isDarkMode ? '#2A1F26' : '#fef2f2';
+  const ownerRedBorder = isDarkMode ? colors.divider : '#fecaca';
+  const ownerYellowSurface = isDarkMode ? '#2B2418' : '#fffbeb';
+  const ownerYellowBorder = isDarkMode ? colors.divider : '#fde68a';
 
   function renderOwnerSection() {
     if (role === 'player') {
       if (ownerStatus === 'pending') {
         return (
-          <View style={[styles.ownerCard, styles.pendingCard]}>
+          <View style={[styles.ownerCard, styles.pendingCard, { backgroundColor: ownerYellowSurface, borderColor: ownerYellowBorder }]}>
             <View style={styles.ownerCardLeft}>
               <View style={[styles.ownerIconBox, { backgroundColor: '#fef3c7' }]}>
                 <MaterialIcons name="hourglass-top" size={20} color="#d97706" />
               </View>
               <View style={styles.ownerCardInfo}>
-                <Text style={styles.ownerCardTitle}>Pengajuan Owner</Text>
-                <Text style={styles.ownerCardDesc}>Menunggu persetujuan admin...</Text>
+                <Text style={[styles.ownerCardTitle, { color: colors.text }]}>Pengajuan Owner</Text>
+                <Text style={[styles.ownerCardDesc, { color: colors.textSecondary }]}>Menunggu persetujuan admin...</Text>
               </View>
             </View>
           </View>
@@ -177,33 +185,33 @@ export default function ProfileScreen() {
 
       if (ownerStatus === 'rejected') {
         return (
-          <TouchableOpacity style={[styles.ownerCard, styles.rejectedCard]} activeOpacity={0.8} onPress={() => setShowOwnerModal(true)}>
+          <TouchableOpacity style={[styles.ownerCard, styles.rejectedCard, { backgroundColor: ownerRedSurface, borderColor: ownerRedBorder }]} activeOpacity={0.8} onPress={() => setShowOwnerModal(true)}>
             <View style={styles.ownerCardLeft}>
-              <View style={[styles.ownerIconBox, { backgroundColor: COLORS.errorLight }]}>
-                <MaterialIcons name="cancel" size={20} color={COLORS.error} />
+              <View style={[styles.ownerIconBox, { backgroundColor: isDarkMode ? '#3B1A1A' : colors.errorLight }]}>
+                <MaterialIcons name="cancel" size={20} color={colors.error} />
               </View>
               <View style={styles.ownerCardInfo}>
-                <Text style={styles.ownerCardTitle}>Pengajuan Ditolak</Text>
-                <Text style={styles.ownerCardDesc}>{ownerRequestData?.rejection_reason ?? 'Ketuk untuk ajukan ulang.'}</Text>
+                <Text style={[styles.ownerCardTitle, { color: colors.text }]}>Pengajuan Ditolak</Text>
+                <Text style={[styles.ownerCardDesc, { color: colors.textSecondary }]}>{ownerRequestData?.rejection_reason ?? 'Ketuk untuk ajukan ulang.'}</Text>
               </View>
             </View>
-            <MaterialIcons name="chevron-right" size={20} color={COLORS.error} />
+            <MaterialIcons name="chevron-right" size={20} color={colors.error} />
           </TouchableOpacity>
         );
       }
 
       return (
-        <TouchableOpacity style={[styles.ownerCard, styles.ownerActionCard]} activeOpacity={0.8} onPress={() => setShowOwnerModal(true)}>
+        <TouchableOpacity style={[styles.ownerCard, styles.ownerActionCard, { backgroundColor: ownerGreenSurface, borderColor: ownerGreenBorder }]} activeOpacity={0.8} onPress={() => setShowOwnerModal(true)}>
           <View style={styles.ownerCardLeft}>
-            <View style={[styles.ownerIconBox, { backgroundColor: COLORS.successLight }]}>
-              <MaterialIcons name="store" size={20} color={COLORS.primary} />
+            <View style={[styles.ownerIconBox, { backgroundColor: isDarkMode ? colors.surfaceContainerHigh : colors.successLight }]}>
+              <MaterialIcons name="store" size={20} color={colors.primary} />
             </View>
             <View style={styles.ownerCardInfo}>
-              <Text style={styles.ownerCardTitle}>Ajukan Jadi Owner</Text>
-              <Text style={styles.ownerCardDesc}>Kelola lapangan Anda sendiri.</Text>
+              <Text style={[styles.ownerCardTitle, { color: colors.text }]}>Ajukan Jadi Owner</Text>
+              <Text style={[styles.ownerCardDesc, { color: colors.textSecondary }]}>Kelola lapangan Anda sendiri.</Text>
             </View>
           </View>
-          <MaterialIcons name="chevron-right" size={20} color={COLORS.textSecondary} />
+          <MaterialIcons name="chevron-right" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       );
     }
@@ -211,19 +219,19 @@ export default function ProfileScreen() {
     if (role === 'owner') {
       return (
         <TouchableOpacity
-          style={[styles.ownerCard, styles.approvedCard]}
+          style={[styles.ownerCard, styles.approvedCard, { backgroundColor: ownerGreenSurface, borderColor: ownerGreenBorder }]}
           onPress={() => router.push('/(owner)/fields' as any)}
         >
           <View style={styles.ownerCardLeft}>
-            <View style={[styles.ownerIconBox, { backgroundColor: COLORS.successLight }]}>
-              <MaterialIcons name="stadium" size={20} color={COLORS.primary} />
+            <View style={[styles.ownerIconBox, { backgroundColor: isDarkMode ? colors.surfaceContainerHigh : colors.successLight }]}>
+              <MaterialIcons name="stadium" size={20} color={colors.primary} />
             </View>
             <View style={styles.ownerCardInfo}>
-              <Text style={styles.ownerCardTitle}>Lapangan Saya</Text>
-              <Text style={styles.ownerCardDesc}>Kelola lapangan yang Anda miliki.</Text>
+              <Text style={[styles.ownerCardTitle, { color: colors.text }]}>Lapangan Saya</Text>
+              <Text style={[styles.ownerCardDesc, { color: colors.textSecondary }]}>Kelola lapangan yang Anda miliki.</Text>
             </View>
           </View>
-          <MaterialIcons name="chevron-right" size={20} color={COLORS.textSecondary} />
+          <MaterialIcons name="chevron-right" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       );
     }
@@ -232,24 +240,24 @@ export default function ProfileScreen() {
       return (
         <>
           <TouchableOpacity
-            style={[styles.ownerCard, styles.approvedCard]}
+            style={[styles.ownerCard, styles.approvedCard, { backgroundColor: ownerGreenSurface, borderColor: ownerGreenBorder }]}
             activeOpacity={0.8}
             onPress={() => router.push('/(tabs)/my-fields')}
           >
             <View style={styles.ownerCardLeft}>
-              <View style={[styles.ownerIconBox, { backgroundColor: COLORS.successLight }]}>
-                <MaterialIcons name="stadium" size={20} color={COLORS.primary} />
+              <View style={[styles.ownerIconBox, { backgroundColor: isDarkMode ? colors.surfaceContainerHigh : colors.successLight }]}>
+                <MaterialIcons name="stadium" size={20} color={colors.primary} />
               </View>
               <View style={styles.ownerCardInfo}>
-                <Text style={styles.ownerCardTitle}>Kelola Lapangan</Text>
-                <Text style={styles.ownerCardDesc}>Lihat dan kelola semua lapangan.</Text>
+                <Text style={[styles.ownerCardTitle, { color: colors.text }]}>Kelola Lapangan</Text>
+                <Text style={[styles.ownerCardDesc, { color: colors.textSecondary }]}>Lihat dan kelola semua lapangan.</Text>
               </View>
             </View>
-            <MaterialIcons name="chevron-right" size={20} color={COLORS.textSecondary} />
+            <MaterialIcons name="chevron-right" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
           {role === 'super_admin' && (
             <TouchableOpacity
-              style={[styles.ownerCard, { backgroundColor: '#f5f3ff', borderColor: '#c4b5fd' }]}
+              style={[styles.ownerCard, { backgroundColor: isDarkMode ? cardSurface : '#f5f3ff', borderColor: isDarkMode ? colors.divider : '#c4b5fd' }]}
               activeOpacity={0.8}
               onPress={() => router.push('/(admin)/dashboard')}
             >
@@ -257,12 +265,12 @@ export default function ProfileScreen() {
                 <View style={[styles.ownerIconBox, { backgroundColor: '#ede9fe' }]}>
                   <MaterialIcons name="admin-panel-settings" size={20} color="#7c3aed" />
                 </View>
-                <View style={styles.ownerCardInfo}>
-                  <Text style={styles.ownerCardTitle}>Panel Super Admin</Text>
-                  <Text style={styles.ownerCardDesc}>Approve field dan owner request.</Text>
-                </View>
+              <View style={styles.ownerCardInfo}>
+                  <Text style={[styles.ownerCardTitle, { color: colors.text }]}>Panel Super Admin</Text>
+                  <Text style={[styles.ownerCardDesc, { color: colors.textSecondary }]}>Approve field dan owner request.</Text>
               </View>
-              <MaterialIcons name="chevron-right" size={20} color={COLORS.textSecondary} />
+            </View>
+              <MaterialIcons name="chevron-right" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
         </>
@@ -274,7 +282,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -289,23 +297,23 @@ export default function ProfileScreen() {
       >
         <View style={styles.pageShell}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={styles.pageTitle}>Profil</Text>
+          <Text style={[styles.pageTitle, { color: isDarkMode ? '#FFFFFF' : colors.text }]}>Profil</Text>
           <ThemeToggle />
         </View>
 
         <View style={[styles.profileGrid, isDesktop && styles.profileGridDesktop]}>
         <View style={styles.profileColumn}>
-        <View style={styles.profileCard}>
+        <View style={[styles.profileCard, { backgroundColor: isDarkMode ? '#1E293B' : colors.surfaceWhite, borderColor: colors.divider }]}>
           <Image
             source={{ uri: profile?.avatar_url || 'https://api.dicebear.com/7.x/bottts/png?seed=goal&backgroundColor=ffffff&textColor=00A651' }}
             style={styles.avatar}
           />
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{profile?.full_name ?? profile?.username ?? 'Pengguna'}</Text>
-            {profile?.username ? <Text style={styles.profileHandle}>@{profile.username}</Text> : null}
+            <Text style={[styles.profileName, { color: colors.text }]}>{profile?.full_name ?? profile?.username ?? 'Pengguna'}</Text>
+            {profile?.username ? <Text style={[styles.profileHandle, { color: colors.textSecondary }]}>@{profile.username}</Text> : null}
             <View style={styles.locationRow}>
-              <MaterialIcons name="location-on" size={14} color={COLORS.textSecondary} />
-              <Text style={styles.locationText}>{profile?.region ?? 'Belum diatur'}</Text>
+              <MaterialIcons name="location-on" size={14} color={colors.textSecondary} />
+              <Text style={[styles.locationText, { color: colors.textSecondary }]}>{profile?.region ?? 'Belum diatur'}</Text>
             </View>
           </View>
           <TouchableOpacity style={styles.editButton} activeOpacity={0.8} onPress={() => router.push('/onboarding')}>
@@ -314,69 +322,69 @@ export default function ProfileScreen() {
         </View>
 
         {profile?.role && (
-          <View style={styles.roleBadge}>
+          <View style={[styles.roleBadge, { backgroundColor: isDarkMode ? '#1E293B' : colors.surfaceWhite, borderColor: colors.divider }]}>
             <MaterialIcons
               name={profile.role === 'super_admin' ? 'shield' : profile.role === 'admin' ? 'admin-panel-settings' : profile.role === 'owner' ? 'store' : 'person'}
               size={14}
               color={COLORS.primary}
             />
-            <Text style={styles.roleBadgeText}>{profile.role === 'super_admin' ? 'SUPER ADMIN' : profile.role === 'owner' ? 'OWNER' : profile.role.toUpperCase()}</Text>
+            <Text style={[styles.roleBadgeText, { color: colors.text }]}>{profile.role === 'super_admin' ? 'SUPER ADMIN' : profile.role === 'owner' ? 'OWNER' : profile.role.toUpperCase()}</Text>
           </View>
         )}
 
-        <Text style={styles.sectionTitle}>OLAHRAGA</Text>
-        <View style={styles.sportsCard}>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>OLAHRAGA</Text>
+        <View style={[styles.sportsCard, { backgroundColor: isDarkMode ? '#1E293B' : colors.surfaceWhite, borderColor: colors.divider }]}>
           {profile?.sports?.length ? (
             <View style={styles.tagsRow}>
               {profile.sports.map((sport: string) => (
-                <View key={sport} style={styles.tagChip}>
-                  <MaterialIcons name={(SPORT_ICONS[sport] ?? 'sports') as any} size={14} color={COLORS.primary} />
-                  <Text style={styles.tagText}>{sport.toUpperCase()}</Text>
+                <View key={sport} style={[styles.tagChip, { backgroundColor: isDarkMode ? colors.surfaceContainerHigh : '#e6f4ea' }]}>
+                  <MaterialIcons name={(SPORT_ICONS[sport] ?? 'sports') as any} size={14} color={colors.primary} />
+                  <Text style={[styles.tagText, { color: isDarkMode ? '#FFFFFF' : '#0f5132' }]}>{sport.toUpperCase()}</Text>
                 </View>
               ))}
             </View>
           ) : (
-            <Text style={styles.emptyText}>Belum ada preferensi olahraga.</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Belum ada preferensi olahraga.</Text>
           )}
         </View>
         </View>
 
         <View style={styles.profileColumn}>
-        <Text style={styles.sectionTitle}>AKUN</Text>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>AKUN</Text>
         {renderOwnerSection()}
 
-        <Text style={styles.sectionTitle}>PENGATURAN</Text>
-        <View style={styles.settingsCard}>
+        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>PENGATURAN</Text>
+        <View style={[styles.settingsCard, { backgroundColor: isDarkMode ? '#1E293B' : colors.surfaceWhite, borderColor: colors.divider }]}>
           <TouchableOpacity style={styles.settingRow} activeOpacity={0.8} onPress={() => router.push('/onboarding')}>
-            <View style={styles.settingIconBox}>
-              <MaterialIcons name="person-outline" size={20} color={COLORS.primary} />
+            <View style={[styles.settingIconBox, { backgroundColor: isDarkMode ? colors.surfaceContainerHigh : '#ecfdf5' }]}>
+              <MaterialIcons name="person-outline" size={20} color={colors.primary} />
             </View>
-            <Text style={styles.settingLabel}>Ubah Profil</Text>
-            <MaterialIcons name="chevron-right" size={20} color={COLORS.outline} />
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Ubah Profil</Text>
+            <MaterialIcons name="chevron-right" size={20} color={colors.outline} />
           </TouchableOpacity>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.divider }]} />
           <TouchableOpacity style={styles.settingRow} activeOpacity={0.8} onPress={() => useToastStore.getState().show({ type: 'info', title: 'Segera Hadir', description: 'Fitur notifikasi akan segera tersedia.' })}>
-            <View style={styles.settingIconBox}>
-              <MaterialIcons name="notifications-none" size={20} color={COLORS.primary} />
+            <View style={[styles.settingIconBox, { backgroundColor: isDarkMode ? colors.surfaceContainerHigh : '#ecfdf5' }]}>
+              <MaterialIcons name="notifications-none" size={20} color={colors.primary} />
             </View>
-            <Text style={styles.settingLabel}>Notifikasi</Text>
-            <MaterialIcons name="chevron-right" size={20} color={COLORS.outline} />
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Notifikasi</Text>
+            <MaterialIcons name="chevron-right" size={20} color={colors.outline} />
           </TouchableOpacity>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.divider }]} />
           <TouchableOpacity style={styles.settingRow} activeOpacity={0.8} onPress={() => router.push('/change-password')}>
-            <View style={styles.settingIconBox}>
-              <MaterialIcons name="lock-outline" size={20} color={COLORS.primary} />
+            <View style={[styles.settingIconBox, { backgroundColor: isDarkMode ? colors.surfaceContainerHigh : '#ecfdf5' }]}>
+              <MaterialIcons name="lock-outline" size={20} color={colors.primary} />
             </View>
-            <Text style={styles.settingLabel}>Ubah Kata Sandi</Text>
-            <MaterialIcons name="chevron-right" size={20} color={COLORS.outline} />
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Ubah Kata Sandi</Text>
+            <MaterialIcons name="chevron-right" size={20} color={colors.outline} />
           </TouchableOpacity>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: colors.divider }]} />
           <TouchableOpacity style={styles.settingRow} activeOpacity={0.8} onPress={() => useToastStore.getState().show({ type: 'info', title: 'Segera Hadir', description: 'Pusat bantuan akan segera tersedia.' })}>
-            <View style={styles.settingIconBox}>
-              <MaterialIcons name="help-outline" size={20} color={COLORS.primary} />
+            <View style={[styles.settingIconBox, { backgroundColor: isDarkMode ? colors.surfaceContainerHigh : '#ecfdf5' }]}>
+              <MaterialIcons name="help-outline" size={20} color={colors.primary} />
             </View>
-            <Text style={styles.settingLabel}>Pusat Bantuan</Text>
-            <MaterialIcons name="chevron-right" size={20} color={COLORS.outline} />
+            <Text style={[styles.settingLabel, { color: colors.text }]}>Pusat Bantuan</Text>
+            <MaterialIcons name="chevron-right" size={20} color={colors.outline} />
           </TouchableOpacity>
         </View>
 

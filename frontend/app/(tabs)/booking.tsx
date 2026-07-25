@@ -5,18 +5,21 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../../components/goalTheme';
 import { FadeInView } from '../../components/FadeInView';
+import { useTheme } from '../../lib/theme';
 
 export default function BookingTabScreen() {
+  const { colors, resolved } = useTheme();
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={resolved === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       <FadeInView style={styles.center}>
-        <View style={styles.iconWrap}>
-          <MaterialIcons name="confirmation-number" size={40} color={COLORS.primary} />
+        <View style={[styles.iconWrap, { backgroundColor: colors.primaryContainer }]}>
+          <MaterialIcons name="confirmation-number" size={40} color={colors.primary} />
         </View>
-        <Text style={styles.title}>Booking</Text>
-        <Text style={styles.badge}>Segera Hadir</Text>
-        <Text style={styles.desc}>
+        <Text style={[styles.title, { color: colors.text }]}>Booking</Text>
+        <Text style={[styles.badge, { color: colors.primary, backgroundColor: colors.primaryContainer }]}>Segera Hadir</Text>
+        <Text style={[styles.desc, { color: colors.textSecondary }]}>
           Fitur pemesanan lapangan sedang kami kembangkan.{'\n'}
           Nantikan pembaruan berikutnya!
         </Text>

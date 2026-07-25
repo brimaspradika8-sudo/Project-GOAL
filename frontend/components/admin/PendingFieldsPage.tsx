@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  RefreshControl, Modal,
+  RefreshControl, Modal, TextInput,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -14,14 +14,20 @@ import DashboardHeader from '../shared/DashboardHeader';
 import TrashedFieldsPage from './TrashedFieldsPage';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
+import { useTheme } from '../../lib/theme';
 
 export default function PendingFieldsPage() {
+  const { colors, resolved } = useTheme();
+  const cardSurface = resolved === 'dark' ? '#1E293B' : colors.surface;
+  const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submittingId, setSubmittingId] = useState<number | null>(null);
   const [showTrashedModal, setShowTrashedModal] = useState(false);
   const [approveTarget, setApproveTarget] = useState<{ id: number; name: string } | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<{ id: number; name: string } | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const fetchFields = useCallback(async () => {
     try {
@@ -45,32 +51,24 @@ export default function PendingFieldsPage() {
   useEffect(() => { fetchFields(); }, [fetchFields]);
   const onRefresh = () => { setRefreshing(true); fetchFields(); };
 
-  const approveField = async (id: number) => {
-    setSubmittingId(id);
-    try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/fields/${id}/approve`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: 'approved' }),
-      });
-      const data = await res.json().catch(() => ({}));
+  const reviewField = async (id: number, status: 'approved' | 'rejected', reason?: string) => {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const res = await fetch(`${API_BASE_URL}/fields/${id}/approve`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status, ...(reason ? { reason } : {}) }),
+    });
+    const data = await res.json().catch(() => ({}));
 
-      if (!res.ok) {
-        throw new Error(getErrorMessage(data, 'Gagal menyetujui lapangan.'));
-      }
-
-      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Lapangan disetujui.' });
-      fetchFields();
-    } catch (e: any) {
-      useToastStore.getState().show({ type: 'error', title: 'Gagal', description: e.message || 'Gagal menyetujui lapangan.' });
-    } finally {
-      setSubmittingId(null);
+    if (!res.ok) {
+      throw new Error(getErrorMessage(data, status === 'approved' ? 'Gagal menyetujui lapangan.' : 'Gagal menolak lapangan.'));
     }
+
+    return data;
   };
 
   const handleApprove = (id: number, name: string) => {
@@ -81,22 +79,7 @@ export default function PendingFieldsPage() {
     if (!approveTarget) return;
     setSubmittingId(approveTarget.id);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/fields/${approveTarget.id}/approve`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: 'approved' }),
-      });
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(getErrorMessage(data, 'Gagal menyetujui lapangan.'));
-      }
-
+      await reviewField(approveTarget.id, 'approved');
       setApproveTarget(null);
       useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Lapangan disetujui.' });
       fetchFields();
@@ -107,9 +90,31 @@ export default function PendingFieldsPage() {
     }
   };
 
+  const confirmReject = async () => {
+    if (!rejectTarget) return;
+    const reason = rejectReason.trim();
+    if (!reason) {
+      useToastStore.getState().show({ type: 'error', title: 'Alasan wajib diisi', description: 'Tuliskan alasan penolakan terlebih dahulu.' });
+      return;
+    }
+
+    setSubmittingId(rejectTarget.id);
+    try {
+      await reviewField(rejectTarget.id, 'rejected', reason);
+      setRejectTarget(null);
+      setRejectReason('');
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Lapangan ditolak.' });
+      fetchFields();
+    } catch (e: any) {
+      useToastStore.getState().show({ type: 'error', title: 'Gagal', description: e.message || 'Gagal menolak lapangan.' });
+    } finally {
+      setSubmittingId(null);
+    }
+  };
+
   if (loading) {
     return (
-      <View style={st.screen}>
+      <View style={[st.screen, { backgroundColor: colors.background }]}>
         <DashboardHeader title="Persetujuan Lapangan" subtitle="Verifikasi lapangan baru" />
         <SkeletonCards count={3} />
       </View>
@@ -118,7 +123,7 @@ export default function PendingFieldsPage() {
 
   return (
     <>
-      <View style={st.screen}>
+      <View style={[st.screen, { backgroundColor: colors.background }]}>
         <DashboardHeader
           title="Persetujuan Lapangan"
           subtitle="Verifikasi lapangan baru"
@@ -135,12 +140,12 @@ export default function PendingFieldsPage() {
 
         <ScrollView
           contentContainerStyle={st.list}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
           showsVerticalScrollIndicator={false}
         >
           {fields.length > 0 && (
             <View style={st.headerRow}>
-              <View style={st.countPill}>
+              <View style={[st.countPill, { backgroundColor: resolved === 'dark' ? '#2A1F5E' : '#ede9fe', borderColor: resolved === 'dark' ? '#4C1D95' : '#c4b5fd' }]}>
                 <MaterialIcons name="pending-actions" size={12} color="#6d28d9" />
                 <Text style={st.countText}>{fields.length} lapangan pending</Text>
               </View>
@@ -148,79 +153,129 @@ export default function PendingFieldsPage() {
                 style={st.trashedLink}
                 onPress={() => setShowTrashedModal(true)}
               >
-                <MaterialIcons name="delete-sweep" size={16} color={COLORS.textSecondary} />
-                <Text style={st.trashedLinkText}>Lihat Terhapus</Text>
+                <MaterialIcons name="delete-sweep" size={16} color={colors.textSecondary} />
+                <Text style={[st.trashedLinkText, { color: colors.textSecondary }]}>Lihat Terhapus</Text>
               </TouchableOpacity>
             </View>
           )}
 
           {fields.length === 0 ? (
             <View style={st.emptyWrap}>
-              <View style={st.emptyIconWrap}>
-                <MaterialIcons name="check-circle" size={40} color={COLORS.primary} />
+              <View style={[st.emptyIconWrap, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '30' }]}>
+                <MaterialIcons name="check-circle" size={40} color={colors.primary} />
               </View>
-              <Text style={st.emptyTitle}>Semua Sudah Diverifikasi</Text>
-              <Text style={st.emptyDesc}>Tidak ada lapangan yang menunggu.</Text>
+              <Text style={[st.emptyTitle, { color: colors.text }]}>Semua Sudah Diverifikasi</Text>
+              <Text style={[st.emptyDesc, { color: colors.textSecondary }]}>Tidak ada lapangan yang menunggu.</Text>
 
               <TouchableOpacity
-                style={st.trashedOutlineBtn}
+                style={[st.trashedOutlineBtn, { borderColor: colors.outline, backgroundColor: cardSurface }]}
                 onPress={() => setShowTrashedModal(true)}
               >
-                <MaterialIcons name="delete-outline" size={18} color={COLORS.textSecondary} />
-                <Text style={st.trashedOutlineText}>Lihat Lapangan Terhapus</Text>
+                <MaterialIcons name="delete-outline" size={18} color={colors.textSecondary} />
+                <Text style={[st.trashedOutlineText, { color: colors.textSecondary }]}>Lihat Lapangan Terhapus</Text>
               </TouchableOpacity>
             </View>
           ) : (
             fields.map((f: any) => (
               <TouchableOpacity
                 key={f.id}
-                style={st.card}
+                style={[st.card, { backgroundColor: cardSurface, borderColor: colors.outline }]}
                 activeOpacity={0.85}
                 onPress={() => router.push(`/venue-detail?id=${f.id}`)}
               >
                 <View style={st.cardTop}>
-                  <View style={st.fieldIconWrap}>
+                  <View style={[st.fieldIconWrap, { backgroundColor: resolved === 'dark' ? '#2A1F5E' : '#ede9fe', borderColor: resolved === 'dark' ? '#4C1D95' : '#c4b5fd' }]}>
                     <MaterialIcons name="stadium" size={20} color="#6d28d9" />
                   </View>
                   <View style={st.cardTopInfo}>
-                    <Text style={st.fieldName} numberOfLines={1}>{f.name}</Text>
+                    <Text style={[st.fieldName, { color: colors.text }]} numberOfLines={1}>{f.name}</Text>
                     <View style={st.sportTag}>
                       <MaterialIcons name="sports" size={11} color="#6d28d9" />
                       <Text style={st.sportText}>{f.sport_type?.toUpperCase()}</Text>
                     </View>
                   </View>
-                  <MaterialIcons name="chevron-right" size={20} color={COLORS.textTertiary} />
+                  <MaterialIcons name="chevron-right" size={20} color={colors.textTertiary} />
                 </View>
 
                 {f.location && (
                   <View style={st.addressRow}>
-                    <MaterialIcons name="location-on" size={13} color={COLORS.textSecondary} />
-                    <Text style={st.addressText} numberOfLines={1}>{f.location}</Text>
+                    <MaterialIcons name="location-on" size={13} color={colors.textSecondary} />
+                    <Text style={[st.addressText, { color: colors.textSecondary }]} numberOfLines={1}>{f.location}</Text>
                   </View>
                 )}
 
-                <TouchableOpacity
-                  style={[st.approveBtn, submittingId === f.id && st.disabledBtn]}
-                  onPress={() => handleApprove(f.id, f.name)}
-                  activeOpacity={0.8}
-                  disabled={submittingId === f.id}
-                >
-                  <MaterialIcons name="verified" size={16} color={COLORS.onPrimary} />
-                  <Text style={st.approveBtnText}>{submittingId === f.id ? 'Menyetujui...' : 'Setujui Lapangan'}</Text>
-                </TouchableOpacity>
+                <View style={st.actionRow}>
+                  <TouchableOpacity
+                    style={[st.approveBtn, submittingId === f.id && st.disabledBtn]}
+                    onPress={() => handleApprove(f.id, f.name)}
+                    activeOpacity={0.8}
+                    disabled={submittingId === f.id}
+                  >
+                    <MaterialIcons name="verified" size={16} color={COLORS.onPrimary} />
+                    <Text style={st.approveBtnText}>{submittingId === f.id ? 'Menyetujui...' : 'Setujui'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[st.rejectBtn, { backgroundColor: resolved === 'dark' ? '#2A1F26' : colors.errorContainer, borderColor: colors.error + '30' }, submittingId === f.id && st.disabledBtn]}
+                    onPress={() => { setRejectTarget({ id: f.id, name: f.name }); setRejectReason(''); }}
+                    activeOpacity={0.8}
+                    disabled={submittingId === f.id}
+                  >
+                    <MaterialIcons name="cancel" size={16} color={colors.error} />
+                    <Text style={[st.rejectBtnText, { color: colors.error }]}>{submittingId === f.id ? 'Menunggu...' : 'Tolak'}</Text>
+                  </TouchableOpacity>
+                </View>
               </TouchableOpacity>
             ))
           )}
         </ScrollView>
       </View>
 
+      <Modal visible={!!rejectTarget} transparent animationType="fade" onRequestClose={() => setRejectTarget(null)}>
+        <View style={st.modalOverlay}>
+          <View style={[st.rejectModal, { backgroundColor: cardSurface, borderColor: colors.outline }]}>
+            <View style={st.rejectHeader}>
+              <View style={[st.rejectIconWrap, { backgroundColor: resolved === 'dark' ? '#3B1A1A' : colors.errorContainer }]}>
+                <MaterialIcons name="cancel" size={22} color={colors.error} />
+              </View>
+              <Text style={[st.rejectTitle, { color: colors.text }]}>Alasan Penolakan</Text>
+            </View>
+            <Text style={[st.rejectSubtitle, { color: colors.textSecondary }]}>
+              Alasan ini akan disimpan saat lapangan ditolak.
+            </Text>
+            <TextInput
+              style={[st.rejectInput, { backgroundColor: softSurface, color: colors.text, borderColor: colors.outline }]}
+              placeholder="Contoh: Data lapangan belum lengkap..."
+              placeholderTextColor={colors.textTertiary}
+              multiline
+              value={rejectReason}
+              onChangeText={setRejectReason}
+            />
+            <View style={st.rejectActions}>
+              <TouchableOpacity
+                style={[st.cancelBtn, { backgroundColor: softSurface, borderColor: colors.outline }]}
+                onPress={() => { setRejectTarget(null); setRejectReason(''); }}
+              >
+                <Text style={[st.cancelBtnText, { color: colors.textSecondary }]}>Batal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[st.confirmRejectBtn, submittingId !== null && st.disabledBtn]}
+                onPress={confirmReject}
+                disabled={submittingId !== null}
+              >
+                <Text style={st.confirmRejectText}>Tolak Lapangan</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Trashed Fields Modal */}
       <Modal visible={showTrashedModal} animationType="slide" onRequestClose={() => setShowTrashedModal(false)}>
-        <View style={st.modalHeaderBar}>
+        <View style={[st.modalHeaderBar, { backgroundColor: cardSurface, borderBottomColor: colors.outline }]}>
           <TouchableOpacity onPress={() => setShowTrashedModal(false)} style={st.closeBtn}>
-            <MaterialIcons name="arrow-back" size={24} color={COLORS.text} />
+            <MaterialIcons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={st.modalHeaderTitle}>Lapangan Terhapus</Text>
+          <Text style={[st.modalHeaderTitle, { color: colors.text }]}>Lapangan Terhapus</Text>
         </View>
         <TrashedFieldsPage />
       </Modal>
@@ -298,12 +353,57 @@ const st = StyleSheet.create({
   addressText: { ...FONTS.bodySm, color: COLORS.textSecondary, flex: 1 },
 
   approveBtn: {
+    flex: 1,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: COLORS.primary, paddingVertical: 12, borderRadius: 12,
     minHeight: 46,
   },
   approveBtnText: { ...FONTS.titleSm, color: COLORS.onPrimary },
+  actionRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  rejectBtn: {
+    flex: 1,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingVertical: 12, borderRadius: 12,
+    borderWidth: 1, minHeight: 46,
+  },
+  rejectBtnText: { ...FONTS.titleSm },
   disabledBtn: { opacity: 0.6 },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
+  rejectModal: {
+    borderRadius: 20,
+    padding: 22,
+    borderWidth: 1,
+    ...SHADOWS.lg,
+  },
+  rejectHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 6 },
+  rejectIconWrap: {
+    width: 38, height: 38, borderRadius: 11,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  rejectTitle: { ...FONTS.headlineSm },
+  rejectSubtitle: { ...FONTS.bodySm, marginBottom: 16, marginLeft: 50 },
+  rejectInput: {
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 14,
+    minHeight: 90,
+    textAlignVertical: 'top',
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+  rejectActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
+  cancelBtn: {
+    paddingVertical: 11, paddingHorizontal: 20, borderRadius: 10,
+    borderWidth: 1,
+    minHeight: 44, justifyContent: 'center',
+  },
+  cancelBtnText: { ...FONTS.titleSm },
+  confirmRejectBtn: {
+    paddingVertical: 11, paddingHorizontal: 24, borderRadius: 10,
+    backgroundColor: COLORS.error, minHeight: 44, justifyContent: 'center', alignItems: 'center',
+  },
+  confirmRejectText: { ...FONTS.titleSm, color: COLORS.onPrimary },
 
   modalHeaderBar: {
     flexDirection: 'row', alignItems: 'center', gap: 16,

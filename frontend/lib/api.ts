@@ -74,3 +74,26 @@ export function getErrorMessage(data: any, fallbackMessage: string = 'Terjadi ke
   return fallbackMessage;
 }
 
+export function getAssetUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  // If it starts with file:// or data: then it's a local/temporary uri
+  if (url.startsWith('file://') || url.startsWith('data:')) {
+    return url;
+  }
+  
+  if (Platform.OS !== 'web' && isLocalDevelopmentUrl(url)) {
+    const apiBase = getApiBaseUrl(); 
+    const apiHost = extractHostFromUrl(apiBase);
+    if (apiHost) {
+      try {
+        const parsed = new URL(url);
+        parsed.hostname = apiHost;
+        return parsed.toString();
+      } catch {
+        return url.replace(/localhost|127\.0\.0\.1|0\.0\.0\.0/g, apiHost);
+      }
+    }
+  }
+  return url;
+}
+

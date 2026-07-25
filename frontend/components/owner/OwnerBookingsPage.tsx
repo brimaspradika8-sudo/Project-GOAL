@@ -10,6 +10,7 @@ import { API_BASE_URL } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import DashboardHeader from '../shared/DashboardHeader';
 import { SkeletonCards } from '../Skeleton';
+import { useTheme } from '../../lib/theme';
 
 const STATUS_CFG: Record<string, { label: string; bg: string; color: string; icon: string }> = {
   confirmed: { label: 'Terkonfirmasi', bg: COLORS.primaryContainer, color: COLORS.primary, icon: 'check-circle' },
@@ -19,6 +20,9 @@ const STATUS_CFG: Record<string, { label: string; bg: string; color: string; ico
 };
 
 export default function OwnerBookingsPage() {
+  const { colors, resolved } = useTheme();
+  const cardSurface = resolved === 'dark' ? '#1E293B' : colors.surface;
+  const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -61,19 +65,23 @@ export default function OwnerBookingsPage() {
   ] as const;
 
   return (
-    <View style={st.screen}>
+    <View style={[st.screen, { backgroundColor: colors.background }]}>
       <DashboardHeader title="Daftar Booking" subtitle="Pantau dan kelola jadwal lapangan Anda" />
       
       {/* Tab filter */}
-      <View style={st.tabRow}>
+      <View style={[st.tabRow, { backgroundColor: cardSurface, borderBottomColor: colors.outline }]}>
         {TABS.map(t => (
           <TouchableOpacity
             key={t.key}
-            style={[st.tabBtn, activeTab === t.key && st.tabBtnActive]}
+            style={[
+              st.tabBtn,
+              { backgroundColor: softSurface, borderColor: colors.outline },
+              activeTab === t.key && [st.tabBtnActive, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '60' }],
+            ]}
             onPress={() => setActiveTab(t.key)}
             activeOpacity={0.75}
           >
-            <Text style={[st.tabText, activeTab === t.key && st.tabTextActive]}>{t.label}</Text>
+            <Text style={[st.tabText, { color: colors.textSecondary }, activeTab === t.key && [st.tabTextActive, { color: colors.primary }]]}>{t.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -85,16 +93,16 @@ export default function OwnerBookingsPage() {
       ) : (
         <ScrollView
           contentContainerStyle={st.contentList}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
           showsVerticalScrollIndicator={false}
         >
           {filteredBookings.length === 0 ? (
             <View style={st.emptyWrap}>
-              <View style={st.emptyIcon}>
-                <MaterialIcons name="event-busy" size={40} color={COLORS.textTertiary} />
+              <View style={[st.emptyIcon, { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outline }]}>
+                <MaterialIcons name="event-busy" size={40} color={colors.textTertiary} />
               </View>
-              <Text style={st.emptyTitle}>Tidak ada booking</Text>
-              <Text style={st.emptyDesc}>Belum ada booking dengan status ini.</Text>
+              <Text style={[st.emptyTitle, { color: colors.text }]}>Tidak ada booking</Text>
+              <Text style={[st.emptyDesc, { color: colors.textSecondary }]}>Belum ada booking dengan status ini.</Text>
             </View>
           ) : (
             filteredBookings.map((b: any) => {
@@ -112,13 +120,13 @@ export default function OwnerBookingsPage() {
               const code = b.code ?? b.id ?? '-';
 
               return (
-                <View key={b.id} style={st.card}>
+                <View key={b.id} style={[st.card, { backgroundColor: cardSurface, borderColor: colors.outline }]}>
                   <View style={st.cardHeader}>
                     <View style={st.headerLeft}>
-                      <View style={st.iconWrap}>
-                        <MaterialIcons name="receipt-long" size={16} color={COLORS.primary} />
+                      <View style={[st.iconWrap, { backgroundColor: colors.primaryContainer }]}>
+                        <MaterialIcons name="receipt-long" size={16} color={colors.primary} />
                       </View>
-                      <Text style={st.bookingCode}>{code}</Text>
+                      <Text style={[st.bookingCode, { color: colors.text }]}>{code}</Text>
                     </View>
                     <View style={[st.statusBadge, { backgroundColor: status.bg, borderColor: status.color + '44' }]}>
                       <MaterialIcons name={status.icon as any} size={11} color={status.color} />
@@ -126,40 +134,42 @@ export default function OwnerBookingsPage() {
                     </View>
                   </View>
 
-                  <View style={st.detailGrid}>
+                  <View style={[st.detailGrid, { backgroundColor: softSurface, borderColor: colors.outline }]}>
                     <View style={st.detailCol}>
                       <View style={st.detailLabelWrap}>
-                        <MaterialIcons name="person" size={12} color={COLORS.textSecondary} />
-                        <Text style={st.detailLabel}>Penyewa</Text>
+                        <MaterialIcons name="person" size={12} color={colors.textSecondary} />
+                        <Text style={[st.detailLabel, { color: colors.textSecondary }]}>Penyewa</Text>
                       </View>
-                      <Text style={st.detailVal}>{renterName}</Text>
-                      {renterPhone ? <Text style={st.detailSub}>{renterPhone}</Text> : null}
+                      <Text style={[st.detailVal, { color: colors.text }]}>{renterName}</Text>
+                      {renterPhone ? <Text style={[st.detailSub, { color: colors.textSecondary }]}>{renterPhone}</Text> : null}
                     </View>
-                    <View style={st.colDivider} />
+                    <View style={[st.colDivider, { backgroundColor: colors.outline }]} />
                     <View style={st.detailCol}>
                       <View style={st.detailLabelWrap}>
-                        <MaterialIcons name="stadium" size={12} color={COLORS.textSecondary} />
-                        <Text style={st.detailLabel}>Lapangan</Text>
+                        <MaterialIcons name="stadium" size={12} color={colors.textSecondary} />
+                        <Text style={[st.detailLabel, { color: colors.textSecondary }]}>Lapangan</Text>
                       </View>
-                      <Text style={st.detailVal}>{fieldName}</Text>
+                      <Text style={[st.detailVal, { color: colors.text }]}>{fieldName}</Text>
                     </View>
                   </View>
 
+                  <View style={[st.detailGrid, { backgroundColor: softSurface, borderColor: colors.outline }]}>
                   <View style={st.scheduleRow}>
                     <View style={st.scheduleItem}>
-                      <MaterialIcons name="event" size={14} color={COLORS.textSecondary} />
-                      <Text style={st.scheduleText}>{bookingDate}</Text>
+                      <MaterialIcons name="event" size={14} color={colors.textSecondary} />
+                      <Text style={[st.scheduleText, { color: colors.text }]}>{bookingDate}</Text>
                     </View>
                     {timeStr !== '-' && (
                       <><View style={st.scheduleDot} />
                       <View style={st.scheduleItem}>
-                        <MaterialIcons name="schedule" size={14} color={COLORS.textSecondary} />
-                        <Text style={st.scheduleText}>{timeStr}</Text>
+                        <MaterialIcons name="schedule" size={14} color={colors.textSecondary} />
+                        <Text style={[st.scheduleText, { color: colors.text }]}>{timeStr}</Text>
                       </View></>
                     )}
-                    <View style={st.pricePill}>
-                      <Text style={st.priceText}>{priceStr}</Text>
+                    <View style={[st.pricePill, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '30' }]}>
+                      <Text style={[st.priceText, { color: colors.primary }]}>{priceStr}</Text>
                     </View>
+                  </View>
                   </View>
                 </View>
               );

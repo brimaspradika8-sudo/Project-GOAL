@@ -41,6 +41,8 @@ function formatPrice(price: number | null): string {
 }
 
 function VenueCard({ item }: { item: Field }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const imgUrl = item.image_url || DEFAULT_IMAGES[item.sport_type] || DEFAULT_IMAGES.default;
   const isApproved = item.status === 'approved';
   return (
@@ -49,7 +51,7 @@ function VenueCard({ item }: { item: Field }) {
       activeOpacity={0.85}
       onPress={() => router.push({ pathname: '/venue-detail', params: { id: String(item.id) } })}
     >
-      <View style={[styles.venueImage, { backgroundColor: COLORS.primaryContainer }]}>
+      <View style={[styles.venueImage, { backgroundColor: colors.primaryContainer }]}>
         <SafeImage source={{ uri: imgUrl }} style={styles.venueImageBg} fallbackSize={32} />
         <View style={styles.venueImageOverlay} />
         <MaterialIcons name="sports" size={28} color="#ffffff80" />
@@ -65,7 +67,7 @@ function VenueCard({ item }: { item: Field }) {
           </View>
         </View>
         <View style={styles.venueLocationRow}>
-          <MaterialIcons name="location-on" size={14} color={COLORS.textTertiary} />
+          <MaterialIcons name="location-on" size={14} color={colors.textTertiary} />
           <Text style={styles.venueLocation}>{item.location}</Text>
         </View>
         <Text style={styles.venuePrice}>{formatPrice(item.price_per_hour)}/jam</Text>
@@ -91,6 +93,7 @@ export default function FieldsScreen() {
   const { fields, loading, loadingMore, meta, fetchFields, fetchMore, refreshFields } = useFieldStore();
   const [refreshing, setRefreshing] = useState(false);
   const { colors } = useTheme();
+  const styles = makeStyles(colors);
 
   useEffect(() => {
     const sport = activeFilter === 'Semua' ? undefined : SPORT_MAP[activeFilter] || activeFilter.toLowerCase();
@@ -118,17 +121,17 @@ export default function FieldsScreen() {
       <Text style={styles.subtitle}>Temukan lapangan terdekat dan tersedia.</Text>
 
       <View style={styles.searchBar}>
-        <MaterialIcons name="search" size={20} color={COLORS.textTertiary} />
+        <MaterialIcons name="search" size={20} color={colors.textTertiary} />
         <TextInput
           style={styles.searchInput}
           placeholder="Cari nama lapangan..."
-          placeholderTextColor={COLORS.textTertiary}
+          placeholderTextColor={colors.textTertiary}
           value={search}
           onChangeText={setSearch}
         />
         {search.length > 0 && (
           <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <MaterialIcons name="close" size={18} color={COLORS.textTertiary} />
+            <MaterialIcons name="close" size={18} color={colors.textTertiary} />
           </TouchableOpacity>
         )}
       </View>
@@ -144,7 +147,10 @@ export default function FieldsScreen() {
           const isActive = activeFilter === filter;
           return (
             <TouchableOpacity
-              style={[styles.chip, isActive && styles.chipActive]}
+              style={[
+                styles.chip,
+                isActive && styles.chipActive
+              ]}
               activeOpacity={0.75}
               onPress={() => setActiveFilter(filter)}
             >
@@ -160,7 +166,7 @@ export default function FieldsScreen() {
     if (!loadingMore) return null;
     return (
       <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={COLORS.primary} />
+        <ActivityIndicator size="small" color={colors.primary} />
         <Text style={styles.footerText}>Memuat lebih banyak...</Text>
       </View>
     );
@@ -170,7 +176,7 @@ export default function FieldsScreen() {
     if (loading && !refreshing) return <SkeletonVenueList />;
     return (
       <View style={styles.emptyState}>
-        <MaterialIcons name="search-off" size={48} color={COLORS.textTertiary} />
+        <MaterialIcons name="search-off" size={48} color={colors.textTertiary} />
         <Text style={styles.emptyTitle}>Tidak ada lapangan ditemukan</Text>
         <Text style={styles.emptyDesc}>Coba kata kunci atau filter yang berbeda.</Text>
       </View>
@@ -206,10 +212,10 @@ export default function FieldsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     paddingTop: Platform.OS === 'ios' ? 60 : 48,
@@ -219,21 +225,21 @@ const styles = StyleSheet.create({
   title: {
     ...FONTS.headlineLg,
     fontSize: 28,
-    color: COLORS.text,
+    color: colors.text,
     marginBottom: 4,
   },
   subtitle: {
     ...FONTS.bodyMd,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 20,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surface,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.outline,
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 16,
@@ -243,7 +249,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     ...FONTS.bodyMd,
-    color: COLORS.text,
+    color: colors.text,
   },
   chipScrollWrapper: {
     marginBottom: 20,
@@ -255,28 +261,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: SIZES.borderRadiusFull,
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.outline,
   },
   chipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
     ...SHADOWS.primary,
   },
   chipText: {
     ...FONTS.labelMd,
     fontSize: 13,
-    color: COLORS.text,
+    color: colors.text,
   },
   chipTextActive: {
-    color: COLORS.onPrimary,
+    color: colors.onPrimary,
   },
   venueCard: {
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surface,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.outline,
     marginBottom: 16,
     overflow: 'hidden',
     ...SHADOWS.md,
@@ -308,7 +314,7 @@ const styles = StyleSheet.create({
   venueName: {
     ...FONTS.headlineSm,
     fontSize: 15,
-    color: COLORS.text,
+    color: colors.text,
     flex: 1,
     marginRight: 10,
   },
@@ -321,10 +327,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   badgeAvailable: {
-    backgroundColor: COLORS.successLight,
+    backgroundColor: colors.primaryContainer,
   },
   badgeFull: {
-    backgroundColor: COLORS.errorLight,
+    backgroundColor: colors.errorContainer,
   },
   statusDot: {
     width: 6,
@@ -332,10 +338,10 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   dotAvailable: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
   dotFull: {
-    backgroundColor: COLORS.error,
+    backgroundColor: colors.error,
   },
   statusText: {
     fontSize: 11,
@@ -343,10 +349,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Montserrat',
   },
   textAvailable: {
-    color: COLORS.primary,
+    color: colors.primary,
   },
   textFull: {
-    color: COLORS.error,
+    color: colors.error,
   },
   venueLocationRow: {
     flexDirection: 'row',
@@ -356,12 +362,12 @@ const styles = StyleSheet.create({
   },
   venueLocation: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   venuePrice: {
     ...FONTS.headlineSm,
     fontSize: 15,
-    color: COLORS.primary,
+    color: colors.primary,
     marginBottom: 10,
   },
   tagRow: {
@@ -373,12 +379,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
-    backgroundColor: COLORS.surfaceContainerLow,
+    backgroundColor: colors.surfaceContainer,
   },
   featureTagText: {
     ...FONTS.labelMd,
     fontSize: 11,
-    color: COLORS.onSurfaceVariant,
+    color: colors.textSecondary,
   },
   footerLoader: {
     flexDirection: 'row',
@@ -389,7 +395,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   emptyState: {
     alignItems: 'center',
@@ -398,11 +404,11 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     ...FONTS.headlineSm,
-    color: COLORS.text,
+    color: colors.text,
   },
   emptyDesc: {
     ...FONTS.bodySm,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
   },
   bottomSection: {
     paddingHorizontal: 20,
@@ -414,16 +420,16 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 12,
     fontWeight: '800',
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginBottom: 14,
   },
   emptyCard: {
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surface,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.outline,
     padding: 32,
     alignItems: 'center',
     ...SHADOWS.sm,
@@ -432,7 +438,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: COLORS.surfaceContainerLow,
+    backgroundColor: colors.surfaceContainerLow,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -440,13 +446,13 @@ const styles = StyleSheet.create({
   favTitle: {
     ...FONTS.headlineSm,
     fontSize: 15,
-    color: COLORS.text,
+    color: colors.text,
     marginBottom: 6,
     textAlign: 'center',
   },
   favDesc: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
   },

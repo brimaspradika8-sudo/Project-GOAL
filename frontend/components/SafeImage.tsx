@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Image, ImageProps, View, StyleSheet, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from './goalTheme';
+import { getAssetUrl } from '../lib/api';
 
 export function SafeImage(props: ImageProps & { fallbackSize?: number }) {
   const [error, setError] = useState(false);
@@ -25,6 +26,11 @@ export function SafeImage(props: ImageProps & { fallbackSize?: number }) {
       )}
       <Image
         {...props}
+        source={
+          props.source && typeof props.source === 'object' && 'uri' in props.source
+            ? { ...props.source, uri: getAssetUrl((props.source as any).uri) || undefined }
+            : props.source
+        }
         style={[props.style, { opacity: loading ? 0 : 1 }]}
         onLoadEnd={() => setLoading(false)}
         onError={() => { setError(true); setLoading(false); }}
