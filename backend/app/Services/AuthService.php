@@ -21,7 +21,7 @@ class AuthService
         $user = User::create([
             'name'     => $name,
             'email'    => $email,
-            'password' => Hash::make($password),
+            'password' => $password,
         ]);
 
         $token = $user->createToken('app-token', ['*'], now()->addMonth())->plainTextToken;

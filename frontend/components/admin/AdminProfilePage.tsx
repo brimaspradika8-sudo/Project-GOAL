@@ -15,13 +15,12 @@ import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
 
 const ROLE_LABEL: Record<string, string> = {
-  admin:       'Admin',
   super_admin: 'Super Admin',
 };
 
 export default function AdminProfilePage() {
   const { profile, clearProfile } = useProfileStore();
-  const role = profile?.role ?? 'admin';
+  const role = profile?.role ?? 'super_admin';
   const initials = (profile?.full_name || profile?.username || 'A').charAt(0).toUpperCase();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
