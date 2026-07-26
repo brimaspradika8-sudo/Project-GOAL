@@ -145,8 +145,8 @@ export default function PendingFieldsPage() {
         >
           {fields.length > 0 && (
             <View style={st.headerRow}>
-              <View style={[st.countPill, { backgroundColor: resolved === 'dark' ? '#2A1F5E' : '#ede9fe', borderColor: resolved === 'dark' ? '#4C1D95' : '#c4b5fd' }]}>
-                <MaterialIcons name="pending-actions" size={12} color="#6d28d9" />
+              <View style={[st.countPill, { backgroundColor: resolved === 'dark' ? '#2A1F5E' : COLORS.purpleBg, borderColor: resolved === 'dark' ? '#4C1D95' : COLORS.purpleBorder }]}>
+                <MaterialIcons name="pending-actions" size={12} color={COLORS.purpleIcon} />
                 <Text style={st.countText}>{fields.length} lapangan pending</Text>
               </View>
               <TouchableOpacity
@@ -184,13 +184,13 @@ export default function PendingFieldsPage() {
                 onPress={() => router.push(`/venue-detail?id=${f.id}`)}
               >
                 <View style={st.cardTop}>
-                  <View style={[st.fieldIconWrap, { backgroundColor: resolved === 'dark' ? '#2A1F5E' : '#ede9fe', borderColor: resolved === 'dark' ? '#4C1D95' : '#c4b5fd' }]}>
-                    <MaterialIcons name="stadium" size={20} color="#6d28d9" />
+                  <View style={[st.fieldIconWrap, { backgroundColor: resolved === 'dark' ? '#2A1F5E' : COLORS.purpleBg, borderColor: resolved === 'dark' ? '#4C1D95' : COLORS.purpleBorder }]}>
+                    <MaterialIcons name="stadium" size={20} color={COLORS.purpleIcon} />
                   </View>
                   <View style={st.cardTopInfo}>
                     <Text style={[st.fieldName, { color: colors.text }]} numberOfLines={1}>{f.name}</Text>
                     <View style={st.sportTag}>
-                      <MaterialIcons name="sports" size={11} color="#6d28d9" />
+                      <MaterialIcons name="sports" size={11} color={COLORS.purpleIcon} />
                       <Text style={st.sportText}>{f.sport_type?.toUpperCase()}</Text>
                     </View>
                   </View>
@@ -234,8 +234,8 @@ export default function PendingFieldsPage() {
         <View style={st.modalOverlay}>
           <View style={[st.rejectModal, { backgroundColor: cardSurface, borderColor: colors.outline }]}>
             <View style={st.rejectHeader}>
-              <View style={[st.rejectIconWrap, { backgroundColor: resolved === 'dark' ? '#3B1A1A' : colors.errorContainer }]}>
-                <MaterialIcons name="cancel" size={22} color={colors.error} />
+              <View style={[st.rejectIconWrap, { backgroundColor: resolved === 'dark' ? '#3B1A1A' : COLORS.errorLight }]}>
+                <MaterialIcons name="cancel" size={22} color={COLORS.error} />
               </View>
               <Text style={[st.rejectTitle, { color: colors.text }]}>Alasan Penolakan</Text>
             </View>
@@ -310,11 +310,11 @@ const st = StyleSheet.create({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   countPill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#ede9fe', borderRadius: 20,
+    backgroundColor: COLORS.purpleBg, borderRadius: 20,
     paddingHorizontal: 12, paddingVertical: 5,
-    borderWidth: 1, borderColor: '#c4b5fd',
+    borderWidth: 1, borderColor: COLORS.purpleBorder,
   },
-  countText: { ...FONTS.labelSm, color: '#6d28d9' },
+  countText: { ...FONTS.labelSm, color: COLORS.purpleText },
   trashedLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   trashedLinkText: { ...FONTS.labelSm, color: COLORS.textSecondary },
 
@@ -342,13 +342,13 @@ const st = StyleSheet.create({
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   fieldIconWrap: {
     width: 44, height: 44, borderRadius: 13,
-    backgroundColor: '#ede9fe', justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: '#c4b5fd',
+    backgroundColor: COLORS.purpleBg, justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: COLORS.purpleBorder,
   },
   cardTopInfo: { flex: 1 },
   fieldName: { ...FONTS.titleLg, color: COLORS.text, marginBottom: 5 },
   sportTag: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start' },
-  sportText: { ...FONTS.labelSm, color: '#6d28d9' },
+  sportText: { ...FONTS.labelSm, color: COLORS.purpleText },
   addressRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 },
   addressText: { ...FONTS.bodySm, color: COLORS.textSecondary, flex: 1 },
 

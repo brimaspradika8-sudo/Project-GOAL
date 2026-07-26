@@ -144,7 +144,7 @@ export default function LoginScreen() {
         <View style={styles.responsiveWrapper}>
 
           <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <Animated.View style={{ transform: [{ scale: pulseAnim }], marginBottom: 12, shadowColor: '#4be277', shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }}>
+            <Animated.View style={[{ transform: [{ scale: pulseAnim }], marginBottom: 12 }, Platform.OS === 'web' ? { boxShadow: '0 0 20px rgba(75,226,119,0.6)' } : { shadowColor: '#4be277', shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }]}>
               <MaterialIcons name="sports-soccer" size={72} color="#4be277" />
             </Animated.View>
             <Text style={styles.title}>GOAL</Text>
@@ -246,9 +246,10 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textTransform: 'uppercase',
     letterSpacing: 2,
-    textShadowColor: 'rgba(75, 226, 119, 0.4)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 10,
+    ...(Platform.OS === 'web'
+      ? { textShadow: '0px 2px 10px rgba(75,226,119,0.4)' }
+      : { textShadowColor: 'rgba(75, 226, 119, 0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10 }
+    ),
   },
   subtitle: {
     fontSize: 18,
@@ -263,11 +264,10 @@ const styles = StyleSheet.create({
     padding: 28,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 15 },
-    shadowOpacity: 0.5,
-    shadowRadius: 25,
-    elevation: 10,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 15px 25px rgba(0,0,0,0.5)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 15 }, shadowOpacity: 0.5, shadowRadius: 25, elevation: 10 }
+    ),
   },
   rowBetween: {
     flexDirection: 'row',
@@ -287,16 +287,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#4be277',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 6,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 6px 12px rgba(75,226,119,0.4)' }
+      : { shadowColor: '#4be277', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }
+    ),
   },
   buttonDisabled: {
     backgroundColor: '#2a8b46',
-    shadowOpacity: 0,
-    elevation: 0,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: 'none' }
+      : { shadowOpacity: 0, elevation: 0 }
+    ),
   },
   buttonContent: {
     flexDirection: 'row',

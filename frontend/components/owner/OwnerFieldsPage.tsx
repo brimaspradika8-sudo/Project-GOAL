@@ -29,7 +29,7 @@ const IMG_PLACEHOLDER = 'https://images.unsplash.com/photo-1546519638-68e109498f
 
 const STATUS_CFG: Record<string, { label: string; bg: string; color: string }> = {
   approved: { label: 'Aktif',    bg: COLORS.primaryContainer, color: COLORS.primary },
-  pending:  { label: 'Menunggu', bg: COLORS.floodlight + '25', color: '#92400e' },
+  pending:  { label: 'Menunggu', bg: COLORS.warningBg, color: COLORS.warningText },
   rejected: { label: 'Ditolak',  bg: COLORS.errorContainer,    color: COLORS.error },
 };
 
@@ -527,8 +527,8 @@ export default function OwnerFieldsPage() {
         visible={!!editTarget}
         title="Edit Venue"
         iconName="edit"
-        iconColor="#6d28d9"
-        iconBg="#ede9fe"
+        iconColor={COLORS.accentPurple}
+        iconBg={COLORS.accentPurpleLight}
         form={editForm}
         errors={editErrors}
         error={editError}
@@ -539,7 +539,7 @@ export default function OwnerFieldsPage() {
         onClose={() => setEditTarget(null)}
         onSubmit={handleEdit}
         submitLabel="Simpan Perubahan"
-        submitBg="#6d28d9"
+        submitBg={COLORS.accentPurple}
       />
 
       <ConfirmDialog
@@ -833,12 +833,12 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#ecfdf5',
+    backgroundColor: COLORS.successLight,
     paddingVertical: 9,
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#bbf7d0',
+    borderColor: COLORS.successBorder,
   },
   editBtnText: { ...FONTS.titleSm, fontSize: 12, color: COLORS.primary },
   delBtn: {
@@ -846,12 +846,12 @@ const st = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#fef2f2',
+    backgroundColor: COLORS.errorLight,
     paddingVertical: 9,
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: COLORS.errorBorder,
   },
   delBtnText: { ...FONTS.titleSm, fontSize: 12, color: COLORS.error },
 
@@ -916,7 +916,7 @@ const st = StyleSheet.create({
   },
   sportChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   sportChipText: { ...FONTS.labelMd, fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
-  sportChipTextActive: { color: '#ffffff', fontWeight: '700' },
+  sportChipTextActive: { color: COLORS.onPrimary, fontWeight: '700' },
 
   // Field input
   fieldWrap: { marginBottom: 20 },
@@ -946,8 +946,10 @@ const st = StyleSheet.create({
   submitBtn: {
     maxWidth: 320, width: '100%', paddingVertical: 14, paddingHorizontal: 24,
     borderRadius: 14, alignItems: 'center', minHeight: 48, justifyContent: 'center',
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15, shadowRadius: 6, elevation: 3,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 2px 6px rgba(30,138,76,0.15)' }
+      : { shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 3 }
+    ),
   },
   submitText: { ...FONTS.titleSm, fontSize: 14, fontWeight: '700', color: COLORS.onPrimary },
 });

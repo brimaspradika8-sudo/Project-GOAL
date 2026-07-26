@@ -437,11 +437,10 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
     gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 4px 12px rgba(0,0,0,0.08)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 }
+    ),
   },
   searchInput: {
     flex: 1,
@@ -823,6 +822,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...SHADOWS.lg,
-    shadowColor: COLORS.primary,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 4px 14px rgba(30,138,76,0.15)' }
+      : { shadowColor: COLORS.primary }
+    ),
   },
 });

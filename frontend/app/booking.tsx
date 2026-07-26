@@ -85,5 +85,5 @@ const styles = StyleSheet.create({
     paddingVertical: 13, paddingHorizontal: 24,
     borderRadius: SIZES.borderRadius,
   },
-  backBtnText: { ...FONTS.buttonMd, color: '#ffffff' },
+  backBtnText: { ...FONTS.buttonMd, color: COLORS.onPrimary },
 });

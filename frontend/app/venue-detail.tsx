@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   backBtnSmallText: {
-    color: '#ffffff',
+    color: COLORS.onPrimary,
     fontWeight: '700',
   },
   heroSection: {
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     fontFamily: FONT_FAMILY,
-    color: '#ffffff',
+    color: COLORS.onPrimary,
   },
   content: {
     paddingHorizontal: 20,
@@ -436,11 +436,13 @@ const styles = StyleSheet.create({
   },
   bookButtonDisabled: {
     backgroundColor: COLORS.surfaceContainerHigh,
-    shadowOpacity: 0,
-    elevation: 0,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: 'none' }
+      : { shadowOpacity: 0, elevation: 0 }
+    ),
   },
   bookButtonText: {
-    color: '#ffffff',
+    color: COLORS.onPrimary,
     ...FONTS.buttonLg,
   },
 });

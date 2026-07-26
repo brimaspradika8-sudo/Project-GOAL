@@ -76,15 +76,22 @@ export default function RootLayout() {
 function RootLayoutInner() {
   const colorScheme = useColorScheme();
   const { resolved, colors } = useTheme();
-  const [fontsLoaded] = Font.useFonts({
+  const [fontsLoaded, fontError] = Font.useFonts({
     'Plus Jakarta Sans': require('../assets/fonts/PlusJakartaSans-Regular.ttf'),
-    'PlusJakarta Sans_500': require('../assets/fonts/PlusJakartaSans-SemiBold.ttf'),
-    'PlusJakarta Sans_700': require('../assets/fonts/PlusJakartaSans-Bold.ttf'),
+    'Plus Jakarta Sans_500': require('../assets/fonts/PlusJakartaSans-SemiBold.ttf'),
+    'Plus Jakarta Sans_700': require('../assets/fonts/PlusJakartaSans-Bold.ttf'),
     'Inter': require('../assets/fonts/Inter-Regular.ttf'),
     'Inter_500': require('../assets/fonts/Inter-SemiBold.ttf'),
     'Inter_700': require('../assets/fonts/Inter-Bold.ttf'),
-    MaterialIcons: require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.ttf'),
+    'material': require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.ttf'),
   });
+  const [fontsFallback, setFontsFallback] = useState(false);
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) return;
+    const timer = setTimeout(() => setFontsFallback(true), 5000);
+    return () => clearTimeout(timer);
+  }, [fontsLoaded, fontError]);
   const [showSplash, setShowSplash] = useState(true);
   const [isReady, setIsReady] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Memuat...');
@@ -166,7 +173,7 @@ function RootLayoutInner() {
     initialize();
   }, [showSplash, routeByProfile, routeToLogin]);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded && !fontsFallback && !fontError) {
     return null;
   }
 

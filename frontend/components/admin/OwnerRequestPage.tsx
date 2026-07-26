@@ -277,7 +277,7 @@ const st = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 5,
     borderWidth: 1, borderColor: COLORS.floodlight + '50',
   },
-  countText: { ...FONTS.labelSm, color: '#92400e' },
+  countText: { ...FONTS.labelSm, color: COLORS.warningText },
 
   emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12 },
   emptyIconWrap: {
@@ -304,7 +304,7 @@ const st = StyleSheet.create({
   businessName: { ...FONTS.titleLg, color: COLORS.text, marginBottom: 5 },
   pendingBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
   pulseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.floodlight },
-  pendingText: { ...FONTS.labelMd, color: '#92400e' },
+  pendingText: { ...FONTS.labelMd, color: COLORS.warningText },
   divider: { height: 1, backgroundColor: COLORS.outline, marginBottom: 12 },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 7 },
   detailText: { ...FONTS.bodyMd, color: COLORS.textSecondary, flex: 1 },

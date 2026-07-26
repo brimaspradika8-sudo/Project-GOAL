@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, TextInput, TouchableOpacity, Animated, Easing } from 'react-native';
+import { StyleSheet, View, TextInput, TouchableOpacity, Animated, Easing, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 interface FloatingInputProps {
@@ -108,11 +108,10 @@ const styles = StyleSheet.create({
   inputFocused: {
     borderColor: '#4be277',
     backgroundColor: '#181f18',
-    shadowColor: '#4be277',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 4,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 0 12px rgba(75,226,119,0.3)' }
+      : { shadowColor: '#4be277', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 4 }
+    ),
   },
   eyeIcon: {
     position: 'absolute',

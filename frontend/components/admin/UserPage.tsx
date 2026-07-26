@@ -17,9 +17,9 @@ import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
 
 const ROLE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  player:      { label: 'Pemain',      color: '#1d6fab', bg: '#dbeafe' },
+  player:      { label: 'Pemain',      color: COLORS.playerText,   bg: COLORS.playerBg },
   owner:       { label: 'Pemilik',     color: COLORS.primary, bg: COLORS.primaryContainer },
-  super_admin: { label: 'Super Admin', color: '#92400e', bg: '#fef3c7' },
+  super_admin: { label: 'Super Admin', color: COLORS.warningText, bg: COLORS.warningBg },
 };
 
 type Tab = 'user' | 'owner';
@@ -622,23 +622,23 @@ function FormField({ label, icon, value, onChangeText, keyboardType, autoCapital
 }
 
 const st = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0F172A' },
+  screen: { flex: 1, backgroundColor: COLORS.darkScreen },
   searchWrap: { paddingHorizontal: SIZES.gutter, paddingTop: 14, paddingBottom: 4 },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#111827', borderRadius: 14,
+    backgroundColor: COLORS.darkSurface, borderRadius: 14,
     paddingHorizontal: 14, paddingVertical: 11,
-    borderWidth: 1.5, borderColor: '#374151',
+    borderWidth: 1.5, borderColor: COLORS.darkBorder,
   },
-  searchBoxFocused: { borderColor: COLORS.primary, backgroundColor: '#1F2937' },
-  searchInput: { flex: 1, color: '#F9FAFB', fontSize: 14, paddingVertical: 0 },
+  searchBoxFocused: { borderColor: COLORS.primary, backgroundColor: COLORS.darkSurfaceAlt },
+  searchInput: { flex: 1, color: COLORS.darkText, fontSize: 14, paddingVertical: 0 },
 
   statsRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#111827',
+    backgroundColor: COLORS.darkSurface,
     marginHorizontal: SIZES.gutter, marginTop: 10,
     borderRadius: SIZES.borderRadius, borderWidth: 1,
-    borderColor: '#374151', paddingVertical: 12, paddingHorizontal: 16,
+    borderColor: COLORS.darkBorder, paddingVertical: 12, paddingHorizontal: 16,
     ...SHADOWS.xs,
   },
   statItem: { flex: 1, alignItems: 'center' },
@@ -650,7 +650,7 @@ const st = StyleSheet.create({
   tab: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 7, paddingVertical: 11, borderRadius: 12,
-    backgroundColor: '#111827', borderWidth: 1.5, borderColor: '#374151',
+    backgroundColor: COLORS.darkSurface, borderWidth: 1.5, borderColor: COLORS.darkBorder,
   },
   tabActive:      { backgroundColor: COLORS.primaryContainer, borderColor: COLORS.primary + '60' },
   tabOwnerActive: { backgroundColor: COLORS.primaryContainer, borderColor: COLORS.primary + '60' },
@@ -664,7 +664,7 @@ const st = StyleSheet.create({
 
   addBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#1F2937', borderRadius: 12,
+    backgroundColor: COLORS.darkSurfaceAlt, borderRadius: 12,
     borderWidth: 1.5, borderColor: COLORS.primary + '50',
     paddingVertical: 12, marginHorizontal: SIZES.gutter, marginTop: 10,
   },
@@ -689,16 +689,16 @@ const st = StyleSheet.create({
 
   card: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#111827', borderRadius: 16, padding: 14, marginBottom: 10,
-    borderWidth: 1, borderColor: '#374151',
+    backgroundColor: COLORS.darkSurface, borderRadius: 16, padding: 14, marginBottom: 10,
+    borderWidth: 1, borderColor: COLORS.darkBorder,
     ...SHADOWS.xs,
   },
   cardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   avatar: { width: 46, height: 46, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 13 },
   avatarText: { ...FONTS.headlineSm, fontSize: 18 },
   info: { flex: 1 },
-  name: { ...FONTS.titleMd, color: '#F9FAFB', marginBottom: 2 },
-  email: { ...FONTS.bodySm, color: '#CBD5E1', marginBottom: 6 },
+  name: { ...FONTS.titleMd, color: COLORS.darkText, marginBottom: 2 },
+  email: { ...FONTS.bodySm, color: COLORS.darkTextSecondary, marginBottom: 6 },
   roleBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 6, paddingVertical: 3, paddingHorizontal: 8, alignSelf: 'flex-start' },
   roleDot: { width: 5, height: 5, borderRadius: 3 },
   roleText: { ...FONTS.labelSm },
@@ -707,17 +707,17 @@ const st = StyleSheet.create({
 
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
   sheet: {
-    backgroundColor: '#111827', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    backgroundColor: COLORS.darkSurface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: 20, paddingBottom: Platform.OS === 'ios' ? 36 : 24,
-    borderWidth: 1, borderColor: '#374151',
+    borderWidth: 1, borderColor: COLORS.darkBorder,
   },
-  sheetHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: '#4B5563', alignSelf: 'center', marginBottom: 18 },
+  sheetHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: COLORS.darkHandle, alignSelf: 'center', marginBottom: 18 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 18 },
   sheetIconWrap: {
     width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.primaryContainer,
     justifyContent: 'center', alignItems: 'center',
   },
-  sheetTitle: { ...FONTS.headlineSm, color: '#F9FAFB' },
+  sheetTitle: { ...FONTS.headlineSm, color: COLORS.darkText },
 
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.errorContainer, borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: COLORS.error + '30' },
   errorText: { ...FONTS.bodySm, color: COLORS.error, flex: 1 },
@@ -726,24 +726,24 @@ const st = StyleSheet.create({
   fieldLabel: { ...FONTS.labelSm, color: COLORS.textSecondary, marginBottom: 6, letterSpacing: 0.5, textTransform: 'uppercase' },
   fieldRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#1F2937', borderRadius: 12,
+    backgroundColor: COLORS.darkSurfaceAlt, borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 12,
-    borderWidth: 1, borderColor: '#374151',
+    borderWidth: 1, borderColor: COLORS.darkBorder,
   },
-  fieldInput: { flex: 1, color: '#F9FAFB', fontSize: 14, paddingVertical: 0 },
+  fieldInput: { flex: 1, color: COLORS.darkText, fontSize: 14, paddingVertical: 0 },
   roleSelectWrap: { marginBottom: 14 },
   roleChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   roleChip: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9,
-    backgroundColor: '#1F2937',
-    borderWidth: 1, borderColor: '#374151',
+    backgroundColor: COLORS.darkSurfaceAlt,
+    borderWidth: 1, borderColor: COLORS.darkBorder,
   },
-  roleChipText: { ...FONTS.labelMd, color: '#CBD5E1' },
+  roleChipText: { ...FONTS.labelMd, color: COLORS.darkTextSecondary },
 
   sheetActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: '#1F2937', alignItems: 'center', borderWidth: 1, borderColor: '#374151' },
-  cancelText: { ...FONTS.titleSm, color: '#CBD5E1' },
+  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: COLORS.darkSurfaceAlt, alignItems: 'center', borderWidth: 1, borderColor: COLORS.darkBorder },
+  cancelText: { ...FONTS.titleSm, color: COLORS.darkTextSecondary },
   submitBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: COLORS.primary, alignItems: 'center' },
   submitText: { ...FONTS.titleSm, color: COLORS.onPrimary },
 });

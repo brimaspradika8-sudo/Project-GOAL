@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export const COLORS = {
   background: '#F3F7F4',
   surface: '#FFFFFF',
@@ -40,6 +42,26 @@ export const COLORS = {
   accentPurpleLight: '#F1EAFB',
   accentOrange: '#E97A1F',
   accentOrangeLight: '#FFF3E6',
+  warningText: '#92400e',
+  warningBg: '#fef3c7',
+  warningBorder: '#fde68a',
+  warningIcon: '#d97706',
+  purpleText: '#6d28d9',
+  purpleBg: '#f5f3ff',
+  purpleLight: '#ede9fe',
+  purpleBorder: '#c4b5fd',
+  purpleIcon: '#7c3aed',
+  successBorder: '#bbf7d0',
+  errorBorder: '#fecaca',
+  playerText: '#1d6fab',
+  playerBg: '#dbeafe',
+  darkSurface: '#111827',
+  darkSurfaceAlt: '#1F2937',
+  darkScreen: '#0F172A',
+  darkBorder: '#374151',
+  darkText: '#F9FAFB',
+  darkTextSecondary: '#CBD5E1',
+  darkHandle: '#4B5563',
 };
 
 export const AUTH_COLORS = {
@@ -67,66 +89,25 @@ export const SIZES = {
   sectionGap: 24,
 };
 
-export const SHADOWS = {
-  xs: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
-    boxShadow: '0px 1px 2px rgba(0,0,0,0.04)',
-  },
-  sm: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-    boxShadow: '0px 1px 3px rgba(0,0,0,0.05)',
-  },
-  md: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 4,
-    boxShadow: '0px 2px 8px rgba(0,0,0,0.07)',
-  },
-  lg: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.09,
-    shadowRadius: 14,
-    elevation: 6,
-    boxShadow: '0px 4px 14px rgba(0,0,0,0.09)',
-  },
-  xl: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.11,
-    shadowRadius: 24,
-    elevation: 8,
-    boxShadow: '0px 8px 24px rgba(0,0,0,0.11)',
-  },
-  primary: {
-    shadowColor: '#007a4f',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-    boxShadow: '0px 3px 8px rgba(0,122,79,0.20)',
-  },
-  authPrimary: {
-    shadowColor: '#1a56db',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-    boxShadow: '0px 3px 8px rgba(26,86,219,0.20)',
-  },
+const _nativeShadows = {
+  xs: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 2, elevation: 1 },
+  sm: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
+  md: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8, elevation: 4 },
+  lg: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.09, shadowRadius: 14, elevation: 6 },
+  xl: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.11, shadowRadius: 24, elevation: 8 },
+  primary: { shadowColor: '#007a4f', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+  authPrimary: { shadowColor: '#1a56db', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
 };
-
-import { Platform } from 'react-native';
+const _webShadows = {
+  xs: { boxShadow: '0px 1px 2px rgba(0,0,0,0.04)' },
+  sm: { boxShadow: '0px 1px 3px rgba(0,0,0,0.05)' },
+  md: { boxShadow: '0px 2px 8px rgba(0,0,0,0.07)' },
+  lg: { boxShadow: '0px 4px 14px rgba(0,0,0,0.09)' },
+  xl: { boxShadow: '0px 8px 24px rgba(0,0,0,0.11)' },
+  primary: { boxShadow: '0px 3px 8px rgba(0,122,79,0.20)' },
+  authPrimary: { boxShadow: '0px 3px 8px rgba(26,86,219,0.20)' },
+};
+export const SHADOWS = Platform.OS === 'web' ? _webShadows : _nativeShadows;
 
 export const FONT_FAMILY = Platform.OS === 'web'
   ? '"Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'

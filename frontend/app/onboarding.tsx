@@ -951,8 +951,10 @@ const styles = StyleSheet.create({
   },
   ctaBtnDisabled: {
     backgroundColor: COLORS.surfaceContainerHigh,
-    shadowOpacity: 0,
-    elevation: 0,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: 'none' }
+      : { shadowOpacity: 0, elevation: 0 }
+    ),
   },
   ctaText: {
     ...FONTS.buttonLg,

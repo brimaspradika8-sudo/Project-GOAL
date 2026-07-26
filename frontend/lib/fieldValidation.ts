@@ -12,6 +12,10 @@ export const SPORT_MAP: Record<string, string> = {
 
 export const VALID_SPORT_VALUES = Object.values(SPORT_MAP);
 
+export const SPORT_LABELS: Record<string, string> = Object.fromEntries(
+  Object.entries(SPORT_MAP).map(([label, key]) => [key, label]),
+);
+
 const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
 const ALLOWED_IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp'];
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
