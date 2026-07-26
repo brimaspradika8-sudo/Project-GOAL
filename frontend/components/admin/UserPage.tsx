@@ -9,18 +9,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProfileStore } from '../../store/profileStore';
 import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../../lib/api';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { useDebounce } from '../../hooks/useDebounce';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
+import { useTheme, type ThemeColors } from '../../lib/theme';
 
-const ROLE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  player:      { label: 'Pemain',      color: COLORS.playerText,   bg: COLORS.playerBg },
-  owner:       { label: 'Pemilik',     color: COLORS.primary, bg: COLORS.primaryContainer },
-  super_admin: { label: 'Super Admin', color: COLORS.warningText, bg: COLORS.warningBg },
-};
+const getRoleConfig = (colors: ThemeColors): Record<string, { label: string; color: string; bg: string }> => ({
+  player:      { label: 'Pemain',      color: colors.accentPurple, bg: colors.accentPurpleLight },
+  owner:       { label: 'Pemilik',     color: colors.primary, bg: colors.primaryContainer },
+  super_admin: { label: 'Super Admin', color: colors.floodlight, bg: colors.floodlight + '20' },
+});
 
 type Tab = 'user' | 'owner';
 
@@ -28,6 +29,9 @@ const EMPTY_CREATE = { name: '', email: '', password: '', role: 'player' };
 const EMPTY_EDIT   = { name: '', email: '', password: '' };
 
 export default function UserPage() {
+  const { colors } = useTheme();
+  const st = makeStyles(colors);
+  const ROLE_CONFIG = getRoleConfig(colors);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -242,6 +246,7 @@ export default function UserPage() {
   const filteredUsers = users.filter(u => {
     const role = u.profile?.role || 'player';
     if (activeTab === 'owner') return role === 'owner';
+    // TODO: Pisahkan role admin dari tab Pengguna jika nanti ada tab/filter khusus admin.
     return role !== 'owner';
   });
 
@@ -264,11 +269,11 @@ export default function UserPage() {
 
         <View style={st.searchWrap}>
           <View style={[st.searchBox, focused && st.searchBoxFocused]}>
-            <MaterialIcons name="search" size={19} color={focused ? COLORS.primary : COLORS.textTertiary} />
+            <MaterialIcons name="search" size={19} color={focused ? colors.primary : colors.textTertiary} />
             <TextInput
               style={st.searchInput}
               placeholder="Cari nama atau email..."
-              placeholderTextColor={COLORS.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={search}
               onChangeText={setSearch}
               onFocus={() => setFocused(true)}
@@ -276,26 +281,9 @@ export default function UserPage() {
             />
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <MaterialIcons name="close" size={16} color={COLORS.textSecondary} />
+                <MaterialIcons name="close" size={16} color={colors.textSecondary} />
               </TouchableOpacity>
             )}
-          </View>
-        </View>
-
-        <View style={st.statsRow}>
-          <View style={st.statItem}>
-            <Text style={st.statNum}>{userCount}</Text>
-            <Text style={st.statLabel}>Pengguna</Text>
-          </View>
-          <View style={st.statDivider} />
-          <View style={st.statItem}>
-            <Text style={st.statNum}>{ownerCount}</Text>
-            <Text style={st.statLabel}>Owner</Text>
-          </View>
-          <View style={st.statDivider} />
-          <View style={st.statItem}>
-            <Text style={st.statNum}>{users.length}</Text>
-            <Text style={st.statLabel}>Total</Text>
           </View>
         </View>
 
@@ -305,7 +293,7 @@ export default function UserPage() {
             onPress={() => setActiveTab('user')}
             activeOpacity={0.75}
           >
-            <MaterialIcons name="person" size={15} color={activeTab === 'user' ? COLORS.primary : COLORS.textTertiary} />
+            <MaterialIcons name="person" size={15} color={activeTab === 'user' ? colors.primary : colors.textTertiary} />
             <Text style={[st.tabLabel, activeTab === 'user' && st.tabLabelActive]}>Pengguna</Text>
             <View style={[st.tabBadge, activeTab === 'user' && st.tabBadgeActive]}>
               <Text style={[st.tabBadgeText, activeTab === 'user' && st.tabBadgeTextActive]}>{userCount}</Text>
@@ -317,7 +305,7 @@ export default function UserPage() {
             onPress={() => setActiveTab('owner')}
             activeOpacity={0.75}
           >
-            <MaterialIcons name="store" size={15} color={activeTab === 'owner' ? COLORS.primary : COLORS.textTertiary} />
+            <MaterialIcons name="store" size={15} color={activeTab === 'owner' ? colors.primary : colors.textTertiary} />
             <Text style={[st.tabLabel, activeTab === 'owner' && st.tabLabelActive]}>Owner</Text>
             <View style={[st.tabBadge, activeTab === 'owner' && st.tabOwnerBadgeActive]}>
               <Text style={[st.tabBadgeText, activeTab === 'owner' && st.tabBadgeTextActive]}>{ownerCount}</Text>
@@ -331,20 +319,20 @@ export default function UserPage() {
             onPress={() => { setCreateError(null); setCreateForm(EMPTY_CREATE); setShowCreate(true); }}
             activeOpacity={0.8}
           >
-            <MaterialIcons name="add-circle-outline" size={17} color={COLORS.primary} />
+            <MaterialIcons name="add-circle-outline" size={17} color={colors.primary} />
             <Text style={st.addBtnText}>Tambah Owner Baru</Text>
           </TouchableOpacity>
         )}
 
         <ScrollView
           contentContainerStyle={st.list}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
           showsVerticalScrollIndicator={false}
         >
           {filteredUsers.length === 0 ? (
             <View style={st.emptyWrap}>
               <View style={st.emptyIcon}>
-                <MaterialIcons name={activeTab === 'owner' ? 'store' : 'person-search'} size={40} color={COLORS.textTertiary} />
+                <MaterialIcons name={activeTab === 'owner' ? 'store' : 'person-search'} size={40} color={colors.textTertiary} />
               </View>
               <Text style={st.emptyTitle}>{activeTab === 'owner' ? 'Belum ada owner terdaftar.' : 'Tidak ada hasil.'}</Text>
               {activeTab === 'owner' && (
@@ -352,7 +340,7 @@ export default function UserPage() {
                   style={st.emptyAction}
                   onPress={() => { setCreateError(null); setCreateForm(EMPTY_CREATE); setShowCreate(true); }}
                 >
-                  <MaterialIcons name="add" size={16} color={COLORS.onPrimary} />
+                  <MaterialIcons name="add" size={16} color={colors.onPrimary} />
                   <Text style={st.emptyActionText}>Tambah Owner</Text>
                 </TouchableOpacity>
               )}
@@ -381,38 +369,38 @@ export default function UserPage() {
                   <View style={st.actions}>
                     {/* Ungu — Edit User (semua baris) */}
                     <TouchableOpacity
-                      style={[st.actionBtn, { backgroundColor: COLORS.accentPurpleLight }]}
+                      style={[st.actionBtn, { backgroundColor: colors.accentPurpleLight }]}
                       onPress={() => openEdit(u)}
                       hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                     >
-                      <MaterialIcons name="edit" size={16} color={COLORS.accentPurple} />
+                      <MaterialIcons name="edit" size={16} color={colors.accentPurple} />
                     </TouchableOpacity>
 
                     {/* Oranye — Upgrade Role (super_admin only, bukan baris super_admin) */}
                     {isSuperAdmin && roleKey !== 'super_admin' && (
                       <TouchableOpacity
-                        style={[st.actionBtn, { backgroundColor: COLORS.accentOrangeLight }]}
+                        style={[st.actionBtn, { backgroundColor: colors.accentOrangeLight }]}
                         onPress={() => {
                           setUpgradeTarget({ id: u.id, name: u.name, currentRole: roleKey });
                           setUpgradeError(null);
                         }}
                         hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                       >
-                        <MaterialIcons name="admin-panel-settings" size={15} color={COLORS.accentOrange} />
+                        <MaterialIcons name="admin-panel-settings" size={15} color={colors.accentOrange} />
                       </TouchableOpacity>
                     )}
 
                     {/* Merah — Hapus User */}
                     {!isOwnRow && (
                       <TouchableOpacity
-                        style={[st.actionBtn, { backgroundColor: COLORS.errorContainer }]}
+                        style={[st.actionBtn, { backgroundColor: colors.errorContainer }]}
                         onPress={() => {
                           setDeleteTarget({ id: u.id, name: u.name });
                           setDeleteError(null);
                         }}
                         hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                       >
-                        <MaterialIcons name="delete-outline" size={17} color={COLORS.error} />
+                        <MaterialIcons name="delete-outline" size={17} color={colors.error} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -431,28 +419,28 @@ export default function UserPage() {
             <View style={st.sheetHandle} />
             <View style={st.sheetHeader}>
               <View style={st.sheetIconWrap}>
-                <MaterialIcons name="person-add-alt-1" size={20} color={COLORS.primary} />
+                <MaterialIcons name="person-add-alt-1" size={20} color={colors.primary} />
               </View>
               <Text style={st.sheetTitle}>Tambah User</Text>
             </View>
 
             {createError ? (
               <View style={st.errorBox}>
-                <MaterialIcons name="error-outline" size={14} color={COLORS.error} />
+                <MaterialIcons name="error-outline" size={14} color={colors.error} />
                 <Text style={st.errorText}>{createError}</Text>
               </View>
             ) : null}
 
             <FormField label="Nama Lengkap" icon="person-outline" value={createForm.name}
-              onChangeText={v => setCreateForm(p => ({ ...p, name: v }))} />
+              onChangeText={v => setCreateForm(p => ({ ...p, name: v }))} st={st} colors={colors} />
             <FormField label="Email" icon="mail-outline" value={createForm.email}
               onChangeText={v => setCreateForm(p => ({ ...p, email: v }))}
-              keyboardType="email-address" autoCapitalize="none" />
+              keyboardType="email-address" autoCapitalize="none" st={st} colors={colors} />
             <FormField label="Password" icon="lock-outline" value={createForm.password}
               onChangeText={v => setCreateForm(p => ({ ...p, password: v }))}
               secureTextEntry={!showCreatePwd}
               rightIcon={showCreatePwd ? 'visibility-off' : 'visibility'}
-              onRightIconPress={() => setShowCreatePwd(p => !p)} />
+              onRightIconPress={() => setShowCreatePwd(p => !p)} st={st} colors={colors} />
 
             <View style={st.roleSelectWrap}>
               <Text style={st.fieldLabel}>Role</Text>
@@ -481,7 +469,7 @@ export default function UserPage() {
               </TouchableOpacity>
               <TouchableOpacity style={[st.submitBtn, createLoading && { opacity: 0.6 }]} onPress={handleCreate} disabled={createLoading}>
                 {createLoading
-                  ? <ActivityIndicator color={COLORS.onPrimary} size="small" />
+                  ? <ActivityIndicator color={colors.onPrimary} size="small" />
                   : <Text style={st.submitText}>Tambah</Text>}
               </TouchableOpacity>
             </View>
@@ -496,38 +484,38 @@ export default function UserPage() {
           <View style={st.sheet}>
             <View style={st.sheetHandle} />
             <View style={st.sheetHeader}>
-              <View style={[st.sheetIconWrap, { backgroundColor: COLORS.accentPurpleLight }]}>
-                <MaterialIcons name="edit" size={20} color={COLORS.accentPurple} />
+              <View style={[st.sheetIconWrap, { backgroundColor: colors.accentPurpleLight }]}>
+                <MaterialIcons name="edit" size={20} color={colors.accentPurple} />
               </View>
               <Text style={st.sheetTitle}>Edit User</Text>
             </View>
 
             {editError ? (
               <View style={st.errorBox}>
-                <MaterialIcons name="error-outline" size={14} color={COLORS.error} />
+                <MaterialIcons name="error-outline" size={14} color={colors.error} />
                 <Text style={st.errorText}>{editError}</Text>
               </View>
             ) : null}
 
             <FormField label="Nama Lengkap" icon="person-outline" value={editForm.name}
-              onChangeText={v => setEditForm(p => ({ ...p, name: v }))} />
+              onChangeText={v => setEditForm(p => ({ ...p, name: v }))} st={st} colors={colors} />
             <FormField label="Email" icon="mail-outline" value={editForm.email}
               onChangeText={v => setEditForm(p => ({ ...p, email: v }))}
-              keyboardType="email-address" autoCapitalize="none" />
+              keyboardType="email-address" autoCapitalize="none" st={st} colors={colors} />
             <FormField label="Password Baru (opsional)" icon="lock-outline" value={editForm.password}
               onChangeText={v => setEditForm(p => ({ ...p, password: v }))}
               secureTextEntry={!showEditPwd}
               rightIcon={showEditPwd ? 'visibility-off' : 'visibility'}
               onRightIconPress={() => setShowEditPwd(p => !p)}
-              placeholder="Kosongkan jika tidak diubah" />
+              placeholder="Kosongkan jika tidak diubah" st={st} colors={colors} />
 
             <View style={st.sheetActions}>
               <TouchableOpacity style={st.cancelBtn} onPress={() => setEditTarget(null)}>
                 <Text style={st.cancelText}>Batal</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[st.submitBtn, { backgroundColor: COLORS.accentPurple }, editLoading && { opacity: 0.6 }]} onPress={handleEdit} disabled={editLoading}>
+              <TouchableOpacity style={[st.submitBtn, { backgroundColor: colors.accentPurple }, editLoading && { opacity: 0.6 }]} onPress={handleEdit} disabled={editLoading}>
                 {editLoading
-                  ? <ActivityIndicator color={COLORS.onPrimary} size="small" />
+                  ? <ActivityIndicator color={colors.onPrimary} size="small" />
                   : <Text style={st.submitText}>Simpan</Text>}
               </TouchableOpacity>
             </View>
@@ -541,8 +529,8 @@ export default function UserPage() {
         title={`Ubah Role — ${upgradeTarget?.name ?? ''}`}
         description="Pilih role baru untuk user ini."
         icon="admin-panel-settings"
-        iconColor={COLORS.accentOrange}
-        iconBg={COLORS.accentOrangeLight}
+        iconColor={colors.accentOrange}
+        iconBg={colors.accentOrangeLight}
         loading={upgradeLoading}
         error={upgradeError}
         onCancel={() => setUpgradeTarget(null)}
@@ -565,7 +553,7 @@ export default function UserPage() {
             ? [{
                 label: 'Jadikan Super Admin',
                 icon: 'shield',
-                color: COLORS.accentOrange,
+                color: colors.accentOrange,
                 onPress: () => handleUpgrade('super_admin'),
               }]
             : []),
@@ -588,19 +576,21 @@ export default function UserPage() {
   );
 }
 
-function FormField({ label, icon, value, onChangeText, keyboardType, autoCapitalize, secureTextEntry, rightIcon, onRightIconPress, placeholder }: {
+function FormField({ label, icon, value, onChangeText, keyboardType, autoCapitalize, secureTextEntry, rightIcon, onRightIconPress, placeholder, st, colors }: {
   label: string; icon: string; value: string;
   onChangeText: (v: string) => void;
   keyboardType?: any; autoCapitalize?: any;
   secureTextEntry?: boolean;
   rightIcon?: string; onRightIconPress?: () => void;
   placeholder?: string;
+  st: ReturnType<typeof makeStyles>;
+  colors: ThemeColors;
 }) {
   return (
     <View style={st.fieldWrap}>
       <Text style={st.fieldLabel}>{label}</Text>
       <View style={st.fieldRow}>
-        <MaterialIcons name={icon as any} size={17} color={COLORS.textSecondary} style={{ marginRight: 10 }} />
+        <MaterialIcons name={icon as any} size={17} color={colors.textSecondary} style={{ marginRight: 10 }} />
         <TextInput
           style={st.fieldInput}
           value={value}
@@ -609,11 +599,11 @@ function FormField({ label, icon, value, onChangeText, keyboardType, autoCapital
           autoCapitalize={autoCapitalize ?? 'sentences'}
           secureTextEntry={secureTextEntry}
           placeholder={placeholder ?? label}
-          placeholderTextColor={COLORS.textTertiary}
+          placeholderTextColor={colors.textTertiary}
         />
         {rightIcon && (
           <TouchableOpacity onPress={onRightIconPress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <MaterialIcons name={rightIcon as any} size={17} color={COLORS.textSecondary} />
+            <MaterialIcons name={rightIcon as any} size={17} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
       </View>
@@ -621,84 +611,71 @@ function FormField({ label, icon, value, onChangeText, keyboardType, autoCapital
   );
 }
 
-const st = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.darkScreen },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.background },
   searchWrap: { paddingHorizontal: SIZES.gutter, paddingTop: 14, paddingBottom: 4 },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: COLORS.darkSurface, borderRadius: 14,
+    backgroundColor: colors.surface, borderRadius: 14,
     paddingHorizontal: 14, paddingVertical: 11,
-    borderWidth: 1.5, borderColor: COLORS.darkBorder,
+    borderWidth: 1.5, borderColor: colors.outline,
   },
-  searchBoxFocused: { borderColor: COLORS.primary, backgroundColor: COLORS.darkSurfaceAlt },
-  searchInput: { flex: 1, color: COLORS.darkText, fontSize: 14, paddingVertical: 0 },
+  searchBoxFocused: { borderColor: colors.primary, backgroundColor: colors.surfaceContainer },
+  searchInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0 },
 
-  statsRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.darkSurface,
-    marginHorizontal: SIZES.gutter, marginTop: 10,
-    borderRadius: SIZES.borderRadius, borderWidth: 1,
-    borderColor: COLORS.darkBorder, paddingVertical: 12, paddingHorizontal: 16,
-    ...SHADOWS.xs,
-  },
-  statItem: { flex: 1, alignItems: 'center' },
-  statNum: { ...FONTS.headlineSm, color: COLORS.text },
-  statLabel: { ...FONTS.bodySm, color: COLORS.textSecondary, marginTop: 2 },
-  statDivider: { width: 1, height: 28, backgroundColor: COLORS.outline },
-
-  tabRow: { flexDirection: 'row', gap: 10, marginHorizontal: SIZES.gutter, marginTop: 12, marginBottom: 4 },
+  tabRow: { flexDirection: 'row', gap: 10, marginHorizontal: SIZES.gutter, marginTop: 10, marginBottom: 4 },
   tab: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 7, paddingVertical: 11, borderRadius: 12,
-    backgroundColor: COLORS.darkSurface, borderWidth: 1.5, borderColor: COLORS.darkBorder,
+    backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.outline,
   },
-  tabActive:      { backgroundColor: COLORS.primaryContainer, borderColor: COLORS.primary + '60' },
-  tabOwnerActive: { backgroundColor: COLORS.primaryContainer, borderColor: COLORS.primary + '60' },
-  tabLabel:        { ...FONTS.titleSm, color: COLORS.textTertiary },
-  tabLabelActive:  { color: COLORS.primary },
-  tabBadge:        { backgroundColor: COLORS.surfaceContainerHigh, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, minWidth: 24, alignItems: 'center' },
-  tabBadgeActive:  { backgroundColor: COLORS.primary + '20' },
-  tabOwnerBadgeActive: { backgroundColor: COLORS.primary + '20' },
-  tabBadgeText:     { ...FONTS.labelSm, color: COLORS.textSecondary },
-  tabBadgeTextActive: { color: COLORS.primary },
+  tabActive:      { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '60' },
+  tabOwnerActive: { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '60' },
+  tabLabel:        { ...FONTS.titleSm, color: colors.textTertiary },
+  tabLabelActive:  { color: colors.primary },
+  tabBadge:        { backgroundColor: colors.surfaceContainerHigh, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, minWidth: 24, alignItems: 'center' },
+  tabBadgeActive:  { backgroundColor: colors.primary + '20' },
+  tabOwnerBadgeActive: { backgroundColor: colors.primary + '20' },
+  tabBadgeText:     { ...FONTS.labelSm, color: colors.textSecondary },
+  tabBadgeTextActive: { color: colors.primary },
 
   addBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: COLORS.darkSurfaceAlt, borderRadius: 12,
-    borderWidth: 1.5, borderColor: COLORS.primary + '50',
+    backgroundColor: colors.surfaceContainer, borderRadius: 12,
+    borderWidth: 1.5, borderColor: colors.primary + '50',
     paddingVertical: 12, marginHorizontal: SIZES.gutter, marginTop: 10,
   },
-  addBtnText: { ...FONTS.titleSm, color: COLORS.primary },
+  addBtnText: { ...FONTS.titleSm, color: colors.primary },
 
   list: { padding: SIZES.gutter, paddingBottom: 60 },
 
   emptyWrap: { alignItems: 'center', marginTop: 60, gap: 12 },
   emptyIcon: {
     width: 80, height: 80, borderRadius: 24,
-    backgroundColor: COLORS.surfaceContainerHigh,
+    backgroundColor: colors.surfaceContainerHigh,
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: COLORS.outline,
+    borderWidth: 1, borderColor: colors.outline,
   },
-  emptyTitle: { ...FONTS.titleMd, color: COLORS.textSecondary },
+  emptyTitle: { ...FONTS.titleMd, color: colors.textSecondary },
   emptyAction: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: COLORS.primary, paddingHorizontal: 20, paddingVertical: 12,
+    backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 12,
     borderRadius: SIZES.borderRadius,
   },
-  emptyActionText: { ...FONTS.titleSm, color: COLORS.onPrimary },
+  emptyActionText: { ...FONTS.titleSm, color: colors.onPrimary },
 
   card: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: COLORS.darkSurface, borderRadius: 16, padding: 14, marginBottom: 10,
-    borderWidth: 1, borderColor: COLORS.darkBorder,
+    backgroundColor: colors.surface, borderRadius: 16, padding: 14, marginBottom: 10,
+    borderWidth: 1, borderColor: colors.outline,
     ...SHADOWS.xs,
   },
   cardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   avatar: { width: 46, height: 46, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 13 },
   avatarText: { ...FONTS.headlineSm, fontSize: 18 },
   info: { flex: 1 },
-  name: { ...FONTS.titleMd, color: COLORS.darkText, marginBottom: 2 },
-  email: { ...FONTS.bodySm, color: COLORS.darkTextSecondary, marginBottom: 6 },
+  name: { ...FONTS.titleMd, color: colors.text, marginBottom: 2 },
+  email: { ...FONTS.bodySm, color: colors.textSecondary, marginBottom: 6 },
   roleBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 6, paddingVertical: 3, paddingHorizontal: 8, alignSelf: 'flex-start' },
   roleDot: { width: 5, height: 5, borderRadius: 3 },
   roleText: { ...FONTS.labelSm },
@@ -707,43 +684,43 @@ const st = StyleSheet.create({
 
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
   sheet: {
-    backgroundColor: COLORS.darkSurface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: 20, paddingBottom: Platform.OS === 'ios' ? 36 : 24,
-    borderWidth: 1, borderColor: COLORS.darkBorder,
+    borderWidth: 1, borderColor: colors.outline,
   },
-  sheetHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: COLORS.darkHandle, alignSelf: 'center', marginBottom: 18 },
+  sheetHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: colors.outline, alignSelf: 'center', marginBottom: 18 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 18 },
   sheetIconWrap: {
-    width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.primaryContainer,
+    width: 40, height: 40, borderRadius: 12, backgroundColor: colors.primaryContainer,
     justifyContent: 'center', alignItems: 'center',
   },
-  sheetTitle: { ...FONTS.headlineSm, color: COLORS.darkText },
+  sheetTitle: { ...FONTS.headlineSm, color: colors.text },
 
-  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.errorContainer, borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: COLORS.error + '30' },
-  errorText: { ...FONTS.bodySm, color: COLORS.error, flex: 1 },
+  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.errorContainer, borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: colors.error + '30' },
+  errorText: { ...FONTS.bodySm, color: colors.error, flex: 1 },
 
   fieldWrap: { marginBottom: 14 },
-  fieldLabel: { ...FONTS.labelSm, color: COLORS.textSecondary, marginBottom: 6, letterSpacing: 0.5, textTransform: 'uppercase' },
+  fieldLabel: { ...FONTS.labelSm, color: colors.textSecondary, marginBottom: 6, letterSpacing: 0.5, textTransform: 'uppercase' },
   fieldRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.darkSurfaceAlt, borderRadius: 12,
+    backgroundColor: colors.surfaceContainer, borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 12,
-    borderWidth: 1, borderColor: COLORS.darkBorder,
+    borderWidth: 1, borderColor: colors.outline,
   },
-  fieldInput: { flex: 1, color: COLORS.darkText, fontSize: 14, paddingVertical: 0 },
+  fieldInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0 },
   roleSelectWrap: { marginBottom: 14 },
   roleChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   roleChip: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9,
-    backgroundColor: COLORS.darkSurfaceAlt,
-    borderWidth: 1, borderColor: COLORS.darkBorder,
+    backgroundColor: colors.surfaceContainer,
+    borderWidth: 1, borderColor: colors.outline,
   },
-  roleChipText: { ...FONTS.labelMd, color: COLORS.darkTextSecondary },
+  roleChipText: { ...FONTS.labelMd, color: colors.textSecondary },
 
   sheetActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: COLORS.darkSurfaceAlt, alignItems: 'center', borderWidth: 1, borderColor: COLORS.darkBorder },
-  cancelText: { ...FONTS.titleSm, color: COLORS.darkTextSecondary },
-  submitBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: COLORS.primary, alignItems: 'center' },
-  submitText: { ...FONTS.titleSm, color: COLORS.onPrimary },
+  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: colors.surfaceContainer, alignItems: 'center', borderWidth: 1, borderColor: colors.outline },
+  cancelText: { ...FONTS.titleSm, color: colors.textSecondary },
+  submitBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' },
+  submitText: { ...FONTS.titleSm, color: colors.onPrimary },
 });
