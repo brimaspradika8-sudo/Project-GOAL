@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../lib/api';
+import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
 
 export interface Field {
   id: number;
@@ -78,7 +78,7 @@ export const useFieldStore = create<FieldState>((set, get) => ({
       params.set('page', '1');
 
       const url = `${API_BASE_URL}/fields?${params.toString()}`;
-      const res = await fetchWithTimeout(url, { headers: { Accept: 'application/json' } });
+      const res = await fetchWithTimeout(url, { headers: { ...DEFAULT_HEADERS } });
       if (!res.ok) throw new Error('Gagal memuat data lapangan');
       const body = await res.json();
 
@@ -110,7 +110,7 @@ export const useFieldStore = create<FieldState>((set, get) => ({
       params.set('page', String(meta.current_page + 1));
 
       const url = `${API_BASE_URL}/fields?${params.toString()}`;
-      const res = await fetchWithTimeout(url, { headers: { Accept: 'application/json' } });
+      const res = await fetchWithTimeout(url, { headers: { ...DEFAULT_HEADERS } });
       if (!res.ok) throw new Error('Gagal memuat data');
       const body = await res.json();
       set({

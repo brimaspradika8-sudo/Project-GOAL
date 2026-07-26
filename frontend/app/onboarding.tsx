@@ -22,7 +22,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { API_BASE_URL } from '../lib/api';
+import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
 import { useProfileStore } from '../store/profileStore';
 import { useUsernameCheck } from '../hooks/useUsernameCheck';
 import { TOKEN_KEY } from '../lib/auth';
@@ -129,7 +129,7 @@ export default function OnboardingScreen() {
       if (token) {
         await fetch(`${API_BASE_URL}/auth/logout`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
         }).catch(() => {});
       }
       await AsyncStorage.removeItem(TOKEN_KEY);
@@ -158,7 +158,7 @@ export default function OnboardingScreen() {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/me/onboarding`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ username, sports: selectedSports, region, avatar_url: avatarUrl }),
         signal: controller.signal,
       });

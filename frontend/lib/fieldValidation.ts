@@ -22,6 +22,7 @@ export type FieldFormErrors = {
   price_per_hour: string;
   image: string;
   description: string;
+  location: string;
 };
 
 export const EMPTY_ERRORS: FieldFormErrors = {
@@ -30,6 +31,7 @@ export const EMPTY_ERRORS: FieldFormErrors = {
   price_per_hour: '',
   image: '',
   description: '',
+  location: '',
 };
 
 export function validateFieldName(value: string): string {
@@ -55,8 +57,7 @@ export function validateFieldPrice(value: string): string {
   }
   const num = parseInt(cleaned, 10);
   if (isNaN(num)) return 'Harga harus berupa angka';
-  if (num < 10000) return 'Harga minimal Rp10.000';
-  if (num > 10000000) return 'Harga maksimal Rp10.000.000';
+  if (num < 0) return 'Harga tidak boleh negatif';
   return '';
 }
 
@@ -98,6 +99,13 @@ export function validateFieldDescription(value: string): string {
   return '';
 }
 
+export function validateFieldLocation(value: string): string {
+  const v = value.trim();
+  if (!v) return '';
+  if (v.length > 255) return 'Lokasi maksimal 255 karakter';
+  return '';
+}
+
 export type FieldFormData = {
   name: string;
   sport_type: string;
@@ -106,6 +114,7 @@ export type FieldFormData = {
   image_url: string;
   image_uri: string;
   image_mime: string;
+  location: string;
 };
 
 export function validateAllFields(form: FieldFormData): FieldFormErrors {
@@ -115,6 +124,7 @@ export function validateAllFields(form: FieldFormData): FieldFormErrors {
     price_per_hour: validateFieldPrice(form.price_per_hour),
     image: validateFieldImage(form.image_uri, form.image_url, form.image_mime),
     description: validateFieldDescription(form.description),
+    location: validateFieldLocation(form.location),
   };
 }
 

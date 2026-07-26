@@ -1,6 +1,8 @@
 import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as NativeSplash from 'expo-splash-screen';
+import * as Font from 'expo-font';
 import 'react-native-reanimated';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -11,7 +13,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { API_BASE_URL } from '../lib/api';
+import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
 import { useProfileStore } from '../store/profileStore';
 import { ToastProvider } from '../components/Toast';
 import { ThemeProvider, useTheme } from '../lib/theme';
@@ -20,6 +22,8 @@ import { useToastStore } from '../store/toastStore';
 
 import { Platform } from 'react-native';
 import { TOKEN_KEY } from '../lib/auth';
+
+NativeSplash.preventAutoHideAsync();
 
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   const fontLinkId = 'google-fonts-plus-jakarta';
@@ -38,8 +42,8 @@ async function fetchProfile(token: string) {
   try {
     const res = await fetch(`${API_BASE_URL}/me`, {
       headers: {
+        ...DEFAULT_HEADERS,
         Authorization: `Bearer ${token}`,
-        Accept: 'application/json',
       },
       signal: controller.signal,
     });
@@ -72,6 +76,15 @@ export default function RootLayout() {
 function RootLayoutInner() {
   const colorScheme = useColorScheme();
   const { resolved, colors } = useTheme();
+  const [fontsLoaded] = Font.useFonts({
+    'Plus Jakarta Sans': require('../assets/fonts/PlusJakartaSans-Regular.ttf'),
+    'PlusJakarta Sans_500': require('../assets/fonts/PlusJakartaSans-SemiBold.ttf'),
+    'PlusJakarta Sans_700': require('../assets/fonts/PlusJakartaSans-Bold.ttf'),
+    'Inter': require('../assets/fonts/Inter-Regular.ttf'),
+    'Inter_500': require('../assets/fonts/Inter-SemiBold.ttf'),
+    'Inter_700': require('../assets/fonts/Inter-Bold.ttf'),
+    MaterialIcons: require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.ttf'),
+  });
   const [showSplash, setShowSplash] = useState(true);
   const [isReady, setIsReady] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Memuat...');
@@ -117,6 +130,7 @@ function RootLayoutInner() {
   }, [routeToLogin]);
 
   const onSplashFinish = useCallback(() => {
+    NativeSplash.hideAsync().catch(() => {});
     setShowSplash(false);
   }, []);
 
@@ -151,6 +165,10 @@ function RootLayoutInner() {
 
     initialize();
   }, [showSplash, routeByProfile, routeToLogin]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <NavThemeProvider value={resolved === 'dark' ? DarkTheme : DefaultTheme}>

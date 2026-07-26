@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useProfileStore } from '../../store/profileStore';
 import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL } from '../../lib/api';
+import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
@@ -30,7 +30,7 @@ export default function OwnerProfilePage() {
       if (token) {
         await fetch(`${API_BASE_URL}/auth/logout`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
         }).catch(() => {});
       }
       await AsyncStorage.removeItem(TOKEN_KEY);

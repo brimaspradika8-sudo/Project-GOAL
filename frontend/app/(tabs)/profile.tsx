@@ -19,7 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useProfileStore } from '../../store/profileStore';
 import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL } from '../../lib/api';
+import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
 import { COLORS, SIZES, FONTS, SHADOWS } from '../../components/goalTheme';
 import AuthInput from '../../components/AuthInput';
 import ThemeToggle from '../../components/ThemeToggle';
@@ -61,7 +61,7 @@ export default function ProfileScreen() {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 20000);
       const res = await fetch(`${API_BASE_URL}/me/owner-request`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
         signal: controller.signal,
       });
       clearTimeout(timeout);
@@ -99,6 +99,40 @@ export default function ProfileScreen() {
   }, [profile]);
 
   async function handleSubmitOwner() {
+    const trimmedName = ownerForm.name.trim();
+    const trimmedEmail = ownerForm.email.trim();
+    const trimmedBusiness = ownerForm.business_name.trim();
+    const trimmedAddress = ownerForm.address.trim();
+    const trimmedPhone = ownerForm.phone.trim();
+
+    if (!trimmedName || !trimmedEmail || !trimmedBusiness || !trimmedAddress || !trimmedPhone) {
+      setSubmitError('Semua kolom wajib diisi.');
+      return;
+    }
+    if (trimmedName.length > 255) {
+      setSubmitError('Nama maksimal 255 karakter.');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setSubmitError('Format email tidak valid.');
+      return;
+    }
+    if (trimmedBusiness.length > 255) {
+      setSubmitError('Nama usaha maksimal 255 karakter.');
+      return;
+    }
+    if (trimmedAddress.length > 500) {
+      setSubmitError('Alamat maksimal 500 karakter.');
+      return;
+    }
+    if (!/^[0-9]{8,15}$/.test(trimmedPhone.replace(/[^0-9]/g, ''))) {
+      setSubmitError('Nomor telepon harus 8-15 digit angka.');
+      return;
+    }
+
+    setOwnerForm({ name: trimmedName, email: trimmedEmail, business_name: trimmedBusiness, address: trimmedAddress, phone: trimmedPhone });
+
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -106,6 +140,7 @@ export default function ProfileScreen() {
       const res = await fetch(`${API_BASE_URL}/me/owner-request`, {
         method: 'POST',
         headers: {
+          ...DEFAULT_HEADERS,
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
@@ -141,7 +176,7 @@ export default function ProfileScreen() {
       if (token) {
         await fetch(`${API_BASE_URL}/auth/logout`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
         }).catch(() => {});
       }
       await AsyncStorage.removeItem(TOKEN_KEY);

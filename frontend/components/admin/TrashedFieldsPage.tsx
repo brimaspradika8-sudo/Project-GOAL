@@ -6,7 +6,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL } from '../../lib/api';
+import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import ConfirmDialog from '../shared/ConfirmDialog';
@@ -26,7 +26,7 @@ export default function TrashedFieldsPage() {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/trashed/list`, {
         headers: {
-          'Accept': 'application/json',
+          ...DEFAULT_HEADERS,
           Authorization: `Bearer ${token}`,
         },
       });
@@ -55,7 +55,7 @@ export default function TrashedFieldsPage() {
       const res = await fetch(`${API_BASE_URL}/fields/${restoreTarget.id}/restore`, {
         method: 'POST',
         headers: {
-          'Accept': 'application/json',
+          ...DEFAULT_HEADERS,
           Authorization: `Bearer ${token}`,
         },
       });
@@ -85,7 +85,7 @@ export default function TrashedFieldsPage() {
       const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}/force`, {
         method: 'DELETE',
         headers: {
-          'Accept': 'application/json',
+          ...DEFAULT_HEADERS,
           Authorization: `Bearer ${token}`,
         },
       });

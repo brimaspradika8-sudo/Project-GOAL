@@ -14,9 +14,9 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../components/goalTheme';
+import { COLORS, FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../components/goalTheme';
 import { SafeImage } from '../components/SafeImage';
-import { API_BASE_URL } from '../lib/api';
+import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
 import type { Field } from '../store/fieldStore';
 
 const DEFAULT_IMAGES: Record<string, string> = {
@@ -44,7 +44,7 @@ export default function VenueDetailScreen() {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 20000);
       const res = await fetch(`${API_BASE_URL}/fields/${id}`, {
-        headers: { Accept: 'application/json' },
+        headers: { ...DEFAULT_HEADERS },
         signal: controller.signal,
       });
       clearTimeout(timeout);
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   heroStatusText: {
     fontSize: 12,
     fontWeight: '700',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: '#ffffff',
   },
   content: {
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   venueTitle: {
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     fontSize: 22,
     fontWeight: '700',
     color: COLORS.text,
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   bottomPriceValue: {
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     fontSize: 18,
     fontWeight: '700',
     color: COLORS.primary,

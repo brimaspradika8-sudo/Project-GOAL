@@ -21,8 +21,9 @@ import { CATEGORIES } from '../../data/venues';
 import { SafeImage } from '../../components/SafeImage';
 import { SkeletonVenueList, SkeletonHorizontalCards, SkeletonProfile } from '../../components/Skeleton';
 import { useDebounce } from '../../hooks/useDebounce';
-import { API_BASE_URL } from '../../lib/api';
+import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
 import { useTheme } from '../../lib/theme';
+import VenueCard from '../../components/VenueCard';
 
 const isWeb = Platform.OS === 'web';
 
@@ -70,7 +71,7 @@ export default function HomeScreen() {
   const fetchPopularFields = useCallback(async () => {
     const params = new URLSearchParams({ page: '1' });
     const res = await fetch(`${API_BASE_URL}/fields?${params.toString()}`, {
-      headers: { Accept: 'application/json' },
+      headers: { ...DEFAULT_HEADERS },
     });
     if (!res.ok) throw new Error('Gagal memuat venue populer');
     const body = await res.json();
@@ -224,9 +225,30 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        <TouchableOpacity
+          style={styles.sparringCard}
+          activeOpacity={0.85}
+          onPress={() => router.push('/(tabs)/matches')}
+        >
+          <View style={styles.sparringContent}>
+            <View style={styles.sparringBadge}>
+              <Text style={styles.sparringBadgeText}>HOT FEATURE ⚽</Text>
+            </View>
+            <Text style={styles.sparringTitle}>Cari Lawan Sparring & Main Bareng</Text>
+            <Text style={styles.sparringDesc}>Kekurangan pemain? Gabung tim lain atau buat match baru!</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.sparringBtn}
+            activeOpacity={0.8}
+            onPress={() => router.push('/(tabs)/matches')}
+          >
+            <Text style={styles.sparringBtnText}>Cari Lawan</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Venue Populer</Text>
+            <Text style={styles.sectionTitle}>Lapangan Populer 🔥</Text>
             <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/(tabs)/fields')}>
               <Text style={styles.sectionLink}>Lihat Semua</Text>
             </TouchableOpacity>
@@ -238,43 +260,9 @@ export default function HomeScreen() {
               <Text style={styles.emptyText}>Tidak ada venue ditemukan</Text>
             </View>
           ) : (
-            <View style={[styles.venueGrid, isDesktop && styles.venueGridDesktop]}>
-            {filteredVenues.map((item) => {
-              const imgUrl = item.image_url || DEFAULT_IMAGES[item.sport_type] || DEFAULT_IMAGES.default;
-              const isApproved = item.status === 'approved';
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[styles.venueCard, isDesktop && styles.venueCardDesktop]}
-                  activeOpacity={0.85}
-                  onPress={() => router.push({ pathname: '/venue-detail', params: { id: String(item.id) } })}
-                >
-                  <View style={styles.venueImageWrap}>
-                    <SafeImage source={{ uri: imgUrl }} style={styles.venueImage} resizeMode="cover" fallbackSize={32} />
-                    <View style={styles.venueImageOverlay} />
-                    <View style={[styles.statusBadge, { backgroundColor: isApproved ? COLORS.primary : COLORS.error }]}>
-                      <Text style={styles.statusText}>{isApproved ? 'Tersedia' : 'Menunggu'}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.venueInfo}>
-                    <View style={styles.venueTopRow}>
-                      <Text style={styles.venueName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
-                      <Text style={styles.venuePrice} numberOfLines={1}>{formatPrice(item.price_per_hour)}/jam</Text>
-                    </View>
-                    <View style={styles.venueLocationRow}>
-                      <MaterialIcons name="location-on" size={14} color={COLORS.textTertiary} />
-                      <Text style={styles.venueLocation} numberOfLines={1} ellipsizeMode="tail">{item.location}</Text>
-                    </View>
-                    <View style={styles.featureRow}>
-                      <View style={styles.featureChip}>
-                        <Text style={styles.featureText}>{item.sport_type}</Text>
-                      </View>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-            </View>
+            filteredVenues.map((item) => (
+              <VenueCard key={item.id} field={item} />
+            ))
           )}
         </View>
 
@@ -550,20 +538,20 @@ const styles = StyleSheet.create({
   promoBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: '#ffffff',
     letterSpacing: 1,
   },
   promoTitle: {
     fontSize: 22,
     fontWeight: '800',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: '#ffffff',
     marginBottom: 6,
   },
   promoDesc: {
     fontSize: 13,
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: 'rgba(255,255,255,0.85)',
     lineHeight: 20,
     marginBottom: 14,
@@ -578,7 +566,7 @@ const styles = StyleSheet.create({
   promoBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: '#ffffff',
   },
   promoDots: {
@@ -640,7 +628,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: '700',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: '#ffffff',
   },
   venueInfo: {
@@ -655,14 +643,14 @@ const styles = StyleSheet.create({
   venueName: {
     fontSize: 16,
     fontWeight: '700',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: COLORS.text,
     flex: 1,
   },
   venuePrice: {
     fontSize: 14,
     fontWeight: '700',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: COLORS.primary,
   },
   venueLocationRow: {
@@ -673,7 +661,7 @@ const styles = StyleSheet.create({
   },
   venueLocation: {
     fontSize: 13,
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: COLORS.textSecondary,
   },
   featureRow: {
@@ -689,7 +677,7 @@ const styles = StyleSheet.create({
   featureText: {
     fontSize: 11,
     fontWeight: '600',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: COLORS.onSurfaceVariant,
   },
   rekomGrid: {
@@ -729,7 +717,7 @@ const styles = StyleSheet.create({
   rekomName: {
     fontSize: 14,
     fontWeight: '700',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: '#ffffff',
     marginBottom: 4,
   },
@@ -740,7 +728,7 @@ const styles = StyleSheet.create({
   },
   rekomDist: {
     fontSize: 12,
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: 'rgba(255,255,255,0.85)',
   },
   sportChips: {
@@ -758,7 +746,7 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: '700',
     fontSize: 12,
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
   },
   emptyState: {
     alignItems: 'center',
@@ -768,6 +756,61 @@ const styles = StyleSheet.create({
   emptyText: {
     ...FONTS.bodyMd,
     color: COLORS.textTertiary,
+  },
+  sparringCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.primaryContainer,
+    borderRadius: SIZES.borderRadiusLg,
+    borderWidth: 1,
+    borderColor: 'rgba(30, 138, 76, 0.3)',
+    padding: 16,
+    marginTop: 20,
+    marginBottom: 4,
+  },
+  sparringContent: {
+    flex: 1,
+    marginRight: 12,
+  },
+  sparringBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.floodlight,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginBottom: 6,
+  },
+  sparringBadgeText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#000000',
+    letterSpacing: 0.5,
+  },
+  sparringTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.onPrimaryContainer,
+    marginBottom: 4,
+  },
+  sparringDesc: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    color: COLORS.onPrimaryContainer + 'CC',
+  },
+  sparringBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: SIZES.borderRadius,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  sparringBtnText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   fab: {
     position: 'absolute',

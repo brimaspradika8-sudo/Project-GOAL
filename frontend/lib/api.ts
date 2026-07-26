@@ -55,6 +55,11 @@ export function getApiBaseUrl() {
 
 export const API_BASE_URL = getApiBaseUrl();
 
+export const DEFAULT_HEADERS: Record<string, string> = {
+  Accept: 'application/json',
+  ...(API_BASE_URL.includes('ngrok') ? { 'ngrok-skip-browser-warning': 'true' } : {}),
+};
+
 export function getErrorMessage(data: any, fallbackMessage: string = 'Terjadi kesalahan.'): string {
   if (data?.errors && typeof data.errors === 'object') {
     const errorList = Object.values(data.errors).flat().filter(Boolean);

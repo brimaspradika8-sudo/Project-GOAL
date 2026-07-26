@@ -10,7 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
-import { API_BASE_URL, getErrorMessage } from '../lib/api';
+import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
 import { TOKEN_KEY } from '../lib/auth';
 import { useProfileStore } from '../store/profileStore';
 
@@ -82,7 +82,7 @@ export default function LoginScreen() {
     try {
       const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),
       });
       const data = await parseApiResponse(res);
@@ -97,7 +97,7 @@ export default function LoginScreen() {
         await AsyncStorage.setItem(TOKEN_KEY, data.token);
 
         const profileRes = await fetch(`${API_BASE_URL}/me`, {
-          headers: { Authorization: `Bearer ${data.token}` },
+          headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${data.token}` },
         });
         const profileData = await parseApiResponse(profileRes);
 
@@ -115,8 +115,10 @@ export default function LoginScreen() {
       } else {
         showMessage('Gagal login. Silakan coba lagi.', 'error');
       }
-    } catch {
-      showMessage('Terjadi kesalahan sistem. Silakan coba lagi.', 'error');
+    } catch (e: any) {
+      const errMsg = e?.message || String(e);
+      console.error('[LOGIN ERROR]', e);
+      showMessage(`Terjadi kesalahan sistem. Detail: ${errMsg}`, 'error');
     } finally {
       setLoading(false);
     }

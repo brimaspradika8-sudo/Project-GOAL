@@ -7,7 +7,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL, getErrorMessage } from '../../lib/api';
+import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
@@ -34,7 +34,7 @@ export default function PendingFieldsPage() {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/pending/list`, {
         headers: {
-          'Accept': 'application/json',
+          ...DEFAULT_HEADERS,
           Authorization: `Bearer ${token}`,
         },
       });
@@ -56,8 +56,8 @@ export default function PendingFieldsPage() {
     const res = await fetch(`${API_BASE_URL}/fields/${id}/approve`, {
       method: 'POST',
       headers: {
+        ...DEFAULT_HEADERS,
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ status, ...(reason ? { reason } : {}) }),

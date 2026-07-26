@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class UserController extends Controller
 {
@@ -24,7 +25,7 @@ class UserController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8',
+            'password' => ['required', 'string', PasswordRule::min(8)->mixedCase()->numbers()],
             'role' => 'nullable|in:owner,player,super_admin',
         ]);
 
@@ -45,7 +46,7 @@ class UserController extends Controller
         $data = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'email' => "sometimes|required|email|unique:users,email,{$id}",
-            'password' => 'nullable|string|min:8',
+            'password' => ['nullable', 'string', PasswordRule::min(8)->mixedCase()->numbers()],
         ]);
 
         $user = User::with('profile')->findOrFail($id);

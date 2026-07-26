@@ -9,7 +9,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
-import { API_BASE_URL, getErrorMessage } from '../lib/api';
+import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -44,7 +44,7 @@ export default function ForgotPasswordScreen() {
     try {
       const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),
       });
       const data = await res.json();

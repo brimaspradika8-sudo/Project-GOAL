@@ -9,7 +9,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
-import { API_BASE_URL, getErrorMessage } from '../lib/api';
+import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
 import { TOKEN_KEY } from '../lib/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -40,8 +40,19 @@ export default function RegisterScreen() {
     setMessage(null);
     Keyboard.dismiss();
 
-    if (!name || !email || !password || !confirmPassword) {
+    if (!name.trim() || !email.trim() || !password || !confirmPassword) {
       showMessage('Semua kolom wajib diisi.', 'error');
+      return;
+    }
+
+    if (name.trim().length > 255) {
+      showMessage('Nama maksimal 255 karakter.', 'error');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      showMessage('Format email tidak valid.', 'error');
       return;
     }
 
@@ -55,8 +66,18 @@ export default function RegisterScreen() {
       return;
     }
 
-    if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
-      showMessage('Password harus mengandung huruf besar dan angka.', 'error');
+    if (!/[a-z]/.test(password)) {
+      showMessage('Password harus mengandung huruf kecil.', 'error');
+      return;
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      showMessage('Password harus mengandung huruf besar.', 'error');
+      return;
+    }
+
+    if (!/[0-9]/.test(password)) {
+      showMessage('Password harus mengandung angka.', 'error');
       return;
     }
 
@@ -64,7 +85,7 @@ export default function RegisterScreen() {
     try {
       const res = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim(),

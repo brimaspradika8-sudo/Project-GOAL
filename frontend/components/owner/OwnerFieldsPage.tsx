@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useFieldStore } from '../../store/fieldStore';
 import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL, getErrorMessage } from '../../lib/api';
+import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
@@ -22,7 +22,7 @@ import {
   EMPTY_ERRORS, validateAllFields, hasErrors,
   validateFieldName, validateFieldSportType, validateFieldPrice,
   validateFieldImage, validateFieldImageSize, validateFieldDescription,
-  mimeFromExt,
+  validateFieldLocation, mimeFromExt,
 } from '../../lib/fieldValidation';
 
 const IMG_PLACEHOLDER = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop';
@@ -41,6 +41,7 @@ const EMPTY_FORM: FieldFormData = {
   image_url: '',
   image_uri: '',
   image_mime: '',
+  location: '',
 };
 
 export default function OwnerFieldsPage() {
@@ -67,7 +68,7 @@ export default function OwnerFieldsPage() {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/my/list`, {
         headers: {
-          'Accept': 'application/json',
+          ...DEFAULT_HEADERS,
           Authorization: `Bearer ${token}`,
         },
       });
@@ -96,6 +97,7 @@ export default function OwnerFieldsPage() {
       case 'sport_type': err = validateFieldSportType(value); break;
       case 'price_per_hour': err = validateFieldPrice(value); break;
       case 'description': err = validateFieldDescription(value); break;
+      case 'location': err = validateFieldLocation(value); break;
       case 'image_uri': err = validateFieldImage(value, form.image_url, form.image_mime); break;
     }
     if (isCreate) {
@@ -140,7 +142,7 @@ export default function OwnerFieldsPage() {
 
   const onAllFieldsTouched = (isCreate: boolean) => {
     const touchedRef = isCreate ? createTouched : editTouched;
-    const fields: (keyof FieldFormData)[] = ['name', 'sport_type', 'price_per_hour', 'image_uri', 'description'];
+    const fields: (keyof FieldFormData)[] = ['name', 'sport_type', 'price_per_hour', 'image_uri', 'description', 'location'];
     fields.forEach(f => { touchedRef.current[f] = true; });
     const form = isCreate ? createForm : editForm;
     const errs = validateAllFields(form);
@@ -223,13 +225,14 @@ export default function OwnerFieldsPage() {
       };
       if (createForm.description.trim())    body.description    = createForm.description.trim();
       if (createForm.price_per_hour.trim()) body.price_per_hour = parseInt(createForm.price_per_hour.replace(/\D/g, ''), 10);
+      if (createForm.location.trim())       body.location       = createForm.location.trim();
       if (imageUrl)                          body.image_url      = imageUrl;
 
       const res = await fetch(`${API_BASE_URL}/fields`, {
         method: 'POST',
         headers: {
+          ...DEFAULT_HEADERS,
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(body),
@@ -260,6 +263,7 @@ export default function OwnerFieldsPage() {
       image_url:      f.image_url || '',
       image_uri:      '',
       image_mime:     '',
+      location:       f.location || '',
     });
     setEditError(null);
     setEditErrors(EMPTY_ERRORS);
@@ -289,6 +293,7 @@ export default function OwnerFieldsPage() {
         name:        editForm.name.trim(),
         sport_type:  editForm.sport_type.trim(),
         description: editForm.description.trim() || null,
+        location:    editForm.location.trim() || null,
       };
       if (editForm.price_per_hour.trim()) body.price_per_hour = parseInt(editForm.price_per_hour.replace(/\D/g, ''), 10);
       if (imageUrl) body.image_url = imageUrl;
@@ -296,8 +301,8 @@ export default function OwnerFieldsPage() {
       const res = await fetch(`${API_BASE_URL}/fields/${editTarget.id}`, {
         method: 'PUT',
         headers: {
+          ...DEFAULT_HEADERS,
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(body),
@@ -336,7 +341,7 @@ export default function OwnerFieldsPage() {
       const res = await fetch(`${API_BASE_URL}/upload/image`, {
         method: 'POST',
         headers: {
-          'Accept': 'application/json',
+          ...DEFAULT_HEADERS,
           Authorization: `Bearer ${token}`,
         },
         body: formData,
@@ -363,7 +368,7 @@ export default function OwnerFieldsPage() {
     const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}`, {
       method: 'DELETE',
       headers: {
-        'Accept': 'application/json',
+        ...DEFAULT_HEADERS,
         Authorization: `Bearer ${token}`,
       },
     });
@@ -671,6 +676,16 @@ function FieldModal({
               placeholder="Contoh: 150000"
               keyboardType="numeric"
               error={errors.price_per_hour}
+            />
+
+            {/* Lokasi */}
+            <FField
+              label="Lokasi (opsional)" icon="location-on"
+              value={form.location}
+              onChangeText={set('location')}
+              onBlur={blur('location')}
+              placeholder="Contoh: Jl. Merdeka No. 10, Kota Bandung"
+              error={errors.location}
             />
           </ScrollView>
 

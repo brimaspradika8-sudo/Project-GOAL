@@ -7,7 +7,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL, getErrorMessage } from '../../lib/api';
+import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
@@ -31,7 +31,7 @@ export default function OwnerRequestPage() {
     try {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/owner-requests/pending`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       setRequests(data?.data ?? []);
@@ -50,7 +50,7 @@ export default function OwnerRequestPage() {
     const token = await AsyncStorage.getItem(TOKEN_KEY);
     const res = await fetch(`${API_BASE_URL}/owner-requests/${id}/review`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ status, ...(reason ? { reason } : {}) }),
     });
     const data = await res.json().catch(() => ({}));
@@ -226,6 +226,7 @@ export default function OwnerRequestPage() {
               multiline
               value={rejectReason}
               onChangeText={setRejectReason}
+              maxLength={500}
             />
             <View style={st.modalActions}>
               <TouchableOpacity
