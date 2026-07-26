@@ -31,7 +31,7 @@ const DEFAULT_IMAGES: Record<string, string> = {
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   approved: { label: 'Disetujui', color: COLORS.primary, bg: COLORS.successLight },
-  pending:  { label: 'Menunggu', color: '#d97706', bg: '#fef3c7' },
+  pending:  { label: 'Menunggu', color: COLORS.warningIcon, bg: COLORS.warningBg },
   rejected: { label: 'Ditolak', color: COLORS.error, bg: COLORS.errorLight },
 };
 
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#ecfdf5',
+    backgroundColor: COLORS.successLight,
   },
   deleteAction: {
     backgroundColor: COLORS.errorLight,

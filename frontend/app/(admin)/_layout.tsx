@@ -292,11 +292,10 @@ const styles = StyleSheet.create({
     height: Platform.OS === 'ios' ? 88 : 64,
     paddingTop: Platform.OS === 'ios' ? 10 : 8,
     paddingBottom: Platform.OS === 'ios' ? 22 : 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 8,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 -2px 8px rgba(0,0,0,0.08)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 8 }
+    ),
   },
   tabLabel: {
     fontFamily: FONT_FAMILY,

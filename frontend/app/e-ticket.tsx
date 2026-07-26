@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.primary,
   },
   primaryBtnText: {
-    color: '#ffffff',
+    color: COLORS.onPrimary,
     ...FONTS.buttonMd,
   },
 });

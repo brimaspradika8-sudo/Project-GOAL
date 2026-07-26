@@ -91,7 +91,7 @@ export default function ChangePasswordScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.responsiveWrapper}>
           <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <Animated.View style={{ transform: [{ scale: pulseAnim }], marginBottom: 12, shadowColor: '#4be277', shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }}>
+            <Animated.View style={[{ transform: [{ scale: pulseAnim }], marginBottom: 12 }, Platform.OS === 'web' ? { boxShadow: '0 0 20px rgba(75,226,119,0.6)' } : { shadowColor: '#4be277', shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }]}>
               <MaterialIcons name="lock" size={56} color="#4be277" />
             </Animated.View>
             <Text style={styles.title}>UBAH PASSWORD</Text>
@@ -133,10 +133,10 @@ const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1, justifyContent: 'center', paddingVertical: 40, paddingHorizontal: 24 },
   responsiveWrapper: { width: '100%', maxWidth: 440, alignSelf: 'center' },
   header: { alignItems: 'center', marginBottom: 40 },
-  title: { fontSize: 36, fontWeight: '900', color: '#4be277', fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: 2, textShadowColor: 'rgba(75,226,119,0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10, textAlign: 'center' },
-  glassCard: { backgroundColor: 'rgba(30,30,30,0.7)', borderRadius: 20, padding: 28, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', shadowColor: '#000', shadowOffset: { width: 0, height: 15 }, shadowOpacity: 0.5, shadowRadius: 25, elevation: 10 },
-  button: { backgroundColor: '#4be277', height: 60, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 8, shadowColor: '#4be277', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 },
-  buttonDisabled: { backgroundColor: '#2a8b46', shadowOpacity: 0, elevation: 0 },
+  title: { fontSize: 36, fontWeight: '900', color: '#4be277', fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: 2, ...(Platform.OS === 'web' ? { textShadow: '0px 2px 10px rgba(75,226,119,0.4)' } : { textShadowColor: 'rgba(75,226,119,0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10 }), textAlign: 'center' },
+  glassCard: { backgroundColor: 'rgba(30,30,30,0.7)', borderRadius: 20, padding: 28, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', ...(Platform.OS === 'web' ? { boxShadow: '0 15px 25px rgba(0,0,0,0.5)' } : { shadowColor: '#000', shadowOffset: { width: 0, height: 15 }, shadowOpacity: 0.5, shadowRadius: 25, elevation: 10 }) },
+  button: { backgroundColor: '#4be277', height: 60, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 8, ...(Platform.OS === 'web' ? { boxShadow: '0 6px 12px rgba(75,226,119,0.4)' } : { shadowColor: '#4be277', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }) },
+  buttonDisabled: { backgroundColor: '#2a8b46', ...(Platform.OS === 'web' ? { boxShadow: 'none' } : { shadowOpacity: 0, elevation: 0 }) },
   buttonContent: { flexDirection: 'row', alignItems: 'center' },
   buttonText: { color: '#002109', fontSize: 18, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 2 },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 40 },

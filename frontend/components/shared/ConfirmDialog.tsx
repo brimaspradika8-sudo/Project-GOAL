@@ -2,6 +2,7 @@ import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { useTheme } from '../../lib/theme';
 
 export interface ConfirmOption {
   label: string;
@@ -34,11 +35,13 @@ export default function ConfirmDialog({
   icon, iconColor, iconBg,
   options, onConfirm, onCancel,
 }: ConfirmDialogProps) {
+  const { colors } = useTheme();
   const hasOptions = options && options.length > 0;
   const showIcon = icon || destructive;
   const resolvedIcon = icon || (destructive ? 'logout' : 'help-outline');
-  const resolvedIconColor = iconColor || (destructive ? COLORS.error : COLORS.primary);
-  const resolvedIconBg = iconBg || (destructive ? COLORS.errorLight : COLORS.primaryLight);
+  const resolvedIconColor = iconColor || (destructive ? COLORS.error : colors.primary);
+  const resolvedIconBg = iconBg || (destructive ? COLORS.errorLight : colors.primaryLight);
+  const st = makeStyles(colors);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
@@ -63,8 +66,8 @@ export default function ConfirmDialog({
           {hasOptions ? (
             <View style={st.options}>
               {options!.map((opt, idx) => {
-                const btnColor = opt.destructive ? COLORS.error : (opt.color ?? COLORS.primary);
-                const bg = opt.destructive ? COLORS.errorContainer : COLORS.primaryContainer;
+                const btnColor = opt.destructive ? COLORS.error : (opt.color ?? colors.primary);
+                const bg = opt.destructive ? COLORS.errorContainer : colors.primaryContainer;
                 return (
                   <TouchableOpacity
                     key={idx}
@@ -95,7 +98,7 @@ export default function ConfirmDialog({
                 disabled={loading}
               >
                 {loading
-                  ? <ActivityIndicator color="#FFFFFF" size="small" />
+                  ? <ActivityIndicator color={colors.onPrimary} size="small" />
                   : <Text style={st.btnConfirmText}>{confirmLabel}</Text>
                 }
               </TouchableOpacity>
@@ -107,23 +110,23 @@ export default function ConfirmDialog({
   );
 }
 
-const st = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   backdrop: {
     flex: 1, backgroundColor: 'rgba(22,32,26,0.45)',
     justifyContent: 'center', alignItems: 'center', padding: 24,
   },
   card: {
-    width: '100%', maxWidth: 340, backgroundColor: '#111827',
+    width: '100%', maxWidth: 340, backgroundColor: colors.surface,
     borderRadius: SIZES.borderRadiusLg, padding: 22, alignItems: 'center',
-    borderWidth: 1, borderColor: '#374151',
+    borderWidth: 1, borderColor: colors.outline,
     ...SHADOWS.md,
   },
   iconWrap: {
     width: 52, height: 52, borderRadius: 16,
     justifyContent: 'center', alignItems: 'center', marginBottom: 14,
   },
-  title: { ...FONTS.headlineSm, color: '#F9FAFB', textAlign: 'center', marginBottom: 6 },
-  desc: { ...FONTS.bodySm, color: '#CBD5E1', textAlign: 'center', marginBottom: 18 },
+  title: { ...FONTS.headlineSm, color: colors.text, textAlign: 'center', marginBottom: 6 },
+  desc: { ...FONTS.bodySm, color: colors.textSecondary, textAlign: 'center', marginBottom: 18 },
   errorBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: COLORS.errorContainer, borderRadius: 10,
@@ -132,21 +135,20 @@ const st = StyleSheet.create({
   errorText: { ...FONTS.bodySm, color: COLORS.error, flex: 1 },
   actions: { flexDirection: 'row', gap: 10, width: '100%' },
   btn: { flex: 1, paddingVertical: 12, borderRadius: SIZES.borderRadius, alignItems: 'center' },
-  btnCancel: { backgroundColor: '#1F2937', borderWidth: 1, borderColor: '#374151' },
-  btnCancelText: { ...FONTS.buttonMd, color: '#CBD5E1' },
-  btnPrimary: { backgroundColor: COLORS.primary },
+  btnCancel: { backgroundColor: colors.surfaceContainerHigh, borderWidth: 1, borderColor: colors.outline },
+  btnCancelText: { ...FONTS.buttonMd, color: colors.textSecondary },
+  btnPrimary: { backgroundColor: colors.primary },
   btnDanger: { backgroundColor: COLORS.error },
-  btnConfirmText: { ...FONTS.buttonMd, color: '#FFFFFF' },
+  btnConfirmText: { ...FONTS.buttonMd, color: colors.onPrimary },
   options: { gap: 10, width: '100%', marginBottom: 12 },
   optionBtn: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 14, paddingHorizontal: 16,
     borderRadius: 14, borderWidth: 1.5, minHeight: 52,
-    backgroundColor: '#1F2937', borderColor: '#374151',
   },
   optionIcon: {
     width: 36, height: 36, borderRadius: 10,
     justifyContent: 'center', alignItems: 'center', marginRight: 12,
   },
-  optionLabel: { ...FONTS.titleMd, flex: 1, color: '#F9FAFB' },
+  optionLabel: { ...FONTS.titleMd, flex: 1 },
 });

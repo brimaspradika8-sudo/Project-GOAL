@@ -119,11 +119,10 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], insets: { bot
     height: 64 + insets.bottom,
     paddingTop: 8,
     paddingBottom: insets.bottom + 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 8,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 -2px 8px rgba(0,0,0,0.08)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 8 }
+    ),
     ...(Platform.OS === 'web' ? {
       maxWidth: 640,
       width: '100%' as any,

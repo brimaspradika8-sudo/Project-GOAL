@@ -198,8 +198,8 @@ export default function ProfileScreen() {
         return (
           <View style={[styles.ownerCard, styles.pendingCard]}>
             <View style={styles.ownerCardLeft}>
-              <View style={[styles.ownerIconBox, { backgroundColor: '#fef3c7' }]}>
-                <MaterialIcons name="hourglass-top" size={20} color="#d97706" />
+              <View style={[styles.ownerIconBox, { backgroundColor: COLORS.warningBg }]}>
+                <MaterialIcons name="hourglass-top" size={20} color={COLORS.warningIcon} />
               </View>
               <View style={styles.ownerCardInfo}>
                 <Text style={styles.ownerCardTitle}>Pengajuan Owner</Text>
@@ -265,42 +265,22 @@ export default function ProfileScreen() {
 
     if (role === 'super_admin') {
       return (
-        <>
-          <TouchableOpacity
-            style={[styles.ownerCard, styles.approvedCard]}
-            activeOpacity={0.8}
-            onPress={() => router.push('/(tabs)/my-fields')}
-          >
-            <View style={styles.ownerCardLeft}>
-              <View style={[styles.ownerIconBox, { backgroundColor: COLORS.successLight }]}>
-                <MaterialIcons name="stadium" size={20} color={COLORS.primary} />
-              </View>
-              <View style={styles.ownerCardInfo}>
-                <Text style={styles.ownerCardTitle}>Kelola Lapangan</Text>
-                <Text style={styles.ownerCardDesc}>Lihat dan kelola semua lapangan.</Text>
-              </View>
+        <TouchableOpacity
+          style={[styles.ownerCard, { backgroundColor: COLORS.purpleBg, borderColor: COLORS.purpleBorder }]}
+          activeOpacity={0.8}
+          onPress={() => router.push('/(admin)/dashboard')}
+        >
+          <View style={styles.ownerCardLeft}>
+            <View style={[styles.ownerIconBox, { backgroundColor: COLORS.purpleLight }]}>
+              <MaterialIcons name="admin-panel-settings" size={20} color={COLORS.purpleIcon} />
             </View>
-            <MaterialIcons name="chevron-right" size={20} color={COLORS.textSecondary} />
-          </TouchableOpacity>
-          {role === 'super_admin' && (
-            <TouchableOpacity
-              style={[styles.ownerCard, { backgroundColor: '#f5f3ff', borderColor: '#c4b5fd' }]}
-              activeOpacity={0.8}
-              onPress={() => router.push('/(admin)/dashboard')}
-            >
-              <View style={styles.ownerCardLeft}>
-                <View style={[styles.ownerIconBox, { backgroundColor: '#ede9fe' }]}>
-                  <MaterialIcons name="admin-panel-settings" size={20} color="#7c3aed" />
-                </View>
-                <View style={styles.ownerCardInfo}>
-                  <Text style={styles.ownerCardTitle}>Panel Super Admin</Text>
-                  <Text style={styles.ownerCardDesc}>Approve field dan owner request.</Text>
-                </View>
-              </View>
-              <MaterialIcons name="chevron-right" size={20} color={COLORS.textSecondary} />
-            </TouchableOpacity>
-          )}
-        </>
+            <View style={styles.ownerCardInfo}>
+              <Text style={styles.ownerCardTitle}>Panel Super Admin</Text>
+              <Text style={styles.ownerCardDesc}>Approve field dan owner request.</Text>
+            </View>
+          </View>
+          <MaterialIcons name="chevron-right" size={20} color={COLORS.textSecondary} />
+        </TouchableOpacity>
       );
     }
 
@@ -329,7 +309,7 @@ export default function ProfileScreen() {
         </View>
 
         <View style={[styles.profileGrid, isDesktop && styles.profileGridDesktop]}>
-        <View style={styles.profileColumn}>
+        <View style={[styles.profileColumn, isDesktop && { flex: 1 }]}>
         <View style={styles.profileCard}>
           <Image
             source={{ uri: profile?.avatar_url || 'https://api.dicebear.com/7.x/bottts/png?seed=goal&backgroundColor=ffffff&textColor=00A651' }}
@@ -376,7 +356,7 @@ export default function ProfileScreen() {
         </View>
         </View>
 
-        <View style={styles.profileColumn}>
+        <View style={[styles.profileColumn, isDesktop && { flex: 1 }]}>
         <Text style={styles.sectionTitle}>AKUN</Text>
         {renderOwnerSection()}
 
@@ -531,9 +511,7 @@ const styles = StyleSheet.create({
     gap: 20,
     alignItems: 'flex-start',
   },
-  profileColumn: {
-    flex: 1,
-  },
+  profileColumn: {},
   pageTitle: {
     ...FONTS.headlineLg,
     fontSize: 28,
@@ -634,7 +612,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#e6f4ea',
+    backgroundColor: COLORS.primaryLight,
     borderRadius: 20,
     paddingVertical: 7,
     paddingHorizontal: 14,
@@ -644,7 +622,7 @@ const styles = StyleSheet.create({
     ...FONTS.labelMd,
     fontSize: 12,
     fontWeight: '700',
-    color: '#0f5132',
+    color: COLORS.onPrimaryContainer,
   },
   emptyText: {
     ...FONTS.bodySm,
@@ -687,20 +665,20 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   pendingCard: {
-    backgroundColor: '#fffbeb',
-    borderColor: '#fde68a',
+    backgroundColor: COLORS.warningBg,
+    borderColor: COLORS.warningBorder,
   },
   approvedCard: {
-    backgroundColor: '#f0fdf4',
-    borderColor: '#bbf7d0',
+    backgroundColor: COLORS.successLight,
+    borderColor: COLORS.successBorder,
   },
   rejectedCard: {
-    backgroundColor: '#fef2f2',
-    borderColor: '#fecaca',
+    backgroundColor: COLORS.errorLight,
+    borderColor: COLORS.errorBorder,
   },
   ownerActionCard: {
-    backgroundColor: '#f0fdf4',
-    borderColor: '#bbf7d0',
+    backgroundColor: COLORS.successLight,
+    borderColor: COLORS.successBorder,
   },
   settingsCard: {
     backgroundColor: COLORS.surfaceWhite,
@@ -722,7 +700,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: '#ecfdf5',
+    backgroundColor: COLORS.primaryContainer,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -752,7 +730,7 @@ const styles = StyleSheet.create({
   signOutText: {
     ...FONTS.bodyMd,
     fontWeight: '700',
-    color: '#dc2626',
+    color: COLORS.error,
   },
   version: {
     ...FONTS.bodySm,
@@ -801,10 +779,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#fef2f2',
+    backgroundColor: COLORS.errorLight,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: COLORS.errorBorder,
     padding: 14,
     marginBottom: 14,
   },

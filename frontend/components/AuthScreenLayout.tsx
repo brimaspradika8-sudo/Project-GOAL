@@ -43,7 +43,7 @@ export default function AuthScreenLayout({
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.responsiveWrapper}>
           <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <Animated.View style={{ transform: [{ scale: pulseAnim }], marginBottom: 12, shadowColor: iconColor, shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }}>
+            <Animated.View style={[{ transform: [{ scale: pulseAnim }], marginBottom: 12 }, Platform.OS === 'web' ? { boxShadow: '0 0 20px rgba(75,226,119,0.6)' } : { shadowColor: iconColor, shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }]}>
               <MaterialIcons name={iconName} size={72} color={iconColor} />
             </Animated.View>
             <Text style={[styles.title, { fontSize: titleFontSize }]}>{title}</Text>
@@ -102,9 +102,10 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textTransform: 'uppercase',
     letterSpacing: 2,
-    textShadowColor: 'rgba(75, 226, 119, 0.4)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 10,
+    ...(Platform.OS === 'web'
+      ? { textShadow: '0px 2px 10px rgba(75,226,119,0.4)' }
+      : { textShadowColor: 'rgba(75, 226, 119, 0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10 }
+    ),
   },
   subtitle: {
     fontSize: 18,
@@ -119,11 +120,10 @@ const styles = StyleSheet.create({
     padding: 28,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 15 },
-    shadowOpacity: 0.5,
-    shadowRadius: 25,
-    elevation: 10,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 15px 25px rgba(0,0,0,0.5)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 15 }, shadowOpacity: 0.5, shadowRadius: 25, elevation: 10 }
+    ),
   },
   footer: {
     flexDirection: 'row',
