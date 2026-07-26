@@ -1,17 +1,23 @@
-import { Tabs } from 'expo-router';
+import { Tabs, usePathname, useRouter } from 'expo-router';
 import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../lib/theme';
+import { FONT_FAMILY } from '../../components/goalTheme';
 import { TOKEN_KEY } from '../../lib/auth';
 import Sidebar, { SidebarItem } from '../../components/web/Sidebar';
+import MobileWebHeader from '../../components/web/MobileWebHeader';
+import { useBreakpoint } from '../../lib/responsive';
 
 export default function OwnerTabLayout() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === 'web';
+  const breakpoint = useBreakpoint();
+  const pathname = usePathname();
+  const router = useRouter();
 
   const sidebarItems: SidebarItem[] = [
     { href: '/(owner)/fields', label: 'Kelola Lapangan', icon: 'stadium' },
@@ -20,13 +26,18 @@ export default function OwnerTabLayout() {
     { href: '/(owner)/profile', label: 'Profile', icon: 'person' },
   ];
 
-  if (isWeb) {
+  const ownerRoutes = ['/(owner)/fields', '/(owner)/bookings', '/(owner)/revenue', '/(owner)/profile'];
+  const activeRoute = ownerRoutes.find(r => pathname.startsWith(r)) || '/(owner)/fields';
+
+  if (isWeb && breakpoint === 'mobile') {
     return (
-      <View style={[styles.webRoot, { backgroundColor: colors.background }]}>
-        <Sidebar
+      <View style={[styles.webRootMobile, { backgroundColor: colors.background }]}>
+        <MobileWebHeader
           title="Owner Panel"
           accentColor={colors.accentOrange}
           items={sidebarItems}
+          activeRoute={activeRoute}
+          onNavigate={(href) => router.push(href as any)}
         />
         <View style={[styles.webContent, { backgroundColor: colors.background }]}>
           <Tabs
@@ -148,6 +159,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: '100%' as any,
   },
+  webRootMobile: {
+    flex: 1,
+    height: '100%' as any,
+  },
   webContent: {
     flex: 1,
   },
@@ -160,7 +175,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   tabLabel: {
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 0.3,

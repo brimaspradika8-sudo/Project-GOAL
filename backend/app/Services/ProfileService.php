@@ -63,6 +63,7 @@ class ProfileService
         $length = strlen($username);
         if ($length < 3) return 'too_short';
         if ($length > 20) return 'too_long';
+        if (!preg_match('/^[a-zA-Z0-9_]+$/', $username)) return 'invalid_format';
         return null;
     }
 

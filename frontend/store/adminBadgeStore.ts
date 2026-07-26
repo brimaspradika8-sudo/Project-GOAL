@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import * as SecureStore from '../lib/secureStorage';
 import { TOKEN_KEY } from '../lib/auth';
-import { API_BASE_URL } from '../lib/api';
+import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
 
 type AdminBadgeState = {
   ownerRequestsCount: number | undefined;
@@ -34,7 +34,7 @@ export async function refreshAdminBadges({ isSuperAdmin = false }: { isSuperAdmi
     }
 
     const headers = {
-      Accept: 'application/json',
+      ...DEFAULT_HEADERS,
       Authorization: `Bearer ${token}`,
     } as const;
 

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../lib/api';
+import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
 import { TOKEN_KEY } from '../lib/auth';
 
 export interface Profile {
@@ -59,8 +59,8 @@ export const useProfileStore = create<ProfileState>((set) => ({
 
       const res = await fetch(`${API_BASE_URL}/me`, {
         headers: {
+          ...DEFAULT_HEADERS,
           Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
         },
         signal: controller.signal,
       });

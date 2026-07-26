@@ -6,7 +6,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL } from '../../lib/api';
+import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import DashboardHeader from '../shared/DashboardHeader';
 import { SkeletonCards } from '../Skeleton';
@@ -33,7 +33,7 @@ export default function OwnerBookingsPage() {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/owner/bookings`, {
         headers: {
-          'Accept': 'application/json',
+          ...DEFAULT_HEADERS,
           Authorization: `Bearer ${token}`,
         },
       });

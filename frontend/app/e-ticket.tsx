@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../components/goalTheme';
+import { COLORS, FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../components/goalTheme';
 
 export default function ETicketScreen() {
   const ticketCode = 'GOAL-' + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.primary,
   },
   successTitle: {
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     fontSize: 20,
     fontWeight: '700',
     color: COLORS.text,
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   ticketLogo: {
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     fontSize: 16,
     fontWeight: '800',
     color: COLORS.primary,
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
   ticketBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: COLORS.primary,
     letterSpacing: 0.5,
   },
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   ticketLabel: {
     fontSize: 10,
     fontWeight: '800',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
     color: COLORS.textTertiary,
     letterSpacing: 0.5,
     marginBottom: 4,

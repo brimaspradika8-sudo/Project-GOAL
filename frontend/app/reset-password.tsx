@@ -9,7 +9,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
-import { API_BASE_URL, getErrorMessage } from '../lib/api';
+import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
 
 export default function ResetPasswordScreen() {
   const params = useLocalSearchParams<{ token?: string; email?: string }>();
@@ -53,7 +53,7 @@ export default function ResetPasswordScreen() {
     try {
       const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: params.email,
           token: params.token,

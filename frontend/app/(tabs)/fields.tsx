@@ -13,12 +13,13 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { COLORS, SIZES, FONTS, SHADOWS } from '../../components/goalTheme';
+import { COLORS, SIZES, FONTS, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
 import { useFieldStore, Field } from '../../store/fieldStore';
 import { SafeImage } from '../../components/SafeImage';
 import { SkeletonVenueList } from '../../components/Skeleton';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useTheme } from '../../lib/theme';
+import VenueCard from '../../components/VenueCard';
 
 const FILTERS = ['Semua', 'Futsal', 'Basket', 'Badminton', 'Mini Soccer', 'Tenis'];
 const SPORT_MAP: Record<string, string> = {
@@ -40,50 +41,8 @@ function formatPrice(price: number | null): string {
   return `Rp${price.toLocaleString('id-ID')}`;
 }
 
-function VenueCard({ item }: { item: Field }) {
-  const { colors } = useTheme();
-  const styles = makeStyles(colors);
-  const imgUrl = item.image_url || DEFAULT_IMAGES[item.sport_type] || DEFAULT_IMAGES.default;
-  const isApproved = item.status === 'approved';
-  return (
-    <TouchableOpacity
-      style={styles.venueCard}
-      activeOpacity={0.85}
-      onPress={() => router.push({ pathname: '/venue-detail', params: { id: String(item.id) } })}
-    >
-      <View style={[styles.venueImage, { backgroundColor: colors.primaryContainer }]}>
-        <SafeImage source={{ uri: imgUrl }} style={styles.venueImageBg} fallbackSize={32} />
-        <View style={styles.venueImageOverlay} />
-        <MaterialIcons name="sports" size={28} color="#ffffff80" />
-      </View>
-      <View style={styles.venueBody}>
-        <View style={styles.venueHeader}>
-          <Text style={styles.venueName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
-          <View style={[styles.statusBadge, isApproved ? styles.badgeAvailable : styles.badgeFull]}>
-            <View style={[styles.statusDot, isApproved ? styles.dotAvailable : styles.dotFull]} />
-            <Text style={[styles.statusText, isApproved ? styles.textAvailable : styles.textFull]}>
-              {isApproved ? 'Tersedia' : 'Menunggu'}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.venueLocationRow}>
-          <MaterialIcons name="location-on" size={14} color={colors.textTertiary} />
-          <Text style={styles.venueLocation} numberOfLines={1} ellipsizeMode="tail">{item.location}</Text>
-        </View>
-        <Text style={styles.venuePrice}>{formatPrice(item.price_per_hour)}/jam</Text>
-        <View style={styles.tagRow}>
-          <View style={styles.featureTag}>
-            <Text style={styles.featureTagText} numberOfLines={1}>{item.sport_type}</Text>
-          </View>
-          {item.owner && (
-            <View style={styles.featureTag}>
-              <Text style={styles.featureTagText} numberOfLines={1}>{item.owner.name}</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+function VenueCardInline({ item }: { item: Field }) {
+  return <VenueCard field={item} />;
 }
 
 export default function FieldsScreen() {
@@ -186,7 +145,7 @@ export default function FieldsScreen() {
       <FlatList
         data={fields}
         keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => <VenueCard item={item} />}
+        renderItem={({ item }) => <VenueCardInline item={item} />}
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
@@ -346,7 +305,7 @@ const makeStyles = (colors: any) => StyleSheet.create({
   statusText: {
     fontSize: 11,
     fontWeight: '600',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
   },
   textAvailable: {
     color: colors.primary,

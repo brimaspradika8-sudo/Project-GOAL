@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { FONT_FAMILY } from './goalTheme';
 
 export type ToastType = 'success' | 'error' | 'info';
 
@@ -238,12 +239,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '600',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
   },
   message: {
     fontSize: 12,
     marginTop: 1,
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
   },
   closeButton: {
     width: 30,

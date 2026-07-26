@@ -1,9 +1,10 @@
-import React from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, Pressable, StyleSheet, Platform, Animated } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../../lib/theme';
 import { FONT_FAMILY } from '../goalTheme';
+import { useBreakpoint } from '../../lib/responsive';
 
 interface NavItem {
   href: string;
@@ -22,6 +23,11 @@ export default function TopNavbar() {
   const { colors } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
+  const breakpoint = useBreakpoint();
+
+  if (breakpoint === 'mobile') {
+    return <MobileTopNavbar colors={colors} pathname={pathname} router={router} />;
+  }
 
   return (
     <View style={[styles.navbar, { backgroundColor: colors.surface, borderBottomColor: colors.outline }]}>
@@ -73,15 +79,103 @@ export default function TopNavbar() {
   );
 }
 
+function MobileTopNavbar({ colors, pathname, router }: { colors: any; pathname: string; router: any }) {
+  const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const slideAnim = useRef(new Animated.Value(-280)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (drawerOpen) {
+      Animated.parallel([
+        Animated.spring(slideAnim, { toValue: 0, useNativeDriver: false, damping: 20, stiffness: 200 }),
+        Animated.timing(backdropAnim, { toValue: 1, duration: 200, useNativeDriver: false }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(slideAnim, { toValue: -280, duration: 200, useNativeDriver: false }),
+        Animated.timing(backdropAnim, { toValue: 0, duration: 200, useNativeDriver: false }),
+      ]).start();
+    }
+  }, [drawerOpen, slideAnim, backdropAnim]);
+
+  const isActive = (href: string) => pathname === href || (href !== '/' && pathname.startsWith(href));
+  const inactiveColor = colors.textSecondary;
+
+  const navigate = (href: string) => {
+    setDrawerOpen(false);
+    router.push(href);
+  };
+
+  return (
+    <>
+      <View style={[styles.mobileHeader, { backgroundColor: colors.surface, borderBottomColor: colors.outline }]}>
+        <Pressable style={styles.hamburger} onPress={() => setDrawerOpen(true)} hitSlop={12}>
+          <MaterialIcons name="menu" size={22} color={colors.onSurface} />
+        </Pressable>
+        <Pressable onPress={() => router.push('/')}>
+          <Text style={[styles.logo, { color: colors.primary }]}>GOAL</Text>
+        </Pressable>
+        <View style={styles.mobileActions}>
+          <Pressable
+            style={[styles.avatar, { backgroundColor: colors.primaryLight }]}
+            onPress={() => router.push('/profile')}
+          >
+            <MaterialIcons name="person" size={20} color={colors.primary} />
+          </Pressable>
+        </View>
+      </View>
+
+      {drawerOpen && (
+        <Animated.View style={[styles.backdrop, { opacity: backdropAnim }]}>
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setDrawerOpen(false)} />
+        </Animated.View>
+      )}
+
+      <Animated.View
+        style={[
+          styles.drawer,
+          {
+            backgroundColor: colors.surfaceContainerLow,
+            borderRightColor: colors.outline,
+            transform: [{ translateX: slideAnim }],
+          },
+        ]}
+      >
+        <View style={[styles.drawerHeader, { borderBottomColor: colors.outline }]}>
+          <Text style={[styles.drawerLogo, { color: colors.primary }]}>GOAL</Text>
+        </View>
+        <View style={styles.drawerMenu}>
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.href);
+            const activeBg = colors.primary + '1A';
+            const activeColor = colors.primary;
+            return (
+              <Pressable
+                key={item.href}
+                style={[styles.drawerItem, active && { backgroundColor: activeBg }]}
+                onPress={() => navigate(item.href)}
+              >
+                <MaterialIcons
+                  name={item.icon as any}
+                  size={20}
+                  color={active ? activeColor : inactiveColor}
+                />
+                <Text style={[styles.drawerLabel, { color: active ? activeColor : inactiveColor }]}>
+                  {item.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </Animated.View>
+    </>
+  );
+}
+
 const styles = StyleSheet.create({
   navbar: {
     ...(Platform.OS === 'web'
-      ? {
-          position: 'sticky' as any,
-          top: 0,
-          zIndex: 100,
-          borderBottomWidth: 1,
-        }
+      ? { position: 'sticky' as any, top: 0, zIndex: 100, borderBottomWidth: 1 }
       : {}),
     height: 64,
   },
@@ -93,9 +187,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 'auto' as any,
     paddingHorizontal: 32,
   },
-  logoPressable: {
-    marginRight: 40,
-  },
+  logoPressable: { marginRight: 40 },
   logo: {
     fontFamily: FONT_FAMILY,
     fontSize: 22,
@@ -143,5 +235,66 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  mobileHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 52,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+  },
+  hamburger: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+  },
+  mobileActions: {
+    marginLeft: 'auto' as any,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    zIndex: 90,
+  },
+  drawer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 260,
+    height: '100%',
+    zIndex: 100,
+    borderRightWidth: 1,
+  },
+  drawerHeader: {
+    padding: 20,
+    borderBottomWidth: 1,
+    paddingTop: 56,
+  },
+  drawerLogo: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 20,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  drawerMenu: {
+    flex: 1,
+    padding: 12,
+  },
+  drawerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 10,
+    minHeight: 48,
+  },
+  drawerLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 12,
+    flex: 1,
   },
 });

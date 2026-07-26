@@ -10,7 +10,7 @@ import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
-import { API_BASE_URL, getErrorMessage } from '../lib/api';
+import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
 import { TOKEN_KEY } from '../lib/auth';
 
 export default function ChangePasswordScreen() {
@@ -42,13 +42,25 @@ export default function ChangePasswordScreen() {
     if (password.length < 8) {
       showMessage('Password minimal 8 karakter.', 'error'); return;
     }
+    if (!/[a-z]/.test(password)) {
+      showMessage('Password harus mengandung huruf kecil.', 'error'); return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      showMessage('Password harus mengandung huruf besar.', 'error'); return;
+    }
+    if (!/[0-9]/.test(password)) {
+      showMessage('Password harus mengandung angka.', 'error'); return;
+    }
+    if (password === currentPassword) {
+      showMessage('Password baru harus berbeda dari password saat ini.', 'error'); return;
+    }
 
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/me/password`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${token}` },
+        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ current_password: currentPassword, password, password_confirmation: confirmPassword }),
       });
       const data = await res.json();

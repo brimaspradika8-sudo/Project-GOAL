@@ -55,7 +55,7 @@ class ProfileController extends Controller
     {
         $request->validate([
             'current_password' => 'required',
-            'password'         => ['required', 'confirmed', PasswordRule::min(8)->mixedCase()->numbers()],
+            'password'         => ['required', 'confirmed', 'different:current_password', PasswordRule::min(8)->mixedCase()->numbers()],
         ]);
 
         $user = $request->user();

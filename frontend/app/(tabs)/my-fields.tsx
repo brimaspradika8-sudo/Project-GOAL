@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { COLORS, SIZES, FONTS, SHADOWS } from '../../components/goalTheme';
-import { API_BASE_URL } from '../../lib/api';
+import { COLORS, SIZES, FONTS, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
+import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
 import { TOKEN_KEY } from '../../lib/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeImage } from '../../components/SafeImage';
@@ -59,7 +59,7 @@ export default function MyFieldsScreen() {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 20000);
       const res = await fetch(`${API_BASE_URL}/fields/my/list?page=${pageNum}`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
         signal: controller.signal,
       });
       clearTimeout(timeout);
@@ -114,7 +114,7 @@ export default function MyFieldsScreen() {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         setFields((prev) => prev.filter((f) => f.id !== deleteTarget.id));
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 11,
     fontWeight: '700',
-    fontFamily: 'Montserrat',
+    fontFamily: FONT_FAMILY,
   },
   cardBody: {
     padding: 14,

@@ -8,7 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProfileStore } from '../../store/profileStore';
 import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL, getErrorMessage } from '../../lib/api';
+import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { useDebounce } from '../../hooks/useDebounce';
 import { SkeletonCards } from '../Skeleton';
@@ -24,7 +24,7 @@ const ROLE_CONFIG: Record<string, { label: string; color: string; bg: string }> 
 
 type Tab = 'user' | 'owner';
 
-const EMPTY_CREATE = { name: '', email: '', password: '', role: 'owner' };
+const EMPTY_CREATE = { name: '', email: '', password: '', role: 'player' };
 const EMPTY_EDIT   = { name: '', email: '', password: '' };
 
 export default function UserPage() {
@@ -66,7 +66,7 @@ export default function UserPage() {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       const params = q ? `?search=${encodeURIComponent(q)}` : '';
       const res = await fetch(`${API_BASE_URL}/admin/users${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       setUsers(data?.data ?? []);
@@ -90,7 +90,7 @@ export default function UserPage() {
     const token = await AsyncStorage.getItem(TOKEN_KEY);
     const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/role`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ role }),
     });
     const data = await res.json().catch(() => ({}));
@@ -104,8 +104,17 @@ export default function UserPage() {
       setCreateError('Semua field wajib diisi.');
       return;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(createForm.email.trim())) {
+      setCreateError('Format email tidak valid.');
+      return;
+    }
     if (createForm.password.length < 8) {
       setCreateError('Password minimal 8 karakter.');
+      return;
+    }
+    if (!/[a-z]/.test(createForm.password) || !/[A-Z]/.test(createForm.password) || !/[0-9]/.test(createForm.password)) {
+      setCreateError('Password harus mengandung huruf besar, huruf kecil, dan angka.');
       return;
     }
     setCreateLoading(true);
@@ -114,7 +123,7 @@ export default function UserPage() {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/admin/users`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ name: createForm.name, email: createForm.email, password: createForm.password, role: createForm.role }),
       });
       const data = await res.json();
@@ -147,6 +156,19 @@ export default function UserPage() {
       setEditError('Nama dan email wajib diisi.');
       return;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(editForm.email.trim())) {
+      setEditError('Format email tidak valid.');
+      return;
+    }
+    if (editForm.password.trim() && editForm.password.length < 8) {
+      setEditError('Password minimal 8 karakter.');
+      return;
+    }
+    if (editForm.password.trim() && (!/[a-z]/.test(editForm.password) || !/[A-Z]/.test(editForm.password) || !/[0-9]/.test(editForm.password))) {
+      setEditError('Password harus mengandung huruf besar, huruf kecil, dan angka.');
+      return;
+    }
     setEditLoading(true);
     setEditError(null);
     try {
@@ -155,7 +177,7 @@ export default function UserPage() {
       if (editForm.password.trim()) body.password = editForm.password;
       const res = await fetch(`${API_BASE_URL}/admin/users/${editTarget.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
       });
       const data = await res.json();
@@ -199,7 +221,7 @@ export default function UserPage() {
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/admin/users/${deleteTarget.id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -435,7 +457,7 @@ export default function UserPage() {
             <View style={st.roleSelectWrap}>
               <Text style={st.fieldLabel}>Role</Text>
               <View style={st.roleChipRow}>
-                {['owner', 'super_admin'].map(r => {
+                {['player', 'owner', 'super_admin'].map(r => {
                   const rc = ROLE_CONFIG[r];
                   const active = createForm.role === r;
                   return (
@@ -516,7 +538,7 @@ export default function UserPage() {
       {/* ── UPGRADE ROLE MODAL ── */}
       <ConfirmDialog
         visible={!!upgradeTarget}
-        title={`Upgrade Role — ${upgradeTarget?.name ?? ''}`}
+        title={`Ubah Role — ${upgradeTarget?.name ?? ''}`}
         description="Pilih role baru untuk user ini."
         icon="admin-panel-settings"
         iconColor={COLORS.accentOrange}
@@ -525,6 +547,13 @@ export default function UserPage() {
         error={upgradeError}
         onCancel={() => setUpgradeTarget(null)}
         options={[
+          ...(upgradeTarget?.currentRole !== 'player'
+            ? [{
+                label: 'Jadikan Pemain',
+                icon: 'person',
+                onPress: () => handleUpgrade('player'),
+              }]
+            : []),
           ...(upgradeTarget?.currentRole !== 'owner'
             ? [{
                 label: 'Jadikan Owner',
