@@ -11,11 +11,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { useFieldStore } from '../../store/fieldStore';
 import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../../lib/api';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
+import { useTheme, type ThemeColors } from '../../lib/theme';
 import {
   SPORT_OPTIONS, SPORT_MAP,
   type FieldFormErrors, type FieldFormData,
@@ -27,11 +28,11 @@ import {
 
 const IMG_PLACEHOLDER = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop';
 
-const STATUS_CFG: Record<string, { label: string; bg: string; color: string }> = {
-  approved: { label: 'Aktif',    bg: COLORS.primaryContainer, color: COLORS.primary },
-  pending:  { label: 'Menunggu', bg: COLORS.warningBg, color: COLORS.warningText },
-  rejected: { label: 'Ditolak',  bg: COLORS.errorContainer,    color: COLORS.error },
-};
+const getStatusCfg = (colors: ThemeColors): Record<string, { label: string; bg: string; color: string }> => ({
+  approved: { label: 'Aktif',    bg: colors.primaryContainer, color: colors.primary },
+  pending:  { label: 'Menunggu', bg: colors.floodlight + '20', color: colors.floodlight },
+  rejected: { label: 'Ditolak',  bg: colors.errorContainer, color: colors.error },
+});
 
 const EMPTY_FORM: FieldFormData = {
   name: '',
@@ -45,6 +46,9 @@ const EMPTY_FORM: FieldFormData = {
 };
 
 export default function OwnerFieldsPage() {
+  const { colors } = useTheme();
+  const st = makeStyles(colors);
+  const STATUS_CFG = getStatusCfg(colors);
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -404,7 +408,7 @@ export default function OwnerFieldsPage() {
           onBack={() => router.push('/(tabs)')}
           right={
             <TouchableOpacity style={st.headerAddBtn} activeOpacity={0.8} onPress={openCreate}>
-              <MaterialIcons name="add" size={20} color={COLORS.primary} />
+              <MaterialIcons name="add" size={20} color={colors.primary} />
             </TouchableOpacity>
           }
         />
@@ -416,30 +420,30 @@ export default function OwnerFieldsPage() {
           </View>
           <View style={st.statDivider} />
           <View style={st.statItem}>
-            <Text style={[st.statNum, { color: COLORS.primary }]}>{activeCount}</Text>
+            <Text style={[st.statNum, { color: colors.primary }]}>{activeCount}</Text>
             <Text style={st.statLabel}>Aktif</Text>
           </View>
           <View style={st.statDivider} />
           <View style={st.statItem}>
-            <Text style={[st.statNum, { color: COLORS.floodlight }]}>{pendingCount}</Text>
+            <Text style={[st.statNum, { color: colors.floodlight }]}>{pendingCount}</Text>
             <Text style={st.statLabel}>Menunggu</Text>
           </View>
         </View>
 
         <ScrollView
           contentContainerStyle={st.contentList}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
           showsVerticalScrollIndicator={false}
         >
           {fields.length === 0 ? (
             <View style={st.emptyWrap}>
               <View style={st.emptyIcon}>
-                <MaterialIcons name="sports-soccer" size={40} color={COLORS.textTertiary} />
+                <MaterialIcons name="sports-soccer" size={40} color={colors.textTertiary} />
               </View>
               <Text style={st.emptyTitle}>Belum ada lapangan</Text>
               <Text style={st.emptyDesc}>Mulai tambahkan aset lapangan Anda untuk menerima booking.</Text>
               <TouchableOpacity style={st.emptyAddBtn} activeOpacity={0.85} onPress={openCreate}>
-                <MaterialIcons name="add" size={18} color={COLORS.onPrimary} />
+                <MaterialIcons name="add" size={18} color={colors.onPrimary} />
                 <Text style={st.emptyAddText}>Tambah Lapangan Pertama</Text>
               </TouchableOpacity>
             </View>
@@ -469,12 +473,12 @@ export default function OwnerFieldsPage() {
                       </View>
                     </View>
                     <View style={st.detailRow}>
-                      <MaterialIcons name="sports" size={14} color={COLORS.textSecondary} />
+                      <MaterialIcons name="sports" size={14} color={colors.textSecondary} />
                       <Text style={st.detailText}>{(Object.keys(SPORT_MAP).find(k => SPORT_MAP[k] === f.sport_type) || f.sport_type)?.toUpperCase()}</Text>
                     </View>
                     {f.description ? (
                       <View style={st.detailRow}>
-                        <MaterialIcons name="notes" size={14} color={COLORS.textSecondary} />
+                        <MaterialIcons name="notes" size={14} color={colors.textSecondary} />
                         <Text style={st.detailText} numberOfLines={2}>{f.description}</Text>
                       </View>
                     ) : null}
@@ -484,7 +488,7 @@ export default function OwnerFieldsPage() {
                         activeOpacity={0.8}
                         onPress={() => openEdit(f)}
                       >
-                        <MaterialIcons name="edit" size={16} color={COLORS.primary} />
+                        <MaterialIcons name="edit" size={16} color={colors.primary} />
                         <Text style={st.editBtnText}>Edit Venue</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -492,7 +496,7 @@ export default function OwnerFieldsPage() {
                         activeOpacity={0.8}
                         onPress={() => handleDelete(f.id, f.name)}
                       >
-                        <MaterialIcons name="delete-outline" size={16} color={COLORS.error} />
+                        <MaterialIcons name="delete-outline" size={16} color={colors.error} />
                         <Text style={st.delBtnText}>Hapus</Text>
                       </TouchableOpacity>
                     </View>
@@ -508,8 +512,8 @@ export default function OwnerFieldsPage() {
         visible={showCreate}
         title="Penambahan Venue"
         iconName="add-business"
-        iconColor={COLORS.primary}
-        iconBg={COLORS.primaryContainer}
+        iconColor={colors.primary}
+        iconBg={colors.primaryContainer}
         form={createForm}
         errors={createErrors}
         error={createError}
@@ -520,15 +524,17 @@ export default function OwnerFieldsPage() {
         onClose={() => setShowCreate(false)}
         onSubmit={handleCreate}
         submitLabel="Simpan Lapangan"
-        submitBg={COLORS.primary}
+        submitBg={colors.primary}
+        st={st}
+        colors={colors}
       />
 
       <FieldModal
         visible={!!editTarget}
         title="Edit Venue"
         iconName="edit"
-        iconColor={COLORS.accentPurple}
-        iconBg={COLORS.accentPurpleLight}
+        iconColor={colors.accentPurple}
+        iconBg={colors.accentPurpleLight}
         form={editForm}
         errors={editErrors}
         error={editError}
@@ -539,7 +545,9 @@ export default function OwnerFieldsPage() {
         onClose={() => setEditTarget(null)}
         onSubmit={handleEdit}
         submitLabel="Simpan Perubahan"
-        submitBg={COLORS.accentPurple}
+        submitBg={colors.accentPurple}
+        st={st}
+        colors={colors}
       />
 
       <ConfirmDialog
@@ -559,7 +567,7 @@ export default function OwnerFieldsPage() {
 function FieldModal({
   visible, title, iconName, iconColor, iconBg,
   form, errors, error, loading,
-  onFieldChange, onFieldBlur, onPickImage, onClose, onSubmit, submitLabel, submitBg,
+  onFieldChange, onFieldBlur, onPickImage, onClose, onSubmit, submitLabel, submitBg, st, colors,
 }: {
   visible: boolean; title: string;
   iconName: string; iconColor: string; iconBg: string;
@@ -571,6 +579,8 @@ function FieldModal({
   onPickImage: () => void;
   onClose: () => void; onSubmit: () => void;
   submitLabel: string; submitBg: string;
+  st: ReturnType<typeof makeStyles>;
+  colors: ThemeColors;
 }) {
   const set = (key: keyof FieldFormData) => (val: string) => onFieldChange(key, val);
   const blur = (key: keyof FieldFormData) => () => onFieldBlur(key);
@@ -590,13 +600,13 @@ function FieldModal({
             </View>
             <Text style={st.sheetTitle}>{title}</Text>
             <TouchableOpacity onPress={onClose} style={st.sheetClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <MaterialIcons name="close" size={20} color={COLORS.textSecondary} />
+              <MaterialIcons name="close" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           {error ? (
             <View style={st.errorBox}>
-              <MaterialIcons name="error-outline" size={16} color={COLORS.error} />
+              <MaterialIcons name="error-outline" size={16} color={colors.error} />
               <Text style={st.errorText}>{error}</Text>
             </View>
           ) : null}
@@ -609,14 +619,14 @@ function FieldModal({
                   <View style={st.imagePreviewWrap}>
                     <Image source={{ uri: previewUri }} style={st.imagePreview} resizeMode="cover" />
                     <View style={st.imageEditOverlay}>
-                      <MaterialIcons name="photo-camera" size={18} color="#fff" />
+                      <MaterialIcons name="photo-camera" size={18} color={colors.onPrimary} />
                       <Text style={st.imageEditText}>Ganti Foto</Text>
                     </View>
                   </View>
                 ) : (
                   <View style={st.imageEmpty}>
                     <View style={st.imgDashedCircle}>
-                      <MaterialIcons name="add-photo-alternate" size={22} color={COLORS.primary} />
+                      <MaterialIcons name="add-photo-alternate" size={22} color={colors.primary} />
                     </View>
                     <View style={st.imageEmptyTextCol}>
                       <Text style={st.imageEmptyText}>Tap untuk memilih foto</Text>
@@ -625,7 +635,7 @@ function FieldModal({
                   </View>
                 )}
               </TouchableOpacity>
-              {errors.image ? <FieldError message={errors.image} /> : null}
+              {errors.image ? <FieldError message={errors.image} st={st} colors={colors} /> : null}
             </View>
 
             <FField
@@ -635,6 +645,8 @@ function FieldModal({
               onBlur={blur('name')}
               placeholder="Contoh: Futsal Arena Gemilang"
               error={errors.name}
+              st={st}
+              colors={colors}
             />
 
             <View style={st.fieldWrap}>
@@ -653,7 +665,7 @@ function FieldModal({
                   );
                 })}
               </View>
-              {errors.sport_type ? <FieldError message={errors.sport_type} /> : null}
+              {errors.sport_type ? <FieldError message={errors.sport_type} st={st} colors={colors} /> : null}
             </View>
 
             {/* Deskripsi */}
@@ -665,6 +677,8 @@ function FieldModal({
               placeholder="Fasilitas yang tersedia..."
               multiline
               error={errors.description}
+              st={st}
+              colors={colors}
             />
 
             {/* Harga */}
@@ -676,6 +690,8 @@ function FieldModal({
               placeholder="Contoh: 150000"
               keyboardType="numeric"
               error={errors.price_per_hour}
+              st={st}
+              colors={colors}
             />
 
             {/* Lokasi */}
@@ -686,6 +702,8 @@ function FieldModal({
               onBlur={blur('location')}
               placeholder="Contoh: Jl. Merdeka No. 10, Kota Bandung"
               error={errors.location}
+              st={st}
+              colors={colors}
             />
           </ScrollView>
 
@@ -696,7 +714,7 @@ function FieldModal({
               disabled={isSubmitDisabled}
             >
               {loading
-                ? <ActivityIndicator color={COLORS.onPrimary} size="small" />
+                ? <ActivityIndicator color={colors.onPrimary} size="small" />
                 : <Text style={st.submitText}>{submitLabel}</Text>}
             </TouchableOpacity>
           </View>
@@ -707,23 +725,25 @@ function FieldModal({
 }
 
 // ── Inline error message ──────────────────────────────────────────────────────
-function FieldError({ message }: { message: string }) {
+function FieldError({ message, st, colors }: { message: string; st: ReturnType<typeof makeStyles>; colors: ThemeColors }) {
   if (!message) return null;
   return (
     <View style={st.fieldErrorRow}>
-      <MaterialIcons name="warning" size={13} color={COLORS.error} />
+      <MaterialIcons name="warning" size={13} color={colors.error} />
       <Text style={st.fieldErrorText}>{message}</Text>
     </View>
   );
 }
 
 // ── Text input field ──────────────────────────────────────────────────────────
-function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboardType, multiline, error }: {
+function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboardType, multiline, error, st, colors }: {
   label: string; icon: string; value: string;
   onChangeText: (v: string) => void;
   onBlur?: () => void;
   placeholder?: string; keyboardType?: any; multiline?: boolean;
   error?: string;
+  st: ReturnType<typeof makeStyles>;
+  colors: ThemeColors;
 }) {
   return (
     <View style={st.fieldWrap}>
@@ -733,66 +753,66 @@ function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboar
         multiline && { alignItems: 'flex-start', paddingTop: 14 },
         error && st.fieldRowError,
       ]}>
-        <MaterialIcons name={icon as any} size={18} color={error ? COLORS.error : COLORS.textSecondary} style={{ marginRight: 12, marginTop: multiline ? 2 : 0 }} />
+        <MaterialIcons name={icon as any} size={18} color={error ? colors.error : colors.textSecondary} style={{ marginRight: 12, marginTop: multiline ? 2 : 0 }} />
         <TextInput
           style={[st.fieldInput, multiline && { minHeight: 80, textAlignVertical: 'top' }]}
           value={value}
           onChangeText={onChangeText}
           onBlur={onBlur}
           placeholder={placeholder ?? label}
-          placeholderTextColor={COLORS.textTertiary}
+          placeholderTextColor={colors.textTertiary}
           keyboardType={keyboardType}
           multiline={multiline}
         />
       </View>
-      {error ? <FieldError message={error} /> : null}
+      {error ? <FieldError message={error} st={st} colors={colors} /> : null}
     </View>
   );
 }
 
-const st = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.background },
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.background },
 
   headerAddBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     justifyContent: 'center', alignItems: 'center',
     ...SHADOWS.xs,
   },
 
   statsRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.surface,
+    backgroundColor: colors.surface,
     marginHorizontal: SIZES.gutter, marginTop: 8,
     borderRadius: SIZES.borderRadius, borderWidth: 1,
-    borderColor: COLORS.outline, paddingVertical: 8, paddingHorizontal: 16,
+    borderColor: colors.outline, paddingVertical: 8, paddingHorizontal: 16,
     ...SHADOWS.xs,
   },
   statItem: { flex: 1, alignItems: 'center' },
-  statNum: { ...FONTS.headlineSm, color: COLORS.text },
-  statLabel: { ...FONTS.bodySm, color: COLORS.textSecondary, marginTop: 2 },
-  statDivider: { width: 1, height: 28, backgroundColor: COLORS.outline },
+  statNum: { ...FONTS.headlineSm, color: colors.text },
+  statLabel: { ...FONTS.bodySm, color: colors.textSecondary, marginTop: 2 },
+  statDivider: { width: 1, height: 28, backgroundColor: colors.outline },
 
   contentList: { padding: SIZES.gutter, paddingBottom: 60 },
   emptyWrap: { alignItems: 'center', marginTop: 60, gap: 12 },
   emptyIcon: {
     width: 80, height: 80, borderRadius: 24,
-    backgroundColor: COLORS.surfaceContainerHigh,
+    backgroundColor: colors.surfaceContainerHigh,
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: COLORS.outline,
+    borderWidth: 1, borderColor: colors.outline,
   },
-  emptyTitle: { ...FONTS.titleLg, color: COLORS.text },
-  emptyDesc: { ...FONTS.bodyMd, color: COLORS.textSecondary, textAlign: 'center', paddingHorizontal: 20 },
+  emptyTitle: { ...FONTS.titleLg, color: colors.text },
+  emptyDesc: { ...FONTS.bodyMd, color: colors.textSecondary, textAlign: 'center', paddingHorizontal: 20 },
   emptyAddBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: COLORS.primary, paddingHorizontal: 20, paddingVertical: 12,
+    backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 12,
     borderRadius: SIZES.borderRadius, marginTop: 8, ...SHADOWS.primary,
   },
-  emptyAddText: { ...FONTS.titleSm, color: COLORS.onPrimary },
+  emptyAddText: { ...FONTS.titleSm, color: colors.onPrimary },
 
   card: {
-    backgroundColor: COLORS.surface, borderRadius: 20, marginBottom: 16,
-    borderWidth: 1, borderColor: COLORS.outline,
+    backgroundColor: colors.surface, borderRadius: 20, marginBottom: 16,
+    borderWidth: 1, borderColor: colors.outline,
     ...SHADOWS.sm,
   },
   cardImgWrap: { borderTopLeftRadius: 19, borderTopRightRadius: 19, overflow: 'hidden' },
@@ -807,16 +827,16 @@ const st = StyleSheet.create({
 
   cardBody: { padding: 18 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  name: { ...FONTS.titleLg, color: COLORS.text, flex: 1, marginRight: 10 },
+  name: { ...FONTS.titleLg, color: colors.text, flex: 1, marginRight: 10 },
   pricePill: {
-    backgroundColor: COLORS.primaryContainer, paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 10, borderWidth: 1, borderColor: COLORS.primary + '30',
+    backgroundColor: colors.primaryContainer, paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 10, borderWidth: 1, borderColor: colors.primary + '30',
   },
-  price: { ...FONTS.titleMd, color: COLORS.primary },
-  priceSub: { ...FONTS.bodySm, color: COLORS.textSecondary },
+  price: { ...FONTS.titleMd, color: colors.primary },
+  priceSub: { ...FONTS.bodySm, color: colors.textSecondary },
 
   detailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
-  detailText: { ...FONTS.bodyMd, color: COLORS.textSecondary, flex: 1 },
+  detailText: { ...FONTS.bodyMd, color: colors.textSecondary, flex: 1 },
 
   actions: {
     flexDirection: 'row',
@@ -826,41 +846,41 @@ const st = StyleSheet.create({
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: COLORS.outline,
+    borderTopColor: colors.outline,
   },
   editBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: COLORS.successLight,
+    backgroundColor: colors.successLight,
     paddingVertical: 9,
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.successBorder,
+    borderColor: colors.primary + '30',
   },
-  editBtnText: { ...FONTS.titleSm, fontSize: 12, color: COLORS.primary },
+  editBtnText: { ...FONTS.titleSm, fontSize: 12, color: colors.primary },
   delBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: COLORS.errorLight,
+    backgroundColor: colors.errorLight,
     paddingVertical: 9,
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.errorBorder,
+    borderColor: colors.error + '30',
   },
-  delBtnText: { ...FONTS.titleSm, fontSize: 12, color: COLORS.error },
+  delBtnText: { ...FONTS.titleSm, fontSize: 12, color: colors.error },
 
   // Modal styling
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   sheet: {
-    backgroundColor: COLORS.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
     padding: 24, paddingBottom: Platform.OS === 'ios' ? 36 : 24,
-    borderTopWidth: 1, borderColor: COLORS.outline, maxHeight: '90%',
+    borderTopWidth: 1, borderColor: colors.outline, maxHeight: '90%',
     maxWidth: 640, width: '100%', alignSelf: 'center',
     ...(Platform.OS === 'web' ? {
       borderBottomLeftRadius: 28,
@@ -869,26 +889,26 @@ const st = StyleSheet.create({
       marginTop: 'auto',
     } : {}),
   },
-  sheetHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: COLORS.outline, alignSelf: 'center', marginBottom: 18 },
+  sheetHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: colors.outline, alignSelf: 'center', marginBottom: 18 },
   sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 18 },
   sheetIconWrap: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  sheetTitle: { ...FONTS.headlineSm, fontSize: 18, color: COLORS.text, flex: 1 },
-  sheetClose: { padding: 6, backgroundColor: COLORS.surfaceContainerLow, borderRadius: 20 },
+  sheetTitle: { ...FONTS.headlineSm, fontSize: 18, color: colors.text, flex: 1 },
+  sheetClose: { padding: 6, backgroundColor: colors.surfaceContainerLow, borderRadius: 20 },
   errorBox: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: COLORS.errorContainer, borderRadius: 12,
-    padding: 14, marginBottom: 16, borderWidth: 1, borderColor: COLORS.error + '30',
+    backgroundColor: colors.errorContainer, borderRadius: 12,
+    padding: 14, marginBottom: 16, borderWidth: 1, borderColor: colors.error + '30',
   },
-  errorText: { color: COLORS.error, ...FONTS.bodySm, flex: 1 },
+  errorText: { color: colors.error, ...FONTS.bodySm, flex: 1 },
 
   // Image picker
   imagePicker: {
     borderRadius: 16, overflow: 'hidden',
-    backgroundColor: COLORS.surfaceContainerLow, borderWidth: 1.5,
-    borderStyle: 'dashed', borderColor: COLORS.outline,
+    backgroundColor: colors.surfaceContainerLow, borderWidth: 1.5,
+    borderStyle: 'dashed', borderColor: colors.outline,
     minHeight: 90, justifyContent: 'center',
   },
-  imagePickerError: { borderColor: COLORS.error },
+  imagePickerError: { borderColor: colors.error },
   imagePreviewWrap: { width: '100%', height: 130, position: 'relative' },
   imagePreview: { width: '100%', height: '100%' },
   imageEditOverlay: {
@@ -901,45 +921,45 @@ const st = StyleSheet.create({
   imageEmptyTextCol: { flex: 1 },
   imgDashedCircle: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: COLORS.primaryContainer, justifyContent: 'center',
+    backgroundColor: colors.primaryContainer, justifyContent: 'center',
     alignItems: 'center',
   },
-  imageEmptyText: { ...FONTS.titleSm, fontSize: 13, color: COLORS.text },
-  imageEmptyHint: { ...FONTS.bodySm, fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
+  imageEmptyText: { ...FONTS.titleSm, fontSize: 13, color: colors.text },
+  imageEmptyHint: { ...FONTS.bodySm, fontSize: 11, color: colors.textSecondary, marginTop: 2 },
 
   // Sport chips
   sportRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  sportRowError: { borderColor: COLORS.error },
+  sportRowError: { borderColor: colors.error },
   sportChip: {
     paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20,
-    backgroundColor: COLORS.surfaceContainerLow, borderWidth: 1, borderColor: COLORS.outline,
+    backgroundColor: colors.surfaceContainerLow, borderWidth: 1, borderColor: colors.outline,
   },
-  sportChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  sportChipText: { ...FONTS.labelMd, fontSize: 12, color: COLORS.textSecondary, fontWeight: '600' },
-  sportChipTextActive: { color: COLORS.onPrimary, fontWeight: '700' },
+  sportChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  sportChipText: { ...FONTS.labelMd, fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
+  sportChipTextActive: { color: colors.onPrimary, fontWeight: '700' },
 
   // Field input
   fieldWrap: { marginBottom: 20 },
-  fieldLabel: { ...FONTS.labelSm, fontSize: 11, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 10, letterSpacing: 0.6, textTransform: 'uppercase' },
+  fieldLabel: { ...FONTS.labelSm, fontSize: 11, fontWeight: '700', color: colors.textSecondary, marginBottom: 10, letterSpacing: 0.6, textTransform: 'uppercase' },
   fieldRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainerLow, borderRadius: 14,
-    paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1.5, borderColor: COLORS.outline,
+    backgroundColor: colors.surfaceContainerLow, borderRadius: 14,
+    paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1.5, borderColor: colors.outline,
   },
-  fieldRowError: { borderColor: COLORS.error, backgroundColor: COLORS.errorContainer + '30' },
-  fieldInput: { flex: 1, color: COLORS.text, fontSize: 14, paddingVertical: 0 },
+  fieldRowError: { borderColor: colors.error, backgroundColor: colors.errorContainer + '30' },
+  fieldInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0 },
 
   fieldErrorRow: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     marginTop: 6, paddingHorizontal: 4,
   },
-  fieldErrorText: { ...FONTS.bodySm, color: COLORS.error, flex: 1 },
+  fieldErrorText: { ...FONTS.bodySm, color: colors.error, flex: 1 },
 
   sheetActions: {
     marginTop: 16,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: COLORS.outline,
+    borderTopColor: colors.outline,
     flexDirection: 'row',
     justifyContent: 'flex-end',
   },
@@ -948,8 +968,8 @@ const st = StyleSheet.create({
     borderRadius: 14, alignItems: 'center', minHeight: 48, justifyContent: 'center',
     ...(Platform.OS === 'web'
       ? { boxShadow: '0 2px 6px rgba(30,138,76,0.15)' }
-      : { shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 3 }
+      : { shadowColor: colors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 3 }
     ),
   },
-  submitText: { ...FONTS.titleSm, fontSize: 14, fontWeight: '700', color: COLORS.onPrimary },
+  submitText: { ...FONTS.titleSm, fontSize: 14, fontWeight: '700', color: colors.onPrimary },
 });
