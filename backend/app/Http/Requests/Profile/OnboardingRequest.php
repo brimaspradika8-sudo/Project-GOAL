@@ -18,7 +18,7 @@ class OnboardingRequest extends FormRequest
             'sports'     => 'required|array|min:1',
             'sports.*'   => 'string|max:100',
             'region'     => 'nullable|string|max:100',
-            'avatar_url' => 'nullable|string|max:2048',
+            'avatar_url' => 'nullable|url|max:2048',
         ];
     }
 
@@ -31,6 +31,7 @@ class OnboardingRequest extends FormRequest
             'username.regex'    => 'Username hanya boleh huruf, angka, dan underscore.',
             'sports.required'   => 'Pilih minimal 1 olahraga.',
             'sports.min'        => 'Pilih minimal 1 olahraga.',
+            'avatar_url.url'    => 'URL avatar harus berformat URL yang valid.',
         ];
     }
 }

@@ -21,23 +21,18 @@ class PasswordResetController extends Controller
 
         $user = \App\Models\User::where('email', $email)->first();
 
-        if (!$user) {
-            return response()->json([
-                'message' => 'Tautan reset password telah dikirim ke email Anda jika terdaftar.',
-            ]);
-        }
+        if ($user) {
+            $token = Password::broker('users')->createToken($user);
 
-        $token = Password::broker('users')->createToken($user);
-        
-        try {
-            Mail::to($email)->send(new ResetPasswordMail($token, $email));
-        } catch (\Exception $e) {
-            // If mail fails, we might still want to proceed in local development
-            \Log::error('Mail fail: ' . $e->getMessage());
+            try {
+                Mail::to($email)->send(new ResetPasswordMail($token, $email));
+            } catch (\Exception $e) {
+                \Log::error('Mail fail: ' . $e->getMessage());
+            }
         }
 
         return response()->json([
-            'message' => 'Tautan reset password telah dikirim ke email Anda. Silakan cek inbox atau folder spam.',
+            'message' => 'Jika email terdaftar, tautan reset password telah dikirim.',
         ]);
     }
 

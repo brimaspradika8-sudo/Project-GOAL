@@ -1,13 +1,22 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing } from 'react-native';
+import { Animated, Easing, Platform } from 'react-native';
 
 export function useAuthAnimations() {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(100)).current;
+  const isWeb = Platform.OS === 'web';
+  const fadeAnim = useRef(new Animated.Value(isWeb ? 1 : 0)).current;
+  const slideAnim = useRef(new Animated.Value(isWeb ? 0 : 100)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const bgScaleAnim = useRef(new Animated.Value(1.1)).current;
+  const bgScaleAnim = useRef(new Animated.Value(isWeb ? 1 : 1.1)).current;
 
   useEffect(() => {
+    if (isWeb) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      bgScaleAnim.setValue(1);
+      pulseAnim.setValue(1);
+      return;
+    }
+
     fadeAnim.setValue(0);
     slideAnim.setValue(100);
 
@@ -59,7 +68,7 @@ export function useAuthAnimations() {
         }),
       ])
     ).start();
-  }, []);
+  }, [bgScaleAnim, fadeAnim, isWeb, pulseAnim, slideAnim]);
 
   return { fadeAnim, slideAnim, pulseAnim, bgScaleAnim };
 }

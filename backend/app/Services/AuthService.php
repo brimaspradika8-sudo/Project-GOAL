@@ -2,7 +2,9 @@
 namespace App\Services;
 
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class AuthService
 {
@@ -12,28 +14,30 @@ class AuthService
         $password = $data['password'];
         $name = trim($data['name']);
 
-        if (User::where('email', $email)->exists()) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'email' => ['Email sudah terdaftar.'],
+        return DB::transaction(function () use ($email, $password, $name) {
+            if (User::where('email', $email)->exists()) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'email' => ['Email sudah terdaftar.'],
+                ]);
+            }
+
+            $user = User::create([
+                'name'     => $name,
+                'email'    => $email,
+                'password' => $password,
             ]);
-        }
 
-        $user = User::create([
-            'name'     => $name,
-            'email'    => $email,
-            'password' => $password,
-        ]);
+            $token = $user->createToken('app-token')->plainTextToken;
 
-        $token = $user->createToken('app-token', ['*'], now()->addMonth())->plainTextToken;
-
-        return [
-            'token' => $token,
-            'user'  => [
-                'id'    => $user->id,
-                'name'  => $user->name,
-                'email' => $user->email,
-            ],
-        ];
+            return [
+                'token' => $token,
+                'user'  => [
+                    'id'    => $user->id,
+                    'name'  => $user->name,
+                    'email' => $user->email,
+                ],
+            ];
+        });
     }
 
     public function login(string $email, string $password): array
@@ -48,7 +52,7 @@ class AuthService
             ])->status(401);
         }
 
-        $token = $user->createToken('Mobile App', ['*'], now()->addMonth())->plainTextToken;
+        $token = $user->createToken('Mobile App')->plainTextToken;
 
         return [
             'token' => $token,
@@ -70,7 +74,7 @@ class AuthService
                 $user->tokens()->delete();
             }
         } catch (\Exception $e) {
-            // swallow errors for logout
+            Log::warning('Logout failed: ' . $e->getMessage());
         }
     }
 

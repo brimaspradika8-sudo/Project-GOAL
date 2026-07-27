@@ -21,6 +21,11 @@ class Field extends Model
         'image_url',
     ];
 
+    protected $hidden = [
+        'rejection_reason',
+        'approved_by',
+    ];
+
     protected $casts = [
         'price_per_hour' => 'integer',
         'approved_at'    => 'datetime',

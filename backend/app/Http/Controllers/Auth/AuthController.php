@@ -68,8 +68,8 @@ class AuthController extends Controller
 
     public function checkEmail(CheckEmailRequest $request): JsonResponse
     {
-        $exists = $this->auth->checkEmail($request->email);
+        $this->auth->checkEmail($request->email);
 
-        return response()->json(['exists' => $exists]);
+        return response()->json(['message' => 'Request diterima.']);
     }
 }

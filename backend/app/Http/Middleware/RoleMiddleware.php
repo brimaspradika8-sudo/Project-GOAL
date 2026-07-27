@@ -27,8 +27,6 @@ class RoleMiddleware
         if (!in_array($profile->role, $roles)) {
             return response()->json([
                 'message' => 'Anda tidak memiliki akses untuk melakukan ini.',
-                'required' => $roles,
-                'current'  => $profile->role,
             ], 403);
         }
 

@@ -17,7 +17,8 @@ class FieldService
         $query = Field::approved()->with('owner:id,name');
 
         if ($search) {
-            $searchTerm = "%{$search}%";
+            $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+            $searchTerm = "%{$escaped}%";
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('name', 'ilike', $searchTerm)
                     ->orWhere('location', 'ilike', $searchTerm);
@@ -25,10 +26,7 @@ class FieldService
         }
 
         if ($sport) {
-            $query->where(function ($q) use ($sport) {
-                $q->where('sport_type', $sport)
-                  ->orWhereRaw('LOWER(sport_type) = ?', [strtolower($sport)]);
-            });
+            $query->where('sport_type', 'ilike', $sport);
         }
 
         return $query->latest()->paginate(15, ['*'], 'page', $page);
@@ -45,10 +43,7 @@ class FieldService
         return Cache::remember($cacheKey, $this->cacheTtl, function () use ($sport) {
             return Field::approved()
                 ->with('owner:id,name')
-                ->when($sport, fn ($q) => $q->where(function ($sq) use ($sport) {
-                    $sq->where('sport_type', $sport)
-                       ->orWhereRaw('LOWER(sport_type) = ?', [strtolower($sport)]);
-                }))
+                ->when($sport, fn ($q) => $q->where('sport_type', 'ilike', $sport))
                 ->latest()
                 ->paginate(15);
         });
@@ -83,6 +78,11 @@ class FieldService
         return Field::with('owner:id,name')->find($id);
     }
 
+    public function findApproved(int $id): ?Field
+    {
+        return Field::approved()->with('owner:id,name')->find($id);
+    }
+
     public function create(User $user, array $data): Field
     {
         $isSuperAdmin = $user->profile?->role === 'super_admin';
@@ -106,11 +106,15 @@ class FieldService
         return $field;
     }
 
-    public function update(Field $field, array $data, bool $isAdmin = false): Field
+    public function update(Field $field, array $data, User $user, bool $isAdmin = false): Field
     {
+        if (!$isAdmin && $field->owner_id !== $user->id) {
+            throw new \RuntimeException('Anda bukan pemilik lapangan ini.');
+        }
+
         $allowed = collect($data)->only([
             'name', 'sport_type', 'location', 'description', 'price_per_hour', 'image_url',
-        ])->filter()->toArray();
+        ])->filter(fn ($v) => $v !== null)->toArray();
 
         $field->update($allowed);
 
@@ -134,6 +138,10 @@ class FieldService
 
     public function approve(Field $field, User $approver, string $status, ?string $reason = null): Field
     {
+        if ($field->owner_id === $approver->id) {
+            throw new \RuntimeException('Tidak dapat memproses lapangan sendiri.');
+        }
+
         $field->forceFill([
             'status' => $status,
             'approved_by' => $approver->id,
