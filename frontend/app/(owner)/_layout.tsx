@@ -97,6 +97,72 @@ export default function OwnerTabLayout() {
     );
   }
 
+  if (isWeb) {
+    return (
+      <View style={[styles.webRoot, { backgroundColor: colors.background }]}>
+        <Sidebar
+          title="Owner Panel"
+          accentColor={colors.accentOrange}
+          items={sidebarItems}
+        />
+        <View style={[styles.webContent, { backgroundColor: colors.background }]}>
+          <Tabs
+            tabBar={() => null}
+            screenOptions={{
+              headerShown: false,
+              tabBarActiveTintColor: colors.primary,
+              tabBarInactiveTintColor: colors.textTertiary,
+              tabBarLabelStyle: styles.tabLabel,
+              tabBarItemStyle: styles.tabItem,
+            }}
+          >
+            <Tabs.Screen
+              name="fields"
+              options={{
+                title: 'Lapangan',
+                tabBarIcon: ({ color }) => (
+                  <MaterialIcons name="stadium" size={24} color={color} />
+                ),
+              }}
+              listeners={{ tabPress: () => Haptics.selectionAsync() }}
+            />
+            <Tabs.Screen
+              name="bookings"
+              options={{
+                title: 'Booking',
+                tabBarIcon: ({ color }) => (
+                  <MaterialIcons name="receipt-long" size={24} color={color} />
+                ),
+              }}
+              listeners={{ tabPress: () => Haptics.selectionAsync() }}
+            />
+            <Tabs.Screen
+              name="revenue"
+              options={{
+                title: 'Pendapatan',
+                tabBarIcon: ({ color }) => (
+                  <MaterialIcons name="bar-chart" size={24} color={color} />
+                ),
+              }}
+              listeners={{ tabPress: () => Haptics.selectionAsync() }}
+            />
+            <Tabs.Screen
+              name="profile"
+              options={{
+                title: 'Profil',
+                tabBarIcon: ({ color }) => (
+                  <MaterialIcons name="person" size={24} color={color} />
+                ),
+              }}
+              listeners={{ tabPress: () => Haptics.selectionAsync() }}
+            />
+            <Tabs.Screen name="index" options={{ href: null }} />
+          </Tabs>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <Tabs
       screenOptions={{
