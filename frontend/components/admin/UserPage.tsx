@@ -86,7 +86,7 @@ export default function UserPage() {
 
   useEffect(() => {
     if (!loading) fetchUsers(debouncedSearch);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, fetchUsers, loading]);
 
   const onRefresh = () => { setRefreshing(true); fetchUsers(search); };
 

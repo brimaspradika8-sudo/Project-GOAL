@@ -7,14 +7,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../lib/theme';
 import { FONT_FAMILY } from '../../components/goalTheme';
 import TopNavbar from '../../components/web/TopNavbar';
-import { useBreakpoint } from '../../lib/responsive';
 
 const isWeb = Platform.OS === 'web';
 
 export default function TabLayout() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const breakpoint = useBreakpoint();
   const styles = makeStyles(colors, insets);
 
   return (

@@ -17,10 +17,10 @@ class FieldService
         $query = Field::approved()->with('owner:id,name');
 
         if ($search) {
-            $searchTerm = "%{$search}%";
+            $searchTerm = '%' . mb_strtolower($search) . '%';
             $query->where(function ($q) use ($searchTerm) {
-                $q->where('name', 'ilike', $searchTerm)
-                    ->orWhere('location', 'ilike', $searchTerm);
+                $q->whereRaw('LOWER(name) LIKE ?', [$searchTerm])
+                    ->orWhereRaw('LOWER(location) LIKE ?', [$searchTerm]);
             });
         }
 

@@ -6,7 +6,6 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../lib/theme';
 import { FONT_FAMILY } from '../../components/goalTheme';
-import { TOKEN_KEY } from '../../lib/auth';
 import Sidebar, { SidebarItem } from '../../components/web/Sidebar';
 import MobileWebHeader from '../../components/web/MobileWebHeader';
 import { useBreakpoint } from '../../lib/responsive';

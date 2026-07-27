@@ -1,10 +1,10 @@
 import React from 'react';
 import {
   View, Text, TouchableOpacity, Modal, StyleSheet,
-  ActivityIndicator, Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { COLORS, FONTS, SHADOWS } from '../goalTheme';
 
 export interface ConfirmOption {
   label: string;
