@@ -42,3 +42,6 @@ app-example
 # generated native folders
 /ios
 /android
+
+fix_index.js
+fix_profile.js

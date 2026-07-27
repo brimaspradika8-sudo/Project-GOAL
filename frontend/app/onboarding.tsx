@@ -28,6 +28,7 @@ import { useUsernameCheck } from '../hooks/useUsernameCheck';
 import { TOKEN_KEY } from '../lib/auth';
 import { COLORS, FONTS, SHADOWS } from '../components/goalTheme';
 import AuthInput from '../components/AuthInput';
+import { useTheme } from '../lib/theme';
 
 const SPORTS = [
   { id: 'futsal', label: 'Futsal', icon: 'sports-soccer' as const },
@@ -65,6 +66,8 @@ const CITIES_BY_PROVINCE: Record<string, string[]> = {
 
 export default function OnboardingScreen() {
   const { width } = useWindowDimensions();
+  const { resolved } = useTheme();
+  const isDark = resolved === 'dark';
   const insets = useSafeAreaInsets();
   const isDesktop = width >= 900;
   const [step, setStep] = useState(1);
@@ -255,11 +258,11 @@ export default function OnboardingScreen() {
   };
 
   const renderStepOne = () => (
-    <Animated.View style={[styles.formPanel, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+    <Animated.View style={[{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
       <View style={styles.sectionHeader}>
         <Text style={styles.kicker}>Profil Pemain</Text>
-        <Text style={styles.title}>Siapkan identitas akunmu</Text>
-        <Text style={styles.subtitle}>Username, foto, dan lokasi membantu GOAL menampilkan venue yang lebih relevan.</Text>
+        <Text style={[styles.title, { color: isDark ? '#FFFFFF' : COLORS.text }]}>Siapkan identitas akunmu</Text>
+        <Text style={[styles.subtitle, { color: isDark ? '#CBD5E1' : COLORS.textSecondary }]}>Username, foto, dan lokasi membantu GOAL menampilkan venue yang lebih relevan.</Text>
       </View>
 
       <View style={styles.avatarArea}>
@@ -295,17 +298,21 @@ export default function OnboardingScreen() {
       />
       {renderStatus()}
 
-      <Text style={styles.fieldGroupLabel}>Lokasi utama</Text>
+      <Text style={[styles.fieldGroupLabel, { color: isDark ? '#94A3B8' : COLORS.textSecondary }]}>Lokasi utama</Text>
       <View style={isDesktop ? styles.dropdownGrid : undefined}>
-        <TouchableOpacity style={[styles.dropdown, isDesktop && styles.dropdownHalf]} onPress={() => setIsProvinceModalOpen(true)} activeOpacity={0.75}>
+        <TouchableOpacity
+          style={[styles.dropdown, isDesktop && styles.dropdownHalf, { backgroundColor: isDark ? '#1E293B' : COLORS.surfaceContainerLow, borderColor: isDark ? '#334155' : COLORS.divider }]}
+          onPress={() => setIsProvinceModalOpen(true)}
+          activeOpacity={0.75}
+        >
           <View>
-            <Text style={styles.dropdownLabel}>Provinsi</Text>
-            <Text style={styles.dropdownValue}>{selectedProvince}</Text>
+            <Text style={[styles.dropdownLabel, { color: isDark ? '#94A3B8' : COLORS.textSecondary }]}>Provinsi</Text>
+            <Text style={[styles.dropdownValue, { color: isDark ? '#FFFFFF' : COLORS.text }]}>{selectedProvince}</Text>
           </View>
-          <MaterialIcons name="expand-more" size={22} color={COLORS.textTertiary} />
+          <MaterialIcons name="expand-more" size={22} color={isDark ? '#64748B' : COLORS.textTertiary} />
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.dropdown, isDesktop && styles.dropdownHalf]}
+          style={[styles.dropdown, isDesktop && styles.dropdownHalf, { backgroundColor: isDark ? '#1E293B' : COLORS.surfaceContainerLow, borderColor: isDark ? '#334155' : COLORS.divider }]}
           onPress={() => {
             setRegionSearch('');
             setIsRegionModalOpen(true);
@@ -313,10 +320,10 @@ export default function OnboardingScreen() {
           activeOpacity={0.75}
         >
           <View>
-            <Text style={styles.dropdownLabel}>Kota / Kabupaten</Text>
-            <Text style={styles.dropdownValue}>{region.replace(', ID', '')}</Text>
+            <Text style={[styles.dropdownLabel, { color: isDark ? '#94A3B8' : COLORS.textSecondary }]}>Kota / Kabupaten</Text>
+            <Text style={[styles.dropdownValue, { color: isDark ? '#FFFFFF' : COLORS.text }]}>{region.replace(', ID', '')}</Text>
           </View>
-          <MaterialIcons name="expand-more" size={22} color={COLORS.textTertiary} />
+          <MaterialIcons name="expand-more" size={22} color={isDark ? '#64748B' : COLORS.textTertiary} />
         </TouchableOpacity>
       </View>
 
@@ -332,11 +339,11 @@ export default function OnboardingScreen() {
   );
 
   const renderStepTwo = () => (
-    <Animated.View style={[styles.formPanel, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+    <Animated.View style={[{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
       <View style={styles.sectionHeader}>
         <Text style={styles.kicker}>Preferensi</Text>
-        <Text style={styles.title}>Pilih olahraga favorit</Text>
-        <Text style={styles.subtitle}>Pilih minimal satu supaya rekomendasi venue dan match terasa lebih pas.</Text>
+        <Text style={[styles.title, { color: isDark ? '#FFFFFF' : COLORS.text }]}>Pilih olahraga favorit</Text>
+        <Text style={[styles.subtitle, { color: isDark ? '#CBD5E1' : COLORS.textSecondary }]}>Pilih minimal satu supaya rekomendasi venue dan match terasa lebih pas.</Text>
       </View>
 
       <View style={styles.sportsGrid}>
@@ -378,7 +385,7 @@ export default function OnboardingScreen() {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       <View style={styles.progressBg}>
         <View style={[styles.progressFill, { width: `${(step / TOTAL_STEPS) * 100}%` }]} />
@@ -418,14 +425,16 @@ export default function OnboardingScreen() {
           </View>
 
           <View style={styles.contentPanel}>
-            {step === 1 ? renderStepOne() : renderStepTwo()}
+            <View style={[styles.formPanel, { backgroundColor: isDark ? '#0F172A' : COLORS.surfaceWhite, borderColor: isDark ? '#1E293B' : COLORS.divider }]}>
+              {step === 1 ? renderStepOne() : renderStepTwo()}
 
-            {submitError && (
-              <View style={styles.errorBox}>
-                <MaterialIcons name="error-outline" size={16} color={COLORS.error} />
-                <Text style={styles.errorText}>{submitError}</Text>
-              </View>
-            )}
+              {submitError && (
+                <View style={styles.errorBox}>
+                  <MaterialIcons name="error-outline" size={16} color={COLORS.error} />
+                  <Text style={styles.errorText}>{submitError}</Text>
+                </View>
+              )}
+            </View>
           </View>
         </View>
       </ScrollView>

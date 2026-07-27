@@ -5,14 +5,13 @@ import * as NativeSplash from 'expo-splash-screen';
 import * as Font from 'expo-font';
 import 'react-native-reanimated';
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import LoadingScreen from '../components/LoadingScreen';
 import SplashScreen from '../components/SplashScreen';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
 import { useProfileStore } from '../store/profileStore';
 import { ToastProvider } from '../components/Toast';
@@ -20,7 +19,6 @@ import { ThemeProvider, useTheme } from '../lib/theme';
 import AppToast from '../components/shared/AppToast';
 import { useToastStore } from '../store/toastStore';
 
-import { Platform } from 'react-native';
 import { TOKEN_KEY } from '../lib/auth';
 
 NativeSplash.preventAutoHideAsync();
@@ -74,7 +72,6 @@ export default function RootLayout() {
 }
 
 function RootLayoutInner() {
-  const colorScheme = useColorScheme();
   const { resolved, colors } = useTheme();
   const shouldBlockForFonts = Platform.OS !== 'web';
   const [fontsLoaded, fontError] = Font.useFonts({

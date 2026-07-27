@@ -50,6 +50,12 @@ export interface ThemeColors {
   accentPurpleLight: string;
   accentOrange: string;
   accentOrangeLight: string;
+  errorBorder: string;
+  successBorder: string;
+  purpleBg: string;
+  purpleBorder: string;
+  purpleLight: string;
+  purpleIcon: string;
 }
 
 const LIGHT_COLORS: ThemeColors = {
@@ -94,6 +100,12 @@ const LIGHT_COLORS: ThemeColors = {
   accentPurpleLight: '#F1EAFB',
   accentOrange: '#E97A1F',
   accentOrangeLight: '#FFF3E6',
+  errorBorder: '#FECACA',
+  successBorder: '#BBF7D0',
+  purpleBg: '#F5F3FF',
+  purpleBorder: '#C4B5FD',
+  purpleLight: '#EDE9FE',
+  purpleIcon: '#7C3AED',
 };
 
 const DARK_COLORS: ThemeColors = {
@@ -138,6 +150,12 @@ const DARK_COLORS: ThemeColors = {
   accentPurpleLight: '#2D1F5E',
   accentOrange: '#FB923C',
   accentOrangeLight: '#4A2C10',
+  errorBorder: '#7F1D1D',
+  successBorder: '#064E3B',
+  purpleBg: '#1E1B4B',
+  purpleBorder: '#3730A3',
+  purpleLight: '#312E81',
+  purpleIcon: '#A5B4FC',
 };
 
 function getAutoMode(systemScheme: string | null | undefined): ResolvedMode {

@@ -20,8 +20,8 @@ class FieldService
             $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
             $searchTerm = "%{$escaped}%";
             $query->where(function ($q) use ($searchTerm) {
-                $q->where('name', 'ilike', $searchTerm)
-                    ->orWhere('location', 'ilike', $searchTerm);
+                $q->whereRaw('LOWER(name) LIKE ?', [$searchTerm])
+                    ->orWhereRaw('LOWER(location) LIKE ?', [$searchTerm]);
             });
         }
 
