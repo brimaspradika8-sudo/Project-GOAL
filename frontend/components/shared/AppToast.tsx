@@ -39,7 +39,7 @@ export default function AppToast({
         .start(() => onDismiss());
     }, durationMs);
     return () => clearTimeout(timer);
-  }, [visible]);
+  }, [durationMs, onDismiss, opacity, visible]);
 
   if (!visible) return null;
 

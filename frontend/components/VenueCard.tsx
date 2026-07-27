@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -7,6 +7,8 @@ import { SafeImage } from './SafeImage';
 import { SPORT_LABELS } from '../lib/fieldValidation';
 import { useTheme } from '../lib/theme';
 import { useToastStore } from '../store/toastStore';
+import { useFavoriteStore } from '../store/favoriteStore';
+import { useNotificationStore } from '../store/notificationStore';
 import type { Field } from '../store/fieldStore';
 
 const SPORT_ICONS: Record<string, string> = {
@@ -37,6 +39,13 @@ export default function VenueCard({ field, onFavoriteToggle, isFavorite = false 
   const isApproved = field.status === 'approved';
   const sportLabel = SPORT_LABELS[field.sport_type] || field.sport_type;
   const sportIcon = (SPORT_ICONS[field.sport_type] || 'sports') as React.ComponentProps<typeof MaterialIcons>['name'];
+  const { hydrate, isFavorite: checkFavorite, toggleFavorite } = useFavoriteStore();
+  const { addNotification } = useNotificationStore();
+  const isLiked = checkFavorite(field.id) || isFavorite;
+
+  useEffect(() => {
+    hydrate().catch(() => {});
+  }, [hydrate]);
 
   return (
     <TouchableOpacity
@@ -58,19 +67,34 @@ export default function VenueCard({ field, onFavoriteToggle, isFavorite = false 
           <Text style={st.sportPillText}>{sportLabel}</Text>
         </View>
 
-        {onFavoriteToggle && (
-          <TouchableOpacity
-            style={st.favoriteBtn}
-            activeOpacity={0.7}
-            onPress={() => onFavoriteToggle(field.id)}
-          >
-            <MaterialIcons
-              name={isFavorite ? 'favorite' : 'favorite-border'}
-              size={20}
-              color={isFavorite ? colors.error : colors.textTertiary}
-            />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={st.favoriteBtn}
+          activeOpacity={0.7}
+          onPress={async (event) => {
+            event.stopPropagation();
+            const next = await toggleFavorite(field.id);
+            onFavoriteToggle?.(field.id);
+
+            const title = next ? 'Ditambahkan ke favorit' : 'Dihapus dari favorit';
+            const description = next
+              ? `${field.name} masuk ke daftar lapangan favorit Anda.`
+              : `${field.name} sudah dihapus dari daftar favorit Anda.`;
+
+            useToastStore.getState().show({
+              type: next ? 'success' : 'info',
+              title,
+              description,
+              durationMs: 2500,
+            });
+            addNotification({ title, description }).catch(() => {});
+          }}
+        >
+          <MaterialIcons
+            name={isLiked ? 'favorite' : 'favorite-border'}
+            size={20}
+            color={isLiked ? '#EF4444' : colors.textTertiary}
+          />
+        </TouchableOpacity>
       </View>
 
       <View style={st.info}>

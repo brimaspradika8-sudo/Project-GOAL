@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  View, TouchableOpacity, Animated, StyleSheet, Platform,
+  TouchableOpacity, Animated, StyleSheet, Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../lib/theme';
@@ -11,7 +11,7 @@ const KNOB_SIZE = 28;
 const KNOB_MARGIN = 3;
 
 export default function ThemeToggle({ size }: { size?: number }) {
-  const { resolved, toggleTheme, colors } = useTheme();
+  const { resolved, toggleTheme } = useTheme();
   const isDark = resolved === 'dark';
 
   const anim = useRef(new Animated.Value(isDark ? 1 : 0)).current;

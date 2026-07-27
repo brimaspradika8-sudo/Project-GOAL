@@ -12,10 +12,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
-import { COLORS, SIZES, FONTS, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
+import { useFocusEffect } from 'expo-router';
+import { SIZES, FONTS, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
 import { useFieldStore, Field } from '../../store/fieldStore';
-import { SafeImage } from '../../components/SafeImage';
 import { SkeletonVenueList } from '../../components/Skeleton';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useTheme } from '../../lib/theme';
@@ -29,18 +28,6 @@ const SPORT_MAP: Record<string, string> = {
   'Mini Soccer': 'mini_soccer',
   'Tenis': 'tennis',
 };
-const DEFAULT_IMAGES: Record<string, string> = {
-  futsal: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
-  basketball: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop',
-  badminton: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?q=80&w=800&auto=format&fit=crop',
-  default: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
-};
-
-function formatPrice(price: number | null): string {
-  if (price == null) return 'Hubungi';
-  return `Rp${price.toLocaleString('id-ID')}`;
-}
-
 function VenueCardInline({ item }: { item: Field }) {
   return <VenueCard field={item} />;
 }

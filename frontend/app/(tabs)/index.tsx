@@ -16,7 +16,7 @@ import { router, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useProfileStore } from '../../store/profileStore';
 import { Field, useFieldStore } from '../../store/fieldStore';
-import { COLORS, FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
+import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
 import { CATEGORIES } from '../../data/venues';
 import { SafeImage } from '../../components/SafeImage';
 import { SkeletonVenueList, SkeletonHorizontalCards, SkeletonProfile } from '../../components/Skeleton';
@@ -24,6 +24,8 @@ import { useDebounce } from '../../hooks/useDebounce';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
 import { useTheme } from '../../lib/theme';
 import VenueCard from '../../components/VenueCard';
+import NotificationCenter from '../../components/shared/NotificationCenter';
+import { useNotificationStore } from '../../store/notificationStore';
 
 const isWeb = Platform.OS === 'web';
 
@@ -43,11 +45,6 @@ const DEFAULT_IMAGES: Record<string, string> = {
   default: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
 };
 
-function formatPrice(price: number | null): string {
-  if (price == null) return 'Hubungi';
-  return `Rp${price.toLocaleString('id-ID')}`;
-}
-
 function getSportFilter(category: string): string | undefined {
   if (category === 'Semua') return undefined;
   return SPORT_MAP[category] || category.toLowerCase();
@@ -61,8 +58,10 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeCategory, setActiveCategory] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
+  const [notifVisible, setNotifVisible] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
   const { colors } = useTheme();
+  const { hydrate: hydrateNotifications, unreadCount } = useNotificationStore();
 
   useEffect(() => {
     if (!profile) fetchProfile();
@@ -87,6 +86,10 @@ export default function HomeScreen() {
     fetchPopularFields().catch(() => {});
   }, [fetchPopularFields]);
 
+  useEffect(() => {
+    hydrateNotifications().catch(() => {});
+  }, [hydrateNotifications]);
+
   useFocusEffect(
     useCallback(() => {
       const sport = getSportFilter(activeCategory);
@@ -102,7 +105,8 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
-  const filteredVenues = useMemo(() => popularFields.slice(0, 5), [popularFields]);
+  const isFiltering = activeCategory !== 'Semua' || debouncedSearch.length > 0;
+  const filteredVenues = useMemo(() => isFiltering ? fields : popularFields.slice(0, 5), [fields, popularFields, isFiltering]);
   const rekomendasi = useMemo(() => fields.slice(0, 4), [fields]);
 
   const styles = makeStyles(colors);
@@ -139,8 +143,9 @@ export default function HomeScreen() {
             <Text style={styles.logoText}>GOAL</Text>
           </View>
           <View style={styles.topBarActions}>
-            <TouchableOpacity style={styles.topBarBtn} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.topBarBtn} activeOpacity={0.7} onPress={() => setNotifVisible(true)}>
               <MaterialIcons name="notifications-none" size={22} color={colors.onSurface} />
+              {unreadCount() > 0 ? <View style={styles.topBarBadge} /> : null}
             </TouchableOpacity>
             <TouchableOpacity style={styles.avatarBtn} activeOpacity={0.7} onPress={() => router.push('/(tabs)/profile')}>
               <MaterialIcons name="person" size={20} color={colors.primary} />
@@ -201,30 +206,7 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
-        <View style={styles.promoCard}>
-          <SafeImage
-            source={{ uri: 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?q=80&w=800&auto=format&fit=crop' }}
-            style={styles.promoImage}
-            resizeMode="cover"
-            fallbackSize={32}
-          />
-          <View style={styles.promoGradient} />
-          <View style={styles.promoContent}>
-            <View style={styles.promoBadge}>
-              <Text style={styles.promoBadgeText}>PROMO SPESIAL</Text>
-            </View>
-            <Text style={styles.promoTitle}>Diskon 20%</Text>
-            <Text style={styles.promoDesc}>Booking lebih hemat di akhir pekan ini.</Text>
-            <TouchableOpacity style={styles.promoBtn} activeOpacity={0.8}>
-              <Text style={styles.promoBtnText}>Gunakan Sekarang</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.promoDots}>
-            <View style={[styles.dot, styles.dotActive]} />
-            <View style={styles.dot} />
-            <View style={styles.dot} />
-          </View>
-        </View>
+
 
         <TouchableOpacity
           style={styles.sparringCard}
@@ -249,7 +231,7 @@ export default function HomeScreen() {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Lapangan Populer 🔥</Text>
+            <Text style={styles.sectionTitle}>{isFiltering ? 'Hasil Pencarian' : 'Lapangan Populer 🔥'}</Text>
             <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/(tabs)/fields')}>
               <Text style={styles.sectionLink}>Lihat Semua</Text>
             </TouchableOpacity>
@@ -261,12 +243,17 @@ export default function HomeScreen() {
               <Text style={styles.emptyText}>Tidak ada venue ditemukan</Text>
             </View>
           ) : (
-            filteredVenues.map((item) => (
-              <VenueCard key={item.id} field={item} />
-            ))
+            <View style={[styles.venueGrid, isDesktop && styles.venueGridDesktop]}>
+              {filteredVenues.map((item) => (
+                <View key={item.id} style={isDesktop ? styles.venueCardDesktop : {}}>
+                  <VenueCard field={item} />
+                </View>
+              ))}
+            </View>
           )}
         </View>
 
+        {!isFiltering && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Rekomendasi Terdekat</Text>
@@ -284,7 +271,7 @@ export default function HomeScreen() {
                   <SafeImage source={{ uri: imgUrl }} style={styles.rekomImage} fallbackSize={24} />
                   <View style={styles.rekomOverlay} />
                   <View style={styles.rekomInfo}>
-                    <Text style={styles.rekomName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
+                     <Text style={styles.rekomName} numberOfLines={1} ellipsizeMode="tail">{item.name}</Text>
                     <View style={styles.rekomDistRow}>
                       <MaterialIcons name="near-me" size={12} color="rgba(255,255,255,0.8)" />
                       <Text style={styles.rekomDist} numberOfLines={1} ellipsizeMode="tail">{item.location}</Text>
@@ -295,6 +282,7 @@ export default function HomeScreen() {
             })}
           </View>
         </View>
+        )}
 
         {sports.length > 0 && (
           <View style={styles.section}>
@@ -318,6 +306,7 @@ export default function HomeScreen() {
       <TouchableOpacity style={styles.fab} activeOpacity={0.85} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/(tabs)/fields'); }}>
         <MaterialIcons name="add" size={28} color="#ffffff" />
       </TouchableOpacity>
+      <NotificationCenter visible={notifVisible} onClose={() => setNotifVisible(false)} />
     </View>
   );
 }
@@ -382,6 +371,17 @@ const makeStyles = (colors: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.divider,
     ...SHADOWS.sm,
+  },
+  topBarBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: '#EF4444',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
   },
   avatarBtn: {
     width: 40,
