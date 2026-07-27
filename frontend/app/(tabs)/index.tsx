@@ -105,6 +105,7 @@ export default function HomeScreen() {
   const filteredVenues = useMemo(() => popularFields.slice(0, 5), [popularFields]);
   const rekomendasi = useMemo(() => fields.slice(0, 4), [fields]);
 
+  const styles = makeStyles(colors);
   const isDesktop = width >= 900;
   const sports = profile?.sports ?? [];
   const userName = profile?.full_name || profile?.username || 'Pengguna';
@@ -133,16 +134,16 @@ export default function HomeScreen() {
         <View style={[styles.pageShell, styles.topBarShell]}>
           <View style={styles.logoRow}>
             <View style={styles.logoIconWrap}>
-              <MaterialIcons name="sports-soccer" size={20} color={COLORS.primary} />
+              <MaterialIcons name="sports-soccer" size={20} color={colors.primary} />
             </View>
             <Text style={styles.logoText}>GOAL</Text>
           </View>
           <View style={styles.topBarActions}>
             <TouchableOpacity style={styles.topBarBtn} activeOpacity={0.7}>
-              <MaterialIcons name="notifications-none" size={22} color={COLORS.onSurface} />
+              <MaterialIcons name="notifications-none" size={22} color={colors.onSurface} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.avatarBtn} activeOpacity={0.7} onPress={() => router.push('/(tabs)/profile')}>
-              <MaterialIcons name="person" size={20} color={COLORS.primary} />
+              <MaterialIcons name="person" size={20} color={colors.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -164,17 +165,17 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.searchBar}>
-          <MaterialIcons name="search" size={22} color={COLORS.primary} />
+          <MaterialIcons name="search" size={22} color={colors.primary} />
           <TextInput
             style={styles.searchInput}
             placeholder="Cari lapangan atau venue..."
-            placeholderTextColor={COLORS.textTertiary}
+            placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <MaterialIcons name="close" size={18} color={COLORS.textTertiary} />
+              <MaterialIcons name="close" size={18} color={colors.textTertiary} />
             </TouchableOpacity>
           )}
         </View>
@@ -191,7 +192,7 @@ export default function HomeScreen() {
                   onPress={() => setActiveCategory(item.label)}
                 >
                   <View style={[styles.categoryIconWrap, isActive && styles.categoryIconWrapActive]}>
-                    <MaterialIcons name={item.icon} size={26} color={isActive ? '#ffffff' : COLORS.onSurfaceVariant} />
+                    <MaterialIcons name={item.icon} size={26} color={isActive ? '#ffffff' : colors.onSurfaceVariant} />
                   </View>
                   <Text style={[styles.categoryLabel, isActive && styles.categoryLabelActive]}>{item.label}</Text>
                 </TouchableOpacity>
@@ -256,7 +257,7 @@ export default function HomeScreen() {
 
           {filteredVenues.length === 0 ? (
             <View style={styles.emptyState}>
-              <MaterialIcons name="search-off" size={40} color={COLORS.textTertiary} />
+              <MaterialIcons name="search-off" size={40} color={colors.textTertiary} />
               <Text style={styles.emptyText}>Tidak ada venue ditemukan</Text>
             </View>
           ) : (
@@ -321,20 +322,20 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   skeletonContainer: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   topBar: {
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 56 : 38,
     paddingBottom: 12,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   pageShell: {
     width: '100%',
@@ -355,7 +356,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -363,7 +364,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
     fontFamily: FONT_FAMILY,
-    color: COLORS.primary,
+    color: colors.primary,
     letterSpacing: 1,
   },
   topBarActions: {
@@ -375,18 +376,18 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.divider,
     ...SHADOWS.sm,
   },
   avatarBtn: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -394,10 +395,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   heroPanel: {
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.divider,
     padding: 18,
     marginTop: 12,
     ...SHADOWS.sm,
@@ -413,22 +414,22 @@ const styles = StyleSheet.create({
   },
   greeting: {
     ...FONTS.labelMd,
-    color: COLORS.primary,
+    color: colors.primary,
     marginBottom: 6,
   },
   heroTitle: {
     ...FONTS.headlineLg,
-    color: COLORS.text,
+    color: colors.text,
   },
   heroText: {
     ...FONTS.bodyMd,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginTop: 6,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadiusLg,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -446,7 +447,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontFamily: FONT_FAMILY,
-    color: COLORS.text,
+    color: colors.text,
   },
   section: {
     marginTop: 20,
@@ -461,13 +462,13 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     fontFamily: FONT_FAMILY,
-    color: COLORS.text,
+    color: colors.text,
   },
   sectionLink: {
     fontSize: 13,
     fontWeight: '600',
     fontFamily: FONT_FAMILY,
-    color: COLORS.primary,
+    color: colors.primary,
   },
   categoryScroll: {
     gap: 12,
@@ -481,26 +482,26 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.divider,
     ...SHADOWS.sm,
   },
   categoryIconWrapActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
     ...SHADOWS.primary,
   },
   categoryLabel: {
     fontSize: 11,
     fontWeight: '600',
     fontFamily: FONT_FAMILY,
-    color: COLORS.onSurfaceVariant,
+    color: colors.onSurfaceVariant,
   },
   categoryLabelActive: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '700',
   },
   promoCard: {
@@ -557,7 +558,7 @@ const styles = StyleSheet.create({
   },
   promoBtn: {
     alignSelf: 'flex-start',
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     borderRadius: SIZES.borderRadius,
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -573,24 +574,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 12,
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.surfaceContainerHigh,
+    backgroundColor: colors.surfaceContainerHigh,
   },
   dotActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     width: 20,
   },
   venueCard: {
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadiusLg,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.divider,
     marginBottom: 14,
     ...SHADOWS.md,
   },
@@ -643,14 +644,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: FONT_FAMILY,
-    color: COLORS.text,
+    color: colors.text,
     flex: 1,
   },
   venuePrice: {
     fontSize: 14,
     fontWeight: '700',
     fontFamily: FONT_FAMILY,
-    color: COLORS.primary,
+    color: colors.primary,
   },
   venueLocationRow: {
     flexDirection: 'row',
@@ -661,14 +662,14 @@ const styles = StyleSheet.create({
   venueLocation: {
     fontSize: 13,
     fontFamily: FONT_FAMILY,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   featureRow: {
     flexDirection: 'row',
     gap: 8,
   },
   featureChip: {
-    backgroundColor: COLORS.surfaceContainerLow,
+    backgroundColor: colors.surfaceContainerLow,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -677,7 +678,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     fontFamily: FONT_FAMILY,
-    color: COLORS.onSurfaceVariant,
+    color: colors.onSurfaceVariant,
   },
   rekomGrid: {
     flexDirection: 'row',
@@ -736,13 +737,13 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   sportChip: {
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: colors.primaryContainer,
     borderRadius: 20,
     paddingVertical: 8,
     paddingHorizontal: 14,
   },
   sportChipText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '700',
     fontSize: 12,
     fontFamily: FONT_FAMILY,
@@ -754,13 +755,13 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...FONTS.bodyMd,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
   },
   sparringCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: colors.primaryContainer,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
     borderColor: 'rgba(30, 138, 76, 0.3)',
@@ -774,7 +775,7 @@ const styles = StyleSheet.create({
   },
   sparringBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: COLORS.floodlight,
+    backgroundColor: colors.floodlight,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -791,16 +792,16 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 15,
     fontWeight: '700',
-    color: COLORS.onPrimaryContainer,
+    color: colors.onPrimaryContainer,
     marginBottom: 4,
   },
   sparringDesc: {
     fontFamily: FONT_FAMILY,
     fontSize: 12,
-    color: COLORS.onPrimaryContainer + 'CC',
+    color: colors.onPrimaryContainer + 'CC',
   },
   sparringBtn: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     borderRadius: SIZES.borderRadius,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -818,13 +819,13 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     ...SHADOWS.lg,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0px 4px 14px rgba(30,138,76,0.15)' }
-      : { shadowColor: COLORS.primary }
+      : { shadowColor: colors.primary }
     ),
   },
 });

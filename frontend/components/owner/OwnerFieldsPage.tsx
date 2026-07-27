@@ -545,7 +545,7 @@ export default function OwnerFieldsPage() {
         onClose={() => setEditTarget(null)}
         onSubmit={handleEdit}
         submitLabel="Simpan Perubahan"
-        submitBg={colors.accentPurple}
+        submitBg={colors.primary}
         st={st}
         colors={colors}
       />

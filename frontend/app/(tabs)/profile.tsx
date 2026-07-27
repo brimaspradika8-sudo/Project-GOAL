@@ -189,6 +189,7 @@ export default function ProfileScreen() {
     }
   };
 
+  const styles = makeStyles(colors);
   const role = profile?.role;
   const isDesktop = width >= 900;
 
@@ -198,8 +199,8 @@ export default function ProfileScreen() {
         return (
           <View style={[styles.ownerCard, styles.pendingCard]}>
             <View style={styles.ownerCardLeft}>
-              <View style={[styles.ownerIconBox, { backgroundColor: COLORS.warningBg }]}>
-                <MaterialIcons name="hourglass-top" size={20} color={COLORS.warningIcon} />
+              <View style={[styles.ownerIconBox, { backgroundColor: colors.warningBg }]}>
+                <MaterialIcons name="hourglass-top" size={20} color={colors.warningIcon} />
               </View>
               <View style={styles.ownerCardInfo}>
                 <Text style={styles.ownerCardTitle}>Pengajuan Owner</Text>
@@ -214,15 +215,15 @@ export default function ProfileScreen() {
         return (
           <TouchableOpacity style={[styles.ownerCard, styles.rejectedCard]} activeOpacity={0.8} onPress={() => setShowOwnerModal(true)}>
             <View style={styles.ownerCardLeft}>
-              <View style={[styles.ownerIconBox, { backgroundColor: COLORS.errorLight }]}>
-                <MaterialIcons name="cancel" size={20} color={COLORS.error} />
+              <View style={[styles.ownerIconBox, { backgroundColor: colors.errorLight }]}>
+                <MaterialIcons name="cancel" size={20} color={colors.error} />
               </View>
               <View style={styles.ownerCardInfo}>
                 <Text style={styles.ownerCardTitle}>Pengajuan Ditolak</Text>
                 <Text style={styles.ownerCardDesc} numberOfLines={2} ellipsizeMode="tail">{ownerRequestData?.rejection_reason ?? 'Ketuk untuk ajukan ulang.'}</Text>
               </View>
             </View>
-            <MaterialIcons name="chevron-right" size={20} color={COLORS.error} />
+            <MaterialIcons name="chevron-right" size={20} color={colors.error} />
           </TouchableOpacity>
         );
       }
@@ -230,15 +231,15 @@ export default function ProfileScreen() {
       return (
         <TouchableOpacity style={[styles.ownerCard, styles.ownerActionCard]} activeOpacity={0.8} onPress={() => setShowOwnerModal(true)}>
           <View style={styles.ownerCardLeft}>
-            <View style={[styles.ownerIconBox, { backgroundColor: COLORS.successLight }]}>
-              <MaterialIcons name="store" size={20} color={COLORS.primary} />
+            <View style={[styles.ownerIconBox, { backgroundColor: colors.successLight }]}>
+              <MaterialIcons name="store" size={20} color={colors.primary} />
             </View>
             <View style={styles.ownerCardInfo}>
               <Text style={styles.ownerCardTitle}>Ajukan Jadi Owner</Text>
               <Text style={styles.ownerCardDesc}>Kelola lapangan Anda sendiri.</Text>
             </View>
           </View>
-          <MaterialIcons name="chevron-right" size={20} color={COLORS.textSecondary} />
+          <MaterialIcons name="chevron-right" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       );
     }
@@ -250,15 +251,15 @@ export default function ProfileScreen() {
           onPress={() => router.push('/(owner)/fields' as any)}
         >
           <View style={styles.ownerCardLeft}>
-            <View style={[styles.ownerIconBox, { backgroundColor: COLORS.successLight }]}>
-              <MaterialIcons name="stadium" size={20} color={COLORS.primary} />
+            <View style={[styles.ownerIconBox, { backgroundColor: colors.successLight }]}>
+              <MaterialIcons name="stadium" size={20} color={colors.primary} />
             </View>
             <View style={styles.ownerCardInfo}>
               <Text style={styles.ownerCardTitle}>Lapangan Saya</Text>
               <Text style={styles.ownerCardDesc}>Kelola lapangan yang Anda miliki.</Text>
             </View>
           </View>
-          <MaterialIcons name="chevron-right" size={20} color={COLORS.textSecondary} />
+          <MaterialIcons name="chevron-right" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       );
     }
@@ -266,20 +267,20 @@ export default function ProfileScreen() {
     if (role === 'super_admin') {
       return (
         <TouchableOpacity
-          style={[styles.ownerCard, { backgroundColor: COLORS.purpleBg, borderColor: COLORS.purpleBorder }]}
+          style={[styles.ownerCard, { backgroundColor: colors.purpleBg, borderColor: colors.purpleBorder }]}
           activeOpacity={0.8}
           onPress={() => router.push('/(admin)/dashboard')}
         >
           <View style={styles.ownerCardLeft}>
-            <View style={[styles.ownerIconBox, { backgroundColor: COLORS.purpleLight }]}>
-              <MaterialIcons name="admin-panel-settings" size={20} color={COLORS.purpleIcon} />
+            <View style={[styles.ownerIconBox, { backgroundColor: colors.purpleLight }]}>
+              <MaterialIcons name="admin-panel-settings" size={20} color={colors.purpleIcon} />
             </View>
             <View style={styles.ownerCardInfo}>
               <Text style={styles.ownerCardTitle}>Panel Super Admin</Text>
               <Text style={styles.ownerCardDesc}>Approve field dan owner request.</Text>
             </View>
           </View>
-          <MaterialIcons name="chevron-right" size={20} color={COLORS.textSecondary} />
+          <MaterialIcons name="chevron-right" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       );
     }
@@ -319,12 +320,12 @@ export default function ProfileScreen() {
             <Text style={styles.profileName} numberOfLines={1} ellipsizeMode="tail">{profile?.full_name ?? profile?.username ?? 'Pengguna'}</Text>
             {profile?.username ? <Text style={styles.profileHandle} numberOfLines={1} ellipsizeMode="tail">@{profile.username}</Text> : null}
             <View style={styles.locationRow}>
-              <MaterialIcons name="location-on" size={14} color={COLORS.textSecondary} />
+              <MaterialIcons name="location-on" size={14} color={colors.textSecondary} />
               <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">{profile?.region ?? 'Belum diatur'}</Text>
             </View>
           </View>
           <TouchableOpacity style={styles.editButton} activeOpacity={0.8} onPress={() => router.push('/onboarding')}>
-            <MaterialIcons name="edit" size={16} color={COLORS.onPrimary} />
+            <MaterialIcons name="edit" size={16} color={colors.onPrimary} />
           </TouchableOpacity>
         </View>
 
@@ -333,7 +334,7 @@ export default function ProfileScreen() {
             <MaterialIcons
               name={profile.role === 'super_admin' ? 'shield' : profile.role === 'owner' ? 'store' : 'person'}
               size={14}
-              color={COLORS.primary}
+              color={colors.primary}
             />
             <Text style={styles.roleBadgeText}>{profile.role === 'super_admin' ? 'SUPER ADMIN' : profile.role === 'owner' ? 'OWNER' : 'PLAYER'}</Text>
           </View>
@@ -345,7 +346,7 @@ export default function ProfileScreen() {
             <View style={styles.tagsRow}>
               {profile.sports.map((sport: string) => (
                 <View key={sport} style={styles.tagChip}>
-                  <MaterialIcons name={(SPORT_ICONS[sport] ?? 'sports') as any} size={14} color={COLORS.primary} />
+                  <MaterialIcons name={(SPORT_ICONS[sport] ?? 'sports') as any} size={14} color={colors.primary} />
                   <Text style={styles.tagText}>{sport.toUpperCase()}</Text>
                 </View>
               ))}
@@ -364,39 +365,39 @@ export default function ProfileScreen() {
         <View style={styles.settingsCard}>
           <TouchableOpacity style={styles.settingRow} activeOpacity={0.8} onPress={() => router.push('/onboarding')}>
             <View style={styles.settingIconBox}>
-              <MaterialIcons name="person-outline" size={20} color={COLORS.primary} />
+              <MaterialIcons name="person-outline" size={20} color={colors.primary} />
             </View>
             <Text style={styles.settingLabel}>Ubah Profil</Text>
-            <MaterialIcons name="chevron-right" size={20} color={COLORS.outline} />
+            <MaterialIcons name="chevron-right" size={20} color={colors.outline} />
           </TouchableOpacity>
           <View style={styles.divider} />
           <TouchableOpacity style={styles.settingRow} activeOpacity={0.8} onPress={() => useToastStore.getState().show({ type: 'info', title: 'Segera Hadir', description: 'Fitur notifikasi akan segera tersedia.' })}>
             <View style={styles.settingIconBox}>
-              <MaterialIcons name="notifications-none" size={20} color={COLORS.primary} />
+              <MaterialIcons name="notifications-none" size={20} color={colors.primary} />
             </View>
             <Text style={styles.settingLabel}>Notifikasi</Text>
-            <MaterialIcons name="chevron-right" size={20} color={COLORS.outline} />
+            <MaterialIcons name="chevron-right" size={20} color={colors.outline} />
           </TouchableOpacity>
           <View style={styles.divider} />
           <TouchableOpacity style={styles.settingRow} activeOpacity={0.8} onPress={() => router.push('/change-password')}>
             <View style={styles.settingIconBox}>
-              <MaterialIcons name="lock-outline" size={20} color={COLORS.primary} />
+              <MaterialIcons name="lock-outline" size={20} color={colors.primary} />
             </View>
             <Text style={styles.settingLabel}>Ubah Kata Sandi</Text>
-            <MaterialIcons name="chevron-right" size={20} color={COLORS.outline} />
+            <MaterialIcons name="chevron-right" size={20} color={colors.outline} />
           </TouchableOpacity>
           <View style={styles.divider} />
           <TouchableOpacity style={styles.settingRow} activeOpacity={0.8} onPress={() => useToastStore.getState().show({ type: 'info', title: 'Segera Hadir', description: 'Pusat bantuan akan segera tersedia.' })}>
             <View style={styles.settingIconBox}>
-              <MaterialIcons name="help-outline" size={20} color={COLORS.primary} />
+              <MaterialIcons name="help-outline" size={20} color={colors.primary} />
             </View>
             <Text style={styles.settingLabel}>Pusat Bantuan</Text>
-            <MaterialIcons name="chevron-right" size={20} color={COLORS.outline} />
+            <MaterialIcons name="chevron-right" size={20} color={colors.outline} />
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} activeOpacity={0.8}>
-          <MaterialIcons name="logout" size={20} color={COLORS.error} />
+          <MaterialIcons name="logout" size={20} color={colors.error} />
           <Text style={styles.signOutText}>Keluar Akun</Text>
         </TouchableOpacity>
 
@@ -416,7 +417,7 @@ export default function ProfileScreen() {
 
             {submitError ? (
               <View style={styles.errorBox}>
-                <MaterialIcons name="error-outline" size={16} color={COLORS.error} />
+                <MaterialIcons name="error-outline" size={16} color={colors.error} />
                 <Text style={styles.errorText}>{submitError}</Text>
               </View>
             ) : null}
@@ -467,7 +468,7 @@ export default function ProfileScreen() {
                 <Text style={styles.cancelText}>Batal</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.submitButton, submitting && styles.submitButtonDisabled]} onPress={handleSubmitOwner} disabled={submitting} activeOpacity={0.8}>
-                {submitting ? <ActivityIndicator color={COLORS.onPrimary} /> : <Text style={styles.submitText}>Kirim Pengajuan</Text>}
+                {submitting ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.submitText}>Kirim Pengajuan</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -488,10 +489,10 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     paddingTop: Platform.OS === 'ios' ? 60 : 48,
@@ -515,16 +516,16 @@ const styles = StyleSheet.create({
   pageTitle: {
     ...FONTS.headlineLg,
     fontSize: 28,
-    color: COLORS.text,
+    color: colors.text,
     marginBottom: 18,
   },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.divider,
     padding: 16,
     marginBottom: 12,
     ...SHADOWS.sm,
@@ -533,7 +534,7 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 20,
-    backgroundColor: COLORS.surfaceContainer,
+    backgroundColor: colors.surfaceContainer,
   },
   profileInfo: {
     flex: 1,
@@ -542,12 +543,12 @@ const styles = StyleSheet.create({
   profileName: {
     ...FONTS.headlineSm,
     fontSize: 17,
-    color: COLORS.text,
+    color: colors.text,
     marginBottom: 2,
   },
   profileHandle: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 6,
   },
   locationRow: {
@@ -557,13 +558,13 @@ const styles = StyleSheet.create({
   },
   locationText: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   editButton: {
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -571,10 +572,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadius,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.divider,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginBottom: 20,
@@ -582,23 +583,23 @@ const styles = StyleSheet.create({
   },
   roleBadgeText: {
     ...FONTS.labelMd,
-    color: COLORS.text,
+    color: colors.text,
   },
   sectionTitle: {
     ...FONTS.labelMd,
     fontSize: 12,
     fontWeight: '800',
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginBottom: 10,
     marginTop: 4,
   },
   sportsCard: {
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.divider,
     padding: 14,
     marginBottom: 20,
     ...SHADOWS.sm,
@@ -612,7 +613,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: colors.primaryLight,
     borderRadius: 20,
     paddingVertical: 7,
     paddingHorizontal: 14,
@@ -622,11 +623,11 @@ const styles = StyleSheet.create({
     ...FONTS.labelMd,
     fontSize: 12,
     fontWeight: '700',
-    color: COLORS.onPrimaryContainer,
+    color: colors.onPrimaryContainer,
   },
   emptyText: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   ownerCard: {
     flexDirection: 'row',
@@ -657,34 +658,34 @@ const styles = StyleSheet.create({
   ownerCardTitle: {
     ...FONTS.headlineSm,
     fontSize: 14,
-    color: COLORS.text,
+    color: colors.text,
   },
   ownerCardDesc: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   pendingCard: {
-    backgroundColor: COLORS.warningBg,
-    borderColor: COLORS.warningBorder,
+    backgroundColor: colors.warningBg,
+    borderColor: colors.warningBorder,
   },
   approvedCard: {
-    backgroundColor: COLORS.successLight,
-    borderColor: COLORS.successBorder,
+    backgroundColor: colors.successLight,
+    borderColor: colors.successBorder,
   },
   rejectedCard: {
-    backgroundColor: COLORS.errorLight,
-    borderColor: COLORS.errorBorder,
+    backgroundColor: colors.errorLight,
+    borderColor: colors.errorBorder,
   },
   ownerActionCard: {
-    backgroundColor: COLORS.successLight,
-    borderColor: COLORS.successBorder,
+    backgroundColor: colors.successLight,
+    borderColor: colors.successBorder,
   },
   settingsCard: {
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.divider,
     paddingVertical: 4,
     marginBottom: 12,
     ...SHADOWS.sm,
@@ -700,7 +701,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: colors.primaryContainer,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -708,11 +709,11 @@ const styles = StyleSheet.create({
     flex: 1,
     ...FONTS.bodyMd,
     fontWeight: '600',
-    color: COLORS.text,
+    color: colors.text,
   },
   divider: {
     height: 1,
-    backgroundColor: COLORS.divider,
+    backgroundColor: colors.divider,
     marginHorizontal: 16,
   },
   signOutButton: {
@@ -730,11 +731,11 @@ const styles = StyleSheet.create({
   signOutText: {
     ...FONTS.bodyMd,
     fontWeight: '700',
-    color: COLORS.error,
+    color: colors.error,
   },
   version: {
     ...FONTS.bodySm,
-    color: COLORS.outline,
+    color: colors.outline,
     textAlign: 'center',
     marginBottom: 22,
   },
@@ -744,7 +745,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 20,
@@ -756,18 +757,18 @@ const styles = StyleSheet.create({
     width: 44,
     height: 4,
     borderRadius: 2,
-    backgroundColor: COLORS.outlineVariant,
+    backgroundColor: colors.outlineVariant,
     alignSelf: 'center',
     marginBottom: 16,
   },
   modalTitle: {
     ...FONTS.headlineMd,
     fontSize: 20,
-    color: COLORS.text,
+    color: colors.text,
   },
   modalSubtitle: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 20,
     marginTop: 6,
     marginBottom: 18,
@@ -779,15 +780,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: COLORS.errorLight,
+    backgroundColor: colors.errorLight,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: COLORS.errorBorder,
+    borderColor: colors.errorBorder,
     padding: 14,
     marginBottom: 14,
   },
   errorText: {
-    color: COLORS.error,
+    color: colors.error,
     ...FONTS.bodySm,
     flex: 1,
   },
@@ -802,20 +803,20 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: SIZES.borderRadius,
     borderWidth: 1,
-    borderColor: COLORS.divider,
-    backgroundColor: COLORS.surfaceWhite,
+    borderColor: colors.divider,
+    backgroundColor: colors.surfaceWhite,
     alignItems: 'center',
   },
   cancelText: {
     ...FONTS.bodyMd,
     fontWeight: '700',
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   submitButton: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: SIZES.borderRadius,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     ...SHADOWS.primary,
   },
@@ -825,6 +826,6 @@ const styles = StyleSheet.create({
   submitText: {
     ...FONTS.bodyMd,
     fontWeight: '700',
-    color: COLORS.onPrimary,
+    color: colors.onPrimary,
   },
 });

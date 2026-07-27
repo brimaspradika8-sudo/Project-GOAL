@@ -127,7 +127,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     ...SHADOWS.sm,
   },
   imageWrap: {
-    height: 150,
+    height: 190,
     position: 'relative',
   },
   image: {
