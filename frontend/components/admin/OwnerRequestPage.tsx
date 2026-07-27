@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
   TextInput, RefreshControl, Modal,
-  Platform, ActivityIndicator,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -58,19 +58,6 @@ export default function OwnerRequestPage() {
       throw new Error(getErrorMessage(data, 'Gagal memproses pengajuan.'));
     }
     return data;
-  };
-
-  const approveRequest = async (id: number) => {
-    setSubmitting(true);
-    try {
-      await reviewRequest(id, 'approved');
-      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Pengajuan disetujui!' });
-      fetchRequests();
-    } catch (e: any) {
-      useToastStore.getState().show({ type: 'error', title: 'Gagal', description: e.message || 'Gagal memproses pengajuan.' });
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   const handleApprove = (id: number, name: string) => {

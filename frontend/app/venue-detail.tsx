@@ -17,7 +17,10 @@ import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../components/goalTheme';
 import { SafeImage } from '../components/SafeImage';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
+import { useFavoriteStore } from '../store/favoriteStore';
+import { useNotificationStore } from '../store/notificationStore';
 import type { Field } from '../store/fieldStore';
+import { useToastStore } from '../store/toastStore';
 
 const DEFAULT_IMAGES: Record<string, string> = {
   futsal: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
@@ -38,6 +41,12 @@ export default function VenueDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const { hydrate, isFavorite, toggleFavorite } = useFavoriteStore();
+  const { addNotification } = useNotificationStore();
+
+  useEffect(() => {
+    hydrate().catch(() => {});
+  }, [hydrate]);
 
   const fetchField = useCallback(async () => {
     try {
@@ -92,6 +101,7 @@ export default function VenueDetailScreen() {
 
   const imgUrl = field.image_url || DEFAULT_IMAGES[field.sport_type] || DEFAULT_IMAGES.default;
   const isApproved = field.status === 'approved';
+  const liked = isFavorite(field.id);
 
   return (
     <View style={styles.container}>
@@ -114,8 +124,26 @@ export default function VenueDetailScreen() {
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
             <MaterialIcons name="arrow-back" size={22} color="#ffffff" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.favButton} activeOpacity={0.8}>
-            <MaterialIcons name="favorite-border" size={22} color="#ffffff" />
+          <TouchableOpacity
+            style={styles.favButton}
+            activeOpacity={0.8}
+            onPress={async () => {
+              const next = await toggleFavorite(field.id);
+              const title = next ? 'Ditambahkan ke favorit' : 'Dihapus dari favorit';
+              const description = next
+                ? `${field.name} masuk ke daftar lapangan favorit Anda.`
+                : `${field.name} sudah dihapus dari daftar favorit Anda.`;
+
+              useToastStore.getState().show({
+                type: next ? 'success' : 'info',
+                title,
+                description,
+                durationMs: 2500,
+              });
+              addNotification({ title, description }).catch(() => {});
+            }}
+          >
+            <MaterialIcons name={liked ? 'favorite' : 'favorite-border'} size={22} color={liked ? '#F87171' : '#ffffff'} />
           </TouchableOpacity>
           <View style={styles.heroContent}>
             <View style={styles.heroBadges}>

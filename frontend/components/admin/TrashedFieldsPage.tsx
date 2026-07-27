@@ -11,8 +11,12 @@ import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
+import { useTheme } from '../../lib/theme';
 
 export default function TrashedFieldsPage() {
+  const { colors, resolved } = useTheme();
+  const cardSurface = resolved === 'dark' ? '#1E293B' : colors.surface;
+  const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -105,7 +109,7 @@ export default function TrashedFieldsPage() {
 
   if (loading) {
     return (
-      <View style={st.screen}>
+      <View style={[st.screen, { backgroundColor: colors.background }]}>
         <SkeletonCards count={3} />
       </View>
     );
@@ -113,47 +117,47 @@ export default function TrashedFieldsPage() {
 
   if (fields.length === 0) {
     return (
-      <View style={st.emptyWrap}>
-        <View style={st.emptyIconWrap}>
-          <MaterialIcons name="delete-sweep" size={40} color={COLORS.textTertiary} />
+      <View style={[st.emptyWrap, { backgroundColor: colors.background }]}>
+        <View style={[st.emptyIconWrap, { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outline }]}>
+          <MaterialIcons name="delete-sweep" size={40} color={colors.textTertiary} />
         </View>
-        <Text style={st.emptyTitle}>Tempat Sampah Kosong</Text>
-        <Text style={st.emptyDesc}>Tidak ada lapangan yang dihapus.</Text>
+        <Text style={[st.emptyTitle, { color: colors.text }]}>Tempat Sampah Kosong</Text>
+        <Text style={[st.emptyDesc, { color: colors.textSecondary }]}>Tidak ada lapangan yang dihapus.</Text>
       </View>
     );
   }
 
   return (
-    <View style={st.screen}>
+    <View style={[st.screen, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={st.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
         showsVerticalScrollIndicator={false}
       >
         <View style={st.headerRow}>
-          <View style={st.countPill}>
-            <MaterialIcons name="auto-delete" size={12} color={COLORS.error} />
-            <Text style={st.countText}>{fields.length} lapangan terhapus</Text>
+          <View style={[st.countPill, { backgroundColor: resolved === 'dark' ? '#2A1F26' : colors.errorContainer, borderColor: colors.error + '30' }]}>
+            <MaterialIcons name="auto-delete" size={12} color={colors.error} />
+            <Text style={[st.countText, { color: colors.error }]}>{fields.length} lapangan terhapus</Text>
           </View>
-          <Text style={st.warningText}>Hati-hati — hapus permanen tidak bisa dikembalikan</Text>
+          <Text style={[st.warningText, { color: colors.textSecondary }]}>Hati-hati, hapus permanen tidak bisa dikembalikan</Text>
         </View>
 
         {fields.map((f: any) => (
-          <View key={f.id} style={st.card}>
+          <View key={f.id} style={[st.card, { backgroundColor: cardSurface, borderColor: colors.outline }]}>
             <View style={st.cardMain}>
-              <View style={st.fieldIconWrap}>
-                <MaterialIcons name="delete" size={20} color={COLORS.error} />
+              <View style={[st.fieldIconWrap, { backgroundColor: resolved === 'dark' ? '#2A1F26' : colors.errorContainer, borderColor: colors.error + '30' }]}>
+                <MaterialIcons name="delete" size={20} color={colors.error} />
               </View>
               <View style={st.cardInfo}>
-                <Text style={st.fieldName} numberOfLines={1}>{f.name}</Text>
+                <Text style={[st.fieldName, { color: colors.text }]} numberOfLines={1}>{f.name}</Text>
                 <View style={st.tagRow}>
                   {f.sport_type && (
-                    <View style={st.sportTag}>
-                      <Text style={st.sportText}>{f.sport_type.toUpperCase()}</Text>
+                    <View style={[st.sportTag, { backgroundColor: softSurface }]}>
+                      <Text style={[st.sportText, { color: colors.textSecondary }]}>{f.sport_type.toUpperCase()}</Text>
                     </View>
                   )}
-                  <View style={st.deletedTag}>
-                    <Text style={st.deletedText}>Dihapus</Text>
+                  <View style={[st.deletedTag, { backgroundColor: resolved === 'dark' ? '#2A1F26' : colors.errorContainer, borderColor: colors.error + '30' }]}>
+                    <Text style={[st.deletedText, { color: colors.error }]}>Dihapus</Text>
                   </View>
                 </View>
               </View>
@@ -161,19 +165,19 @@ export default function TrashedFieldsPage() {
 
             {f.deleted_at && (
               <View style={st.deletedRow}>
-                <MaterialIcons name="schedule" size={12} color={COLORS.textSecondary} />
-                <Text style={st.deletedAt}>Dihapus: {new Date(f.deleted_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
+                <MaterialIcons name="schedule" size={12} color={colors.textSecondary} />
+                <Text style={[st.deletedAt, { color: colors.textSecondary }]}>Dihapus: {new Date(f.deleted_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
               </View>
             )}
 
             <View style={st.actions}>
-              <TouchableOpacity style={st.restoreBtn} onPress={() => handleRestore(f.id, f.name)} activeOpacity={0.8}>
-                <MaterialIcons name="restore" size={16} color={COLORS.primary} />
-                <Text style={st.restoreBtnText}>Pulihkan</Text>
+              <TouchableOpacity style={[st.restoreBtn, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '30' }]} onPress={() => handleRestore(f.id, f.name)} activeOpacity={0.8}>
+                <MaterialIcons name="restore" size={16} color={colors.primary} />
+                <Text style={[st.restoreBtnText, { color: colors.primary }]}>Pulihkan</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={st.deleteBtn} onPress={() => handleForceDelete(f.id, f.name)} activeOpacity={0.8}>
-                <MaterialIcons name="delete-forever" size={16} color={COLORS.error} />
-                <Text style={st.deleteBtnText}>Hapus Permanen</Text>
+              <TouchableOpacity style={[st.deleteBtn, { backgroundColor: resolved === 'dark' ? '#2A1F26' : colors.errorContainer, borderColor: colors.error + '30' }]} onPress={() => handleForceDelete(f.id, f.name)} activeOpacity={0.8}>
+                <MaterialIcons name="delete-forever" size={16} color={colors.error} />
+                <Text style={[st.deleteBtnText, { color: colors.error }]}>Hapus Permanen</Text>
               </TouchableOpacity>
             </View>
           </View>
