@@ -412,16 +412,20 @@ export default function UserPage() {
       </View>
 
       {/* ── CREATE MODAL ── */}
-      <Modal visible={showCreate} transparent animationType="slide" onRequestClose={() => setShowCreate(false)}>
+      <Modal visible={showCreate} transparent animationType="fade" onRequestClose={() => setShowCreate(false)}>
         <KeyboardAvoidingView style={st.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setShowCreate(false)} />
           <View style={st.sheet}>
-            <View style={st.sheetHandle} />
             <View style={st.sheetHeader}>
-              <View style={st.sheetIconWrap}>
-                <MaterialIcons name="person-add-alt-1" size={20} color={colors.primary} />
+              <View style={st.sheetHeaderLeft}>
+                <View style={st.sheetIconWrap}>
+                  <MaterialIcons name="person-add-alt-1" size={20} color={colors.primary} />
+                </View>
+                <Text style={st.sheetTitle}>Tambah User</Text>
               </View>
-              <Text style={st.sheetTitle}>Tambah User</Text>
+              <TouchableOpacity onPress={() => setShowCreate(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <MaterialIcons name="close" size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
             </View>
 
             {createError ? (
@@ -478,16 +482,20 @@ export default function UserPage() {
       </Modal>
 
       {/* ── EDIT MODAL ── */}
-      <Modal visible={!!editTarget} transparent animationType="slide" onRequestClose={() => setEditTarget(null)}>
+      <Modal visible={!!editTarget} transparent animationType="fade" onRequestClose={() => setEditTarget(null)}>
         <KeyboardAvoidingView style={st.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setEditTarget(null)} />
           <View style={st.sheet}>
-            <View style={st.sheetHandle} />
             <View style={st.sheetHeader}>
-              <View style={[st.sheetIconWrap, { backgroundColor: colors.accentPurpleLight }]}>
-                <MaterialIcons name="edit" size={20} color={colors.accentPurple} />
+              <View style={st.sheetHeaderLeft}>
+                <View style={[st.sheetIconWrap, { backgroundColor: colors.accentPurpleLight }]}>
+                  <MaterialIcons name="edit" size={20} color={colors.accentPurple} />
+                </View>
+                <Text style={st.sheetTitle}>Edit User</Text>
               </View>
-              <Text style={st.sheetTitle}>Edit User</Text>
+              <TouchableOpacity onPress={() => setEditTarget(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <MaterialIcons name="close" size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
             </View>
 
             {editError ? (
@@ -682,14 +690,15 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   actions: { flexDirection: 'row', gap: 6, marginLeft: 6 },
   actionBtn: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
 
-  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.45)', padding: 20 },
   sheet: {
-    backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 20, paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    backgroundColor: colors.surfaceWhite, borderRadius: 24, padding: 24,
+    width: '100%', maxWidth: 500,
     borderWidth: 1, borderColor: colors.outline,
+    ...SHADOWS.lg,
   },
-  sheetHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: colors.outline, alignSelf: 'center', marginBottom: 18 },
-  sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 18 },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  sheetHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   sheetIconWrap: {
     width: 40, height: 40, borderRadius: 12, backgroundColor: colors.primaryContainer,
     justifyContent: 'center', alignItems: 'center',
