@@ -11,12 +11,11 @@ import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
-import TrashedFieldsPage from './TrashedFieldsPage';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme } from '../../lib/theme';
 
-export default function PendingFieldsPage() {
+export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean } = {}) {
   const { colors, resolved } = useTheme();
   const cardSurface = resolved === 'dark' ? '#1E293B' : colors.surface;
   const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
@@ -24,7 +23,6 @@ export default function PendingFieldsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submittingId, setSubmittingId] = useState<number | null>(null);
-  const [showTrashedModal, setShowTrashedModal] = useState(false);
   const [approveTarget, setApproveTarget] = useState<{ id: number; name: string } | null>(null);
   const [rejectTarget, setRejectTarget] = useState<{ id: number; name: string } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -115,7 +113,7 @@ export default function PendingFieldsPage() {
   if (loading) {
     return (
       <View style={[st.screen, { backgroundColor: colors.background }]}>
-        <DashboardHeader title="Persetujuan Lapangan" subtitle="Verifikasi lapangan baru" />
+        {!hideHeader && <DashboardHeader title="Persetujuan Lapangan" subtitle="Verifikasi lapangan baru" />}
         <SkeletonCards count={3} />
       </View>
     );
@@ -124,19 +122,12 @@ export default function PendingFieldsPage() {
   return (
     <>
       <View style={[st.screen, { backgroundColor: colors.background }]}>
-        <DashboardHeader
-          title="Persetujuan Lapangan"
-          subtitle="Verifikasi lapangan baru"
-          right={
-            <TouchableOpacity
-              style={st.trashedBtn}
-              onPress={() => setShowTrashedModal(true)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <MaterialIcons name="delete-outline" size={20} color={COLORS.onPrimary} />
-            </TouchableOpacity>
-          }
-        />
+        {!hideHeader && (
+          <DashboardHeader
+            title="Persetujuan Lapangan"
+            subtitle="Verifikasi lapangan baru"
+          />
+        )}
 
         <ScrollView
           contentContainerStyle={st.list}
@@ -149,13 +140,6 @@ export default function PendingFieldsPage() {
                 <MaterialIcons name="pending-actions" size={12} color={COLORS.purpleIcon} />
                 <Text style={st.countText}>{fields.length} lapangan pending</Text>
               </View>
-              <TouchableOpacity
-                style={st.trashedLink}
-                onPress={() => setShowTrashedModal(true)}
-              >
-                <MaterialIcons name="delete-sweep" size={16} color={colors.textSecondary} />
-                <Text style={[st.trashedLinkText, { color: colors.textSecondary }]}>Lihat Terhapus</Text>
-              </TouchableOpacity>
             </View>
           )}
 
@@ -166,14 +150,6 @@ export default function PendingFieldsPage() {
               </View>
               <Text style={[st.emptyTitle, { color: colors.text }]}>Semua Sudah Diverifikasi</Text>
               <Text style={[st.emptyDesc, { color: colors.textSecondary }]}>Tidak ada lapangan yang menunggu.</Text>
-
-              <TouchableOpacity
-                style={[st.trashedOutlineBtn, { borderColor: colors.outline, backgroundColor: cardSurface }]}
-                onPress={() => setShowTrashedModal(true)}
-              >
-                <MaterialIcons name="delete-outline" size={18} color={colors.textSecondary} />
-                <Text style={[st.trashedOutlineText, { color: colors.textSecondary }]}>Lihat Lapangan Terhapus</Text>
-              </TouchableOpacity>
             </View>
           ) : (
             fields.map((f: any) => (
@@ -267,17 +243,6 @@ export default function PendingFieldsPage() {
             </View>
           </View>
         </View>
-      </Modal>
-
-      {/* Trashed Fields Modal */}
-      <Modal visible={showTrashedModal} animationType="slide" onRequestClose={() => setShowTrashedModal(false)}>
-        <View style={[st.modalHeaderBar, { backgroundColor: cardSurface, borderBottomColor: colors.outline }]}>
-          <TouchableOpacity onPress={() => setShowTrashedModal(false)} style={st.closeBtn}>
-            <MaterialIcons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[st.modalHeaderTitle, { color: colors.text }]}>Lapangan Terhapus</Text>
-        </View>
-        <TrashedFieldsPage />
       </Modal>
 
       {/* Approve Confirm Modal */}

@@ -351,9 +351,13 @@ export default function OwnerFieldsPage() {
         body: formData,
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) return null;
+      if (!res.ok) {
+        console.error('[uploadImage] gagal:', res.status, data);
+        return null;
+      }
       return data.url;
-    } catch {
+    } catch (err: any) {
+      console.error('[uploadImage] exception:', err?.message ?? err);
       return null;
     }
   };
