@@ -407,13 +407,19 @@ export default function ProfileScreen() {
         </View>
       </ScrollView>
 
-      <Modal visible={showOwnerModal} transparent animationType="slide" onRequestClose={() => setShowOwnerModal(false)}>
+      <Modal visible={showOwnerModal} transparent animationType="fade" onRequestClose={() => setShowOwnerModal(false)}>
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={() => setShowOwnerModal(false)} />
           <View style={styles.modalSheet}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Ajukan Jadi Owner</Text>
-            <Text style={styles.modalSubtitle}>Isi data usaha Anda untuk menjadi owner lapangan.</Text>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Ajukan Jadi Owner</Text>
+                <Text style={styles.modalSubtitle}>Isi data usaha Anda untuk menjadi owner lapangan.</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowOwnerModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ alignSelf: 'flex-start' }}>
+                <MaterialIcons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
 
             {submitError ? (
               <View style={styles.errorBox}>
@@ -741,25 +747,26 @@ const makeStyles = (colors: any) => StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    justifyContent: 'flex-end',
+    padding: 20,
   },
   modalSheet: {
     backgroundColor: colors.surfaceWhite,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 20,
-    paddingTop: 12,
-    maxHeight: '85%',
-    ...SHADOWS.xl,
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '90%',
+    borderWidth: 1,
+    borderColor: colors.outline,
+    ...SHADOWS.lg,
   },
-  modalHandle: {
-    width: 44,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.outlineVariant,
-    alignSelf: 'center',
-    marginBottom: 16,
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 18,
   },
   modalTitle: {
     ...FONTS.headlineMd,
@@ -771,7 +778,6 @@ const makeStyles = (colors: any) => StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 20,
     marginTop: 6,
-    marginBottom: 18,
   },
   inputContainer: {
     marginBottom: 16,
