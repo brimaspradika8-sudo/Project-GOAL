@@ -12,6 +12,39 @@ class FieldService
     private string $cachePrefix = 'fields_';
     private int $cacheTtl = 300;
 
+    private const SPORT_ALIASES = [
+        'futsal'      => ['futsal'],
+        'basketball'  => ['basketball', 'basket'],
+        'badminton'   => ['badminton'],
+        'volleyball'  => ['volleyball', 'voli'],
+        'tennis'      => ['tennis', 'tenis'],
+        'mini_soccer' => ['mini_soccer'],
+        'other'       => ['other', 'lainnya'],
+    ];
+
+    private static function sportAliases(string $sport): array
+    {
+        $key = strtolower($sport);
+
+        foreach (self::SPORT_ALIASES as $canonical => $variants) {
+            if (in_array($key, $variants, true)) {
+                return $variants;
+            }
+        }
+
+        return [$sport];
+    }
+
+    private function applySportFilter($query, string $sport): void
+    {
+        $aliases = self::sportAliases($sport);
+        $query->where(function ($q) use ($aliases) {
+            foreach ($aliases as $alias) {
+                $q->orWhereRaw('LOWER(sport_type) = ?', [strtolower($alias)]);
+            }
+        });
+    }
+
     public function listApproved(?string $search = null, ?string $sport = null, int $page = 1): LengthAwarePaginator
     {
         $query = Field::approved()->with('owner:id,name');
@@ -26,7 +59,7 @@ class FieldService
         }
 
         if ($sport) {
-            $query->where('sport_type', 'ilike', $sport);
+            $this->applySportFilter($query, $sport);
         }
 
         return $query->latest()->paginate(15, ['*'], 'page', $page);
@@ -41,11 +74,15 @@ class FieldService
         $cacheKey = $this->cachePrefix . 'approved_' . strtolower($sport ?? 'all');
 
         return Cache::remember($cacheKey, $this->cacheTtl, function () use ($sport) {
-            return Field::approved()
+            $query = Field::approved()
                 ->with('owner:id,name')
-                ->when($sport, fn ($q) => $q->where('sport_type', 'ilike', $sport))
-                ->latest()
-                ->paginate(15);
+                ->latest();
+
+            if ($sport) {
+                $this->applySportFilter($query, $sport);
+            }
+
+            return $query->paginate(15);
         });
     }
 

@@ -25,7 +25,7 @@ class UploadController extends Controller
         $filename = time() . '_' . bin2hex(random_bytes(8)) . '.' . $file->getClientOriginalExtension();
 
         $supabaseUrl = config('services.supabase.url');
-        $supabaseKey = config('services.supabase.key');
+        $supabaseKey = env('SUPABASE_SERVICE_KEY');
         $bucket = config('services.supabase.bucket');
 
         if ($supabaseUrl && $supabaseKey && $bucket) {
@@ -34,7 +34,6 @@ class UploadController extends Controller
 
                 $response = Http::withHeaders([
                     'Authorization' => "Bearer {$supabaseKey}",
-                    'Content-Type'  => 'multipart/form-data',
                 ])->attach('file', file_get_contents($file), $filename, [
                     'Content-Type' => $file->getMimeType(),
                 ])->timeout(30)->post($uploadUrl);

@@ -24,7 +24,7 @@ export default function AdminTabLayout() {
   const router = useRouter();
 
   const [ownerRequestBadge, setOwnerRequestBadge] = useState<number | undefined>(undefined);
-  const [pendingFieldsBadge, setPendingFieldsBadge] = useState<number | undefined>(undefined);
+  const [manageFieldsBadge, setManageFieldsBadge] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     const fetchBadges = async () => {
@@ -48,7 +48,7 @@ export default function AdminTabLayout() {
           if (fieldsRes.ok) {
             const fieldsData = await fieldsRes.json().catch(() => ({}));
             const count = (fieldsData?.data ?? []).length;
-            setPendingFieldsBadge(count > 0 ? count : undefined);
+            setManageFieldsBadge(count > 0 ? count : undefined);
           }
         }
       } catch {}
@@ -59,7 +59,9 @@ export default function AdminTabLayout() {
   const sidebarItems: SidebarItem[] = [
     { href: '/(admin)/users', label: 'Kelola Pengguna', icon: 'people-alt' },
     { href: '/(admin)/owner-requests', label: 'Pengajuan Owner', icon: 'inventory' },
-    ...(isSuperAdmin ? [{ href: '/(admin)/pending-fields', label: 'Kelola Lapangan', icon: 'stadium' }] : []),
+    ...(isSuperAdmin ? [
+      { href: '/(admin)/manage-fields', label: 'Kelola Lapangan', icon: 'stadium' },
+    ] : []),
     { href: '/(admin)/profile', label: 'Profile', icon: 'person' },
   ];
 
@@ -109,15 +111,15 @@ export default function AdminTabLayout() {
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
             <Tabs.Screen
-              name="pending-fields"
+              name="manage-fields"
               options={{
                 title: 'Lapangan',
                 tabBarIcon: ({ color }) => (
                   <MaterialIcons name="stadium" size={24} color={color} />
                 ),
                 href: isSuperAdmin ? undefined : null,
-                tabBarBadge: isSuperAdmin ? pendingFieldsBadge : undefined,
-                tabBarBadgeStyle: isSuperAdmin && pendingFieldsBadge ? styles.badge : undefined,
+                tabBarBadge: isSuperAdmin ? manageFieldsBadge : undefined,
+                tabBarBadgeStyle: isSuperAdmin && manageFieldsBadge ? styles.badge : undefined,
               }}
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
@@ -181,15 +183,15 @@ export default function AdminTabLayout() {
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
             <Tabs.Screen
-              name="pending-fields"
+              name="manage-fields"
               options={{
                 title: 'Lapangan',
                 tabBarIcon: ({ color }) => (
                   <MaterialIcons name="stadium" size={24} color={color} />
                 ),
                 href: isSuperAdmin ? undefined : null,
-                tabBarBadge: isSuperAdmin ? pendingFieldsBadge : undefined,
-                tabBarBadgeStyle: isSuperAdmin && pendingFieldsBadge ? styles.badge : undefined,
+                tabBarBadge: isSuperAdmin ? manageFieldsBadge : undefined,
+                tabBarBadgeStyle: isSuperAdmin && manageFieldsBadge ? styles.badge : undefined,
               }}
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
@@ -245,15 +247,15 @@ export default function AdminTabLayout() {
         listeners={{ tabPress: () => Haptics.selectionAsync() }}
       />
       <Tabs.Screen
-        name="pending-fields"
+        name="manage-fields"
         options={{
           title: 'Lapangan',
           tabBarIcon: ({ color }) => (
             <MaterialIcons name="stadium" size={24} color={color} />
           ),
           href: isSuperAdmin ? undefined : null,
-          tabBarBadge: isSuperAdmin ? pendingFieldsBadge : undefined,
-          tabBarBadgeStyle: isSuperAdmin && pendingFieldsBadge ? styles.badge : undefined,
+          tabBarBadge: isSuperAdmin ? manageFieldsBadge : undefined,
+          tabBarBadgeStyle: isSuperAdmin && manageFieldsBadge ? styles.badge : undefined,
         }}
         listeners={{ tabPress: () => Haptics.selectionAsync() }}
       />
