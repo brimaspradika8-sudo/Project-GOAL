@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Field;
+
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Field\StoreFieldRequest;
 use App\Http\Requests\Field\UpdateFieldRequest;
@@ -35,7 +36,7 @@ class FieldController extends Controller
     {
         $search = $request->query('search');
         $sport = $request->query('sport');
-        $page = (int) $request->query('page', 1);
+        $page = max(1, (int) $request->query('page', 1));
 
         $fields = $search || $page > 1
             ? $this->fieldService->listApproved($search, $sport, $page)
@@ -46,7 +47,7 @@ class FieldController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $field = $this->fieldService->find($id);
+        $field = $this->fieldService->findApproved($id);
 
         if (!$field) {
             return response()->json(['message' => 'Lapangan tidak ditemukan.'], 404);
@@ -75,15 +76,14 @@ class FieldController extends Controller
             return response()->json(['message' => 'Lapangan tidak ditemukan.'], 404);
         }
 
-        $profile = $request->user()->profile;
-        $isOwner = $field->owner_id === $request->user()->id;
-        $isAdmin = $profile && $profile->role === 'super_admin';
+        $user = $request->user();
+        $isAdmin = $user->profile?->role === 'super_admin';
 
-        if (!$isOwner && !$isAdmin) {
+        if (!$isAdmin && $field->owner_id !== $user->id) {
             return response()->json(['message' => 'Anda bukan pemilik lapangan ini.'], 403);
         }
 
-        $field = $this->fieldService->update($field, $request->validated(), $isAdmin);
+        $field = $this->fieldService->update($field, $request->validated(), $user, $isAdmin);
 
         $this->fieldService->invalidateCache();
 
@@ -135,12 +135,16 @@ class FieldController extends Controller
             return response()->json(['message' => 'Lapangan tidak ditemukan.'], 404);
         }
 
-        $field = $this->fieldService->approve(
-            $field,
-            $request->user(),
-            $request->status,
-            $request->reason
-        );
+        try {
+            $field = $this->fieldService->approve(
+                $field,
+                $request->user(),
+                $request->status,
+                $request->reason
+            );
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         $this->fieldService->invalidateCache();
 

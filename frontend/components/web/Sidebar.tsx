@@ -17,6 +17,63 @@ interface SidebarProps {
   items: SidebarItem[];
 }
 
+interface SidebarMenuItemProps {
+  item: SidebarItem;
+  active: boolean;
+  activeColor: string;
+  inactiveColor: string;
+  onPress: () => void;
+}
+
+export function getComparableRoute(path: string) {
+  return path.replace(/\/\([^/]+\)/g, '') || '/';
+}
+
+export function isSidebarRouteActive(pathname: string, href: string) {
+  const currentRoute = getComparableRoute(pathname);
+  const itemRoute = getComparableRoute(href);
+
+  return currentRoute === itemRoute || currentRoute.startsWith(itemRoute + '/');
+}
+
+export function SidebarMenuItem({
+  item,
+  active,
+  activeColor,
+  inactiveColor,
+  onPress,
+}: SidebarMenuItemProps) {
+  const itemColor = active ? activeColor : inactiveColor;
+
+  return (
+    <Pressable
+      key={item.href}
+      style={[
+        styles.menuItem,
+        active && styles.menuItemActive,
+      ]}
+      onPress={onPress}
+    >
+      <MaterialIcons
+        name={item.icon as any}
+        size={20}
+        color={itemColor}
+      />
+      <Text
+        style={[
+          styles.menuLabel,
+          {
+            color: itemColor,
+            fontWeight: active ? '700' : '500',
+          },
+        ]}
+      >
+        {item.label}
+      </Text>
+    </Pressable>
+  );
+}
+
 export default function Sidebar({ title, accentColor, items }: SidebarProps) {
   const { colors, resolved } = useTheme();
   const pathname = usePathname();
@@ -24,13 +81,8 @@ export default function Sidebar({ title, accentColor, items }: SidebarProps) {
 
   if (Platform.OS !== 'web') return null;
 
-  const isActive = (href: string) => {
-    return pathname === href || pathname.startsWith(href + '/');
-  };
-
-  const activeBackground = resolved === 'dark' ? '#1E293B' : accentColor + '1A';
-  const activeColor = resolved === 'dark' ? '#FFFFFF' : accentColor;
-  const inactiveColor = resolved === 'dark' ? '#94A3B8' : colors.textSecondary;
+  const activeColor = accentColor;
+  const inactiveColor = resolved === 'dark' ? '#94A3B8' : '#4B5563';
   const panelTitleColor = resolved === 'dark' ? '#CBD5E1' : colors.text;
 
   return (
@@ -50,30 +102,16 @@ export default function Sidebar({ title, accentColor, items }: SidebarProps) {
 
       <View style={styles.menu}>
         {items.map((item) => {
-          const active = isActive(item.href);
+          const active = isSidebarRouteActive(pathname, item.href);
           return (
-            <Pressable
+            <SidebarMenuItem
               key={item.href}
-              style={[
-                styles.menuItem,
-                active && { backgroundColor: activeBackground },
-              ]}
+              item={item}
+              active={active}
+              activeColor={activeColor}
+              inactiveColor={inactiveColor}
               onPress={() => router.push(item.href as any)}
-            >
-              <MaterialIcons
-                name={item.icon as any}
-                size={20}
-                color={active ? activeColor : inactiveColor}
-              />
-              <Text
-                style={[
-                  styles.menuLabel,
-                  { color: active ? activeColor : inactiveColor },
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
+            />
           );
         })}
       </View>
@@ -121,12 +159,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 10,
+    backgroundColor: 'transparent',
+    transitionDuration: '180ms' as any,
+    transitionProperty: 'background-color, color' as any,
+    transitionTimingFunction: 'ease' as any,
+  },
+  menuItemActive: {
+    backgroundColor: '#EDE7FF',
   },
   menuLabel: {
     fontFamily: FONT_FAMILY,
     fontSize: 14,
-    fontWeight: '500',
     marginLeft: 12,
     flex: 1,
+    transitionDuration: '180ms' as any,
+    transitionProperty: 'color, font-weight' as any,
+    transitionTimingFunction: 'ease' as any,
   },
 });

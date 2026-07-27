@@ -29,7 +29,7 @@ class ProfileController extends Controller
         $validated = $request->validate([
             'full_name' => 'sometimes|string|max:100',
             'region'    => 'sometimes|string|max:100',
-            'avatar_url' => ['sometimes', 'nullable', 'url', 'max:500', Rule::startsWith([config('app.url') . '/storage/'])],
+            'avatar_url' => ['sometimes', 'nullable', 'url', 'max:500'],
             'age'       => 'sometimes|nullable|integer|min:10|max:100',
         ]);
 
@@ -40,11 +40,16 @@ class ProfileController extends Controller
         }
 
         $profile = $user->profile;
-        if ($profile) {
-            $profile->update(collect($validated)->only([
-                'full_name', 'region', 'avatar_url', 'age',
-            ])->toArray());
+
+        if (!$profile) {
+            return response()->json([
+                'message' => 'Profil belum dibuat. Silakan lengkapi onboarding terlebih dahulu.',
+            ], 422);
         }
+
+        $profile->update(collect($validated)->only([
+            'full_name', 'region', 'avatar_url', 'age',
+        ])->toArray());
 
         $data = $this->profile->getPayload($user);
 
@@ -70,8 +75,10 @@ class ProfileController extends Controller
             'password' => $request->password,
         ]);
 
+        $user->tokens()->delete();
+
         return response()->json([
-            'message' => 'Password berhasil diperbarui.',
+            'message' => 'Password berhasil diperbarui. Silakan login kembali.',
         ]);
     }
 }

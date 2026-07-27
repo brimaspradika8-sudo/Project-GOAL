@@ -1,9 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Pressable, Platform, StyleSheet, Animated } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../../lib/theme';
 import { FONT_FAMILY } from '../goalTheme';
-import type { SidebarItem } from './Sidebar';
+import { isSidebarRouteActive, type SidebarItem } from './Sidebar';
 
 interface MobileWebHeaderProps {
   title: string;
@@ -33,11 +33,8 @@ export default function MobileWebHeader({ title, accentColor, items, activeRoute
     }
   }, [drawerOpen, slideAnim, backdropAnim]);
 
-  const isActive = (href: string) => activeRoute === href || activeRoute?.startsWith(href + '/');
-
-  const activeBg = resolved === 'dark' ? '#1E293B' : accentColor + '1A';
-  const activeColor = resolved === 'dark' ? '#FFFFFF' : accentColor;
-  const inactiveColor = resolved === 'dark' ? '#94A3B8' : colors.textSecondary;
+  const activeColor = accentColor;
+  const inactiveColor = resolved === 'dark' ? '#94A3B8' : '#4B5563';
   const panelTitleColor = resolved === 'dark' ? '#CBD5E1' : colors.text;
 
   return (
@@ -76,11 +73,12 @@ export default function MobileWebHeader({ title, accentColor, items, activeRoute
         </View>
         <View style={styles.drawerMenu}>
           {items.map((item) => {
-            const active = isActive(item.href);
+            const active = activeRoute ? isSidebarRouteActive(activeRoute, item.href) : false;
+            const itemColor = active ? activeColor : inactiveColor;
             return (
               <Pressable
                 key={item.href}
-                style={[styles.drawerItem, active && { backgroundColor: activeBg }]}
+                style={[styles.drawerItem, active && styles.drawerItemActive]}
                 onPress={() => {
                   setDrawerOpen(false);
                   onNavigate(item.href);
@@ -89,10 +87,16 @@ export default function MobileWebHeader({ title, accentColor, items, activeRoute
                 <MaterialIcons
                   name={item.icon as any}
                   size={20}
-                  color={active ? activeColor : inactiveColor}
+                  color={itemColor}
                 />
                 <Text
-                  style={[styles.drawerLabel, { color: active ? activeColor : inactiveColor }]}
+                  style={[
+                    styles.drawerLabel,
+                    {
+                      color: itemColor,
+                      fontWeight: active ? '700' : '500',
+                    },
+                  ]}
                 >
                   {item.label}
                 </Text>
@@ -176,12 +180,21 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     minHeight: 48,
+    backgroundColor: 'transparent',
+    transitionDuration: '180ms' as any,
+    transitionProperty: 'background-color, color' as any,
+    transitionTimingFunction: 'ease' as any,
+  },
+  drawerItemActive: {
+    backgroundColor: '#EDE7FF',
   },
   drawerLabel: {
     fontFamily: FONT_FAMILY,
     fontSize: 14,
-    fontWeight: '500',
     marginLeft: 12,
     flex: 1,
+    transitionDuration: '180ms' as any,
+    transitionProperty: 'color, font-weight' as any,
+    transitionTimingFunction: 'ease' as any,
   },
 });

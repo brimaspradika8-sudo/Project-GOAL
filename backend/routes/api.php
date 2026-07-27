@@ -19,9 +19,11 @@ use App\Http\Controllers\UploadController;
     Route::middleware('throttle:5,1')->group(function () {
     Route::post('/auth/forgot-password', [PasswordResetController::class, 'forgot']);
 });
-    Route::get('/fields',                      [FieldController::class, 'index']);
-    Route::get('/fields/{id}',                 [FieldController::class, 'show']);
-    Route::get('/me/onboarding/check-username',[OnboardingController::class, 'checkUsername']);
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::get('/fields',                      [FieldController::class, 'index']);
+        Route::get('/fields/{id}',                 [FieldController::class, 'show']);
+        Route::get('/me/onboarding/check-username',[OnboardingController::class, 'checkUsername']);
+    });
 // Protected (Sanctum + rate limit)
     Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);

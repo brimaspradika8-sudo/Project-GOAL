@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Profile;
 use App\Models\User;
 use App\Models\UserSportPreference;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 class ProfileService
@@ -69,33 +70,40 @@ class ProfileService
 
     public function submitOnboarding(User $user, array $data): array|false
     {
-        return DB::transaction(function () use ($user, $data) {
-            if (!$this->isUsernameAvailable($data['username'], $user->id)) {
+        try {
+            return DB::transaction(function () use ($user, $data) {
+                if (!$this->isUsernameAvailable($data['username'], $user->id)) {
+                    return false;
+                }
+
+                $profile = Profile::updateOrCreate(
+                    ['user_id' => $user->id],
+                    [
+                        'username'             => $data['username'],
+                        'email'                => $user->email,
+                        'full_name'            => $user->name,
+                        'region'               => $data['region'] ?? null,
+                        'avatar_url'           => $data['avatar_url'] ?? null,
+                        'onboarding_completed' => true,
+                    ]
+                );
+
+                UserSportPreference::where('user_id', $user->id)->delete();
+
+                foreach ($data['sports'] as $sport) {
+                    UserSportPreference::create([
+                        'user_id'    => $user->id,
+                        'sport_type' => strtolower($sport),
+                    ]);
+                }
+
+                return $this->getPayload($user);
+            });
+        } catch (QueryException $e) {
+            if (str_contains($e->getMessage(), 'username')) {
                 return false;
             }
-
-            $profile = Profile::updateOrCreate(
-                ['user_id' => $user->id],
-                [
-                    'username'             => $data['username'],
-                    'email'                => $user->email,
-                    'full_name'            => $user->name,
-                    'region'               => $data['region'] ?? null,
-                    'avatar_url'           => $data['avatar_url'] ?? null,
-                    'onboarding_completed' => true,
-                ]
-            );
-
-            UserSportPreference::where('user_id', $user->id)->delete();
-
-            foreach ($data['sports'] as $sport) {
-                UserSportPreference::create([
-                    'user_id'    => $user->id,
-                    'sport_type' => strtolower($sport),
-                ]);
-            }
-
-            return $this->getPayload($user);
-        });
+            throw $e;
+        }
     }
 }

@@ -40,7 +40,6 @@ export default function AdminProfilePage() {
       }
       await AsyncStorage.removeItem(TOKEN_KEY);
       await clearProfile();
-      router.dismissAll();
       router.replace('/login');
     } catch {
       useToastStore.getState().show({ type: 'error', title: 'Gagal', description: 'Terjadi kesalahan saat keluar akun.' });

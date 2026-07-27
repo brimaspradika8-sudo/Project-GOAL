@@ -76,6 +76,7 @@ export default function RootLayout() {
 function RootLayoutInner() {
   const colorScheme = useColorScheme();
   const { resolved, colors } = useTheme();
+  const shouldBlockForFonts = Platform.OS !== 'web';
   const [fontsLoaded, fontError] = Font.useFonts({
     'Plus Jakarta Sans': require('../assets/fonts/PlusJakartaSans-Regular.ttf'),
     'Plus Jakarta Sans_500': require('../assets/fonts/PlusJakartaSans-SemiBold.ttf'),
@@ -92,7 +93,7 @@ function RootLayoutInner() {
     const timer = setTimeout(() => setFontsFallback(true), 5000);
     return () => clearTimeout(timer);
   }, [fontsLoaded, fontError]);
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(Platform.OS !== 'web');
   const [isReady, setIsReady] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Memuat...');
   const routingRef = useRef(false);
@@ -173,7 +174,7 @@ function RootLayoutInner() {
     initialize();
   }, [showSplash, routeByProfile, routeToLogin]);
 
-  if (!fontsLoaded && !fontsFallback && !fontError) {
+  if (shouldBlockForFonts && !fontsLoaded && !fontsFallback && !fontError) {
     return null;
   }
 
@@ -205,7 +206,7 @@ function RootLayoutInner() {
             <Stack.Screen name="booking" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="e-ticket" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
           </Stack>
-          {!isReady && (
+          {!isReady && Platform.OS !== 'web' && (
             <View style={styles.loadingOverlay}>
               <LoadingScreen message={loadingMessage} />
             </View>

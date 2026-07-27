@@ -27,8 +27,8 @@ class FieldResource extends JsonResource
                 'id'   => $this->approver->id,
                 'name' => $this->approver->name,
             ]),
-            'created_at'      => $this->created_at->toISOString(),
-            'updated_at'      => $this->updated_at->toISOString(),
+            'created_at'      => $this->created_at?->toISOString(),
+            'updated_at'      => $this->updated_at?->toISOString(),
         ];
     }
 }

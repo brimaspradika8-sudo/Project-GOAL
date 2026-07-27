@@ -9,7 +9,7 @@ import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
 import { useTheme } from '../../lib/theme';
 import { TOKEN_KEY } from '../../lib/auth';
 import { FONT_FAMILY } from '../../components/goalTheme';
-import Sidebar, { SidebarItem } from '../../components/web/Sidebar';
+import Sidebar, { isSidebarRouteActive, SidebarItem } from '../../components/web/Sidebar';
 import MobileWebHeader from '../../components/web/MobileWebHeader';
 import { useBreakpoint } from '../../lib/responsive';
 
@@ -63,8 +63,7 @@ export default function AdminTabLayout() {
     { href: '/(admin)/profile', label: 'Profile', icon: 'person' },
   ];
 
-  const adminRoutes = sidebarItems.map(i => i.href);
-  const activeRoute = adminRoutes.find(r => pathname.startsWith(r)) || '/(admin)/users';
+  const activeRoute = sidebarItems.find((item) => isSidebarRouteActive(pathname, item.href))?.href || '/(admin)/users';
 
   if (isWeb && breakpoint === 'mobile') {
     return (

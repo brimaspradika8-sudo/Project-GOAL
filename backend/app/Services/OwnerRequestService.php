@@ -19,15 +19,26 @@ class OwnerRequestService
 
     public function submit(User $user, array $data): OwnerRequest
     {
-        return OwnerRequest::create([
-            'user_id' => $user->id,
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'business_name' => $data['business_name'],
-            'address' => $data['address'],
-            'phone' => $data['phone'],
-            'status' => 'pending',
-        ]);
+        return DB::transaction(function () use ($user, $data) {
+            $pending = OwnerRequest::where('user_id', $user->id)
+                ->where('status', 'pending')
+                ->lockForUpdate()
+                ->first();
+
+            if ($pending) {
+                throw new \RuntimeException('Anda sudah memiliki pengajuan yang sedang diproses.');
+            }
+
+            return OwnerRequest::create([
+                'user_id' => $user->id,
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'business_name' => $data['business_name'],
+                'address' => $data['address'],
+                'phone' => $data['phone'],
+                'status' => 'pending',
+            ]);
+        });
     }
 
     public function listPending(): LengthAwarePaginator
@@ -40,15 +51,17 @@ class OwnerRequestService
 
     public function review(OwnerRequest $request, User $reviewer, string $status, ?string $reason = null): OwnerRequest
     {
-        if ($request->status !== 'pending') {
-            throw new \RuntimeException('Pengajuan sudah diproses sebelumnya.');
-        }
+        return DB::transaction(function () use ($request, $reviewer, $status, $reason) {
+            $request->refresh();
 
-        if ($request->user_id === $reviewer->id) {
-            throw new \RuntimeException('Tidak dapat memproses pengajuan sendiri.');
-        }
+            if ($request->status !== 'pending') {
+                throw new \RuntimeException('Pengajuan sudah diproses sebelumnya.');
+            }
 
-        return DB::transaction(function () use ($request, $reviewer, $status, $reason): OwnerRequest {
+            if ($request->user_id === $reviewer->id) {
+                throw new \RuntimeException('Tidak dapat memproses pengajuan sendiri.');
+            }
+
             if ($status === 'approved') {
                 $request->update([
                     'status' => 'approved',
@@ -56,10 +69,13 @@ class OwnerRequestService
                     'reviewed_at' => now(),
                 ]);
 
-                Profile::where('user_id', $request->user_id)
-                    ->first()
-                    ?->forceFill(['role' => 'owner', 'is_owner_verified' => true])
-                    ->save();
+                $profile = Profile::where('user_id', $request->user_id)->first();
+
+                if (!$profile) {
+                    throw new \RuntimeException('Profil user tidak ditemukan.');
+                }
+
+                $profile->forceFill(['role' => 'owner', 'is_owner_verified' => true])->save();
             } else {
                 $request->update([
                     'status' => 'rejected',

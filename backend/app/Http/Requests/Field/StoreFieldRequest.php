@@ -19,9 +19,9 @@ class StoreFieldRequest extends FormRequest
             'name'            => 'required|string|min:5|max:50',
             'sport_type'      => ['required', 'string', 'max:50', Rule::in(SportType::values())],
             'location'        => 'nullable|string|max:255',
-            'description'     => 'nullable|string|min:50|max:255',
+            'description'     => 'nullable|string|min:10|max:1000',
             'price_per_hour'  => ['nullable', 'numeric', 'min:0'],
-            'image_url'       => 'nullable|string|max:2048',
+            'image_url'       => 'nullable|url|max:2048',
         ];
 
         $min = config('goal.price_min');
@@ -52,12 +52,12 @@ class StoreFieldRequest extends FormRequest
             'location.string'         => 'Lokasi harus berupa teks.',
             'location.max'            => 'Lokasi tidak boleh lebih dari 255 karakter.',
             'description.string'      => 'Deskripsi harus berupa teks.',
-            'description.min'         => 'Deskripsi minimal 50 karakter jika diisi.',
-            'description.max'         => 'Deskripsi tidak boleh lebih dari 255 karakter.',
+            'description.min'         => 'Deskripsi minimal 10 karakter jika diisi.',
+            'description.max'         => 'Deskripsi tidak boleh lebih dari 1000 karakter.',
             'price_per_hour.numeric'  => 'Harga harus berupa angka.',
             'price_per_hour.min'      => 'Harga per jam tidak boleh kurang dari batas minimum.',
             'price_per_hour.max'      => 'Harga per jam terlalu besar dan tidak wajar.',
-            'image_url.string'        => 'URL gambar harus berupa teks.',
+            'image_url.url'           => 'URL gambar harus berformat URL yang valid.',
             'image_url.max'           => 'URL gambar tidak boleh lebih dari 2048 karakter.',
         ];
     }
