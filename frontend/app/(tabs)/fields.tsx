@@ -19,15 +19,9 @@ import { SkeletonVenueList } from '../../components/Skeleton';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useTheme } from '../../lib/theme';
 import VenueCard from '../../components/VenueCard';
+import { SPORT_OPTIONS, SPORT_MAP } from '../../lib/fieldValidation';
 
-const FILTERS = ['Semua', 'Futsal', 'Basket', 'Badminton', 'Mini Soccer', 'Tenis'];
-const SPORT_MAP: Record<string, string> = {
-  'Futsal': 'futsal',
-  'Basket': 'basketball',
-  'Badminton': 'badminton',
-  'Mini Soccer': 'mini_soccer',
-  'Tenis': 'tennis',
-};
+const FILTERS = ['Semua', ...SPORT_OPTIONS];
 function VenueCardInline({ item }: { item: Field }) {
   return <VenueCard field={item} />;
 }

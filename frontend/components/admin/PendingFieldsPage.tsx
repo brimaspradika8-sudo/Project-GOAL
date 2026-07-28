@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
   RefreshControl, Modal, TextInput,
@@ -266,12 +266,6 @@ const st = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
   list: { padding: SIZES.gutter, paddingBottom: 60 },
 
-  trashedBtn: {
-    width: 36, height: 36, borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center', alignItems: 'center',
-  },
-
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   countPill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -280,8 +274,6 @@ const st = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.purpleBorder,
   },
   countText: { ...FONTS.labelSm, color: COLORS.purpleText },
-  trashedLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  trashedLinkText: { ...FONTS.labelSm, color: COLORS.textSecondary },
 
   emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12 },
   emptyIconWrap: {
@@ -292,13 +284,6 @@ const st = StyleSheet.create({
   },
   emptyTitle: { ...FONTS.titleLg, color: COLORS.text },
   emptyDesc: { ...FONTS.bodyMd, color: COLORS.textSecondary },
-  trashedOutlineBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 1, borderColor: COLORS.outline,
-    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, marginTop: 12,
-    backgroundColor: COLORS.surface,
-  },
-  trashedOutlineText: { ...FONTS.titleSm, color: COLORS.textSecondary },
 
   card: {
     backgroundColor: COLORS.surface, borderRadius: 18, padding: 16, marginBottom: 12,
@@ -369,12 +354,4 @@ const st = StyleSheet.create({
     backgroundColor: COLORS.error, minHeight: 44, justifyContent: 'center', alignItems: 'center',
   },
   confirmRejectText: { ...FONTS.titleSm, color: COLORS.onPrimary },
-
-  modalHeaderBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 16,
-    paddingHorizontal: 16, paddingTop: 48, paddingBottom: 14,
-    backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.outline,
-  },
-  closeBtn: { padding: 4 },
-  modalHeaderTitle: { ...FONTS.headlineSm, color: COLORS.text },
 });
