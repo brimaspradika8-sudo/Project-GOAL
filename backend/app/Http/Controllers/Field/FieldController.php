@@ -45,12 +45,21 @@ class FieldController extends Controller
         return $this->paginatedResponse($fields);
     }
 
-    public function show(int $id): JsonResponse
+    public function show(int $id, Request $request): JsonResponse
     {
         $field = $this->fieldService->findApproved($id);
 
         if (!$field) {
             return response()->json(['message' => 'Lapangan tidak ditemukan.'], 404);
+        }
+
+        $user = $request->user();
+        if ($user) {
+            $isOwner = $field->owner_id === $user->id;
+            $isAdmin = $user->profile?->role === 'super_admin';
+            if ($isOwner || $isAdmin) {
+                $field->makeVisible(['rejection_reason', 'approved_by']);
+            }
         }
 
         return response()->json(new FieldResource($field));
@@ -116,6 +125,7 @@ class FieldController extends Controller
     public function pending(): JsonResponse
     {
         $fields = $this->fieldService->listPending();
+        $fields->getCollection()->makeVisible(['rejection_reason', 'approved_by']);
 
         return $this->paginatedResponse($fields);
     }
@@ -123,6 +133,7 @@ class FieldController extends Controller
     public function myFields(Request $request): JsonResponse
     {
         $fields = $this->fieldService->listByOwner($request->user());
+        $fields->getCollection()->makeVisible(['rejection_reason', 'approved_by']);
 
         return $this->paginatedResponse($fields);
     }
@@ -148,12 +159,15 @@ class FieldController extends Controller
 
         $this->fieldService->invalidateCache();
 
+        $field->makeVisible(['rejection_reason', 'approved_by']);
+
         return response()->json(new FieldResource($field));
     }
 
     public function trashed(): JsonResponse
     {
         $fields = $this->fieldService->listTrashed();
+        $fields->getCollection()->makeVisible(['rejection_reason', 'approved_by']);
 
         return $this->paginatedResponse($fields);
     }

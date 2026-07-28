@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
   RefreshControl, TextInput, Image, Modal,
@@ -17,7 +17,7 @@ import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useDebounce } from '../../hooks/useDebounce';
 import {
-  SPORT_OPTIONS, SPORT_MAP,
+  SPORT_OPTIONS, SPORT_MAP, SPORT_LABELS,
   type FieldFormErrors, type FieldFormData,
   EMPTY_ERRORS, validateAllFields, hasErrors,
   validateFieldName, validateFieldSportType, validateFieldPrice,
@@ -526,10 +526,6 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
     </>
   );
 }
-
-const SPORT_LABELS: Record<string, string> = Object.fromEntries(
-  Object.entries(SPORT_MAP).map(([label, key]) => [key, label]),
-);
 
 // ── Reusable field components (same pattern as OwnerFieldsPage) ──
 
