@@ -17,7 +17,7 @@ import { useTheme } from '../../lib/theme';
 
 export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean } = {}) {
   const { colors, resolved } = useTheme();
-  const cardSurface = resolved === 'dark' ? '#1E293B' : colors.surface;
+  const cardSurface = colors.surface;
   const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -136,7 +136,7 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
         >
           {fields.length > 0 && (
             <View style={st.headerRow}>
-              <View style={[st.countPill, { backgroundColor: resolved === 'dark' ? '#2A1F5E' : COLORS.purpleBg, borderColor: resolved === 'dark' ? '#4C1D95' : COLORS.purpleBorder }]}>
+              <View style={[st.countPill, { backgroundColor: colors.accentPurpleLight, borderColor: resolved === 'dark' ? '#4C1D95' : COLORS.purpleBorder }]}>
                 <MaterialIcons name="pending-actions" size={12} color={COLORS.purpleIcon} />
                 <Text style={st.countText}>{fields.length} lapangan pending</Text>
               </View>
@@ -160,7 +160,7 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
                 onPress={() => router.push(`/venue-detail?id=${f.id}`)}
               >
                 <View style={st.cardTop}>
-                  <View style={[st.fieldIconWrap, { backgroundColor: resolved === 'dark' ? '#2A1F5E' : COLORS.purpleBg, borderColor: resolved === 'dark' ? '#4C1D95' : COLORS.purpleBorder }]}>
+                  <View style={[st.fieldIconWrap, { backgroundColor: colors.accentPurpleLight, borderColor: resolved === 'dark' ? '#4C1D95' : COLORS.purpleBorder }]}>
                     <MaterialIcons name="stadium" size={20} color={COLORS.purpleIcon} />
                   </View>
                   <View style={st.cardTopInfo}>
@@ -210,7 +210,7 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
         <View style={st.modalOverlay}>
           <View style={[st.rejectModal, { backgroundColor: cardSurface, borderColor: colors.outline }]}>
             <View style={st.rejectHeader}>
-              <View style={[st.rejectIconWrap, { backgroundColor: resolved === 'dark' ? '#3B1A1A' : COLORS.errorLight }]}>
+              <View style={[st.rejectIconWrap, { backgroundColor: colors.errorContainer }]}>
                 <MaterialIcons name="cancel" size={22} color={COLORS.error} />
               </View>
               <Text style={[st.rejectTitle, { color: colors.text }]}>Alasan Penolakan</Text>

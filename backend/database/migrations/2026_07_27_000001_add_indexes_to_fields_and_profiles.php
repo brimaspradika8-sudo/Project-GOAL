@@ -7,10 +7,10 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     public function up(): void
-    {
+    {   
         Schema::table('fields', function (Blueprint $table) {
             $table->index('sport_type');
-            $table->index('status');
+          
         });
 
         Schema::table('profiles', function (Blueprint $table) {

@@ -17,7 +17,7 @@ import { useTheme } from '../../lib/theme';
 
 export default function OwnerRequestPage() {
   const { colors, resolved } = useTheme();
-  const cardSurface = resolved === 'dark' ? '#1E293B' : colors.surface;
+  const cardSurface = colors.surface;
   const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -200,7 +200,7 @@ export default function OwnerRequestPage() {
         <View style={st.modalOverlay}>
           <View style={[st.modal, { backgroundColor: cardSurface, borderColor: colors.outline }]}>
             <View style={st.modalHeader}>
-              <View style={[st.modalIconWrap, { backgroundColor: resolved === 'dark' ? '#3B1A1A' : colors.errorContainer }]}>
+              <View style={[st.modalIconWrap, { backgroundColor: colors.errorContainer }]}>
                 <MaterialIcons name="cancel" size={22} color={colors.error} />
               </View>
               <Text style={[st.modalTitle, { color: colors.text }]}>Alasan Penolakan</Text>
