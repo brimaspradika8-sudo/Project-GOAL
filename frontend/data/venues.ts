@@ -165,8 +165,9 @@ export const CATEGORIES = [
   { label: 'Futsal', icon: 'sports-soccer' as const },
   { label: 'Badminton', icon: 'sports-tennis' as const },
   { label: 'Basket', icon: 'sports-basketball' as const },
-  { label: 'Mini Soccer', icon: 'sports-soccer' as const },
+  { label: 'Voli', icon: 'sports-volleyball' as const },
   { label: 'Tenis', icon: 'sports-tennis' as const },
+  { label: 'Mini Soccer', icon: 'sports-soccer' as const },
 ];
 
 export function generateBooking(venue: Venue, court: Court, date: string, time: string): Booking {

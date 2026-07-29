@@ -14,19 +14,24 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { COLORS, FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../components/goalTheme';
+import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../components/goalTheme';
 import { SafeImage } from '../components/SafeImage';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
 import { useFavoriteStore } from '../store/favoriteStore';
 import { useNotificationStore } from '../store/notificationStore';
+import { useTheme } from '../lib/theme';
+import { useBreakpoint } from '../lib/responsive';
 import type { Field } from '../store/fieldStore';
 import { useToastStore } from '../store/toastStore';
 
-const DEFAULT_IMAGES: Record<string, string> = {
-  futsal: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
-  basketball: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop',
-  badminton: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?q=80&w=800&auto=format&fit=crop',
-  default: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
+const SPORT_ICONS: Record<string, string> = {
+  futsal: 'sports-soccer',
+  basketball: 'sports-basketball',
+  badminton: 'sports-tennis',
+  volleyball: 'sports-volleyball',
+  mini_soccer: 'sports-soccer',
+  tennis: 'sports-tennis',
+  other: 'sports',
 };
 
 function formatPrice(price: number | null): string {
@@ -36,7 +41,10 @@ function formatPrice(price: number | null): string {
 
 export default function VenueDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { height: screenHeight } = useWindowDimensions();
+  const { height: screenHeight, width: screenWidth } = useWindowDimensions();
+  const { colors } = useTheme();
+  const breakpoint = useBreakpoint();
+  const isDesktop = breakpoint === 'desktop';
   const [field, setField] = useState<Field | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,187 +86,283 @@ export default function VenueDetailScreen() {
     setRefreshing(false);
   }, [fetchField]);
 
+  const st = makeStyles(colors, isDesktop, screenWidth);
+
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.errorText}>Memuat data...</Text>
+      <View style={st.centered}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={st.errorText}>Memuat data...</Text>
       </View>
     );
   }
 
   if (error || !field) {
     return (
-      <View style={styles.centered}>
-        <MaterialIcons name="error-outline" size={48} color={COLORS.textTertiary} />
-        <Text style={styles.errorText}>{error || 'Lapangan tidak ditemukan'}</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtnSmall}>
-          <Text style={styles.backBtnSmallText}>Kembali</Text>
+      <View style={st.centered}>
+        <MaterialIcons name="error-outline" size={48} color={colors.textTertiary} />
+        <Text style={st.errorText}>{error || 'Lapangan tidak ditemukan'}</Text>
+        <TouchableOpacity onPress={() => router.back()} style={st.backBtnSmall}>
+          <Text style={st.backBtnSmallText}>Kembali</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const imgUrl = field.image_url || DEFAULT_IMAGES[field.sport_type] || DEFAULT_IMAGES.default;
-  const isApproved = field.status === 'approved';
-  const liked = isFavorite(field.id);
+  const f = field!;
+  const hasImage = !!f.image_url;
+  const isApproved = f.status === 'approved';
+  const liked = isFavorite(f.id);
+  const sportIcon = (SPORT_ICONS[f.sport_type] || 'sports') as React.ComponentProps<typeof MaterialIcons>['name'];
+  const initial = (f.owner?.name || '?').charAt(0).toUpperCase();
 
-  return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+  function renderHero() {
+    return (
+      <View style={[st.heroSection, { height: isDesktop ? '100%' : Math.min(280, screenHeight * 0.4) }]}>
+        {hasImage ? (
+          <SafeImage source={{ uri: f.image_url! }} style={st.heroImage} fallbackSize={48} />
+        ) : (
+          <View style={st.heroPlaceholder}>
+            <MaterialIcons name={sportIcon} size={64} color={colors.primary} />
+            <Text style={st.heroPlaceholderText}>Belum ada foto</Text>
+          </View>
+        )}
+        <View style={st.heroOverlay} />
+        <TouchableOpacity style={st.backButton} onPress={() => router.back()} activeOpacity={0.8}>
+          <MaterialIcons name="arrow-back" size={22} color="#ffffff" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={st.favButton}
+          activeOpacity={0.8}
+          onPress={async () => {
+            const next = await toggleFavorite(f.id);
+            const title = next ? 'Ditambahkan ke favorit' : 'Dihapus dari favorit';
+            const description = next
+              ? `${f.name} masuk ke daftar lapangan favorit Anda.`
+              : `${f.name} sudah dihapus dari daftar favorit Anda.`;
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
-          />
-        }
-      >
-        <View style={[styles.heroSection, { height: Math.min(280, screenHeight * 0.4) }]}>
-          <SafeImage source={{ uri: imgUrl }} style={styles.heroImage} fallbackSize={48} />
-          <View style={styles.heroOverlay} />
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.8}>
-            <MaterialIcons name="arrow-back" size={22} color="#ffffff" />
-          </TouchableOpacity>
+            useToastStore.getState().show({
+              type: next ? 'success' : 'info',
+              title,
+              description,
+              durationMs: 2500,
+            });
+            addNotification({ title, description }).catch(() => {});
+          }}
+        >
+          <MaterialIcons name={liked ? 'favorite' : 'favorite-border'} size={22} color={liked ? '#F87171' : '#ffffff'} />
+        </TouchableOpacity>
+        <View style={st.heroContent}>
+          <View style={st.heroBadges}>
+            <View style={[st.heroStatusBadge, { backgroundColor: isApproved ? colors.primary : colors.error }]}>
+              <Text style={st.heroStatusText}>{isApproved ? 'Tersedia' : 'Menunggu'}</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  function renderInfoBar() {
+    return (
+      <View style={st.infoRow}>
+        <View style={st.infoItem}>
+          <MaterialIcons name="sports" size={18} color={colors.primary} />
+          <Text style={st.infoText}>{f.sport_type}</Text>
+        </View>
+        <View style={st.infoDivider} />
+        <View style={st.infoItem}>
+          <MaterialIcons name="payments" size={18} color={colors.primary} />
+          <Text style={st.infoText}>{formatPrice(f.price_per_hour)}/jam</Text>
+        </View>
+      </View>
+    );
+  }
+
+  function renderDescription() {
+    if (!f.description) return null;
+    return (
+      <View style={st.section}>
+        <Text style={st.sectionTitle}>Tentang</Text>
+        <Text style={st.descText}>{f.description}</Text>
+      </View>
+    );
+  }
+
+  function renderOwner() {
+    if (!f.owner) return null;
+    return (
+      <View style={st.section}>
+        <Text style={st.sectionTitle}>Pemilik</Text>
+        <View style={st.ownerRow}>
+          <View style={[st.ownerAvatar, { backgroundColor: colors.primaryContainer }]}>
+            <Text style={[st.ownerAvatarText, { color: colors.primary }]}>{initial}</Text>
+          </View>
+          <View>
+            <Text style={st.ownerName}>{f.owner.name}</Text>
+            <Text style={st.ownerLabel}>Pemilik Lapangan</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  function renderLocation() {
+    return (
+      <View style={st.section}>
+        <Text style={st.sectionTitle}>Lokasi</Text>
+        <View style={st.mapCard}>
+          <View style={st.mapIconRow}>
+            <View style={[st.mapIconCircle, { backgroundColor: colors.primaryContainer }]}>
+              <MaterialIcons name="map" size={24} color={colors.primary} />
+            </View>
+          </View>
+          <Text style={st.mapAddress}>{f.location}</Text>
           <TouchableOpacity
-            style={styles.favButton}
+            style={[st.mapButton, { backgroundColor: colors.primary }]}
             activeOpacity={0.8}
-            onPress={async () => {
-              const next = await toggleFavorite(field.id);
-              const title = next ? 'Ditambahkan ke favorit' : 'Dihapus dari favorit';
-              const description = next
-                ? `${field.name} masuk ke daftar lapangan favorit Anda.`
-                : `${field.name} sudah dihapus dari daftar favorit Anda.`;
-
-              useToastStore.getState().show({
-                type: next ? 'success' : 'info',
-                title,
-                description,
-                durationMs: 2500,
-              });
-              addNotification({ title, description }).catch(() => {});
+            onPress={() => {
+              const query = encodeURIComponent(`${f.name} ${f.location}`);
+              const url = Platform.OS === 'web'
+                ? `https://www.google.com/maps/search/${query}`
+                : `https://www.google.com/maps/search/${query}`;
+              if (Platform.OS === 'web') {
+                window.open(url, '_blank');
+              }
             }}
           >
-            <MaterialIcons name={liked ? 'favorite' : 'favorite-border'} size={22} color={liked ? '#F87171' : '#ffffff'} />
+            <MaterialIcons name="directions" size={18} color={colors.onPrimary} />
+            <Text style={st.mapButtonText}>Buka di Maps</Text>
           </TouchableOpacity>
-          <View style={styles.heroContent}>
-            <View style={styles.heroBadges}>
-              <View style={[styles.heroStatusBadge, { backgroundColor: isApproved ? COLORS.primary : COLORS.error }]}>
-                <Text style={styles.heroStatusText}>{isApproved ? 'Tersedia' : 'Menunggu'}</Text>
-              </View>
-            </View>
-          </View>
         </View>
+      </View>
+    );
+  }
 
-        <View style={styles.content}>
-          <Text style={styles.venueTitle} numberOfLines={2} ellipsizeMode="tail">{field.name}</Text>
-          <View style={styles.locationRow}>
-            <MaterialIcons name="location-on" size={16} color={COLORS.primary} />
-            <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">{field.location}</Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <View style={styles.infoItem}>
-              <MaterialIcons name="sports" size={18} color={COLORS.primary} />
-              <Text style={styles.infoText}>{field.sport_type}</Text>
-            </View>
-            <View style={styles.infoDivider} />
-            <View style={styles.infoItem}>
-              <MaterialIcons name="payments" size={18} color={COLORS.primary} />
-              <Text style={styles.infoText}>{formatPrice(field.price_per_hour)}/jam</Text>
-            </View>
-          </View>
-
-          {field.description && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Tentang</Text>
-              <Text style={styles.descText}>{field.description}</Text>
-            </View>
-          )}
-
-          {field.owner && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Pemilik</Text>
-              <View style={styles.ownerRow}>
-                <View style={styles.ownerAvatar}>
-                  <MaterialIcons name="person" size={24} color={COLORS.primary} />
-                </View>
-                <View>
-                  <Text style={styles.ownerName}>{field.owner.name}</Text>
-                  <Text style={styles.ownerLabel}>Pemilik Lapangan</Text>
-                </View>
-              </View>
-            </View>
-          )}
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Lokasi</Text>
-            <View style={styles.mapPlaceholder}>
-              <MaterialIcons name="map" size={32} color={COLORS.textTertiary} />
-              <Text style={styles.mapText}>{field.location}</Text>
-              <TouchableOpacity style={styles.mapButton} activeOpacity={0.8}>
-                <MaterialIcons name="directions" size={18} color={COLORS.primary} />
-                <Text style={styles.mapButtonText}>Buka di Maps</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={{ height: 100 }} />
+  function renderMainContent() {
+    return (
+      <>
+        <Text style={st.venueTitle} numberOfLines={2} ellipsizeMode="tail">{f.name}</Text>
+        <View style={st.locationRow}>
+          <MaterialIcons name="location-on" size={16} color={colors.primary} />
+          <Text style={st.locationText} numberOfLines={1} ellipsizeMode="tail">{f.location}</Text>
         </View>
-      </ScrollView>
+        {renderInfoBar()}
+        {renderDescription()}
+        {renderOwner()}
+        {renderLocation()}
+      </>
+    );
+  }
 
-      <View style={styles.bottomBar}>
-        <View style={styles.bottomPrice}>
-          <Text style={styles.bottomPriceLabel}>Harga</Text>
-          <Text style={styles.bottomPriceValue}>{formatPrice(field.price_per_hour)}/jam</Text>
+  return (
+    <View style={st.container}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+
+      {isDesktop ? (
+        <View style={st.desktopOuter}>
+          <View style={st.desktopLeftCol}>{renderHero()}</View>
+          <ScrollView
+            style={st.desktopRightCol}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
+            }
+          >
+            <View style={st.content}>{renderMainContent()}</View>
+            <View style={{ height: 100 }} />
+          </ScrollView>
+        </View>
+      ) : (
+        <View style={st.containerInner}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
+            }
+          >
+            {renderHero()}
+            <View style={st.content}>{renderMainContent()}</View>
+          </ScrollView>
+        </View>
+      )}
+
+      <View style={st.bottomBar}>
+        <View style={st.bottomPrice}>
+          <Text style={st.bottomPriceLabel}>Harga</Text>
+          <Text style={st.bottomPriceValue}>{formatPrice(f.price_per_hour)}/jam</Text>
         </View>
         <TouchableOpacity
-          style={[styles.bookButton, !isApproved && styles.bookButtonDisabled]}
+          style={[st.bookButton, !isApproved && st.bookButtonDisabled]}
           activeOpacity={0.85}
           onPress={() => {
             if (!isApproved) return;
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            router.push({ pathname: '/booking', params: { venueId: String(field.id) } });
+            router.push({ pathname: '/booking', params: { venueId: String(f.id) } });
           }}
           disabled={!isApproved}
         >
-          <Text style={styles.bookButtonText}>{isApproved ? 'Pesan Sekarang' : 'Tersedia Nanti'}</Text>
+          <Text style={st.bookButtonText}>{isApproved ? 'Pesan Sekarang' : 'Tersedia Nanti'}</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isDesktop: boolean, screenWidth: number) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
+  },
+  containerInner: {
+    flex: 1,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     gap: 12,
   },
   errorText: {
     ...FONTS.headlineSm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   backBtnSmall: {
     marginTop: 8,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: SIZES.borderRadius,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
   backBtnSmallText: {
-    color: COLORS.onPrimary,
+    color: colors.onPrimary,
     fontWeight: '700',
+  },
+  desktopGrid: {
+    flexDirection: 'row',
+    maxWidth: 1200,
+    marginHorizontal: 'auto' as any,
+    width: '100%',
+    flex: 1,
+  },
+  desktopLeft: {
+    flex: 3,
+  },
+  desktopRight: {
+    flex: 4,
+  },
+  desktopOuter: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  desktopLeftCol: {
+    width: '45%',
+  },
+  desktopRightCol: {
+    flex: 1,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.divider,
   },
   heroSection: {
     position: 'relative',
@@ -266,6 +370,19 @@ const styles = StyleSheet.create({
   heroImage: {
     width: '100%',
     height: '100%',
+  },
+  heroPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.surfaceContainer,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  heroPlaceholderText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    color: colors.textTertiary,
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -312,20 +429,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     fontFamily: FONT_FAMILY,
-    color: COLORS.onPrimary,
+    color: colors.onPrimary,
   },
   content: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    maxWidth: 440,
-    alignSelf: 'center',
+    maxWidth: isDesktop ? undefined : 440,
+    alignSelf: isDesktop ? 'stretch' : 'center',
     width: '100%',
   },
   venueTitle: {
     fontFamily: FONT_FAMILY,
-    fontSize: 22,
+    fontSize: isDesktop ? 28 : 22,
     fontWeight: '700',
-    color: COLORS.text,
+    color: colors.text,
     marginBottom: 8,
   },
   locationRow: {
@@ -336,12 +453,12 @@ const styles = StyleSheet.create({
   },
   locationText: {
     ...FONTS.bodyMd,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadius,
     padding: 14,
     gap: 12,
@@ -355,13 +472,13 @@ const styles = StyleSheet.create({
   },
   infoText: {
     ...FONTS.bodySm,
-    color: COLORS.text,
+    color: colors.text,
     fontWeight: '600',
   },
   infoDivider: {
     width: 1,
     height: 20,
-    backgroundColor: COLORS.divider,
+    backgroundColor: colors.divider,
   },
   section: {
     marginBottom: 24,
@@ -369,19 +486,19 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...FONTS.headlineSm,
     fontSize: 16,
-    color: COLORS.text,
+    color: colors.text,
     marginBottom: 12,
   },
   descText: {
     ...FONTS.bodyMd,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 22,
   },
   ownerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadius,
     padding: 14,
     ...SHADOWS.sm,
@@ -390,41 +507,60 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: COLORS.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  ownerAvatarText: {
+    ...FONTS.headlineSm,
+    fontSize: 18,
+  },
   ownerName: {
     ...FONTS.titleMd,
-    color: COLORS.text,
+    color: colors.text,
   },
   ownerLabel: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
-  mapPlaceholder: {
-    backgroundColor: COLORS.surfaceWhite,
+  mapCard: {
+    backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.divider,
     padding: 24,
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
     ...SHADOWS.sm,
   },
-  mapText: {
+  mapIconRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  mapIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapAddress: {
     ...FONTS.bodyMd,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   mapButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    borderRadius: SIZES.borderRadius,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     marginTop: 4,
   },
   mapButtonText: {
     ...FONTS.titleMd,
-    color: COLORS.primary,
+    color: colors.onPrimary,
+    fontWeight: '700',
   },
   bottomBar: {
     position: 'absolute',
@@ -434,12 +570,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     paddingHorizontal: 20,
     paddingTop: 14,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     borderTopWidth: 1,
-    borderTopColor: COLORS.divider,
+    borderTopColor: colors.divider,
     ...SHADOWS.xl,
   },
   bottomPrice: {
@@ -447,30 +583,30 @@ const styles = StyleSheet.create({
   },
   bottomPriceLabel: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   bottomPriceValue: {
     fontFamily: FONT_FAMILY,
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.primary,
+    color: colors.primary,
   },
   bookButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     borderRadius: SIZES.borderRadius,
     paddingHorizontal: 28,
     paddingVertical: 14,
     ...SHADOWS.primary,
   },
   bookButtonDisabled: {
-    backgroundColor: COLORS.surfaceContainerHigh,
+    backgroundColor: colors.surfaceContainerHigh,
     ...(Platform.OS === 'web'
       ? { boxShadow: 'none' }
       : { shadowOpacity: 0, elevation: 0 }
     ),
   },
   bookButtonText: {
-    color: COLORS.onPrimary,
+    color: colors.onPrimary,
     ...FONTS.buttonLg,
   },
 });

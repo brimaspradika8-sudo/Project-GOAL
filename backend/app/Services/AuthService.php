@@ -16,7 +16,7 @@ class AuthService
         $name = trim($data['name']);
 
         return DB::transaction(function () use ($email, $password, $name) {
-            if (User::where('email', $email)->exists()) {
+            if (User::whereRaw('LOWER(email) = ?', [$email])->exists()) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'email' => ['Email sudah terdaftar.'],
                 ]);
@@ -51,10 +51,23 @@ class AuthService
     public function login(string $email, string $password): array
     {
         $email = strtolower(trim($email));
+        Log::info('[LOGIN] attempt', ['email_raw' => $email]);
 
-        $user = User::where('email', $email)->first();
+        $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
 
-        if (!$user || !Hash::check($password, $user->password)) {
+        if ($user) {
+            Log::info('[LOGIN] user found', ['id' => $user->id, 'name' => $user->name]);
+        } else {
+            Log::warning('[LOGIN] user not found', ['email' => $email]);
+        }
+
+        if (!$user) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'email' => ['Email tidak terdaftar.'],
+            ])->status(401);
+        }
+
+        if (!Hash::check($password, $user->password)) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'email' => ['Email atau password salah.'],
             ])->status(401);
@@ -88,6 +101,6 @@ class AuthService
 
     public function checkEmail(string $email): bool
     {
-        return User::where('email', strtolower(trim($email)))->exists();
+        return User::whereRaw('LOWER(email) = ?', [strtolower(trim($email))])->exists();
     }
 }

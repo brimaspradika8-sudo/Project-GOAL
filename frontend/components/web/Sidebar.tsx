@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../../lib/theme';
 import { FONT_FAMILY } from '../goalTheme';
+import ThemeToggle from '../ThemeToggle';
 
 export interface SidebarItem {
   href: string;
@@ -21,6 +22,7 @@ interface SidebarMenuItemProps {
   item: SidebarItem;
   active: boolean;
   activeColor: string;
+  activeBg: string;
   inactiveColor: string;
   onPress: () => void;
 }
@@ -40,6 +42,7 @@ export function SidebarMenuItem({
   item,
   active,
   activeColor,
+  activeBg,
   inactiveColor,
   onPress,
 }: SidebarMenuItemProps) {
@@ -50,7 +53,7 @@ export function SidebarMenuItem({
       key={item.href}
       style={[
         styles.menuItem,
-        active && styles.menuItemActive,
+        active && { backgroundColor: activeBg },
       ]}
       onPress={onPress}
     >
@@ -84,6 +87,7 @@ export default function Sidebar({ title, accentColor, items }: SidebarProps) {
   const activeColor = accentColor;
   const inactiveColor = resolved === 'dark' ? '#94A3B8' : '#4B5563';
   const panelTitleColor = resolved === 'dark' ? '#CBD5E1' : colors.text;
+  const activeBg = resolved === 'dark' ? accentColor + '1A' : accentColor + '14';
 
   return (
     <View
@@ -109,11 +113,16 @@ export default function Sidebar({ title, accentColor, items }: SidebarProps) {
               item={item}
               active={active}
               activeColor={activeColor}
+              activeBg={activeBg}
               inactiveColor={inactiveColor}
               onPress={() => router.push(item.href as any)}
             />
           );
         })}
+      </View>
+
+      <View style={[styles.footer, { borderTopColor: colors.outline }]}>
+        <ThemeToggle size={28} />
       </View>
     </View>
   );
@@ -164,9 +173,6 @@ const styles = StyleSheet.create({
     transitionProperty: 'background-color, color' as any,
     transitionTimingFunction: 'ease' as any,
   },
-  menuItemActive: {
-    backgroundColor: '#EDE7FF',
-  },
   menuLabel: {
     fontFamily: FONT_FAMILY,
     fontSize: 14,
@@ -175,5 +181,9 @@ const styles = StyleSheet.create({
     transitionDuration: '180ms' as any,
     transitionProperty: 'color, font-weight' as any,
     transitionTimingFunction: 'ease' as any,
+  },
+  footer: {
+    padding: 16,
+    borderTopWidth: 1,
   },
 });

@@ -47,8 +47,9 @@ class AuthController extends Controller
                 ...$result,
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
+            $firstError = collect($e->errors())->flatten()->first() ?? 'Email atau password salah.';
             return response()->json([
-                'message' => $e->getMessage(),
+                'message' => $firstError,
             ], 401);
         } catch (\Exception $e) {
             return response()->json([

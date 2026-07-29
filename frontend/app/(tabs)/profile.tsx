@@ -22,7 +22,6 @@ import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
 import { SIZES, FONTS, SHADOWS } from '../../components/goalTheme';
 import AuthInput from '../../components/AuthInput';
-import ThemeToggle from '../../components/ThemeToggle';
 import { useTheme } from '../../lib/theme';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
@@ -204,7 +203,7 @@ export default function ProfileScreen() {
     if (role === 'player' && ownerStatus === 'pending') {
       return (
         <View style={[styles.ownerCard, {
-          backgroundColor: isDark ? '#1E293B' : '#FEF3C7',
+          backgroundColor: isDark ? colors.surface : '#FEF3C7',
           borderColor: isDark ? '#334155' : '#F59E0B',
         }]}>
           <View style={styles.ownerCardLeft}>
@@ -338,10 +337,7 @@ export default function ProfileScreen() {
         }
       >
         <View style={styles.pageShell}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={styles.pageTitle}>Profil</Text>
-            <ThemeToggle />
-          </View>
+          <Text style={styles.pageTitle}>Profil</Text>
 
           <View style={[styles.profileGrid, isDesktop && styles.profileGridDesktop]}>
             {/* ===== KOLOM KIRI: Profil + OLAHRAGA + Owner Card ===== */}
@@ -798,14 +794,14 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     padding: 20,
   },
   modalSheet: {
-    backgroundColor: isDark ? '#1E293B' : colors.surfaceWhite,
+    backgroundColor: isDark ? colors.surface : colors.surfaceWhite,
     borderRadius: 24,
     padding: 24,
     width: '100%',
     maxWidth: 500,
     maxHeight: '90%',
     borderWidth: 1,
-    borderColor: isDark ? '#334155' : colors.outline,
+    borderColor: isDark ? colors.outline : colors.outline,
     ...SHADOWS.lg,
   },
   modalHeader: {
@@ -855,7 +851,7 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     borderRadius: SIZES.borderRadius,
     borderWidth: 1,
     borderColor: colors.divider,
-    backgroundColor: isDark ? '#0F172A' : colors.surfaceWhite,
+    backgroundColor: isDark ? colors.background : colors.surfaceWhite,
     alignItems: 'center',
   },
   cancelText: {

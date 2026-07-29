@@ -1,4 +1,4 @@
-export const SPORT_OPTIONS = ['Futsal', 'Basket', 'Badminton', 'Voli', 'Tenis', 'Mini Soccer', 'Lainnya'];
+export const SPORT_OPTIONS = ['Futsal', 'Basket', 'Badminton', 'Voli', 'Tenis', 'Mini Soccer'];
 
 export const SPORT_MAP: Record<string, string> = {
   'Futsal': 'futsal',
@@ -7,7 +7,6 @@ export const SPORT_MAP: Record<string, string> = {
   'Voli': 'volleyball',
   'Tenis': 'tennis',
   'Mini Soccer': 'mini_soccer',
-  'Lainnya': 'other',
 };
 
 export const VALID_SPORT_VALUES = Object.values(SPORT_MAP);
@@ -40,15 +39,15 @@ export const EMPTY_ERRORS: FieldFormErrors = {
 
 export function validateFieldName(value: string): string {
   const v = value.trim();
-  if (!v) return 'Nama lapangan wajib diisi';
-  if (v.length < 5) return 'Nama lapangan minimal 5 karakter';
-  if (v.length > 50) return 'Nama lapangan maksimal 50 karakter';
+  if (!v) return 'Nama lapangan wajib diisi.';
+  if (v.length < 5) return 'Nama lapangan minimal 5 karakter.';
+  if (v.length > 50) return 'Nama lapangan tidak boleh lebih dari 50 karakter.';
   return '';
 }
 
 export function validateFieldSportType(value: string): string {
-  if (!value.trim()) return 'Silahkan pilih kategori lapangan';
-  if (!VALID_SPORT_VALUES.includes(value.trim())) return 'Kategori tidak valid';
+  if (!value.trim()) return 'Jenis olahraga wajib diisi.';
+  if (!VALID_SPORT_VALUES.includes(value.trim())) return 'Jenis olahraga tidak valid. Pilih salah satu kategori yang tersedia.';
   return '';
 }
 
@@ -57,11 +56,12 @@ export function validateFieldPrice(value: string): string {
   if (!v) return '';
   const cleaned = v.replace(/\D/g, '');
   if (cleaned !== v.replace(/[^0-9]/g, '') || /\D/.test(v.replace(/\./g, '').replace(/,/g, ''))) {
-    return 'Harga harus berupa angka';
+    return 'Harga harus berupa angka.';
   }
   const num = parseInt(cleaned, 10);
-  if (isNaN(num)) return 'Harga harus berupa angka';
-  if (num < 0) return 'Harga tidak boleh negatif';
+  if (isNaN(num)) return 'Harga harus berupa angka.';
+  if (num < 10000) return 'Harga per jam tidak boleh kurang dari Rp 10.000.';
+  if (num > 1000000000) return 'Harga per jam tidak boleh lebih dari Rp 1.000.000.000';
   return '';
 }
 
@@ -98,15 +98,15 @@ export function validateFieldImageSize(fileSize: number): string {
 export function validateFieldDescription(value: string): string {
   const v = value.trim();
   if (!v) return '';
-  if (v.length < 50) return 'Deskripsi minimal 50 karakter';
-  if (v.length > 255) return 'Deskripsi maksimal 255 karakter';
+  if (v.length < 50) return 'Deskripsi minimal 50 karakter jika diisi.';
+  if (v.length > 255) return 'Deskripsi tidak boleh lebih dari 255 karakter.';
   return '';
 }
 
 export function validateFieldLocation(value: string): string {
   const v = value.trim();
   if (!v) return '';
-  if (v.length > 255) return 'Lokasi maksimal 255 karakter';
+  if (v.length > 255) return 'Lokasi tidak boleh lebih dari 255 karakter.';
   return '';
 }
 
