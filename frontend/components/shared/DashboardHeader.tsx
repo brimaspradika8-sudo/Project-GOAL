@@ -4,7 +4,6 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SHADOWS } from '../goalTheme';
-import ThemeToggle from '../ThemeToggle';
 import { useTheme } from '../../lib/theme';
 import NotificationCenter from './NotificationCenter';
 import { useNotificationStore } from '../../store/notificationStore';
@@ -28,7 +27,7 @@ export default function DashboardHeader({
 }: DashboardHeaderProps) {
   const { colors, resolved } = useTheme();
   const insets = useSafeAreaInsets();
-  const headerBackground = resolved === 'dark' ? '#064E3B' : colors.primary;
+  const headerBackground = resolved === 'dark' ? colors.primaryContainer : colors.primary;
   const headerTextColor = '#FFFFFF';
   const headerSubtextColor = 'rgba(255,255,255,0.82)';
   const backButtonBackground = resolved === 'dark' ? 'rgba(255,255,255,0.16)' : colors.surface;
@@ -89,7 +88,6 @@ export default function DashboardHeader({
               <MaterialIcons name="notifications" size={22} color={headerTextColor} />
               {unreadCount() > 0 ? <View style={st.notifBadge} /> : null}
             </TouchableOpacity>
-            <ThemeToggle />
           </View>
         </View>
       </View>

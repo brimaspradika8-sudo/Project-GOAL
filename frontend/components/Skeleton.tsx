@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View, ViewStyle, FlatList } from 'react-native';
-import { COLORS, SHADOWS } from './goalTheme';
+import { SHADOWS } from './goalTheme';
+import { useTheme } from '../lib/theme';
 
 interface SkeletonProps {
   width?: number | `${number}%`;
@@ -10,6 +11,7 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ width = '100%', height = 16, borderRadius = 8, style }: SkeletonProps) {
+  const { colors } = useTheme();
   const shimmer = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -29,8 +31,7 @@ export function Skeleton({ width = '100%', height = 16, borderRadius = 8, style 
   return (
     <Animated.View
       style={[
-        styles.skeleton,
-        { width, height, borderRadius, opacity },
+        { width, height, borderRadius, opacity, backgroundColor: colors.surfaceContainerLow },
         style,
       ]}
     />
@@ -38,15 +39,16 @@ export function Skeleton({ width = '100%', height = 16, borderRadius = 8, style 
 }
 
 export function SkeletonVenueCard() {
+  const { colors } = useTheme();
   return (
-    <View style={styles.card}>
+    <View style={[st.card, { backgroundColor: colors.surfaceWhite, borderColor: colors.divider }]}>
       <Skeleton height={180} borderRadius={0} />
-      <View style={styles.cardBody}>
+      <View style={st.cardBody}>
         <Skeleton width="70%" height={18} borderRadius={6} />
         <Skeleton width="50%" height={14} borderRadius={6} />
-        <View style={styles.cardFooter}>
+        <View style={st.cardFooter}>
           <Skeleton width={80} height={16} borderRadius={6} />
-          <View style={styles.chips}>
+          <View style={st.chips}>
             <Skeleton width={50} height={24} borderRadius={6} />
             <Skeleton width={60} height={24} borderRadius={6} />
           </View>
@@ -58,7 +60,7 @@ export function SkeletonVenueCard() {
 
 export function SkeletonVenueList() {
   return (
-    <View style={styles.list}>
+    <View style={st.list}>
       <SkeletonVenueCard />
       <SkeletonVenueCard />
       <SkeletonVenueCard />
@@ -73,11 +75,11 @@ export function SkeletonHorizontalCards() {
       data={[1, 2, 3]}
       keyExtractor={(item) => String(item)}
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.hRow}
+      contentContainerStyle={st.hRow}
       renderItem={() => (
-        <View style={styles.hCard}>
+        <View style={st.hCard}>
           <Skeleton width={180} height={140} borderRadius={14} />
-          <View style={styles.hCardBody}>
+          <View style={st.hCardBody}>
             <Skeleton width="80%" height={16} borderRadius={6} />
             <Skeleton width="60%" height={12} borderRadius={6} />
           </View>
@@ -89,9 +91,9 @@ export function SkeletonHorizontalCards() {
 
 export function SkeletonProfile() {
   return (
-    <View style={styles.profile}>
+    <View style={st.profile}>
       <Skeleton width={64} height={64} borderRadius={20} />
-      <View style={styles.profileText}>
+      <View style={st.profileText}>
         <Skeleton width={120} height={18} borderRadius={6} />
         <Skeleton width={180} height={14} borderRadius={6} />
       </View>
@@ -101,10 +103,11 @@ export function SkeletonProfile() {
 
 /** Satu baris item list (untuk halaman admin/owner) */
 export function SkeletonListItem() {
+  const { colors } = useTheme();
   return (
-    <View style={styles.listItem}>
+    <View style={[st.listItem, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
       <Skeleton width={44} height={44} borderRadius={13} />
-      <View style={styles.listItemBody}>
+      <View style={st.listItemBody}>
         <Skeleton width="65%" height={14} borderRadius={6} />
         <Skeleton width="45%" height={11} borderRadius={6} />
       </View>
@@ -116,7 +119,7 @@ export function SkeletonListItem() {
 /** N buah SkeletonListItem — digunakan sebagai pengganti ActivityIndicator */
 export function SkeletonCards({ count = 4 }: { count?: number }) {
   return (
-    <View style={styles.cardsList}>
+    <View style={st.cardsList}>
       {Array.from({ length: count }).map((_, i) => (
         <SkeletonListItem key={i} />
       ))}
@@ -124,16 +127,11 @@ export function SkeletonCards({ count = 4 }: { count?: number }) {
   );
 }
 
-const styles = StyleSheet.create({
-  skeleton: {
-    backgroundColor: COLORS.surfaceContainerLow,
-  },
+const st = StyleSheet.create({
   card: {
-    backgroundColor: COLORS.surfaceWhite,
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: COLORS.divider,
     marginBottom: 14,
     ...SHADOWS.sm,
   },
@@ -177,12 +175,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: COLORS.surface,
     borderRadius: 16,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: COLORS.outline,
   },
   listItemBody: {
     flex: 1,

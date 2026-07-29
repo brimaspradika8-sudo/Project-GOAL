@@ -6,8 +6,10 @@ import { useDebouncedValue } from './useDebouncedValue';
 
 export type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'error';
 
+const checkCache = new Map<string, 'available' | 'taken'>();
+
 export function useUsernameCheck(rawUsername: string): UsernameStatus {
-  const debouncedUsername = useDebouncedValue(rawUsername, 500);
+  const debouncedUsername = useDebouncedValue(rawUsername, 350);
   const [status, setStatus] = useState<UsernameStatus>('idle');
   const abortRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
@@ -29,6 +31,12 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
 
   useEffect(() => {
     if (debouncedUsername.length < 3) return;
+
+    const cached = checkCache.get(debouncedUsername.toLowerCase());
+    if (cached) {
+      setStatus(cached);
+      return;
+    }
 
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
@@ -52,8 +60,10 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
         if (!res.ok) throw new Error('Network error');
 
         const json = await res.json();
+        const result = json.available ? 'available' : 'taken';
+        checkCache.set(debouncedUsername.toLowerCase(), result);
         if (mountedRef.current) {
-          setStatus(json.available ? 'available' : 'taken');
+          setStatus(result);
         }
       } catch (e: any) {
         if (e?.name !== 'AbortError' && mountedRef.current) {

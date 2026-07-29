@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\SportType;
 use App\Models\Field;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -10,7 +11,7 @@ use Illuminate\Support\Facades\Cache;
 class FieldService
 {
     private string $cachePrefix = 'fields_';
-    private int $cacheTtl = 300;
+    private int $cacheTtl = 60;
 
     private const SPORT_ALIASES = [
         'futsal'      => ['futsal'],
@@ -89,8 +90,8 @@ class FieldService
     public function invalidateCache(): void
     {
         Cache::forget($this->cachePrefix . 'approved_all');
-        foreach (config('goal.sport_types', []) as $sport) {
-            Cache::forget($this->cachePrefix . 'approved_' . $sport);
+        foreach (SportType::values() as $sport) {
+            Cache::forget($this->cachePrefix . 'approved_' . strtolower($sport));
         }
     }
 

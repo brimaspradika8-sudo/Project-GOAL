@@ -10,8 +10,6 @@ import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
-import { TOKEN_KEY } from '../lib/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function RegisterScreen() {
   const { width } = useWindowDimensions();
@@ -96,13 +94,8 @@ export default function RegisterScreen() {
       const data = await res.json();
 
       if (res.ok) {
-        if (data.token) {
-          await AsyncStorage.setItem(TOKEN_KEY, data.token);
-          router.replace('/(tabs)');
-        } else {
-          showMessage('Registrasi berhasil! Silakan masuk.', 'success');
-          setTimeout(() => router.replace('/login'), 1500);
-        }
+        showMessage('Registrasi berhasil! Silakan masuk.', 'success');
+        setTimeout(() => router.replace('/login'), 1500);
       } else {
         showMessage(getErrorMessage(data, 'Gagal mendaftar.'), 'error');
       }

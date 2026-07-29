@@ -27,8 +27,8 @@ class FieldResource extends JsonResource
             'image_url'       => $this->image_url,
             'status'          => $this->status,
             'approved_at'     => $this->approved_at?->toISOString(),
-            'approved_by'     => $showModeration ? $this->approved_by : $this->when(false),
-            'rejection_reason'=> $showModeration ? $this->rejection_reason : $this->when(false),
+            'approved_by'     => $this->when($showModeration, $this->approved_by),
+            'rejection_reason'=> $this->when($showModeration, $this->rejection_reason),
             'owner'           => $this->whenLoaded('owner', fn () => [
                 'id'   => $this->owner->id,
                 'name' => $this->owner->name,

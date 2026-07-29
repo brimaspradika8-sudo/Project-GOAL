@@ -21,7 +21,7 @@ const STATUS_CFG: Record<string, { label: string; bg: string; color: string; ico
 
 export default function OwnerBookingsPage() {
   const { colors, resolved } = useTheme();
-  const cardSurface = resolved === 'dark' ? '#1E293B' : colors.surface;
+  const cardSurface = colors.surface;
   const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

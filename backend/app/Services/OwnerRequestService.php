@@ -69,13 +69,24 @@ class OwnerRequestService
                     'reviewed_at' => now(),
                 ]);
 
+                $user = $request->user;
                 $profile = Profile::where('user_id', $request->user_id)->first();
 
-                if (!$profile) {
-                    throw new \RuntimeException('Profil user tidak ditemukan.');
-                }
+                if ($profile) {
+                    $profile->forceFill(['role' => 'owner', 'is_owner_verified' => true])->save();
+                } else {
+                    $username = 'user_' . $request->user_id . '_' . strtolower(substr(uniqid(), -4));
 
-                $profile->forceFill(['role' => 'owner', 'is_owner_verified' => true])->save();
+                    Profile::create([
+                        'user_id'             => $request->user_id,
+                        'username'            => $username,
+                        'full_name'           => $user->name ?? null,
+                        'email'               => $user->email ?? null,
+                        'role'                => 'owner',
+                        'is_owner_verified'   => true,
+                        'onboarding_completed' => true,
+                    ]);
+                }
             } else {
                 $request->update([
                     'status' => 'rejected',
