@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
   RefreshControl,
@@ -15,7 +15,7 @@ import { useTheme } from '../../lib/theme';
 
 export default function TrashedFieldsPage() {
   const { colors, resolved } = useTheme();
-  const cardSurface = resolved === 'dark' ? '#1E293B' : colors.surface;
+  const cardSurface = colors.surface;
   const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

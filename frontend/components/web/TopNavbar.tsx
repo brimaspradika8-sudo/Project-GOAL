@@ -5,6 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../../lib/theme';
 import { FONT_FAMILY } from '../goalTheme';
 import { useBreakpoint } from '../../lib/responsive';
+import ThemeToggle from '../ThemeToggle';
 
 interface NavItem {
   href: string;
@@ -16,7 +17,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Beranda', icon: 'home' },
   { href: '/booking', label: 'Booking', icon: 'event-available' },
   { href: '/matches', label: 'Match', icon: 'sports-soccer' },
-  { href: '/profile', label: 'Profile', icon: 'person' },
 ];
 
 export default function TopNavbar() {
@@ -32,11 +32,16 @@ export default function TopNavbar() {
   return (
     <View style={[styles.navbar, { backgroundColor: colors.surface, borderBottomColor: colors.outline }]}>
       <View style={styles.inner}>
-        <Pressable style={styles.logoPressable} onPress={() => router.push('/')}>
-          <Text style={[styles.logo, { color: colors.primary }]}>GOAL</Text>
-        </Pressable>
 
-        <View style={styles.navLinks}>
+        {/* ZONA KIRI — logo, lebar sama dengan zona kanan lewat flex:1 */}
+        <View style={styles.zoneLeft}>
+          <Pressable onPress={() => router.push('/')}>
+            <Text style={[styles.logo, { color: colors.primary }]}>GOAL</Text>
+          </Pressable>
+        </View>
+
+        {/* ZONA TENGAH — menu, betul-betul center karena kiri & kanan sama lebar (flex:1) */}
+        <View style={styles.zoneCenter}>
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
             return (
@@ -50,12 +55,7 @@ export default function TopNavbar() {
                   size={18}
                   color={isActive ? colors.primary : colors.textTertiary}
                 />
-                <Text
-                  style={[
-                    styles.navLabel,
-                    { color: isActive ? colors.primary : colors.textTertiary },
-                  ]}
-                >
+                <Text style={[styles.navLabel, { color: isActive ? colors.primary : colors.textTertiary }]}>
                   {item.label}
                 </Text>
               </Pressable>
@@ -63,7 +63,9 @@ export default function TopNavbar() {
           })}
         </View>
 
-        <View style={styles.actions}>
+        {/* ZONA KANAN — toggle tema, bell, avatar (urutan sesuai request) */}
+        <View style={styles.zoneRight}>
+          <ThemeToggle size={18} />
           <Pressable style={[styles.iconBtn, { backgroundColor: colors.surfaceWhite, borderColor: colors.divider }]}>
             <MaterialIcons name="notifications-none" size={20} color={colors.onSurface} />
           </Pressable>
@@ -74,6 +76,7 @@ export default function TopNavbar() {
             <MaterialIcons name="person" size={20} color={colors.primary} />
           </Pressable>
         </View>
+
       </View>
     </View>
   );
@@ -166,6 +169,9 @@ function MobileTopNavbar({ colors, pathname, router }: { colors: any; pathname: 
               </Pressable>
             );
           })}
+          <View style={[styles.drawerFooter, { borderTopColor: colors.outline }]}>
+            <ThemeToggle size={28} />
+          </View>
         </View>
       </Animated.View>
     </>
@@ -183,22 +189,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     height: '100%',
-    maxWidth: 1200,
-    marginHorizontal: 'auto' as any,
-    paddingHorizontal: 32,
+    width: '100%',
+    paddingHorizontal: 24,
   },
-  logoPressable: { marginRight: 40 },
+  zoneLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  zoneCenter: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  zoneRight: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
   logo: {
     fontFamily: FONT_FAMILY,
     fontSize: 22,
     fontWeight: '700',
     letterSpacing: -0.5,
-  },
-  navLinks: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
   },
   navItem: {
     flexDirection: 'row',
@@ -215,19 +233,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginLeft: 'auto' as any,
-  },
   iconBtn: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
+    position: 'relative',
   },
   avatar: {
     width: 36,
@@ -296,5 +309,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginLeft: 12,
     flex: 1,
+  },
+  drawerFooter: {
+    marginTop: 'auto' as any,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    paddingHorizontal: 16,
   },
 });

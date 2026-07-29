@@ -38,7 +38,6 @@ const SPORTS = [
   { id: 'minisoccer', label: 'Mini Soccer', icon: 'sports-soccer' as const },
   { id: 'tennis', label: 'Tenis', icon: 'sports-tennis' as const },
   { id: 'tabletennis', label: 'Padel', icon: 'sports' as const },
-  { id: 'others', label: 'Lainnya', icon: 'more-horiz' as const },
 ];
 
 const USERNAME_PREFIXES = [
@@ -66,7 +65,7 @@ const CITIES_BY_PROVINCE: Record<string, string[]> = {
 
 export default function OnboardingScreen() {
   const { width } = useWindowDimensions();
-  const { resolved } = useTheme();
+  const { resolved, colors } = useTheme();
   const isDark = resolved === 'dark';
   const insets = useSafeAreaInsets();
   const isDesktop = width >= 900;
@@ -261,7 +260,7 @@ export default function OnboardingScreen() {
     <Animated.View style={[{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
       <View style={styles.sectionHeader}>
         <Text style={styles.kicker}>Profil Pemain</Text>
-        <Text style={[styles.title, { color: isDark ? '#FFFFFF' : COLORS.text }]}>Siapkan identitas akunmu</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Siapkan identitas akunmu</Text>
         <Text style={[styles.subtitle, { color: isDark ? '#CBD5E1' : COLORS.textSecondary }]}>Username, foto, dan lokasi membantu GOAL menampilkan venue yang lebih relevan.</Text>
       </View>
 
@@ -298,21 +297,21 @@ export default function OnboardingScreen() {
       />
       {renderStatus()}
 
-      <Text style={[styles.fieldGroupLabel, { color: isDark ? '#94A3B8' : COLORS.textSecondary }]}>Lokasi utama</Text>
+      <Text style={[styles.fieldGroupLabel, { color: colors.textSecondary }]}>Lokasi utama</Text>
       <View style={isDesktop ? styles.dropdownGrid : undefined}>
         <TouchableOpacity
-          style={[styles.dropdown, isDesktop && styles.dropdownHalf, { backgroundColor: isDark ? '#1E293B' : COLORS.surfaceContainerLow, borderColor: isDark ? '#334155' : COLORS.divider }]}
+           style={[styles.dropdown, isDesktop && styles.dropdownHalf, { backgroundColor: colors.surfaceWhite, borderColor: colors.divider }]}
           onPress={() => setIsProvinceModalOpen(true)}
           activeOpacity={0.75}
         >
           <View>
-            <Text style={[styles.dropdownLabel, { color: isDark ? '#94A3B8' : COLORS.textSecondary }]}>Provinsi</Text>
-            <Text style={[styles.dropdownValue, { color: isDark ? '#FFFFFF' : COLORS.text }]}>{selectedProvince}</Text>
+            <Text style={[styles.dropdownLabel, { color: colors.textSecondary }]}>Provinsi</Text>
+            <Text style={[styles.dropdownValue, { color: colors.text }]}>{selectedProvince}</Text>
           </View>
-          <MaterialIcons name="expand-more" size={22} color={isDark ? '#64748B' : COLORS.textTertiary} />
+          <MaterialIcons name="expand-more" size={22} color={colors.textTertiary} />
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.dropdown, isDesktop && styles.dropdownHalf, { backgroundColor: isDark ? '#1E293B' : COLORS.surfaceContainerLow, borderColor: isDark ? '#334155' : COLORS.divider }]}
+          style={[styles.dropdown, isDesktop && styles.dropdownHalf, { backgroundColor: colors.surfaceWhite, borderColor: colors.divider }]}
           onPress={() => {
             setRegionSearch('');
             setIsRegionModalOpen(true);
@@ -320,10 +319,10 @@ export default function OnboardingScreen() {
           activeOpacity={0.75}
         >
           <View>
-            <Text style={[styles.dropdownLabel, { color: isDark ? '#94A3B8' : COLORS.textSecondary }]}>Kota / Kabupaten</Text>
-            <Text style={[styles.dropdownValue, { color: isDark ? '#FFFFFF' : COLORS.text }]}>{region.replace(', ID', '')}</Text>
+            <Text style={[styles.dropdownLabel, { color: colors.textSecondary }]}>Kota / Kabupaten</Text>
+            <Text style={[styles.dropdownValue, { color: colors.text }]}>{region.replace(', ID', '')}</Text>
           </View>
-          <MaterialIcons name="expand-more" size={22} color={isDark ? '#64748B' : COLORS.textTertiary} />
+          <MaterialIcons name="expand-more" size={22} color={colors.textTertiary} />
         </TouchableOpacity>
       </View>
 
@@ -342,7 +341,7 @@ export default function OnboardingScreen() {
     <Animated.View style={[{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
       <View style={styles.sectionHeader}>
         <Text style={styles.kicker}>Preferensi</Text>
-        <Text style={[styles.title, { color: isDark ? '#FFFFFF' : COLORS.text }]}>Pilih olahraga favorit</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Pilih olahraga favorit</Text>
         <Text style={[styles.subtitle, { color: isDark ? '#CBD5E1' : COLORS.textSecondary }]}>Pilih minimal satu supaya rekomendasi venue dan match terasa lebih pas.</Text>
       </View>
 
@@ -425,7 +424,7 @@ export default function OnboardingScreen() {
           </View>
 
           <View style={styles.contentPanel}>
-            <View style={[styles.formPanel, { backgroundColor: isDark ? '#0F172A' : COLORS.surfaceWhite, borderColor: isDark ? '#1E293B' : COLORS.divider }]}>
+            <View style={[styles.formPanel, { backgroundColor: colors.background, borderColor: colors.outline }]}>
               {step === 1 ? renderStepOne() : renderStepTwo()}
 
               {submitError && (

@@ -22,7 +22,6 @@ return new class extends Migration
             $table->timestamp('approved_at')->nullable();
             $table->timestamps();
 
-            $table->index('status');
             $table->index('owner_id');
         });
     }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class UploadController extends Controller
@@ -20,15 +21,55 @@ class UploadController extends Controller
             'image' => 'required|file|image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
 
-        $file = $request->file('image');
-        $extension = $file->extension() ?: $file->getClientOriginalExtension();
-        $filename = time() . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
+        try {
+            $file = $request->file('image');
 
-        // Keep business path semantics ("fields/...") but use local disk storage.
-        $localPath = $file->storeAs('fields', $filename, 'public');
+            if (!$file || !$file->isValid()) {
+                Log::error('Upload failed: invalid file', ['hasFile' => (bool) $file]);
+                return response()->json(['message' => 'File tidak valid.'], 400);
+            }
 
-        return response()->json([
-            'url' => Storage::disk('public')->url($localPath),
-        ]);
+            $ext = $file->getClientOriginalExtension();
+            if (!$ext) {
+                $ext = match ($file->getMimeType()) {
+                    'image/jpeg' => 'jpg',
+                    'image/png' => 'png',
+                    'image/webp' => 'webp',
+                    default => 'jpg',
+                };
+            }
+
+            $filename = time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+
+            $contents = file_get_contents($file->getRealPath());
+            if ($contents === false) {
+                Log::error('Upload failed: could not read temp file');
+                return response()->json(['message' => 'Gagal membaca file.'], 500);
+            }
+
+            $stored = Storage::disk('public')->put('fields/' . $filename, $contents);
+
+            if (!$stored) {
+                Log::error('Upload failed: Storage::put returned false');
+                return response()->json(['message' => 'Gagal menyimpan file.'], 500);
+            }
+
+            $url = Storage::disk('public')->url('fields/' . $filename);
+
+            Log::info('Upload success', [
+                'filename' => $filename,
+                'url' => $url,
+            ]);
+
+            return response()->json([
+                'url' => $url,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Upload exception: ' . $e->getMessage());
+
+            return response()->json([
+                'message' => 'Gagal mengunggah foto. Silakan coba lagi.',
+            ], 500);
+        }
     }
 }

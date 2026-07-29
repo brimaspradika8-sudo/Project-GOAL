@@ -27,7 +27,7 @@ export default function ThemeToggle({ size }: { size?: number }) {
 
   const trackBg = anim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['#E2E9E4', '#374151'],
+    outputRange: ['#E2E9E4', '#263040'],
   });
 
   const knobLeft = anim.interpolate({

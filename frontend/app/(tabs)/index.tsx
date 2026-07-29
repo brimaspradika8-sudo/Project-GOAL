@@ -26,18 +26,11 @@ import { useTheme } from '../../lib/theme';
 import VenueCard from '../../components/VenueCard';
 import NotificationCenter from '../../components/shared/NotificationCenter';
 import { useNotificationStore } from '../../store/notificationStore';
+import { SPORT_MAP } from '../../lib/fieldValidation';
 
 const isWeb = Platform.OS === 'web';
 
 
-const SPORT_MAP: Record<string, string> = {
-  'Semua': '',
-  'Futsal': 'futsal',
-  'Basket': 'basketball',
-  'Badminton': 'badminton',
-  'Mini Soccer': 'mini_soccer',
-  'Tenis': 'tennis',
-};
 const DEFAULT_IMAGES: Record<string, string> = {
   futsal: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
   basketball: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop',

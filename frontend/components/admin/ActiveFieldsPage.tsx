@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
   RefreshControl, TextInput, Image, Modal,
@@ -17,7 +17,7 @@ import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useDebounce } from '../../hooks/useDebounce';
 import {
-  SPORT_OPTIONS, SPORT_MAP,
+  SPORT_OPTIONS, SPORT_MAP, SPORT_LABELS,
   type FieldFormErrors, type FieldFormData,
   EMPTY_ERRORS, validateAllFields, hasErrors,
   validateFieldName, validateFieldSportType, validateFieldPrice,
@@ -48,7 +48,6 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editErrors, setEditErrors] = useState<FieldFormErrors>(EMPTY_ERRORS);
-  const editTouched = useRef<Record<string, boolean>>({});
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -91,7 +90,6 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
     });
     setEditError(null);
     setEditErrors(EMPTY_ERRORS);
-    editTouched.current = {};
   };
 
   const validateSingleField = (key: keyof FieldFormData, value: string, form: FieldFormData) => {
@@ -108,22 +106,14 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
   };
 
   const onFormFieldChange = (key: keyof FieldFormData, value: string) => {
-    const shouldValidate = editTouched.current[key] || key === 'sport_type' || key === 'image_uri';
     setEditForm(p => {
       const next = { ...p, [key]: value };
-      if (shouldValidate) validateSingleField(key, value, next);
+      validateSingleField(key, value, next);
       return next;
     });
   };
 
-  const onFieldBlur = (key: keyof FieldFormData) => {
-    editTouched.current[key] = true;
-    validateSingleField(key, editForm[key], editForm);
-  };
-
   const onAllFieldsTouched = () => {
-    const fields: (keyof FieldFormData)[] = ['name', 'sport_type', 'price_per_hour', 'image_uri', 'description', 'location'];
-    fields.forEach(f => { editTouched.current[f] = true; });
     const errs = validateAllFields(editForm);
     setEditErrors(errs);
   };
@@ -440,7 +430,6 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
                 label="Nama Lapangan" icon="stadium"
                 value={editForm.name}
                 onChangeText={(v) => onFormFieldChange('name', v)}
-                onBlur={() => onFieldBlur('name')}
                 placeholder="Contoh: Futsal Arena Gemilang"
                 error={editErrors.name} st={st} colors={colors}
               />
@@ -473,7 +462,6 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
                 label="Deskripsi" icon="notes"
                 value={editForm.description}
                 onChangeText={(v) => onFormFieldChange('description', v)}
-                onBlur={() => onFieldBlur('description')}
                 placeholder="Fasilitas yang tersedia..."
                 multiline error={editErrors.description} st={st} colors={colors}
               />
@@ -482,7 +470,6 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
                 label="Sewa Per Jam (Rp)" icon="payments"
                 value={editForm.price_per_hour}
                 onChangeText={(v) => onFormFieldChange('price_per_hour', v)}
-                onBlur={() => onFieldBlur('price_per_hour')}
                 placeholder="Contoh: 150000"
                 keyboardType="numeric"
                 error={editErrors.price_per_hour} st={st} colors={colors}
@@ -492,7 +479,6 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
                 label="Lokasi (opsional)" icon="location-on"
                 value={editForm.location}
                 onChangeText={(v) => onFormFieldChange('location', v)}
-                onBlur={() => onFieldBlur('location')}
                 placeholder="Contoh: Jl. Merdeka No. 10"
                 error={editErrors.location} st={st} colors={colors}
               />
@@ -527,15 +513,11 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
   );
 }
 
-const SPORT_LABELS: Record<string, string> = Object.fromEntries(
-  Object.entries(SPORT_MAP).map(([label, key]) => [key, label]),
-);
-
 // ── Reusable field components (same pattern as OwnerFieldsPage) ──
 
-function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboardType, multiline, error, st, colors }: {
+function FField({ label, icon, value, onChangeText, placeholder, keyboardType, multiline, error, st, colors }: {
   label: string; icon: string; value: string;
-  onChangeText: (v: string) => void; onBlur?: () => void;
+  onChangeText: (v: string) => void;
   placeholder?: string; keyboardType?: any; multiline?: boolean;
   error?: string; st: ReturnType<typeof makeStyles>; colors: ThemeColors;
 }) {
@@ -552,7 +534,6 @@ function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboar
           style={[st.fieldInput, { color: colors.text }, multiline && { minHeight: 80, textAlignVertical: 'top' }]}
           value={value}
           onChangeText={onChangeText}
-          onBlur={onBlur}
           placeholder={placeholder ?? label}
           placeholderTextColor={colors.textTertiary}
           keyboardType={keyboardType}

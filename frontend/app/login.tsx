@@ -32,6 +32,9 @@ async function parseApiResponse(res: Response) {
 
 function getApiErrorMessage(data: any, status: number) {
   if (status === 401) {
+    if (data?.message === 'Email tidak terdaftar.') {
+      return 'Email tidak terdaftar. Silakan registrasi terlebih dahulu.';
+    }
     return 'Email atau password salah.';
   }
 
@@ -93,26 +96,27 @@ export default function LoginScreen() {
         return;
       }
 
-      if (data?.token) {
-        await AsyncStorage.setItem(TOKEN_KEY, data.token);
+        if (data?.token) {
+          await AsyncStorage.setItem(TOKEN_KEY, data.token);
 
-        const profileRes = await fetch(`${API_BASE_URL}/me`, {
-          headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${data.token}` },
-        });
-        const profileData = await parseApiResponse(profileRes);
+          const profileRes = await fetch(`${API_BASE_URL}/me`, {
+            headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${data.token}` },
+          });
+          const profileData = await parseApiResponse(profileRes);
 
-        if (profileRes.ok && profileData) {
-          useProfileStore.setState({ profile: profileData, loading: false });
+          if (profileRes.ok && profileData) {
+            useProfileStore.setState({ profile: profileData, loading: false });
 
-          if (profileData.onboarding_completed === false) {
-            router.replace('/onboarding');
+            if (profileData.onboarding_completed === false) {
+              router.replace('/onboarding');
+            } else {
+              router.replace('/(tabs)');
+            }
           } else {
-            router.replace('/(tabs)');
+            await AsyncStorage.removeItem(TOKEN_KEY);
+            showMessage('Gagal memuat profil. Silakan coba login lagi.', 'error');
           }
         } else {
-          router.replace('/(tabs)');
-        }
-      } else {
         showMessage('Gagal login. Silakan coba lagi.', 'error');
       }
     } catch (e: any) {

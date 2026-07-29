@@ -57,7 +57,7 @@ frontend/
 │   │   ├── _layout.tsx         # Sidebar (web) / Tabs (mobile)
 │   │   ├── users.tsx           # Kelola user
 │   │   ├── owner-requests.tsx  # Review request owner
-│   │   ├── pending-fields.tsx  # Review lapangan (super_admin)
+│   │   ├── manage-fields.tsx   # Kelola lapangan (super_admin)
 │   │   └── profile.tsx         # Profile admin
 │   │
 │   └── (owner)/                # Panel owner
