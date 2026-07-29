@@ -1,6 +1,7 @@
 <?php
 namespace App\Services;
 
+use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -25,6 +26,13 @@ class AuthService
                 'name'     => $name,
                 'email'    => $email,
                 'password' => $password,
+            ]);
+
+            Profile::create([
+                'user_id' => $user->id,
+                'email' => $email,
+                'full_name' => $name,
+                'username' => 'user_' . $user->id,
             ]);
 
             $token = $user->createToken('app-token')->plainTextToken;
