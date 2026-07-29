@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class UploadController extends Controller
 {
@@ -21,37 +21,45 @@ class UploadController extends Controller
             'image' => 'required|file|image|mimes:jpeg,png,webp|max:5120',
         ]);
 
-        $file = $request->file('image');
-        $filename = time() . '_' . bin2hex(random_bytes(8)) . '.' . $file->getClientOriginalExtension();
-
-        $supabaseUrl = config('services.supabase.url');
-        $supabaseKey = env('SUPABASE_SERVICE_KEY');
-        $bucket = config('services.supabase.bucket');
-
-        if ($supabaseUrl && $supabaseKey && $bucket) {
-            try {
-                $uploadUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}/fields/{$filename}";
-
-                $response = Http::withHeaders([
-                    'Authorization' => "Bearer {$supabaseKey}",
-                ])->attach('file', file_get_contents($file), $filename, [
-                    'Content-Type' => $file->getMimeType(),
-                ])->timeout(30)->post($uploadUrl);
-
-                if ($response->successful()) {
-                    $publicUrl = "{$supabaseUrl}/storage/v1/object/public/{$bucket}/fields/{$filename}";
-
-                    return response()->json(['url' => $publicUrl]);
-                }
-
-                Log::warning('Supabase HTTP upload failed: ' . $response->body());
-            } catch (\Exception $e) {
-                Log::warning('Supabase HTTP upload exception: ' . $e->getMessage());
+        try {
+            $file = $request->file('image');
+            if (!$file || !$file->isValid()) {
+                Log::error('Upload failed: invalid file', ['hasFile' => (bool)$file]);
+                return response()->json(['message' => 'File tidak valid.'], 400);
             }
-        }
 
-        return response()->json([
-            'message' => 'Gagal mengunggah foto. Silakan coba lagi.',
-        ], 500);
+            $ext = $file->getClientOriginalExtension();
+            if (!$ext) {
+                $ext = match ($file->getMimeType()) {
+                    'image/jpeg' => 'jpg',
+                    'image/png'  => 'png',
+                    'image/webp' => 'webp',
+                    default      => 'jpg',
+                };
+            }
+            $filename = time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+
+            $contents = file_get_contents($file->getRealPath());
+            if ($contents === false) {
+                Log::error('Upload failed: could not read temp file');
+                return response()->json(['message' => 'Gagal membaca file.'], 500);
+            }
+
+            $stored = Storage::disk('public')->put('fields/' . $filename, $contents);
+
+            if (!$stored) {
+                Log::error('Upload failed: Storage::put returned false');
+                return response()->json(['message' => 'Gagal menyimpan file.'], 500);
+            }
+
+            $url = Storage::disk('public')->url('fields/' . $filename);
+
+            Log::info('Upload success', ['filename' => $filename, 'url' => $url]);
+
+            return response()->json(['url' => $url]);
+        } catch (\Exception $e) {
+            Log::error('Upload exception: ' . $e->getMessage());
+            return response()->json(['message' => 'Gagal mengunggah foto. Silakan coba lagi.'], 500);
+        }
     }
 }
