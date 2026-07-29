@@ -8,14 +8,23 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('fields', function (Blueprint $table) {
-            $table->index('sport_type');
-            $table->index('status');
-        });
+        if (! Schema::hasIndex('fields', 'fields_sport_type_index')) {
+            Schema::table('fields', function (Blueprint $table) {
+                $table->index('sport_type');
+            });
+        }
 
-        Schema::table('profiles', function (Blueprint $table) {
-            $table->index('role');
-        });
+        if (! Schema::hasIndex('fields', 'fields_status_index')) {
+            Schema::table('fields', function (Blueprint $table) {
+                $table->index('status');
+            });
+        }
+
+        if (! Schema::hasIndex('profiles', 'profiles_role_index')) {
+            Schema::table('profiles', function (Blueprint $table) {
+                $table->index('role');
+            });
+        }
     }
 
     public function down(): void

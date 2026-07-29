@@ -4,8 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class UploadController extends Controller
 {
@@ -18,40 +17,18 @@ class UploadController extends Controller
         }
 
         $request->validate([
-            'image' => 'required|file|image|mimes:jpeg,png,webp|max:5120',
+            'image' => 'required|file|image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
 
         $file = $request->file('image');
-        $filename = time() . '_' . bin2hex(random_bytes(8)) . '.' . $file->getClientOriginalExtension();
+        $extension = $file->extension() ?: $file->getClientOriginalExtension();
+        $filename = time() . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
 
-        $supabaseUrl = config('services.supabase.url');
-        $supabaseKey = env('SUPABASE_SERVICE_KEY');
-        $bucket = config('services.supabase.bucket');
-
-        if ($supabaseUrl && $supabaseKey && $bucket) {
-            try {
-                $uploadUrl = "{$supabaseUrl}/storage/v1/object/{$bucket}/fields/{$filename}";
-
-                $response = Http::withHeaders([
-                    'Authorization' => "Bearer {$supabaseKey}",
-                ])->attach('file', file_get_contents($file), $filename, [
-                    'Content-Type' => $file->getMimeType(),
-                ])->timeout(30)->post($uploadUrl);
-
-                if ($response->successful()) {
-                    $publicUrl = "{$supabaseUrl}/storage/v1/object/public/{$bucket}/fields/{$filename}";
-
-                    return response()->json(['url' => $publicUrl]);
-                }
-
-                Log::warning('Supabase HTTP upload failed: ' . $response->body());
-            } catch (\Exception $e) {
-                Log::warning('Supabase HTTP upload exception: ' . $e->getMessage());
-            }
-        }
+        // Keep business path semantics ("fields/...") but use local disk storage.
+        $localPath = $file->storeAs('fields', $filename, 'public');
 
         return response()->json([
-            'message' => 'Gagal mengunggah foto. Silakan coba lagi.',
-        ], 500);
+            'url' => Storage::disk('public')->url($localPath),
+        ]);
     }
 }
