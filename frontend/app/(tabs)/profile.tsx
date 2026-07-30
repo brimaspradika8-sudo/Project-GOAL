@@ -203,16 +203,16 @@ export default function ProfileScreen() {
     if (role === 'player' && ownerStatus === 'pending') {
       return (
         <View style={[styles.ownerCard, {
-          backgroundColor: isDark ? colors.surface : '#FEF3C7',
-          borderColor: isDark ? '#334155' : '#F59E0B',
+            backgroundColor: colors.warningMuted,
+            borderColor: colors.warning + '50',
         }]}>
           <View style={styles.ownerCardLeft}>
-            <View style={[styles.ownerIconBox, { backgroundColor: isDark ? '#334155' : '#FDE68A' }]}>
-              <MaterialIcons name="hourglass-top" size={20} color={isDark ? '#FBBF24' : '#D97706'} />
+            <View style={[styles.ownerIconBox, { backgroundColor: colors.warningMuted }]}>
+              <MaterialIcons name="hourglass-top" size={20} color={colors.warning} />
             </View>
             <View style={styles.ownerCardInfo}>
-              <Text style={[styles.ownerCardTitle, isDark && { color: '#F1F5F9' }]}>Pengajuan Owner</Text>
-              <Text style={[styles.ownerCardDesc, isDark && { color: '#94A3B8' }]}>Menunggu persetujuan admin...</Text>
+              <Text style={styles.ownerCardTitle}>Pengajuan Owner</Text>
+              <Text style={styles.ownerCardDesc}>Menunggu persetujuan admin...</Text>
             </View>
           </View>
         </View>
@@ -223,17 +223,17 @@ export default function ProfileScreen() {
     if (role === 'player' && ownerStatus === 'rejected') {
       return (
         <TouchableOpacity
-          style={[styles.ownerCard, { backgroundColor: isDark ? '#2D1B1B' : colors.errorLight, borderColor: isDark ? '#7F1D1D' : colors.errorBorder }]}
+          style={[styles.ownerCard, { backgroundColor: colors.destructiveMuted, borderColor: colors.destructive + '40' }]}
           activeOpacity={0.8}
           onPress={() => setShowOwnerModal(true)}
         >
           <View style={styles.ownerCardLeft}>
-            <View style={[styles.ownerIconBox, { backgroundColor: isDark ? '#3B1515' : colors.errorLight }]}>
+            <View style={[styles.ownerIconBox, { backgroundColor: colors.destructiveMuted }]}>
               <MaterialIcons name="cancel" size={20} color={colors.error} />
             </View>
             <View style={styles.ownerCardInfo}>
-              <Text style={[styles.ownerCardTitle, isDark && { color: '#FCA5A5' }]}>Pengajuan Ditolak</Text>
-              <Text style={[styles.ownerCardDesc, isDark && { color: '#94A3B8' }]} numberOfLines={2} ellipsizeMode="tail">
+              <Text style={styles.ownerCardTitle}>Pengajuan Ditolak</Text>
+              <Text style={styles.ownerCardDesc} numberOfLines={2} ellipsizeMode="tail">
                 {ownerRequestData?.rejection_reason ?? 'Ketuk untuk ajukan ulang.'}
               </Text>
             </View>
@@ -248,22 +248,22 @@ export default function ProfileScreen() {
       return (
         <TouchableOpacity
           style={[styles.ownerCard, {
-            backgroundColor: isDark ? '#0F2A1E' : colors.successLight,
-            borderColor: isDark ? '#064E3B' : colors.successBorder,
+            backgroundColor: colors.primaryMuted,
+            borderColor: colors.primary + '40',
           }]}
           activeOpacity={0.8}
           onPress={() => setShowOwnerModal(true)}
         >
           <View style={styles.ownerCardLeft}>
-            <View style={[styles.ownerIconBox, { backgroundColor: isDark ? '#064E3B' : colors.successLight }]}>
+            <View style={[styles.ownerIconBox, { backgroundColor: colors.primaryMuted }]}>
               <MaterialIcons name="store" size={20} color={colors.primary} />
             </View>
             <View style={styles.ownerCardInfo}>
-              <Text style={[styles.ownerCardTitle, isDark && { color: '#D1FAE5' }]}>Ajukan Jadi Owner</Text>
-              <Text style={[styles.ownerCardDesc, isDark && { color: '#6EE7B7' }]}>Kelola lapangan Anda sendiri.</Text>
+              <Text style={styles.ownerCardTitle}>Ajukan Jadi Owner</Text>
+              <Text style={styles.ownerCardDesc}>Kelola lapangan Anda sendiri.</Text>
             </View>
           </View>
-          <MaterialIcons name="chevron-right" size={20} color={isDark ? '#6EE7B7' : colors.textSecondary} />
+          <MaterialIcons name="chevron-right" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       );
     }
@@ -273,22 +273,22 @@ export default function ProfileScreen() {
       return (
         <TouchableOpacity
           style={[styles.ownerCard, {
-            backgroundColor: isDark ? '#0F2A1E' : colors.successLight,
-            borderColor: isDark ? '#064E3B' : colors.successBorder,
+            backgroundColor: colors.primaryMuted,
+            borderColor: colors.primary + '40',
           }]}
           activeOpacity={0.8}
           onPress={() => router.push('/(owner)/fields' as any)}
         >
           <View style={styles.ownerCardLeft}>
-            <View style={[styles.ownerIconBox, { backgroundColor: isDark ? '#064E3B' : colors.successLight }]}>
+            <View style={[styles.ownerIconBox, { backgroundColor: colors.primaryMuted }]}>
               <MaterialIcons name="stadium" size={20} color={colors.primary} />
             </View>
             <View style={styles.ownerCardInfo}>
-              <Text style={[styles.ownerCardTitle, isDark && { color: '#D1FAE5' }]}>Lapangan Saya</Text>
-              <Text style={[styles.ownerCardDesc, isDark && { color: '#6EE7B7' }]}>Kelola lapangan yang Anda miliki.</Text>
+              <Text style={styles.ownerCardTitle}>Lapangan Saya</Text>
+              <Text style={styles.ownerCardDesc}>Kelola lapangan yang Anda miliki.</Text>
             </View>
           </View>
-          <MaterialIcons name="chevron-right" size={20} color={isDark ? '#6EE7B7' : colors.textSecondary} />
+          <MaterialIcons name="chevron-right" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       );
     }
@@ -298,22 +298,22 @@ export default function ProfileScreen() {
       return (
         <TouchableOpacity
           style={[styles.ownerCard, {
-            backgroundColor: isDark ? '#1E1B4B' : colors.purpleBg,
-            borderColor: isDark ? '#3730A3' : colors.purpleBorder,
+            backgroundColor: colors.surfaceContainerHigh,
+            borderColor: colors.outline,
           }]}
           activeOpacity={0.8}
           onPress={() => router.push('/(admin)/dashboard')}
         >
           <View style={styles.ownerCardLeft}>
-            <View style={[styles.ownerIconBox, { backgroundColor: isDark ? '#312E81' : colors.purpleLight }]}>
-              <MaterialIcons name="admin-panel-settings" size={20} color={isDark ? '#A5B4FC' : colors.purpleIcon} />
+            <View style={[styles.ownerIconBox, { backgroundColor: colors.primaryContainer }]}>
+              <MaterialIcons name="admin-panel-settings" size={20} color={colors.primary} />
             </View>
             <View style={styles.ownerCardInfo}>
-              <Text style={[styles.ownerCardTitle, isDark && { color: '#C7D2FE' }]}>Panel Super Admin</Text>
-              <Text style={[styles.ownerCardDesc, isDark && { color: '#A5B4FC' }]}>Approve field dan owner request.</Text>
+              <Text style={styles.ownerCardTitle}>Panel Super Admin</Text>
+              <Text style={styles.ownerCardDesc}>Approve field dan owner request.</Text>
             </View>
           </View>
-          <MaterialIcons name="chevron-right" size={20} color={isDark ? '#A5B4FC' : colors.textSecondary} />
+          <MaterialIcons name="chevron-right" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       );
     }
@@ -584,7 +584,7 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surfaceWhite,
+    backgroundColor: colors.surface,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
     borderColor: colors.divider,
@@ -634,7 +634,7 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: colors.surfaceWhite,
+    backgroundColor: colors.surface,
     borderRadius: SIZES.borderRadius,
     borderWidth: 1,
     borderColor: colors.divider,
@@ -658,7 +658,7 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     marginTop: 4,
   },
   sportsCard: {
-    backgroundColor: colors.surfaceWhite,
+    backgroundColor: colors.surface,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
     borderColor: colors.divider,
@@ -729,7 +729,7 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     marginTop: 2,
   },
   settingsCard: {
-    backgroundColor: colors.surfaceWhite,
+    backgroundColor: colors.surface,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
     borderColor: colors.divider,
@@ -794,7 +794,7 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     padding: 20,
   },
   modalSheet: {
-    backgroundColor: isDark ? colors.surface : colors.surfaceWhite,
+    backgroundColor: colors.surface,
     borderRadius: 24,
     padding: 24,
     width: '100%',
@@ -830,7 +830,7 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     backgroundColor: colors.errorLight,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.errorBorder,
+    borderColor: colors.destructive + '40',
     padding: 14,
     marginBottom: 14,
   },
@@ -851,7 +851,7 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     borderRadius: SIZES.borderRadius,
     borderWidth: 1,
     borderColor: colors.divider,
-    backgroundColor: isDark ? colors.background : colors.surfaceWhite,
+    backgroundColor: colors.bgElevated,
     alignItems: 'center',
   },
   cancelText: {

@@ -143,7 +143,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
     }
   };
 
-  const uploadImage = async (uri: string, token: string, mime?: string): Promise<string | null> => {
+  const uploadImage = async (uri: string, token: string, mime?: string): Promise<{ url: string | null; error?: string }> => {
     try {
       const formData = new FormData();
       const filename = uri.split('/').pop() || 'photo.jpg';
@@ -162,11 +162,14 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
         body: formData,
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) { console.error('[uploadImage] gagal:', res.status, data); return null; }
-      return data.url;
+      if (!res.ok) {
+        console.error('[uploadImage] gagal:', res.status, data);
+        return { url: null, error: getErrorMessage(data, 'Gagal mengunggah foto. Coba lagi.') };
+      }
+      return { url: data.url ?? null };
     } catch (err: any) {
       console.error('[uploadImage] exception:', err?.message ?? err);
-      return null;
+      return { url: null, error: 'Gagal terhubung ke server upload.' };
     }
   };
 
@@ -184,8 +187,8 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
       let imageUrl = editForm.image_url;
       if (editForm.image_uri) {
         const uploaded = await uploadImage(editForm.image_uri, token!, editForm.image_mime);
-        if (!uploaded) { setEditError('Gagal mengunggah foto. Coba lagi.'); return; }
-        imageUrl = uploaded;
+        if (!uploaded.url) { setEditError(uploaded.error || 'Gagal mengunggah foto. Coba lagi.'); return; }
+        imageUrl = uploaded.url;
       }
       const body: any = {
         name: editForm.name.trim(),
@@ -375,8 +378,8 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
           <View style={st.sheet}>
             <View style={st.sheetHandle} />
             <View style={st.sheetHeader}>
-              <View style={[st.sheetIconWrap, { backgroundColor: colors.accentPurpleLight }]}>
-                <MaterialIcons name="edit" size={22} color={colors.accentPurple} />
+              <View style={[st.sheetIconWrap, { backgroundColor: colors.primaryContainer }]}>
+                <MaterialIcons name="edit" size={22} color={colors.primary} />
               </View>
               <Text style={[st.sheetTitle, { color: colors.text }]}>Edit Lapangan</Text>
               <TouchableOpacity onPress={() => setEditTarget(null)} style={[st.sheetClose, { backgroundColor: colors.surfaceContainerLow }]} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -561,7 +564,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10,
     borderWidth: 1.5,
   },
-  searchInput: { flex: 1, fontSize: 14, paddingVertical: 0 },
+  searchInput: { flex: 1, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}) },
 
   chipScroll: { paddingHorizontal: SIZES.gutter, gap: 8, marginBottom: 12 },
   chip: {
@@ -670,7 +673,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1.5,
   },
-  fieldInput: { flex: 1, fontSize: 14, paddingVertical: 0 },
+  fieldInput: { flex: 1, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}) },
 
   fieldErrorRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6, paddingHorizontal: 4 },
   fieldErrorText: { ...FONTS.bodySm, flex: 1 },
