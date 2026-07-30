@@ -45,9 +45,22 @@ function getApiErrorMessage(data: any, status: number) {
   return getErrorMessage(data, 'Terjadi kesalahan sistem. Silakan coba lagi.');
 }
 
+function validateEmail(v: string): string {
+  if (!v.trim()) return 'Email wajib diisi.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) return 'Format email tidak valid.';
+  return '';
+}
+
+function validatePassword(v: string): string {
+  if (!v) return 'Password wajib diisi.';
+  return '';
+}
+
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
   const { fadeAnim, slideAnim, pulseAnim, bgScaleAnim } = useAuthAnimations();
@@ -63,7 +76,23 @@ export default function LoginScreen() {
     }).start();
   };
 
+  function onEmailChange(v: string) {
+    setEmail(v);
+    setEmailError(validateEmail(v));
+  }
+
+  function onPasswordChange(v: string) {
+    setPassword(v);
+    setPasswordError(validatePassword(v));
+  }
+
   async function signInWithEmail() {
+    const eErr = validateEmail(email);
+    const pErr = validatePassword(password);
+    setEmailError(eErr);
+    setPasswordError(pErr);
+    if (eErr || pErr) return;
+
     setMessage(null);
     Keyboard.dismiss();
 
@@ -71,11 +100,6 @@ export default function LoginScreen() {
     if (now - lastAttemptRef.current < RATE_LIMIT_MS) {
       const waitSec = Math.ceil((RATE_LIMIT_MS - (now - lastAttemptRef.current)) / 1000);
       showMessage(`Tunggu ${waitSec} detik sebelum mencoba lagi.`, 'error');
-      return;
-    }
-
-    if (!email || !password) {
-      showMessage('Email dan password wajib diisi.', 'error');
       return;
     }
 
@@ -165,15 +189,17 @@ export default function LoginScreen() {
             <FloatingInput
               label="Email Address"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={onEmailChange}
               keyboardType="email-address"
+              error={emailError}
             />
 
             <FloatingInput
               label="Password"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={onPasswordChange}
               secureTextEntry={true}
+              error={passwordError}
             />
 
             <View style={styles.rowBetween}>

@@ -51,6 +51,13 @@ export default function UserPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [showEditPwd, setShowEditPwd] = useState(false);
 
+  const [createFieldErrors, setCreateFieldErrors] = useState({ name: '', email: '', password: '' });
+  const [editFieldErrors, setEditFieldErrors] = useState({ name: '', email: '', password: '' });
+
+  const valName = (v: string) => { if (!v.trim()) return 'Nama wajib diisi.'; return ''; };
+  const valEmail = (v: string) => { if (!v.trim()) return 'Email wajib diisi.'; if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) return 'Format email tidak valid.'; return ''; };
+  const valPwd = (v: string) => { if (v && v.length < 8) return 'Password minimal 8 karakter.'; if (v && (!/[a-z]/.test(v) || !/[A-Z]/.test(v) || !/[0-9]/.test(v))) return 'Password harus mengandung huruf besar, kecil, dan angka.'; return ''; };
+
   const [upgradeTarget, setUpgradeTarget] = useState<{ id: number; name: string; currentRole: string } | null>(null);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
@@ -104,21 +111,16 @@ export default function UserPage() {
 
   // ── CREATE ──────────────────────────────────────────────
   const handleCreate = async () => {
-    if (!createForm.name.trim() || !createForm.email.trim() || !createForm.password.trim()) {
-      setCreateError('Semua field wajib diisi.');
+    const nErr = valName(createForm.name);
+    const eErr = valEmail(createForm.email);
+    const pErr = valPwd(createForm.password);
+    setCreateFieldErrors({ name: nErr, email: eErr, password: pErr });
+    if (nErr || eErr || pErr) {
+      setCreateError('Periksa kembali isian Anda.');
       return;
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(createForm.email.trim())) {
-      setCreateError('Format email tidak valid.');
-      return;
-    }
-    if (createForm.password.length < 8) {
-      setCreateError('Password minimal 8 karakter.');
-      return;
-    }
-    if (!/[a-z]/.test(createForm.password) || !/[A-Z]/.test(createForm.password) || !/[0-9]/.test(createForm.password)) {
-      setCreateError('Password harus mengandung huruf besar, huruf kecil, dan angka.');
+    if (!createForm.password.trim()) {
+      setCreateError('Password wajib diisi.');
       return;
     }
     setCreateLoading(true);
@@ -156,21 +158,12 @@ export default function UserPage() {
 
   const handleEdit = async () => {
     if (!editTarget) return;
-    if (!editForm.name.trim() || !editForm.email.trim()) {
-      setEditError('Nama dan email wajib diisi.');
-      return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(editForm.email.trim())) {
-      setEditError('Format email tidak valid.');
-      return;
-    }
-    if (editForm.password.trim() && editForm.password.length < 8) {
-      setEditError('Password minimal 8 karakter.');
-      return;
-    }
-    if (editForm.password.trim() && (!/[a-z]/.test(editForm.password) || !/[A-Z]/.test(editForm.password) || !/[0-9]/.test(editForm.password))) {
-      setEditError('Password harus mengandung huruf besar, huruf kecil, dan angka.');
+    const nErr = valName(editForm.name);
+    const eErr = valEmail(editForm.email);
+    const pErr = valPwd(editForm.password);
+    setEditFieldErrors({ name: nErr, email: eErr, password: pErr });
+    if (nErr || eErr || pErr) {
+      setEditError('Periksa kembali isian Anda.');
       return;
     }
     setEditLoading(true);
@@ -436,15 +429,15 @@ export default function UserPage() {
             ) : null}
 
             <FormField label="Nama Lengkap" icon="person-outline" value={createForm.name}
-              onChangeText={v => setCreateForm(p => ({ ...p, name: v }))} st={st} colors={colors} />
+              onChangeText={v => { setCreateForm(p => ({ ...p, name: v })); setCreateFieldErrors(p => ({ ...p, name: valName(v) })); }} st={st} colors={colors} error={createFieldErrors.name} />
             <FormField label="Email" icon="mail-outline" value={createForm.email}
-              onChangeText={v => setCreateForm(p => ({ ...p, email: v }))}
-              keyboardType="email-address" autoCapitalize="none" st={st} colors={colors} />
+              onChangeText={v => { setCreateForm(p => ({ ...p, email: v })); setCreateFieldErrors(p => ({ ...p, email: valEmail(v) })); }}
+              keyboardType="email-address" autoCapitalize="none" st={st} colors={colors} error={createFieldErrors.email} />
             <FormField label="Password" icon="lock-outline" value={createForm.password}
-              onChangeText={v => setCreateForm(p => ({ ...p, password: v }))}
+              onChangeText={v => { setCreateForm(p => ({ ...p, password: v })); setCreateFieldErrors(p => ({ ...p, password: valPwd(v) })); }}
               secureTextEntry={!showCreatePwd}
               rightIcon={showCreatePwd ? 'visibility-off' : 'visibility'}
-              onRightIconPress={() => setShowCreatePwd(p => !p)} st={st} colors={colors} />
+              onRightIconPress={() => setShowCreatePwd(p => !p)} st={st} colors={colors} error={createFieldErrors.password} />
 
             <View style={st.roleSelectWrap}>
               <Text style={st.fieldLabel}>Role</Text>
@@ -506,16 +499,16 @@ export default function UserPage() {
             ) : null}
 
             <FormField label="Nama Lengkap" icon="person-outline" value={editForm.name}
-              onChangeText={v => setEditForm(p => ({ ...p, name: v }))} st={st} colors={colors} />
+              onChangeText={v => { setEditForm(p => ({ ...p, name: v })); setEditFieldErrors(p => ({ ...p, name: valName(v) })); }} st={st} colors={colors} error={editFieldErrors.name} />
             <FormField label="Email" icon="mail-outline" value={editForm.email}
-              onChangeText={v => setEditForm(p => ({ ...p, email: v }))}
-              keyboardType="email-address" autoCapitalize="none" st={st} colors={colors} />
+              onChangeText={v => { setEditForm(p => ({ ...p, email: v })); setEditFieldErrors(p => ({ ...p, email: valEmail(v) })); }}
+              keyboardType="email-address" autoCapitalize="none" st={st} colors={colors} error={editFieldErrors.email} />
             <FormField label="Password Baru (opsional)" icon="lock-outline" value={editForm.password}
-              onChangeText={v => setEditForm(p => ({ ...p, password: v }))}
+              onChangeText={v => { setEditForm(p => ({ ...p, password: v })); setEditFieldErrors(p => ({ ...p, password: valPwd(v) })); }}
               secureTextEntry={!showEditPwd}
               rightIcon={showEditPwd ? 'visibility-off' : 'visibility'}
               onRightIconPress={() => setShowEditPwd(p => !p)}
-              placeholder="Kosongkan jika tidak diubah" st={st} colors={colors} />
+              placeholder="Kosongkan jika tidak diubah" st={st} colors={colors} error={editFieldErrors.password} />
 
             <View style={st.sheetActions}>
               <TouchableOpacity style={st.cancelBtn} onPress={() => setEditTarget(null)}>
@@ -584,21 +577,22 @@ export default function UserPage() {
   );
 }
 
-function FormField({ label, icon, value, onChangeText, keyboardType, autoCapitalize, secureTextEntry, rightIcon, onRightIconPress, placeholder, st, colors }: {
+function FormField({ label, icon, value, onChangeText, keyboardType, autoCapitalize, secureTextEntry, rightIcon, onRightIconPress, placeholder, error, st, colors }: {
   label: string; icon: string; value: string;
   onChangeText: (v: string) => void;
   keyboardType?: any; autoCapitalize?: any;
   secureTextEntry?: boolean;
   rightIcon?: string; onRightIconPress?: () => void;
   placeholder?: string;
+  error?: string;
   st: ReturnType<typeof makeStyles>;
   colors: ThemeColors;
 }) {
   return (
     <View style={st.fieldWrap}>
       <Text style={st.fieldLabel}>{label}</Text>
-      <View style={st.fieldRow}>
-        <MaterialIcons name={icon as any} size={17} color={colors.textSecondary} style={{ marginRight: 10 }} />
+      <View style={[st.fieldRow, error ? { borderColor: colors.error } : undefined]}>
+        <MaterialIcons name={icon as any} size={17} color={error ? colors.error : colors.textSecondary} style={{ marginRight: 10 }} />
         <TextInput
           style={st.fieldInput}
           value={value}
@@ -615,6 +609,7 @@ function FormField({ label, icon, value, onChangeText, keyboardType, autoCapital
           </TouchableOpacity>
         )}
       </View>
+      {error ? <Text style={{ color: colors.error, fontSize: 12, marginTop: 4, marginLeft: 4 }}>{error}</Text> : null}
     </View>
   );
 }
