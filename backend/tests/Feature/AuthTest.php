@@ -79,6 +79,10 @@ class AuthTest extends TestCase
             ->assertJsonStructure(['message', 'token', 'user']);
 
         $this->assertDatabaseHas('users', ['email' => 'test@example.com']);
+        $this->assertDatabaseHas('profiles', [
+            'email' => 'test@example.com',
+            'full_name' => 'Test User',
+        ]);
     }
 
     public function test_register_duplicate_email_fails(): void
