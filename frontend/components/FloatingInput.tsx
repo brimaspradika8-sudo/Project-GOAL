@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, TextInput, TouchableOpacity, Animated, Easing, Platform } from 'react-native';
+import { StyleSheet, View, TextInput, TouchableOpacity, Animated, Easing, Platform, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../lib/theme';
+import { FONTS } from './goalTheme';
 
 interface FloatingInputProps {
   label: string;
@@ -10,6 +11,7 @@ interface FloatingInputProps {
   secureTextEntry?: boolean;
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  error?: string;
 }
 
 export default function FloatingInput({
@@ -19,11 +21,13 @@ export default function FloatingInput({
   secureTextEntry = false,
   keyboardType = 'default',
   autoCapitalize = 'none',
+  error,
 }: FloatingInputProps) {
   const { colors } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const animatedIsFocused = useRef(new Animated.Value(value === '' ? 0 : 1)).current;
+  const hasError = !!error;
 
   useEffect(() => {
     Animated.timing(animatedIsFocused, {
@@ -47,7 +51,7 @@ export default function FloatingInput({
     }),
     color: animatedIsFocused.interpolate({
       inputRange: [0, 1],
-      outputRange: [colors.textSecondary, colors.primary],
+      outputRange: [colors.textSecondary, hasError ? colors.destructive : colors.primary],
     }),
     backgroundColor: animatedIsFocused.interpolate({
       inputRange: [0, 0.5, 1],
@@ -62,14 +66,14 @@ export default function FloatingInput({
   };
 
   return (
-    <View style={styles.inputContainer}>
+    <View style={[styles.inputContainer, hasError && { marginBottom: 6 }]}>
       <Animated.Text style={labelStyle}>{label}</Animated.Text>
       <TextInput
         style={[
           styles.input,
           {
             backgroundColor: isFocused ? colors.bgElevated : colors.surfaceContainerLow,
-            borderColor: isFocused ? colors.primary : colors.borderSubtle,
+            borderColor: hasError ? colors.destructive : (isFocused ? colors.primary : colors.borderSubtle),
             color: colors.textPrimary,
           },
           isFocused && focusRing(colors.focusRing),
@@ -94,6 +98,7 @@ export default function FloatingInput({
           />
         </TouchableOpacity>
       )}
+      {hasError && <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>}
     </View>
   );
 }
@@ -116,10 +121,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     top: 19,
-    position: 'absolute',
-    right: 16,
-    top: 19,
     zIndex: 3,
+  },
+  errorText: {
+    ...FONTS.bodySm,
+    marginTop: 4,
+    marginLeft: 4,
   },
 });
 
