@@ -33,7 +33,7 @@ export default function OwnerTabLayout() {
       <View style={[styles.webRootMobile, { backgroundColor: colors.background }]}>
         <MobileWebHeader
           title="Owner Panel"
-          accentColor={colors.accentOrange}
+          accentColor={colors.primary}
           items={sidebarItems}
           activeRoute={activeRoute}
           onNavigate={(href) => router.push(href as any)}
@@ -101,7 +101,7 @@ export default function OwnerTabLayout() {
       <View style={[styles.webRoot, { backgroundColor: colors.background }]}>
         <Sidebar
           title="Owner Panel"
-          accentColor={colors.accentOrange}
+          accentColor={colors.primary}
           items={sidebarItems}
         />
         <View style={[styles.webContent, { backgroundColor: colors.background }]}>

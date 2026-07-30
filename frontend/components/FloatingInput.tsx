@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, TextInput, TouchableOpacity, Animated, Easing, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTheme } from '../lib/theme';
 
 interface FloatingInputProps {
   label: string;
@@ -19,6 +20,7 @@ export default function FloatingInput({
   keyboardType = 'default',
   autoCapitalize = 'none',
 }: FloatingInputProps) {
+  const { colors } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const animatedIsFocused = useRef(new Animated.Value(value === '' ? 0 : 1)).current;
@@ -45,11 +47,11 @@ export default function FloatingInput({
     }),
     color: animatedIsFocused.interpolate({
       inputRange: [0, 1],
-      outputRange: ['#869585', '#4be277'],
+      outputRange: [colors.textSecondary, colors.primary],
     }),
     backgroundColor: animatedIsFocused.interpolate({
       inputRange: [0, 0.5, 1],
-      outputRange: ['transparent', 'transparent', '#1c1b1b'],
+      outputRange: ['transparent', 'transparent', colors.bgElevated],
     }),
     paddingHorizontal: animatedIsFocused.interpolate({
       inputRange: [0, 1],
@@ -63,7 +65,15 @@ export default function FloatingInput({
     <View style={styles.inputContainer}>
       <Animated.Text style={labelStyle}>{label}</Animated.Text>
       <TextInput
-        style={[styles.input, isFocused && styles.inputFocused]}
+        style={[
+          styles.input,
+          {
+            backgroundColor: isFocused ? colors.bgElevated : colors.surfaceContainerLow,
+            borderColor: isFocused ? colors.primary : colors.borderSubtle,
+            color: colors.textPrimary,
+          },
+          isFocused && focusRing(colors.focusRing),
+        ]}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         onChangeText={onChangeText}
@@ -80,7 +90,7 @@ export default function FloatingInput({
           <MaterialIcons
             name={isPasswordVisible ? 'visibility' : 'visibility-off'}
             size={22}
-            color={isFocused ? '#4be277' : '#888'}
+            color={isFocused ? colors.primary : colors.textTertiary}
           />
         </TouchableOpacity>
       )}
@@ -95,28 +105,26 @@ const styles = StyleSheet.create({
     height: 60,
   },
   input: {
-    backgroundColor: '#1c1b1b',
-    color: '#e5e2e1',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: 12,
     height: 60,
     paddingHorizontal: 16,
     fontSize: 16,
     zIndex: 1,
   },
-  inputFocused: {
-    borderColor: '#4be277',
-    backgroundColor: '#181f18',
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0 0 12px rgba(75,226,119,0.3)' }
-      : { shadowColor: '#4be277', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 4 }
-    ),
-  },
   eyeIcon: {
+    position: 'absolute',
+    right: 16,
+    top: 19,
     position: 'absolute',
     right: 16,
     top: 19,
     zIndex: 3,
   },
 });
+
+function focusRing(color: string) {
+  return Platform.OS === 'web'
+    ? { outlineStyle: 'none' as const }
+    : { shadowColor: color, shadowOpacity: 1, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 2 };
+}
