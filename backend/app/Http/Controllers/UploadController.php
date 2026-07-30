@@ -18,7 +18,7 @@ class UploadController extends Controller
         }
 
         $request->validate([
-            'image' => 'required|file|image|mimes:jpeg,png,webp|max:5120',
+            'image' => 'required|file|image|mimes:jpg,jpeg|max:2048',
         ]);
 
         try {
@@ -30,12 +30,7 @@ class UploadController extends Controller
 
             $ext = $file->getClientOriginalExtension();
             if (!$ext) {
-                $ext = match ($file->getMimeType()) {
-                    'image/jpeg' => 'jpg',
-                    'image/png'  => 'png',
-                    'image/webp' => 'webp',
-                    default      => 'jpg',
-                };
+                $ext = 'jpg';
             }
             $filename = time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
 

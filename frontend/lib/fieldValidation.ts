@@ -1,4 +1,4 @@
-export const SPORT_OPTIONS = ['Futsal', 'Basket', 'Badminton', 'Voli', 'Tenis', 'Mini Soccer'];
+export const SPORT_OPTIONS = ['Futsal', 'Basket', 'Badminton', 'Voli', 'Tenis', 'Mini Soccer', 'Padel'];
 
 export const SPORT_MAP: Record<string, string> = {
   'Futsal': 'futsal',
@@ -7,6 +7,7 @@ export const SPORT_MAP: Record<string, string> = {
   'Voli': 'volleyball',
   'Tenis': 'tennis',
   'Mini Soccer': 'mini_soccer',
+  'Padel': 'padel',
 };
 
 export const VALID_SPORT_VALUES = Object.values(SPORT_MAP);
@@ -15,9 +16,9 @@ export const SPORT_LABELS: Record<string, string> = Object.fromEntries(
   Object.entries(SPORT_MAP).map(([label, key]) => [key, label]),
 );
 
-const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
-const ALLOWED_IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp'];
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_IMAGE_MIMES = ['image/jpeg'];
+const ALLOWED_IMAGE_EXTS = ['jpg', 'jpeg'];
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
 
 export type FieldFormErrors = {
   name: string;
@@ -70,27 +71,24 @@ export function validateFieldImage(uri: string, existingUrl: string, mimeType?: 
   if (!source) return 'Foto venue wajib diunggah';
   if (mimeType) {
     if (!ALLOWED_IMAGE_MIMES.includes(mimeType.toLowerCase())) {
-      return 'Format gambar harus JPG, JPEG, PNG, atau WEBP';
+      return 'Format gambar harus JPG/JPEG';
     }
     return '';
   }
   const ext = source.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
   if (!ALLOWED_IMAGE_EXTS.includes(ext)) {
-    return 'Format gambar harus JPG, JPEG, PNG, atau WEBP';
+    return 'Format gambar harus JPG/JPEG';
   }
   return '';
 }
 
 export function mimeFromExt(ext: string): string {
-  const e = ext.toLowerCase();
-  if (e === 'png') return 'image/png';
-  if (e === 'webp') return 'image/webp';
   return 'image/jpeg';
 }
 
 export function validateFieldImageSize(fileSize: number): string {
   if (fileSize > MAX_IMAGE_SIZE) {
-    return 'Ukuran gambar maksimal 5MB';
+    return 'Ukuran gambar maksimal 2MB';
   }
   return '';
 }

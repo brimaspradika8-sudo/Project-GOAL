@@ -610,7 +610,7 @@ function FieldModal({
                     </View>
                     <View style={st.imageEmptyTextCol}>
                       <Text style={st.imageEmptyText}>Tap untuk memilih foto</Text>
-                      <Text style={st.imageEmptyHint}>Format JPG, PNG, WEBP (Maks 5MB)</Text>
+                      <Text style={st.imageEmptyHint}>Format JPG (Maks 2MB)</Text>
                     </View>
                   </View>
                 )}
@@ -824,27 +824,25 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: colors.successLight,
+    backgroundColor: colors.primary,
     paddingVertical: 9,
     paddingHorizontal: 14,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.primary + '30',
+    borderWidth: 0,
   },
-  editBtnText: { ...FONTS.titleSm, fontSize: 12, color: colors.primary },
+  editBtnText: { ...FONTS.titleSm, fontSize: 12, color: colors.onPrimary },
   delBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: colors.errorLight,
+    backgroundColor: colors.error,
     paddingVertical: 9,
     paddingHorizontal: 14,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.error + '30',
+    borderWidth: 0,
   },
-  delBtnText: { ...FONTS.titleSm, fontSize: 12, color: colors.error },
+  delBtnText: { ...FONTS.titleSm, fontSize: 12, color: '#FFFFFF' },
 
   // Modal styling
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },

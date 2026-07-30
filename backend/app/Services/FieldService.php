@@ -156,9 +156,7 @@ class FieldService
 
         $field->update($allowed);
 
-        $shouldResetApproval = $field->status === 'rejected' || ($field->status === 'approved' && !$isAdmin);
-
-        if ($shouldResetApproval) {
+        if ($field->status === 'rejected') {
             $field->forceFill([
                 'status' => 'pending',
                 'approved_by' => null,
