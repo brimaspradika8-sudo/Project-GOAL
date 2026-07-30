@@ -141,7 +141,15 @@ export default function OnboardingScreen() {
   }
 
   function handleBack() {
-    if (step > 1) setStep((prev) => prev - 1);
+    if (step > 1) {
+      setStep((prev) => prev - 1);
+    } else {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        handleSignOut();
+      }
+    }
   }
 
   async function handleNextStep() {
@@ -236,15 +244,16 @@ export default function OnboardingScreen() {
   const filteredCities = (CITIES_BY_PROVINCE[selectedProvince] || []).filter((city) =>
     city.toLowerCase().includes(regionSearch.toLowerCase())
   );
+  const styles = makeStyles(colors, isDark);
 
   const renderStatus = () => {
     const statusConfig = {
-      checking: { icon: 'sync' as const, color: COLORS.textSecondary, text: 'Memeriksa username...' },
-      available: { icon: 'check-circle' as const, color: COLORS.primary, text: 'Username tersedia' },
-      taken: { icon: 'cancel' as const, color: COLORS.error, text: 'Username sudah digunakan' },
-      invalid: { icon: 'error' as const, color: COLORS.error, text: 'Minimal 3 karakter, gunakan huruf/angka/underscore' },
-      error: { icon: 'wifi-off' as const, color: '#d97706', text: 'Gagal memeriksa username' },
-      idle: { icon: 'info-outline' as const, color: COLORS.textSecondary, text: 'Gunakan minimal 3 karakter' },
+      checking: { icon: 'sync' as const, color: colors.textSecondary, text: 'Memeriksa username...' },
+      available: { icon: 'check-circle' as const, color: colors.primary, text: 'Username tersedia' },
+      taken: { icon: 'cancel' as const, color: colors.destructive, text: 'Username sudah digunakan' },
+      invalid: { icon: 'error' as const, color: colors.destructive, text: 'Minimal 3 karakter, gunakan huruf/angka/underscore' },
+      error: { icon: 'wifi-off' as const, color: colors.warning, text: 'Gagal memeriksa username' },
+      idle: { icon: 'info-outline' as const, color: colors.textSecondary, text: 'Gunakan minimal 3 karakter' },
     };
     const config = statusConfig[usernameStatus || 'idle'] ?? statusConfig.idle;
 
@@ -261,7 +270,7 @@ export default function OnboardingScreen() {
       <View style={styles.sectionHeader}>
         <Text style={styles.kicker}>Profil Pemain</Text>
         <Text style={[styles.title, { color: colors.text }]}>Siapkan identitas akunmu</Text>
-        <Text style={[styles.subtitle, { color: isDark ? '#CBD5E1' : COLORS.textSecondary }]}>Username, foto, dan lokasi membantu GOAL menampilkan venue yang lebih relevan.</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Username, foto, dan lokasi membantu GOAL menampilkan venue yang lebih relevan.</Text>
       </View>
 
       <View style={styles.avatarArea}>
@@ -290,7 +299,7 @@ export default function OnboardingScreen() {
         rightElement={
           <TouchableOpacity onPress={triggerDiceRoll} activeOpacity={0.7} style={styles.diceBtn}>
             <Animated.View style={{ transform: [{ rotate: spin }] }}>
-              <MaterialIcons name="casino" size={24} color={COLORS.primary} />
+              <MaterialIcons name="casino" size={24} color={colors.primary} />
             </Animated.View>
           </TouchableOpacity>
         }
@@ -300,7 +309,7 @@ export default function OnboardingScreen() {
       <Text style={[styles.fieldGroupLabel, { color: colors.textSecondary }]}>Lokasi utama</Text>
       <View style={isDesktop ? styles.dropdownGrid : undefined}>
         <TouchableOpacity
-           style={[styles.dropdown, isDesktop && styles.dropdownHalf, { backgroundColor: colors.surfaceWhite, borderColor: colors.divider }]}
+           style={[styles.dropdown, isDesktop && styles.dropdownHalf, { backgroundColor: colors.bgElevated, borderColor: colors.borderSubtle }]}
           onPress={() => setIsProvinceModalOpen(true)}
           activeOpacity={0.75}
         >
@@ -311,7 +320,7 @@ export default function OnboardingScreen() {
           <MaterialIcons name="expand-more" size={22} color={colors.textTertiary} />
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.dropdown, isDesktop && styles.dropdownHalf, { backgroundColor: colors.surfaceWhite, borderColor: colors.divider }]}
+          style={[styles.dropdown, isDesktop && styles.dropdownHalf, { backgroundColor: colors.bgElevated, borderColor: colors.borderSubtle }]}
           onPress={() => {
             setRegionSearch('');
             setIsRegionModalOpen(true);
@@ -342,7 +351,7 @@ export default function OnboardingScreen() {
       <View style={styles.sectionHeader}>
         <Text style={styles.kicker}>Preferensi</Text>
         <Text style={[styles.title, { color: colors.text }]}>Pilih olahraga favorit</Text>
-        <Text style={[styles.subtitle, { color: isDark ? '#CBD5E1' : COLORS.textSecondary }]}>Pilih minimal satu supaya rekomendasi venue dan match terasa lebih pas.</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Pilih minimal satu supaya rekomendasi venue dan match terasa lebih pas.</Text>
       </View>
 
       <View style={styles.sportsGrid}>
@@ -356,7 +365,7 @@ export default function OnboardingScreen() {
               activeOpacity={0.85}
             >
               <View style={[styles.sportIconWrap, isSelected && styles.sportIconWrapActive]}>
-                <MaterialIcons name={sport.icon} size={24} color={isSelected ? '#ffffff' : COLORS.primary} />
+                <MaterialIcons name={sport.icon} size={24} color={isSelected ? colors.onPrimary : colors.primary} />
               </View>
               <Text style={[styles.sportLabel, isSelected && styles.sportLabelActive]}>{sport.label}</Text>
               {isSelected && (
@@ -376,7 +385,7 @@ export default function OnboardingScreen() {
           <Text style={styles.previewSub}>{selectedSports.length} olahraga dipilih · {region.replace(', ID', '')}</Text>
         </View>
         <View style={styles.previewBadge}>
-          <MaterialIcons name="sports" size={18} color={COLORS.primary} />
+          <MaterialIcons name="sports" size={18} color={colors.primary} />
         </View>
       </View>
     </Animated.View>
@@ -391,14 +400,14 @@ export default function OnboardingScreen() {
       </View>
 
       <View style={[styles.header, { top: insets.top }]}>
-        <TouchableOpacity style={[styles.iconButton, step === 1 && styles.iconButtonDisabled]} onPress={handleBack} disabled={step === 1} activeOpacity={0.75}>
-          <MaterialIcons name="arrow-back" size={20} color={COLORS.text} />
+        <TouchableOpacity style={styles.iconButton} onPress={handleBack} activeOpacity={0.75}>
+          <MaterialIcons name="arrow-back" size={20} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.stepPill}>
           <Text style={styles.stepPillText}>Langkah {step} / {TOTAL_STEPS}</Text>
         </View>
         <TouchableOpacity onPress={handleSignOut} style={styles.iconButton} activeOpacity={0.75}>
-          <MaterialIcons name="close" size={20} color={COLORS.textSecondary} />
+          <MaterialIcons name="close" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -413,23 +422,23 @@ export default function OnboardingScreen() {
 
             <View style={styles.stepList}>
               <View style={[styles.stepItem, step === 1 && styles.stepItemActive]}>
-                <MaterialIcons name="person-outline" size={18} color={step === 1 ? COLORS.primary : COLORS.textSecondary} />
+                <MaterialIcons name="person-outline" size={18} color={step === 1 ? colors.primary : colors.textSecondary} />
                 <Text style={[styles.stepItemText, step === 1 && styles.stepItemTextActive]}>Profil & Lokasi</Text>
               </View>
               <View style={[styles.stepItem, step === 2 && styles.stepItemActive]}>
-                <MaterialIcons name="sports" size={18} color={step === 2 ? COLORS.primary : COLORS.textSecondary} />
+                <MaterialIcons name="sports" size={18} color={step === 2 ? colors.primary : colors.textSecondary} />
                 <Text style={[styles.stepItemText, step === 2 && styles.stepItemTextActive]}>Preferensi Olahraga</Text>
               </View>
             </View>
           </View>
 
           <View style={styles.contentPanel}>
-            <View style={[styles.formPanel, { backgroundColor: colors.background, borderColor: colors.outline }]}>
+            <View style={[styles.formPanel, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
               {step === 1 ? renderStepOne() : renderStepTwo()}
 
               {submitError && (
                 <View style={styles.errorBox}>
-                  <MaterialIcons name="error-outline" size={16} color={COLORS.error} />
+                  <MaterialIcons name="error-outline" size={16} color={colors.error} />
                   <Text style={styles.errorText}>{submitError}</Text>
                 </View>
               )}
@@ -459,6 +468,8 @@ export default function OnboardingScreen() {
       </View>
 
       <LocationModal
+        styles={styles}
+        colors={colors}
         visible={isProvinceModalOpen}
         title="Pilih Provinsi"
         items={PROVINCES}
@@ -478,11 +489,11 @@ export default function OnboardingScreen() {
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Pilih Kota atau Kabupaten</Text>
             <View style={styles.searchRow}>
-              <MaterialIcons name="search" size={18} color={COLORS.textTertiary} />
+              <MaterialIcons name="search" size={18} color={colors.textTertiary} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Cari kota..."
-                placeholderTextColor={COLORS.textTertiary}
+                placeholderTextColor={colors.textTertiary}
                 value={regionSearch}
                 onChangeText={setRegionSearch}
                 autoCorrect={false}
@@ -500,7 +511,7 @@ export default function OnboardingScreen() {
                   activeOpacity={0.75}
                 >
                   <Text style={[styles.modalItemText, region === city && styles.modalItemTextActive]}>{city.replace(', ID', '')}</Text>
-                  {region === city && <MaterialIcons name="check" size={18} color={COLORS.primary} />}
+                  {region === city && <MaterialIcons name="check" size={18} color={colors.primary} />}
                 </TouchableOpacity>
               ))}
               {filteredCities.length === 0 && <Text style={styles.emptyText}>Kota tidak ditemukan</Text>}
@@ -513,6 +524,8 @@ export default function OnboardingScreen() {
 }
 
 function LocationModal({
+  styles,
+  colors,
   visible,
   title,
   items,
@@ -520,6 +533,8 @@ function LocationModal({
   onClose,
   onSelect,
 }: {
+  styles: ReturnType<typeof makeStyles>;
+  colors: any;
   visible: boolean;
   title: string;
   items: string[];
@@ -543,7 +558,7 @@ function LocationModal({
                 activeOpacity={0.75}
               >
                 <Text style={[styles.modalItemText, selected === item && styles.modalItemTextActive]}>{item}</Text>
-                {selected === item && <MaterialIcons name="check" size={18} color={COLORS.primary} />}
+                {selected === item && <MaterialIcons name="check" size={18} color={colors.primary} />}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -553,10 +568,10 @@ function LocationModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   progressBg: {
     position: 'absolute',
@@ -564,12 +579,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 4,
-    backgroundColor: COLORS.surfaceContainerHigh,
+    backgroundColor: colors.surfaceContainerHigh,
     zIndex: 10,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
   header: {
     position: 'absolute',
@@ -587,27 +602,27 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.bgElevated,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.borderSubtle,
     ...SHADOWS.sm,
   },
   iconButtonDisabled: {
     opacity: 0.35,
   },
   stepPill: {
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surface,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.borderSubtle,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   stepPillText: {
     ...FONTS.labelMd,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   scroll: {
     paddingTop: 88,
@@ -625,7 +640,7 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   sidePanel: {
-    backgroundColor: COLORS.inverseSurface,
+    backgroundColor: colors.inverseSurface,
     borderRadius: 24,
     padding: 22,
     marginBottom: 18,
@@ -639,7 +654,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 16,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 18,
@@ -666,23 +681,23 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)',
   },
   stepItemActive: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.bgElevated,
   },
   stepItemText: {
     ...FONTS.labelLg,
     color: 'rgba(255,255,255,0.72)',
   },
   stepItemTextActive: {
-    color: COLORS.text,
+    color: colors.text,
   },
   contentPanel: {
     flex: 1,
   },
   formPanel: {
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surface,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.borderSubtle,
     padding: 20,
     ...SHADOWS.md,
   },
@@ -691,25 +706,27 @@ const styles = StyleSheet.create({
   },
   kicker: {
     ...FONTS.labelMd,
-    color: COLORS.primary,
+    color: colors.primary,
     textTransform: 'uppercase',
     marginBottom: 6,
   },
   title: {
     ...FONTS.headlineLg,
-    color: COLORS.text,
+    color: colors.text,
   },
   subtitle: {
     ...FONTS.bodyMd,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginTop: 8,
   },
   avatarArea: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    backgroundColor: COLORS.surfaceContainerLow,
+    backgroundColor: colors.bgElevated,
     borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     padding: 14,
     marginBottom: 18,
   },
@@ -718,9 +735,9 @@ const styles = StyleSheet.create({
     height: 72,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
     overflow: 'hidden',
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surface,
   },
   avatar: {
     width: '100%',
@@ -733,9 +750,9 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 12,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     borderWidth: 2,
-    borderColor: COLORS.surfaceWhite,
+    borderColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -744,11 +761,11 @@ const styles = StyleSheet.create({
   },
   avatarTitle: {
     ...FONTS.titleMd,
-    color: COLORS.text,
+    color: colors.text,
   },
   avatarText: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginTop: 4,
   },
   diceBtn: {
@@ -767,7 +784,7 @@ const styles = StyleSheet.create({
   },
   fieldGroupLabel: {
     ...FONTS.labelMd,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textTransform: 'uppercase',
     marginBottom: 10,
   },
@@ -779,10 +796,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.surfaceContainerLow,
+    backgroundColor: colors.bgElevated,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.borderSubtle,
     padding: 14,
     marginBottom: 12,
   },
@@ -791,12 +808,12 @@ const styles = StyleSheet.create({
   },
   dropdownLabel: {
     ...FONTS.labelSm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textTransform: 'uppercase',
   },
   dropdownValue: {
     ...FONTS.labelLg,
-    color: COLORS.text,
+    color: colors.text,
     marginTop: 4,
   },
   termsRow: {
@@ -810,22 +827,22 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 7,
     borderWidth: 1.5,
-    borderColor: COLORS.outlineVariant,
+    borderColor: colors.outline,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
   },
   checkboxActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   termsText: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     flex: 1,
   },
   termsLink: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '700',
   },
   sportsGrid: {
@@ -839,8 +856,8 @@ const styles = StyleSheet.create({
     minHeight: 112,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: COLORS.divider,
-    backgroundColor: COLORS.surfaceContainerLow,
+    borderColor: colors.borderSubtle,
+    backgroundColor: colors.bgElevated,
     padding: 14,
     justifyContent: 'space-between',
     position: 'relative',
@@ -849,26 +866,26 @@ const styles = StyleSheet.create({
     width: '30%' as any,
   },
   sportCardActive: {
-    backgroundColor: COLORS.primaryLight,
-    borderColor: COLORS.primary,
+    backgroundColor: colors.primaryMuted,
+    borderColor: colors.primary,
   },
   sportIconWrap: {
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   sportIconWrapActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
   sportLabel: {
     ...FONTS.labelLg,
-    color: COLORS.text,
+    color: colors.text,
   },
   sportLabelActive: {
-    color: COLORS.primary,
+    color: colors.primary,
   },
   sportCheck: {
     position: 'absolute',
@@ -877,7 +894,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -885,7 +902,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: COLORS.surfaceContainerLow,
+    backgroundColor: colors.bgElevated,
     borderRadius: 18,
     padding: 14,
     marginTop: 18,
@@ -900,18 +917,18 @@ const styles = StyleSheet.create({
   },
   previewName: {
     ...FONTS.titleMd,
-    color: COLORS.text,
+    color: colors.text,
   },
   previewSub: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   previewBadge: {
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -919,16 +936,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: COLORS.errorLight,
+    backgroundColor: colors.destructiveMuted,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: COLORS.errorContainer,
+    borderColor: colors.errorContainer,
     padding: 12,
     marginTop: 14,
   },
   errorText: {
     ...FONTS.bodySm,
-    color: COLORS.error,
+    color: colors.error,
     flex: 1,
   },
   footer: {
@@ -936,9 +953,9 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(243,247,244,0.96)',
+    backgroundColor: isDark ? 'rgba(12,18,25,0.96)' : 'rgba(243,247,244,0.96)',
     borderTopWidth: 1,
-    borderTopColor: COLORS.divider,
+    borderTopColor: colors.borderSubtle,
     paddingHorizontal: 18,
     paddingTop: 12,
   },
@@ -950,7 +967,7 @@ const styles = StyleSheet.create({
   ctaBtn: {
     height: 54,
     borderRadius: 16,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -958,7 +975,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.primary,
   },
   ctaBtnDisabled: {
-    backgroundColor: COLORS.surfaceContainerHigh,
+    opacity: 0.5,
     ...(Platform.OS === 'web'
       ? { boxShadow: 'none' }
       : { shadowOpacity: 0, elevation: 0 }
@@ -974,7 +991,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
@@ -984,13 +1001,13 @@ const styles = StyleSheet.create({
     width: 42,
     height: 4,
     borderRadius: 2,
-    backgroundColor: COLORS.surfaceContainerHigh,
+    backgroundColor: colors.surfaceContainerHigh,
     alignSelf: 'center',
     marginBottom: 16,
   },
   modalTitle: {
     ...FONTS.headlineSm,
-    color: COLORS.text,
+    color: colors.text,
     marginBottom: 14,
   },
   modalList: {
@@ -1005,23 +1022,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   modalItemActive: {
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: colors.primaryMuted,
   },
   modalItemText: {
     ...FONTS.labelLg,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   modalItemTextActive: {
-    color: COLORS.primary,
+    color: colors.primary,
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: COLORS.surfaceContainerLow,
+    backgroundColor: colors.bgElevated,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.borderSubtle,
     paddingHorizontal: 12,
     height: 46,
     marginBottom: 12,
@@ -1029,12 +1046,13 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     ...FONTS.bodyMd,
-    color: COLORS.text,
+    color: colors.text,
     padding: 0,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}),
   },
   emptyText: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     paddingVertical: 24,
   },

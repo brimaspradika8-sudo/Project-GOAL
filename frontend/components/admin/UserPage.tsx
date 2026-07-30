@@ -18,9 +18,9 @@ import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 
 const getRoleConfig = (colors: ThemeColors): Record<string, { label: string; color: string; bg: string }> => ({
-  player:      { label: 'Pemain',      color: colors.accentPurple, bg: colors.accentPurpleLight },
+  player:      { label: 'Pemain',      color: colors.textSecondary, bg: colors.surfaceContainerHigh },
   owner:       { label: 'Pemilik',     color: colors.primary, bg: colors.primaryContainer },
-  super_admin: { label: 'Super Admin', color: colors.floodlight, bg: colors.floodlight + '20' },
+  super_admin: { label: 'Super Admin', color: colors.warning, bg: colors.warningMuted },
 });
 
 type Tab = 'user' | 'owner';
@@ -369,24 +369,24 @@ export default function UserPage() {
                   <View style={st.actions}>
                     {/* Ungu — Edit User (semua baris) */}
                     <TouchableOpacity
-                      style={[st.actionBtn, { backgroundColor: colors.accentPurpleLight }]}
+                      style={[st.actionBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
                       onPress={() => openEdit(u)}
                       hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                     >
-                      <MaterialIcons name="edit" size={16} color={colors.accentPurple} />
+                      <MaterialIcons name="edit" size={16} color={colors.onPrimary} />
                     </TouchableOpacity>
 
                     {/* Oranye — Upgrade Role (super_admin only, bukan baris super_admin) */}
                     {isSuperAdmin && roleKey !== 'super_admin' && (
                       <TouchableOpacity
-                        style={[st.actionBtn, { backgroundColor: colors.accentOrangeLight }]}
+                        style={st.actionBtn}
                         onPress={() => {
                           setUpgradeTarget({ id: u.id, name: u.name, currentRole: roleKey });
                           setUpgradeError(null);
                         }}
                         hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                       >
-                        <MaterialIcons name="admin-panel-settings" size={15} color={colors.accentOrange} />
+                        <MaterialIcons name="admin-panel-settings" size={15} color={colors.textSecondary} />
                       </TouchableOpacity>
                     )}
 
@@ -488,8 +488,8 @@ export default function UserPage() {
           <View style={st.sheet}>
             <View style={st.sheetHeader}>
               <View style={st.sheetHeaderLeft}>
-                <View style={[st.sheetIconWrap, { backgroundColor: colors.accentPurpleLight }]}>
-                  <MaterialIcons name="edit" size={20} color={colors.accentPurple} />
+                <View style={[st.sheetIconWrap, { backgroundColor: colors.primaryContainer }]}>
+                  <MaterialIcons name="edit" size={20} color={colors.primary} />
                 </View>
                 <Text style={st.sheetTitle}>Edit User</Text>
               </View>
@@ -521,7 +521,7 @@ export default function UserPage() {
               <TouchableOpacity style={st.cancelBtn} onPress={() => setEditTarget(null)}>
                 <Text style={st.cancelText}>Batal</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[st.submitBtn, { backgroundColor: colors.accentPurple }, editLoading && { opacity: 0.6 }]} onPress={handleEdit} disabled={editLoading}>
+              <TouchableOpacity style={[st.submitBtn, editLoading && { opacity: 0.6 }]} onPress={handleEdit} disabled={editLoading}>
                 {editLoading
                   ? <ActivityIndicator color={colors.onPrimary} size="small" />
                   : <Text style={st.submitText}>Simpan</Text>}
@@ -537,8 +537,8 @@ export default function UserPage() {
         title={`Ubah Role — ${upgradeTarget?.name ?? ''}`}
         description="Pilih role baru untuk user ini."
         icon="admin-panel-settings"
-        iconColor={colors.accentOrange}
-        iconBg={colors.accentOrangeLight}
+        iconColor={colors.primary}
+        iconBg={colors.primaryContainer}
         loading={upgradeLoading}
         error={upgradeError}
         onCancel={() => setUpgradeTarget(null)}
@@ -561,7 +561,7 @@ export default function UserPage() {
             ? [{
                 label: 'Jadikan Super Admin',
                 icon: 'shield',
-                color: colors.accentOrange,
+                color: colors.primary,
                 onPress: () => handleUpgrade('super_admin'),
               }]
             : []),
@@ -628,8 +628,11 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 11,
     borderWidth: 1.5, borderColor: colors.outline,
   },
-  searchBoxFocused: { borderColor: colors.primary, backgroundColor: colors.surfaceContainer },
-  searchInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0 },
+  searchBoxFocused: {
+    borderColor: colors.primary,
+    backgroundColor: colors.bgElevated,
+  },
+  searchInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}) },
 
   tabRow: { flexDirection: 'row', gap: 10, marginHorizontal: SIZES.gutter, marginTop: 10, marginBottom: 4 },
   tab: {
@@ -688,11 +691,20 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   roleDot: { width: 5, height: 5, borderRadius: 3 },
   roleText: { ...FONTS.labelSm },
   actions: { flexDirection: 'row', gap: 6, marginLeft: 6 },
-  actionBtn: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  actionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainerHigh,
+    borderWidth: 1,
+    borderColor: colors.outline,
+  },
 
   modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.45)', padding: 20 },
   sheet: {
-    backgroundColor: colors.surfaceWhite, borderRadius: 24, padding: 24,
+    backgroundColor: colors.surface, borderRadius: 24, padding: 24,
     width: '100%', maxWidth: 500,
     borderWidth: 1, borderColor: colors.outline,
     ...SHADOWS.lg,
@@ -712,23 +724,23 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   fieldLabel: { ...FONTS.labelSm, color: colors.textSecondary, marginBottom: 6, letterSpacing: 0.5, textTransform: 'uppercase' },
   fieldRow: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surfaceContainer, borderRadius: 12,
+    backgroundColor: colors.bgElevated, borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 12,
     borderWidth: 1, borderColor: colors.outline,
   },
-  fieldInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0 },
+  fieldInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}) },
   roleSelectWrap: { marginBottom: 14 },
   roleChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   roleChip: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9,
-    backgroundColor: colors.surfaceContainer,
+    backgroundColor: colors.bgElevated,
     borderWidth: 1, borderColor: colors.outline,
   },
   roleChipText: { ...FONTS.labelMd, color: colors.textSecondary },
 
   sheetActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: colors.surfaceContainer, alignItems: 'center', borderWidth: 1, borderColor: colors.outline },
+  cancelBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: colors.bgElevated, alignItems: 'center', borderWidth: 1, borderColor: colors.outline },
   cancelText: { ...FONTS.titleSm, color: colors.textSecondary },
   submitBtn: { flex: 1, paddingVertical: 13, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' },
   submitText: { ...FONTS.titleSm, color: colors.onPrimary },

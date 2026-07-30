@@ -9,9 +9,11 @@ import {
   Text,
   TextInputProps,
   ViewStyle,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { COLORS, FONTS } from './goalTheme';
+import { FONTS } from './goalTheme';
+import { useTheme } from '../lib/theme';
 
 interface AuthInputProps extends TextInputProps {
   label: string;
@@ -24,6 +26,7 @@ interface AuthInputProps extends TextInputProps {
 
 const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
   ({ label, icon, isPassword = false, containerStyle, error, value, rightElement, ...props }, ref) => {
+    const { colors } = useTheme();
     const [isFocused, setIsFocused] = useState(false);
     const [isSecure, setIsSecure] = useState(isPassword);
     const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
@@ -46,7 +49,7 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
 
     const borderColor = animatedValue.interpolate({
       inputRange: [0, 1],
-      outputRange: [hasError ? COLORS.error : COLORS.outlineVariant, hasError ? COLORS.error : COLORS.primary],
+      outputRange: [hasError ? colors.destructive : colors.borderSubtle, hasError ? colors.destructive : colors.primary],
     });
 
     const labelTranslateY = animatedValue.interpolate({
@@ -61,18 +64,25 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
 
     const labelColor = animatedValue.interpolate({
       inputRange: [0, 1],
-      outputRange: [hasError ? COLORS.error : COLORS.textSecondary, hasError ? COLORS.error : COLORS.primary],
+      outputRange: [hasError ? colors.destructive : colors.textSecondary, hasError ? colors.destructive : colors.primary],
     });
 
     return (
       <View style={containerStyle}>
-        <Animated.View style={[styles.container, { borderColor, backgroundColor: isFocused || hasError ? COLORS.surfaceWhite : COLORS.surfaceAlt }]}>
+        <Animated.View style={[
+          styles.container,
+          {
+            borderColor,
+            backgroundColor: isFocused || hasError ? colors.bgElevated : colors.surfaceContainerLow,
+            ...(isFocused ? focusRing(colors.focusRing) : null),
+          },
+        ]}>
           {icon && (
             <View style={styles.iconContainer}>
               <MaterialIcons
                 name={icon}
                 size={24}
-                color={isActive || hasError ? (hasError ? COLORS.error : COLORS.primary) : COLORS.textTertiary}
+                color={isActive || hasError ? (hasError ? colors.destructive : colors.primary) : colors.textTertiary}
               />
             </View>
           )}
@@ -80,9 +90,10 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
             styles.labelContainer,
             {
               transform: [{ translateY: labelTranslateY }, { scale: labelScale }],
-              left: icon ? 52 : 18,
-            },
-          ]}>
+                left: icon ? 52 : 18,
+                backgroundColor: isActive ? colors.bgElevated : 'transparent',
+              },
+            ]}>
             <Animated.Text style={[styles.label, { color: labelColor }]}>{label}</Animated.Text>
           </Animated.View>
           <TextInput
@@ -92,13 +103,14 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
               {
                 paddingLeft: icon ? 12 : 18,
                 paddingRight: isPassword || rightElement ? 44 : 18,
+                color: colors.textPrimary,
               },
             ]}
             value={value}
             onFocus={handleFocus}
             onBlur={handleBlur}
             secureTextEntry={isSecure}
-            placeholderTextColor={COLORS.textTertiary}
+            placeholderTextColor={colors.textMuted}
             {...props}
           />
           {isPassword && (
@@ -113,13 +125,13 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
               <MaterialIcons
                 name={isSecure ? 'visibility-off' : 'visibility'}
                 size={22}
-                color={COLORS.textTertiary}
+                color={colors.textTertiary}
               />
             </TouchableOpacity>
           )}
           {!isPassword && rightElement && <View style={styles.rightElement}>{rightElement}</View>}
         </Animated.View>
-        {hasError && <Text style={styles.errorText}>{error}</Text>}
+        {hasError && <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>}
       </View>
     );
   }
@@ -135,7 +147,6 @@ const styles = StyleSheet.create({
     height: 58,
     borderRadius: 16,
     borderWidth: 1.5,
-    backgroundColor: COLORS.surfaceWhite,
     paddingHorizontal: 10,
   },
   iconContainer: {
@@ -147,7 +158,6 @@ const styles = StyleSheet.create({
   labelContainer: {
     position: 'absolute',
     paddingHorizontal: 4,
-    backgroundColor: COLORS.surfaceWhite,
   },
   label: {
     ...FONTS.bodyMd,
@@ -157,7 +167,6 @@ const styles = StyleSheet.create({
     flex: 1,
     height: '100%',
     fontSize: 16,
-    color: COLORS.text,
     paddingTop: 10,
   },
   rightElement: {
@@ -171,10 +180,15 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...FONTS.bodySm,
-    color: COLORS.error,
     marginTop: 6,
     marginLeft: 16,
   },
 });
+
+function focusRing(color: string) {
+  return Platform.OS === 'web'
+    ? { outlineStyle: 'none' as const }
+    : { shadowColor: color, shadowOpacity: 1, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 2 };
+}
 
 export default AuthInput;
