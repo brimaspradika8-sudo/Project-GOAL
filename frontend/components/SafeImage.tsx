@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { Image, ImageProps, View, StyleSheet, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { COLORS } from './goalTheme';
 import { getAssetUrl } from '../lib/api';
+import { useTheme } from '../lib/theme';
 
 export function SafeImage(props: ImageProps & { fallbackSize?: number }) {
+  const { colors } = useTheme();
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
   const fallbackSize = props.fallbackSize ?? 32;
+  const st = makeStyles(colors);
 
   if (error) {
     return (
-      <View style={[styles.fallback, props.style, { borderRadius: (props.style as any)?.borderRadius ?? 12 }]}>
-        <MaterialIcons name="image-not-supported" size={fallbackSize} color={COLORS.textTertiary} />
+      <View style={[st.fallback, props.style, { borderRadius: (props.style as any)?.borderRadius ?? 12 }]}>
+        <MaterialIcons name="image-not-supported" size={fallbackSize} color={colors.textTertiary} />
       </View>
     );
   }
@@ -20,8 +22,8 @@ export function SafeImage(props: ImageProps & { fallbackSize?: number }) {
   return (
     <View style={props.style as any}>
       {loading && (
-        <View style={[styles.loader, { borderRadius: (props.style as any)?.borderRadius ?? 12 }]}>
-          <ActivityIndicator size="small" color={COLORS.primary} />
+        <View style={[st.loader, { borderRadius: (props.style as any)?.borderRadius ?? 12 }]}>
+          <ActivityIndicator size="small" color={colors.primary} />
         </View>
       )}
       <Image
@@ -39,15 +41,15 @@ export function SafeImage(props: ImageProps & { fallbackSize?: number }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   fallback: {
-    backgroundColor: COLORS.surfaceContainerLow,
+    backgroundColor: colors.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
   },
   loader: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.surfaceContainerLow,
+    backgroundColor: colors.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
   },

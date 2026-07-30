@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -29,19 +29,23 @@ function VenueCardInline({ item }: { item: Field }) {
 export default function FieldsScreen() {
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('Semua');
-  const debouncedSearch = useDebounce(search, 400);
+  const debouncedSearch = useDebounce(search, 150);
   const { fields, loading, loadingMore, meta, fetchFields, fetchMore, refreshFields } = useFieldStore();
   const [refreshing, setRefreshing] = useState(false);
   const { colors } = useTheme();
   const styles = makeStyles(colors);
 
+  const lastFetchRef = useRef(debouncedSearch);
+
   useEffect(() => {
+    lastFetchRef.current = debouncedSearch;
     const sport = activeFilter === 'Semua' ? undefined : SPORT_MAP[activeFilter] || activeFilter.toLowerCase();
     fetchFields(sport, debouncedSearch || undefined);
   }, [activeFilter, debouncedSearch, fetchFields]);
 
   useFocusEffect(
     useCallback(() => {
+      lastFetchRef.current = debouncedSearch;
       const sport = activeFilter === 'Semua' ? undefined : SPORT_MAP[activeFilter] || activeFilter.toLowerCase();
       fetchFields(sport, debouncedSearch || undefined);
     }, [activeFilter, debouncedSearch, fetchFields])
@@ -73,6 +77,9 @@ export default function FieldsScreen() {
           <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <MaterialIcons name="close" size={18} color={colors.textTertiary} />
           </TouchableOpacity>
+        )}
+        {loading && fields.length > 0 && (
+          <ActivityIndicator size="small" color={colors.primary} />
         )}
       </View>
 
@@ -110,7 +117,7 @@ export default function FieldsScreen() {
   };
 
   const renderEmpty = () => {
-    if (loading && !refreshing) return <SkeletonVenueList />;
+    if (loading && !refreshing && fields.length === 0) return <SkeletonVenueList />;
     return (
       <View style={styles.emptyState}>
         <MaterialIcons name="search-off" size={48} color={colors.textTertiary} />

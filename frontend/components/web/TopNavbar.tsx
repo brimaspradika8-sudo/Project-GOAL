@@ -66,9 +66,9 @@ export default function TopNavbar() {
         {/* ZONA KANAN — toggle tema, bell, avatar (urutan sesuai request) */}
         <View style={styles.zoneRight}>
           <ThemeToggle size={18} />
-          <Pressable style={[styles.iconBtn, { backgroundColor: colors.surfaceWhite, borderColor: colors.divider }]}>
+          <View style={[styles.iconBtn, { backgroundColor: colors.surfaceWhite, borderColor: colors.divider }]}>
             <MaterialIcons name="notifications-none" size={20} color={colors.onSurface} />
-          </Pressable>
+          </View>
           <Pressable
             style={[styles.avatar, { backgroundColor: colors.primaryLight }]}
             onPress={() => router.push('/profile')}

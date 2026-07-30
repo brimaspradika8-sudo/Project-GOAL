@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { useTheme } from '../../lib/theme';
 
 export type ToastType = 'success' | 'error' | 'info';
 
@@ -20,16 +21,13 @@ const ICON_BY_TYPE: Record<ToastType, keyof typeof MaterialIcons.glyphMap> = {
   info: 'info',
 };
 
-const ACCENT_BY_TYPE: Record<ToastType, string> = {
-  success: COLORS.primary,
-  error: COLORS.error,
-  info: COLORS.floodlight,
-};
-
 export default function AppToast({
   visible, type = 'success', title, description, onDismiss, durationMs = 3000,
 }: AppToastProps) {
+  const { colors } = useTheme();
   const opacity = useRef(new Animated.Value(0)).current;
+  const accent = type === 'success' ? colors.primary : type === 'error' ? colors.error : colors.floodlight;
+  const st = makeStyles(colors);
 
   useEffect(() => {
     if (!visible) { opacity.setValue(0); return; }
@@ -45,32 +43,32 @@ export default function AppToast({
 
   return (
     <Animated.View style={[st.wrap, { opacity }]}>
-      <View style={[st.iconWrap, { backgroundColor: ACCENT_BY_TYPE[type] + '1A' }]}>
-        <MaterialIcons name={ICON_BY_TYPE[type]} size={20} color={ACCENT_BY_TYPE[type]} />
+      <View style={[st.iconWrap, { backgroundColor: accent + '1A' }]}>
+        <MaterialIcons name={ICON_BY_TYPE[type]} size={20} color={accent} />
       </View>
       <View style={st.textWrap}>
         <Text style={st.title} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
         {description ? <Text style={st.desc} numberOfLines={2} ellipsizeMode="tail">{description}</Text> : null}
       </View>
       <TouchableOpacity onPress={onDismiss} hitSlop={8} style={st.closeBtn}>
-        <MaterialIcons name="close" size={18} color={COLORS.textTertiary} />
+        <MaterialIcons name="close" size={18} color={colors.textTertiary} />
       </TouchableOpacity>
     </Animated.View>
   );
 }
 
-const st = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   wrap: {
     position: 'absolute', top: 50, left: 16, right: 16,
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: COLORS.surface, borderRadius: SIZES.borderRadiusLg,
-    borderWidth: 1, borderColor: COLORS.outline,
+    backgroundColor: colors.surface, borderRadius: SIZES.borderRadiusLg,
+    borderWidth: 1, borderColor: colors.outline,
     paddingVertical: 12, paddingHorizontal: 12, zIndex: 999,
     ...SHADOWS.md,
   },
   iconWrap: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   textWrap: { flex: 1 },
-  title: { ...FONTS.bodyMd, color: COLORS.text, fontWeight: '700' },
-  desc: { ...FONTS.bodySm, color: COLORS.textSecondary, marginTop: 1 },
+  title: { ...FONTS.bodyMd, color: colors.text, fontWeight: '700' },
+  desc: { ...FONTS.bodySm, color: colors.textSecondary, marginTop: 1 },
   closeBtn: { padding: 4 },
 });

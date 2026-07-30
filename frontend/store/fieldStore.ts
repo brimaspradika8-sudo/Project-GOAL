@@ -35,6 +35,7 @@ interface FieldState {
   refreshFields: () => Promise<void>;
   clearCache: () => Promise<void>;
   lastParams: { sport?: string; search?: string };
+  _fetchGen: number;
 }
 
 const FIELDS_CACHE_KEY = 'cached_fields_';
@@ -57,18 +58,20 @@ export const useFieldStore = create<FieldState>((set, get) => ({
   loadingMore: false,
   error: null,
   lastParams: {},
+  _fetchGen: 0,
 
   fetchFields: async (sport?: string, search?: string) => {
+    const gen = Date.now();
     const cacheKey = FIELDS_CACHE_KEY + (sport ?? 'all') + '_' + (search ?? '');
 
     const cached = await AsyncStorage.getItem(cacheKey);
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        set({ fields: parsed.data, meta: parsed.meta, loading: false });
+        set({ fields: parsed.data, meta: parsed.meta, loading: false, _fetchGen: gen });
       } catch {}
     } else {
-      set({ loading: true, error: null });
+      set({ loading: true, error: null, _fetchGen: gen });
     }
 
     try {
@@ -82,15 +85,22 @@ export const useFieldStore = create<FieldState>((set, get) => ({
       if (!res.ok) throw new Error('Gagal memuat data lapangan');
       const body = await res.json();
 
+      const state = get();
+      if (state._fetchGen !== gen) return;
+
       await AsyncStorage.setItem(cacheKey, JSON.stringify(body));
 
       set({
         fields: body.data,
         meta: body.meta,
         loading: false,
+        _fetchGen: gen,
         lastParams: { sport, search },
       });
     } catch (e: any) {
+      const state = get();
+      if (state._fetchGen !== gen) return;
+
       const hasCache = !!await AsyncStorage.getItem(cacheKey);
       if (!hasCache) {
         set({ error: e.message || 'Terjadi kesalahan', loading: false });
