@@ -35,11 +35,15 @@ class UploadController extends Controller
             }
 
             $filename = time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+            $path = 'fields/' . $filename;
 
-            $contents = file_get_contents($file->getRealPath());
-            if ($contents === false) {
-                Log::error('Upload failed: could not read temp file');
-                return response()->json(['message' => 'Gagal membaca file.'], 500);
+            $supabaseUrl = config('services.supabase.url');
+            $supabaseKey = config('services.supabase.key');
+            $bucket = config('services.supabase.bucket');
+
+            if (!$supabaseUrl || !$supabaseKey || !$bucket) {
+                Log::error('Upload failed: Supabase credentials not configured');
+                return response()->json(['message' => 'Konfigurasi penyimpanan tidak lengkap.'], 500);
             }
 
             $stored = Storage::disk('public')->put('fields/' . $filename, $contents);

@@ -3,6 +3,7 @@ import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
   TextInput, RefreshControl, Modal,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -123,7 +124,7 @@ export default function OwnerRequestPage() {
             <View style={st.headerRow}>
               <View style={[st.countPill, { backgroundColor: colors.floodlight + '20', borderColor: colors.floodlight + '50' }]}>
                 <MaterialIcons name="pending-actions" size={12} color={colors.floodlight} />
-                <Text style={st.countText}>{requests.length} menunggu review</Text>
+                <Text style={[st.countText, { color: colors.warning }]}>{requests.length} menunggu review</Text>
               </View>
             </View>
           )}
@@ -148,7 +149,7 @@ export default function OwnerRequestPage() {
                     <Text style={[st.businessName, { color: colors.text }]} numberOfLines={1}>{r.business_name}</Text>
                     <View style={st.pendingBadge}>
                       <View style={st.pulseDot} />
-                      <Text style={st.pendingText}>Menunggu</Text>
+                      <Text style={[st.pendingText, { color: colors.warning }]}>Menunggu</Text>
                     </View>
                   </View>
                 </View>
@@ -331,6 +332,7 @@ const st = StyleSheet.create({
     color: COLORS.text, fontSize: 14, minHeight: 90,
     textAlignVertical: 'top', marginBottom: 16,
     borderWidth: 1, borderColor: COLORS.outline,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}),
   },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
   cancelBtn: {

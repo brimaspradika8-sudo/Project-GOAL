@@ -72,7 +72,7 @@ export default function AdminTabLayout() {
       <View style={[styles.webRootMobile, { backgroundColor: colors.background }]}>
         <MobileWebHeader
           title="Admin Panel"
-          accentColor={colors.accentPurple}
+          accentColor={colors.primary}
           items={sidebarItems}
           activeRoute={activeRoute}
           onNavigate={(href) => router.push(href as any)}
@@ -146,7 +146,7 @@ export default function AdminTabLayout() {
       <View style={[styles.webRoot, { backgroundColor: colors.background }]}>
         <Sidebar
           title="Admin Panel"
-          accentColor={colors.accentPurple}
+          accentColor={colors.primary}
           items={sidebarItems}
         />
         <View style={[styles.webContent, { backgroundColor: colors.background }]}>

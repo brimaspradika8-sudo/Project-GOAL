@@ -9,6 +9,19 @@ export type ThemeMode = 'light' | 'dark' | 'auto';
 export type ResolvedMode = 'light' | 'dark';
 
 export interface ThemeColors {
+  bgBase: string;
+  bgSurface: string;
+  bgElevated: string;
+  borderSubtle: string;
+  textPrimary: string;
+  textMuted: string;
+  primaryHover: string;
+  primaryMuted: string;
+  destructive: string;
+  destructiveMuted: string;
+  warning: string;
+  warningMuted: string;
+  focusRing: string;
   background: string;
   surface: string;
   surfaceWhite: string;
@@ -46,19 +59,22 @@ export interface ThemeColors {
   shadowDark: string;
   warmWhite: string;
   cardBg: string;
-  accentPurple: string;
-  accentPurpleLight: string;
-  accentOrange: string;
-  accentOrangeLight: string;
-  errorBorder: string;
-  successBorder: string;
-  purpleBg: string;
-  purpleBorder: string;
-  purpleLight: string;
-  purpleIcon: string;
 }
 
 const LIGHT_COLORS: ThemeColors = {
+  bgBase: '#F3F7F4',
+  bgSurface: '#FFFFFF',
+  bgElevated: '#EFF6EE',
+  borderSubtle: '#DDE5E0',
+  textPrimary: '#16201A',
+  textMuted: '#889189',
+  primaryHover: '#176D3C',
+  primaryMuted: '#DCF2DD',
+  destructive: '#E0533D',
+  destructiveMuted: '#FEEBE9',
+  warning: '#D97706',
+  warningMuted: '#FEF3C7',
+  focusRing: 'rgba(30,138,76,0.35)',
   background: '#F3F7F4',
   surface: '#FFFFFF',
   surfaceWhite: '#FFFFFF',
@@ -96,19 +112,22 @@ const LIGHT_COLORS: ThemeColors = {
   shadowDark: 'rgba(0,0,0,0.10)',
   warmWhite: '#FFFFFF',
   cardBg: '#FFFFFF',
-  accentPurple: '#8B5CF6',
-  accentPurpleLight: '#F1EAFB',
-  accentOrange: '#E97A1F',
-  accentOrangeLight: '#FFF3E6',
-  errorBorder: '#FECACA',
-  successBorder: '#BBF7D0',
-  purpleBg: '#F5F3FF',
-  purpleBorder: '#C4B5FD',
-  purpleLight: '#EDE9FE',
-  purpleIcon: '#7C3AED',
 };
 
 const DARK_COLORS: ThemeColors = {
+  bgBase: '#0C1219',
+  bgSurface: '#161E28',
+  bgElevated: '#1E2A36',
+  borderSubtle: '#263040',
+  textPrimary: '#F0F4F2',
+  textMuted: '#5C6B62',
+  primaryHover: '#5BE091',
+  primaryMuted: '#1A3828',
+  destructive: '#F87171',
+  destructiveMuted: '#3B1A1A',
+  warning: '#FBBF24',
+  warningMuted: '#3A2A12',
+  focusRing: 'rgba(52,208,123,0.36)',
   background: '#0C1219',
   surface: '#161E28',
   surfaceWhite: '#1E2A36',
@@ -146,16 +165,6 @@ const DARK_COLORS: ThemeColors = {
   shadowDark: 'rgba(0,0,0,0.55)',
   warmWhite: '#1E2A36',
   cardBg: '#1E2A36',
-  accentPurple: '#A78BFA',
-  accentPurpleLight: '#2D1F5E',
-  accentOrange: '#FB923C',
-  accentOrangeLight: '#4A2C10',
-  errorBorder: '#7F1D1D',
-  successBorder: '#1A3A2A',
-  purpleBg: '#1E1B4B',
-  purpleBorder: '#3730A3',
-  purpleLight: '#312E81',
-  purpleIcon: '#A5B4FC',
 };
 
 function getAutoMode(systemScheme: string | null | undefined): ResolvedMode {

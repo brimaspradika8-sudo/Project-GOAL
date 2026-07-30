@@ -468,20 +468,18 @@ export default function OwnerFieldsPage() {
                     ) : null}
                     <View style={st.actions}>
                       <TouchableOpacity
-                        style={st.editBtn}
-                        activeOpacity={0.8}
+                        style={[st.actionBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
                         onPress={() => openEdit(f)}
+                        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                       >
-                        <MaterialIcons name="edit" size={16} color={colors.primary} />
-                        <Text style={st.editBtnText}>Edit Venue</Text>
+                        <MaterialIcons name="edit" size={16} color={colors.onPrimary} />
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={st.delBtn}
-                        activeOpacity={0.8}
+                        style={[st.actionBtn, { backgroundColor: colors.errorContainer }]}
                         onPress={() => handleDelete(f.id, f.name)}
+                        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                       >
-                        <MaterialIcons name="delete-outline" size={16} color={colors.error} />
-                        <Text style={st.delBtnText}>Hapus</Text>
+                        <MaterialIcons name="delete-outline" size={17} color={colors.error} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -819,30 +817,16 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.outline,
   },
-  editBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  actionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: 'center',
-    gap: 6,
-    backgroundColor: colors.primary,
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 0,
-  },
-  editBtnText: { ...FONTS.titleSm, fontSize: 12, color: colors.onPrimary },
-  delBtn: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: colors.error,
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 0,
+    backgroundColor: colors.surfaceContainerHigh,
+    borderWidth: 1,
+    borderColor: colors.outline,
   },
-  delBtnText: { ...FONTS.titleSm, fontSize: 12, color: '#FFFFFF' },
 
   // Modal styling
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
@@ -916,7 +900,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1.5, borderColor: colors.outline,
   },
   fieldRowError: { borderColor: colors.error, backgroundColor: colors.errorContainer + '30' },
-  fieldInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0 },
+  fieldInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}) },
 
   fieldErrorRow: {
     flexDirection: 'row', alignItems: 'center', gap: 5,

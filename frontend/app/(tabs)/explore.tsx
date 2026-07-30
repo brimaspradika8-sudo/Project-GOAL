@@ -27,12 +27,12 @@ const CATEGORIES = [
 
 export default function ExploreScreen() {
   const [search, setSearch] = useState('');
-  const { colors } = useTheme();
+  const { colors, resolved } = useTheme();
   const st = makeStyles(colors);
 
   return (
     <View style={st.container}>
-      <StatusBar barStyle={colors.background === '#0C1219' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+      <StatusBar barStyle={resolved === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       <ScrollView contentContainerStyle={st.scrollContent} showsVerticalScrollIndicator={false}>
         <FadeInView>
           <Text style={st.title}>Jelajahi</Text>
