@@ -21,6 +21,7 @@ const CATEGORIES = [
   { key: 'volley', label: 'Voli', icon: 'sports-volleyball' as const, color: '#8b5cf6' },
   { key: 'tennis', label: 'Tenis', icon: 'sports-tennis' as const, color: '#06b6d4' },
   { key: 'minisoccer', label: 'Mini Soccer', icon: 'sports-soccer' as const, color: '#10b981' },
+  { key: 'padel', label: 'Padel', icon: 'sports-tennis' as const, color: '#8b5cf6' },
 ];
 
 export default function ExploreScreen() {

@@ -29,9 +29,9 @@ export default function DashboardHeader({
   const insets = useSafeAreaInsets();
   const headerBackground = resolved === 'dark' ? colors.primaryContainer : colors.primary;
   const headerTextColor = '#FFFFFF';
-  const headerSubtextColor = 'rgba(255,255,255,0.82)';
-  const backButtonBackground = resolved === 'dark' ? 'rgba(255,255,255,0.16)' : colors.surface;
-  const backButtonIcon = resolved === 'dark' ? '#FFFFFF' : colors.primary;
+  const headerSubtextColor = resolved === 'dark' ? colors.onPrimaryContainer : 'rgba(255,255,255,0.82)';
+  const backButtonBackground = resolved === 'dark' ? colors.surfaceContainerHighest : colors.surface;
+  const backButtonIcon = resolved === 'dark' ? colors.onPrimaryContainer : colors.primary;
 
   const [notifVisible, setNotifVisible] = useState(false);
   const { hydrate, unreadCount } = useNotificationStore();
