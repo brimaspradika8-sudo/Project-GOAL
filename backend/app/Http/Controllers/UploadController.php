@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class UploadController extends Controller
 {
@@ -35,41 +35,30 @@ class UploadController extends Controller
             }
 
             $filename = time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
-            $path = 'fields/' . $filename;
 
-            $supabaseUrl = config('services.supabase.url');
-            $supabaseKey = config('services.supabase.key');
-            $bucket = config('services.supabase.bucket');
-
-            if (!$supabaseUrl || !$supabaseKey || !$bucket) {
-                Log::error('Upload failed: Supabase credentials not configured');
-                return response()->json(['message' => 'Konfigurasi penyimpanan tidak lengkap.'], 500);
+            $contents = file_get_contents($file->getRealPath());
+            if ($contents === false) {
+                Log::error('Upload failed: could not read temp file');
+                return response()->json(['message' => 'Gagal membaca file.'], 500);
             }
 
-            $response = Http::withHeaders([
-                'apikey' => $supabaseKey,
-                'Authorization' => 'Bearer ' . $supabaseKey,
-                'Content-Type' => $file->getMimeType(),
-            ])->withBody(file_get_contents($file->getRealPath()), $file->getMimeType())
-              ->post("{$supabaseUrl}/storage/v1/object/{$bucket}/{$path}");
+            $stored = Storage::disk('public')->put('fields/' . $filename, $contents);
 
-            if ($response->failed()) {
-                Log::error('Supabase upload failed', [
-                    'filename' => $filename,
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
-                return response()->json(['message' => 'Gagal mengunggah ke penyimpanan.'], 500);
+            if (!$stored) {
+                Log::error('Upload failed: Storage::put returned false');
+                return response()->json(['message' => 'Gagal menyimpan file.'], 500);
             }
 
-            $publicUrl = "{$supabaseUrl}/storage/v1/object/public/{$bucket}/{$path}";
+            $url = Storage::disk('public')->url('fields/' . $filename);
 
-            Log::info('Upload success (Supabase)', [
+            Log::info('Upload success', [
                 'filename' => $filename,
-                'url' => $publicUrl,
+                'url' => $url,
             ]);
 
-            return response()->json(['url' => $publicUrl]);
+            return response()->json([
+                'url' => $url,
+            ]);
         } catch (\Exception $e) {
             Log::error('Upload exception: ' . $e->getMessage());
 
