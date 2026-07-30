@@ -11,7 +11,8 @@ import {
   ViewStyle,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { COLORS, FONTS } from './goalTheme';
+import { FONTS } from './goalTheme';
+import { useTheme } from '../lib/theme';
 
 interface AuthInputProps extends TextInputProps {
   label: string;
@@ -24,6 +25,7 @@ interface AuthInputProps extends TextInputProps {
 
 const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
   ({ label, icon, isPassword = false, containerStyle, error, value, rightElement, ...props }, ref) => {
+    const { colors } = useTheme();
     const [isFocused, setIsFocused] = useState(false);
     const [isSecure, setIsSecure] = useState(isPassword);
     const animatedValue = useRef(new Animated.Value(value ? 1 : 0)).current;
@@ -46,7 +48,7 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
 
     const borderColor = animatedValue.interpolate({
       inputRange: [0, 1],
-      outputRange: [hasError ? COLORS.error : COLORS.outlineVariant, hasError ? COLORS.error : COLORS.primary],
+      outputRange: [hasError ? colors.error : colors.outlineVariant, hasError ? colors.error : colors.primary],
     });
 
     const labelTranslateY = animatedValue.interpolate({
@@ -61,34 +63,36 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
 
     const labelColor = animatedValue.interpolate({
       inputRange: [0, 1],
-      outputRange: [hasError ? COLORS.error : COLORS.textSecondary, hasError ? COLORS.error : COLORS.primary],
+      outputRange: [hasError ? colors.error : colors.textSecondary, hasError ? colors.error : colors.primary],
     });
+
+    const st = makeStyles(colors);
 
     return (
       <View style={containerStyle}>
-        <Animated.View style={[styles.container, { borderColor, backgroundColor: isFocused || hasError ? COLORS.surfaceWhite : COLORS.surfaceAlt }]}>
+        <Animated.View style={[st.container, { borderColor, backgroundColor: isFocused || hasError ? colors.surfaceWhite : colors.surfaceAlt }]}>
           {icon && (
-            <View style={styles.iconContainer}>
+            <View style={st.iconContainer}>
               <MaterialIcons
                 name={icon}
                 size={24}
-                color={isActive || hasError ? (hasError ? COLORS.error : COLORS.primary) : COLORS.textTertiary}
+                color={isActive || hasError ? (hasError ? colors.error : colors.primary) : colors.textTertiary}
               />
             </View>
           )}
           <Animated.View style={[
-            styles.labelContainer,
+            st.labelContainer,
             {
               transform: [{ translateY: labelTranslateY }, { scale: labelScale }],
               left: icon ? 52 : 18,
             },
           ]}>
-            <Animated.Text style={[styles.label, { color: labelColor }]}>{label}</Animated.Text>
+            <Animated.Text style={[st.label, { color: labelColor }]}>{label}</Animated.Text>
           </Animated.View>
           <TextInput
             ref={ref}
             style={[
-              styles.input,
+              st.input,
               {
                 paddingLeft: icon ? 12 : 18,
                 paddingRight: isPassword || rightElement ? 44 : 18,
@@ -98,13 +102,13 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
             onFocus={handleFocus}
             onBlur={handleBlur}
             secureTextEntry={isSecure}
-            placeholderTextColor={COLORS.textTertiary}
+            placeholderTextColor={colors.textTertiary}
             {...props}
           />
           {isPassword && (
             <TouchableOpacity
               onPress={toggleSecure}
-              style={styles.rightElement}
+              style={st.rightElement}
               activeOpacity={0.7}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityRole="button"
@@ -113,13 +117,13 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
               <MaterialIcons
                 name={isSecure ? 'visibility-off' : 'visibility'}
                 size={22}
-                color={COLORS.textTertiary}
+                color={colors.textTertiary}
               />
             </TouchableOpacity>
           )}
-          {!isPassword && rightElement && <View style={styles.rightElement}>{rightElement}</View>}
+          {!isPassword && rightElement && <View style={st.rightElement}>{rightElement}</View>}
         </Animated.View>
-        {hasError && <Text style={styles.errorText}>{error}</Text>}
+        {hasError && <Text style={st.errorText}>{error}</Text>}
       </View>
     );
   }
@@ -127,7 +131,7 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
 
 AuthInput.displayName = 'AuthInput';
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -135,7 +139,7 @@ const styles = StyleSheet.create({
     height: 58,
     borderRadius: 16,
     borderWidth: 1.5,
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     paddingHorizontal: 10,
   },
   iconContainer: {
@@ -147,7 +151,7 @@ const styles = StyleSheet.create({
   labelContainer: {
     position: 'absolute',
     paddingHorizontal: 4,
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
   },
   label: {
     ...FONTS.bodyMd,
@@ -157,7 +161,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: '100%',
     fontSize: 16,
-    color: COLORS.text,
+    color: colors.text,
     paddingTop: 10,
   },
   rightElement: {
@@ -171,7 +175,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...FONTS.bodySm,
-    color: COLORS.error,
+    color: colors.error,
     marginTop: 6,
     marginLeft: 16,
   },

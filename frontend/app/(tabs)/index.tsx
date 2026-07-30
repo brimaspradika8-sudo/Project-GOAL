@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,6 +10,7 @@ import {
   StatusBar,
   TextInput,
   useWindowDimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -45,14 +46,14 @@ function getSportFilter(category: string): string | undefined {
 
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
-  const { profile, loading, fetchProfile } = useProfileStore();
-  const { fields, fetchFields } = useFieldStore();
+  const { profile, loading: profileLoading, fetchProfile } = useProfileStore();
+  const { fields, loading: fieldsLoading, fetchFields } = useFieldStore();
   const [popularFields, setPopularFields] = useState<Field[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [activeCategory, setActiveCategory] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
   const [notifVisible, setNotifVisible] = useState(false);
-  const debouncedSearch = useDebounce(searchQuery, 300);
+  const debouncedSearch = useDebounce(searchQuery, 150);
   const { colors } = useTheme();
   const { hydrate: hydrateNotifications, unreadCount } = useNotificationStore();
 
@@ -70,7 +71,10 @@ export default function HomeScreen() {
     setPopularFields(body.data ?? []);
   }, []);
 
+  const lastSearchRef = useRef(debouncedSearch);
+
   useEffect(() => {
+    lastSearchRef.current = debouncedSearch;
     const sport = getSportFilter(activeCategory);
     fetchFields(sport, debouncedSearch || undefined);
   }, [activeCategory, debouncedSearch, fetchFields]);
@@ -85,6 +89,7 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      lastSearchRef.current = debouncedSearch;
       const sport = getSportFilter(activeCategory);
       fetchFields(sport, debouncedSearch || undefined);
       fetchPopularFields().catch(() => {});
@@ -107,7 +112,7 @@ export default function HomeScreen() {
   const sports = profile?.sports ?? [];
   const userName = profile?.full_name || profile?.username || 'Pengguna';
 
-  if (loading && !refreshing) {
+  if (profileLoading && !refreshing) {
     return (
       <View style={styles.skeletonContainer}>
         <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
@@ -175,6 +180,9 @@ export default function HomeScreen() {
             <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <MaterialIcons name="close" size={18} color={colors.textTertiary} />
             </TouchableOpacity>
+          )}
+          {fieldsLoading && fields.length > 0 && (
+            <ActivityIndicator size="small" color={colors.primary} />
           )}
         </View>
 

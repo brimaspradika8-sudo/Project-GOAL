@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Profile;
 
+use App\Enums\SportType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class OnboardingRequest extends FormRequest
 {
@@ -16,7 +18,7 @@ class OnboardingRequest extends FormRequest
         return [
             'username'   => ['required', 'string', 'min:3', 'max:20', 'regex:/^[a-zA-Z0-9_]+$/'],
             'sports'     => 'required|array|min:1',
-            'sports.*'   => 'string|max:100',
+            'sports.*'   => ['string', 'max:100', Rule::in(SportType::values())],
             'region'     => 'nullable|string|max:100',
             'avatar_url' => 'nullable|url|max:2048',
         ];

@@ -10,124 +10,126 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { COLORS, FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../components/goalTheme';
+import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../components/goalTheme';
+import { useTheme } from '../lib/theme';
 
 export default function ETicketScreen() {
+  const { colors } = useTheme();
   const ticketCode = 'GOAL-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+  const st = makeStyles(colors);
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+    <View style={st.container}>
+      <StatusBar barStyle={colors.background === '#0C1219' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.replace('/(tabs)')} activeOpacity={0.7} style={styles.headerBtn}>
-          <MaterialIcons name="close" size={22} color={COLORS.text} />
+      <View style={st.header}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')} activeOpacity={0.7} style={st.headerBtn}>
+          <MaterialIcons name="close" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>E-Tiket</Text>
-        <View style={styles.headerBtn} />
+        <Text style={st.headerTitle}>E-Tiket</Text>
+        <View style={st.headerBtn} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.successSection}>
-          <View style={styles.successCircle}>
+      <ScrollView contentContainerStyle={st.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={st.successSection}>
+          <View style={st.successCircle}>
             <MaterialIcons name="check" size={48} color="#ffffff" />
           </View>
-          <Text style={styles.successTitle}>Booking Berhasil!</Text>
-          <Text style={styles.successDesc}>Tiket Anda telah berhasil dibuat. Tunjukkan tiket ini saat tiba di lapangan.</Text>
+          <Text style={st.successTitle}>Booking Berhasil!</Text>
+          <Text style={st.successDesc}>Tiket Anda telah berhasil dibuat. Tunjukkan tiket ini saat tiba di lapangan.</Text>
         </View>
 
-        <View style={styles.ticketCard}>
-          <View style={styles.ticketHeader}>
-            <View style={styles.ticketLogoRow}>
-              <View style={styles.ticketLogoIcon}>
-                <MaterialIcons name="sports-soccer" size={14} color={COLORS.primary} />
+        <View style={st.ticketCard}>
+          <View style={st.ticketHeader}>
+            <View style={st.ticketLogoRow}>
+              <View style={st.ticketLogoIcon}>
+                <MaterialIcons name="sports-soccer" size={14} color={colors.primary} />
               </View>
-              <Text style={styles.ticketLogo}>GOAL</Text>
+              <Text style={st.ticketLogo}>GOAL</Text>
             </View>
-            <View style={styles.ticketBadge}>
-              <Text style={styles.ticketBadgeText}>AKTIF</Text>
-            </View>
-          </View>
-
-          <View style={styles.ticketDivider}>
-            <View style={styles.ticketDividerHole} />
-            <View style={styles.ticketDividerLine} />
-            <View style={styles.ticketDividerHole} />
-          </View>
-
-          <View style={styles.ticketBody}>
-            <View style={styles.ticketRow}>
-              <View style={styles.ticketField}>
-                <Text style={styles.ticketLabel}>KODE TIKET</Text>
-                <Text style={styles.ticketValue} numberOfLines={1} ellipsizeMode="tail">{ticketCode}</Text>
-              </View>
-            </View>
-
-            <View style={styles.ticketRow}>
-              <View style={styles.ticketField}>
-                <Text style={styles.ticketLabel}>VENUE</Text>
-                <Text style={styles.ticketValue} numberOfLines={1} ellipsizeMode="tail">Kinetic Stadium</Text>
-              </View>
-            </View>
-
-            <View style={styles.ticketRow}>
-              <View style={styles.ticketField}>
-                <Text style={styles.ticketLabel}>LAPANGAN</Text>
-                <Text style={styles.ticketValue} numberOfLines={1} ellipsizeMode="tail">Lapangan A - Futsal</Text>
-              </View>
-            </View>
-
-            <View style={styles.ticketRow2}>
-              <View style={styles.ticketField}>
-                <Text style={styles.ticketLabel}>TANGGAL</Text>
-                <Text style={styles.ticketValue} numberOfLines={1} ellipsizeMode="tail">Sabtu, 19 Juli 2025</Text>
-              </View>
-              <View style={styles.ticketField}>
-                <Text style={styles.ticketLabel}>JAM</Text>
-                <Text style={styles.ticketValue}>10:00</Text>
-              </View>
-            </View>
-
-            <View style={styles.ticketRow2}>
-              <View style={styles.ticketField}>
-                <Text style={styles.ticketLabel}>DURASI</Text>
-                <Text style={styles.ticketValue}>1 Jam</Text>
-              </View>
-              <View style={styles.ticketField}>
-                <Text style={styles.ticketLabel}>TOTAL</Text>
-                <Text style={[styles.ticketValue, { color: COLORS.primary }]} numberOfLines={1} ellipsizeMode="tail">Rp150.000</Text>
-              </View>
+            <View style={st.ticketBadge}>
+              <Text style={st.ticketBadgeText}>AKTIF</Text>
             </View>
           </View>
 
-          <View style={styles.ticketDivider}>
-            <View style={styles.ticketDividerHole} />
-            <View style={styles.ticketDividerLine} />
-            <View style={styles.ticketDividerHole} />
+          <View style={st.ticketDivider}>
+            <View style={st.ticketDividerHole} />
+            <View style={st.ticketDividerLine} />
+            <View style={st.ticketDividerHole} />
           </View>
 
-          <View style={styles.ticketFooter}>
-            <View style={styles.qrPlaceholder}>
-              <MaterialIcons name="qr-code-2" size={64} color={COLORS.textTertiary} />
-              <Text style={styles.qrText}>Tunjukkan QR ini</Text>
+          <View style={st.ticketBody}>
+            <View style={st.ticketRow}>
+              <View style={st.ticketField}>
+                <Text style={st.ticketLabel}>KODE TIKET</Text>
+                <Text style={st.ticketValue} numberOfLines={1} ellipsizeMode="tail">{ticketCode}</Text>
+              </View>
+            </View>
+
+            <View style={st.ticketRow}>
+              <View style={st.ticketField}>
+                <Text style={st.ticketLabel}>VENUE</Text>
+                <Text style={st.ticketValue} numberOfLines={1} ellipsizeMode="tail">Kinetic Stadium</Text>
+              </View>
+            </View>
+
+            <View style={st.ticketRow}>
+              <View style={st.ticketField}>
+                <Text style={st.ticketLabel}>LAPANGAN</Text>
+                <Text style={st.ticketValue} numberOfLines={1} ellipsizeMode="tail">Lapangan A - Futsal</Text>
+              </View>
+            </View>
+
+            <View style={st.ticketRow2}>
+              <View style={st.ticketField}>
+                <Text style={st.ticketLabel}>TANGGAL</Text>
+                <Text style={st.ticketValue} numberOfLines={1} ellipsizeMode="tail">Sabtu, 19 Juli 2025</Text>
+              </View>
+              <View style={st.ticketField}>
+                <Text style={st.ticketLabel}>JAM</Text>
+                <Text style={st.ticketValue}>10:00</Text>
+              </View>
+            </View>
+
+            <View style={st.ticketRow2}>
+              <View style={st.ticketField}>
+                <Text style={st.ticketLabel}>DURASI</Text>
+                <Text style={st.ticketValue}>1 Jam</Text>
+              </View>
+              <View style={st.ticketField}>
+                <Text style={[st.ticketValue, { color: colors.primary }]} numberOfLines={1} ellipsizeMode="tail">Rp150.000</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={st.ticketDivider}>
+            <View style={st.ticketDividerHole} />
+            <View style={st.ticketDividerLine} />
+            <View style={st.ticketDividerHole} />
+          </View>
+
+          <View style={st.ticketFooter}>
+            <View style={st.qrPlaceholder}>
+              <MaterialIcons name="qr-code-2" size={64} color={colors.textTertiary} />
+              <Text style={st.qrText}>Tunjukkan QR ini</Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.infoCard}>
-          <MaterialIcons name="info-outline" size={18} color={COLORS.primary} />
-          <Text style={styles.infoText}>
+        <View style={st.infoCard}>
+          <MaterialIcons name="info-outline" size={18} color={colors.primary} />
+          <Text style={st.infoText}>
             Datang 15 menit sebelum jadwal. Bawa tiket ini dalam format digital atau cetak.
           </Text>
         </View>
 
-        <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.secondaryBtn} activeOpacity={0.85}>
-            <MaterialIcons name="download" size={20} color={COLORS.primary} />
-            <Text style={styles.secondaryBtnText}>Unduh Tiket</Text>
+        <View style={st.actionButtons}>
+          <TouchableOpacity style={st.secondaryBtn} activeOpacity={0.85}>
+            <MaterialIcons name="download" size={20} color={colors.primary} />
+            <Text style={st.secondaryBtnText}>Unduh Tiket</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.primaryBtn} activeOpacity={0.85} onPress={() => router.replace('/(tabs)')}>
-            <Text style={styles.primaryBtnText}>Kembali ke Beranda</Text>
+          <TouchableOpacity style={st.primaryBtn} activeOpacity={0.85} onPress={() => router.replace('/(tabs)')}>
+            <Text style={st.primaryBtnText}>Kembali ke Beranda</Text>
           </TouchableOpacity>
         </View>
 
@@ -137,10 +139,10 @@ export default function ETicketScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -149,7 +151,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 56 : 40,
     paddingBottom: 12,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   headerBtn: {
     width: 40,
@@ -160,7 +162,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     ...FONTS.headlineSm,
-    color: COLORS.text,
+    color: colors.text,
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -176,7 +178,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -186,21 +188,21 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 20,
     fontWeight: '700',
-    color: COLORS.text,
+    color: colors.text,
     marginBottom: 8,
   },
   successDesc: {
     ...FONTS.bodyMd,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     paddingHorizontal: 16,
   },
   ticketCard: {
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadiusXl,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.divider,
     overflow: 'hidden',
     marginBottom: 16,
     ...SHADOWS.lg,
@@ -220,7 +222,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 8,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -228,11 +230,11 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 16,
     fontWeight: '800',
-    color: COLORS.primary,
+    color: colors.primary,
     letterSpacing: 1,
   },
   ticketBadge: {
-    backgroundColor: COLORS.successLight,
+    backgroundColor: colors.successLight,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
@@ -241,7 +243,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     fontFamily: FONT_FAMILY,
-    color: COLORS.primary,
+    color: colors.primary,
     letterSpacing: 0.5,
   },
   ticketDivider: {
@@ -252,14 +254,14 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   ticketDividerLine: {
     flex: 1,
     height: 1,
     borderStyle: 'dashed',
     borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
+    borderColor: colors.outlineVariant,
   },
   ticketBody: {
     padding: 18,
@@ -280,13 +282,13 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     fontFamily: FONT_FAMILY,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
     letterSpacing: 0.5,
     marginBottom: 4,
   },
   ticketValue: {
     ...FONTS.titleMd,
-    color: COLORS.text,
+    color: colors.text,
   },
   ticketFooter: {
     padding: 18,
@@ -298,23 +300,23 @@ const styles = StyleSheet.create({
   },
   qrText: {
     ...FONTS.bodySm,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
   },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    backgroundColor: COLORS.primaryContainer + '20',
+    backgroundColor: colors.primaryContainer + '20',
     borderRadius: SIZES.borderRadius,
     borderWidth: 1,
-    borderColor: COLORS.primaryContainer,
+    borderColor: colors.primaryContainer,
     padding: 14,
     marginBottom: 20,
   },
   infoText: {
     flex: 1,
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 18,
   },
   actionButtons: {
@@ -327,24 +329,24 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: SIZES.borderRadius,
     borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.surfaceWhite,
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceWhite,
     gap: 8,
   },
   secondaryBtnText: {
     ...FONTS.buttonMd,
-    color: COLORS.primary,
+    color: colors.primary,
   },
   primaryBtn: {
     height: 48,
     borderRadius: SIZES.borderRadius,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     ...SHADOWS.primary,
   },
   primaryBtnText: {
-    color: COLORS.onPrimary,
+    color: colors.onPrimary,
     ...FONTS.buttonMd,
   },
 });
