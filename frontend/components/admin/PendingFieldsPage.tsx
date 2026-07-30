@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
   RefreshControl, Modal, TextInput,
+  Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -136,9 +137,9 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
         >
           {fields.length > 0 && (
             <View style={st.headerRow}>
-              <View style={[st.countPill, { backgroundColor: colors.accentPurpleLight, borderColor: resolved === 'dark' ? '#4C1D95' : COLORS.purpleBorder }]}>
-                <MaterialIcons name="pending-actions" size={12} color={COLORS.purpleIcon} />
-                <Text style={st.countText}>{fields.length} lapangan pending</Text>
+              <View style={[st.countPill, { backgroundColor: colors.warningMuted, borderColor: colors.warning + '50' }]}>
+                <MaterialIcons name="pending-actions" size={12} color={colors.warning} />
+                <Text style={[st.countText, { color: colors.warning }]}>{fields.length} lapangan pending</Text>
               </View>
             </View>
           )}
@@ -160,14 +161,14 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
                 onPress={() => router.push(`/venue-detail?id=${f.id}`)}
               >
                 <View style={st.cardTop}>
-                  <View style={[st.fieldIconWrap, { backgroundColor: colors.accentPurpleLight, borderColor: resolved === 'dark' ? '#4C1D95' : COLORS.purpleBorder }]}>
-                    <MaterialIcons name="stadium" size={20} color={COLORS.purpleIcon} />
+                  <View style={[st.fieldIconWrap, { backgroundColor: colors.warningMuted, borderColor: colors.warning + '50' }]}>
+                    <MaterialIcons name="stadium" size={20} color={colors.warning} />
                   </View>
                   <View style={st.cardTopInfo}>
                     <Text style={[st.fieldName, { color: colors.text }]} numberOfLines={1}>{f.name}</Text>
                     <View style={st.sportTag}>
-                      <MaterialIcons name="sports" size={11} color={COLORS.purpleIcon} />
-                      <Text style={st.sportText}>{f.sport_type?.toUpperCase()}</Text>
+                      <MaterialIcons name="sports" size={11} color={colors.warning} />
+                      <Text style={[st.sportText, { color: colors.warning }]}>{f.sport_type?.toUpperCase()}</Text>
                     </View>
                   </View>
                   <MaterialIcons name="chevron-right" size={20} color={colors.textTertiary} />
@@ -269,11 +270,11 @@ const st = StyleSheet.create({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   countPill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: COLORS.purpleBg, borderRadius: 20,
+    backgroundColor: COLORS.warningBg, borderRadius: 20,
     paddingHorizontal: 12, paddingVertical: 5,
-    borderWidth: 1, borderColor: COLORS.purpleBorder,
+    borderWidth: 1, borderColor: COLORS.warningBorder,
   },
-  countText: { ...FONTS.labelSm, color: COLORS.purpleText },
+  countText: { ...FONTS.labelSm, color: COLORS.warningText },
 
   emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12 },
   emptyIconWrap: {
@@ -292,13 +293,13 @@ const st = StyleSheet.create({
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   fieldIconWrap: {
     width: 44, height: 44, borderRadius: 13,
-    backgroundColor: COLORS.purpleBg, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: COLORS.purpleBorder,
+    backgroundColor: COLORS.warningBg, justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: COLORS.warningBorder,
   },
   cardTopInfo: { flex: 1 },
   fieldName: { ...FONTS.titleLg, color: COLORS.text, marginBottom: 5 },
   sportTag: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start' },
-  sportText: { ...FONTS.labelSm, color: COLORS.purpleText },
+  sportText: { ...FONTS.labelSm, color: COLORS.warningText },
   addressRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 },
   addressText: { ...FONTS.bodySm, color: COLORS.textSecondary, flex: 1 },
 
@@ -341,6 +342,7 @@ const st = StyleSheet.create({
     textAlignVertical: 'top',
     marginBottom: 16,
     borderWidth: 1,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}),
   },
   rejectActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
   cancelBtn: {

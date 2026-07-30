@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class UploadController extends Controller
 {
@@ -42,8 +43,15 @@ class UploadController extends Controller
             $bucket = config('services.supabase.bucket');
 
             if (!$supabaseUrl || !$supabaseKey || !$bucket) {
-                Log::error('Upload failed: Supabase credentials not configured');
-                return response()->json(['message' => 'Konfigurasi penyimpanan tidak lengkap.'], 500);
+                $localPath = $file->storeAs('fields', $filename, 'public');
+                $localUrl = Storage::disk('public')->url($localPath);
+
+                Log::info('Upload success (local fallback)', [
+                    'filename' => $filename,
+                    'url' => $localUrl,
+                ]);
+
+                return response()->json(['url' => $localUrl]);
             }
 
             $response = Http::withHeaders([

@@ -176,10 +176,10 @@ const makeStyles = (colors: any) => StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.bgElevated,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: colors.outline,
+    borderColor: colors.borderSubtle,
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 16,
@@ -190,6 +190,7 @@ const makeStyles = (colors: any) => StyleSheet.create({
     flex: 1,
     ...FONTS.bodyMd,
     color: colors.text,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}),
   },
   chipScrollWrapper: {
     marginBottom: 20,

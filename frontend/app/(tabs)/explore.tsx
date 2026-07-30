@@ -11,25 +11,28 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { COLORS, SIZES, SHADOWS, FONTS } from '../../components/goalTheme';
+import { SIZES, SHADOWS, FONTS } from '../../components/goalTheme';
 import { FadeInView } from '../../components/FadeInView';
+import { useTheme } from '../../lib/theme';
 
 const CATEGORIES = [
-  { key: 'futsal', label: 'Futsal', icon: 'sports-soccer' as const, color: COLORS.primary },
-  { key: 'basket', label: 'Basket', icon: 'sports-basketball' as const, color: '#f59e0b' },
-  { key: 'badminton', label: 'Badminton', icon: 'sports-tennis' as const, color: '#3b82f6' },
-  { key: 'volley', label: 'Voli', icon: 'sports-volleyball' as const, color: '#8b5cf6' },
-  { key: 'tennis', label: 'Tenis', icon: 'sports-tennis' as const, color: '#06b6d4' },
-  { key: 'minisoccer', label: 'Mini Soccer', icon: 'sports-soccer' as const, color: '#10b981' },
-  { key: 'padel', label: 'Padel', icon: 'sports-tennis' as const, color: '#8b5cf6' },
+  { key: 'futsal', label: 'Futsal', icon: 'sports-soccer' as const },
+  { key: 'basket', label: 'Basket', icon: 'sports-basketball' as const },
+  { key: 'badminton', label: 'Badminton', icon: 'sports-tennis' as const },
+  { key: 'volley', label: 'Voli', icon: 'sports-volleyball' as const },
+  { key: 'tennis', label: 'Tenis', icon: 'sports-tennis' as const },
+  { key: 'minisoccer', label: 'Mini Soccer', icon: 'sports-soccer' as const },
+  { key: 'padel', label: 'Padel', icon: 'sports-tennis' as const },
 ];
 
 export default function ExploreScreen() {
   const [search, setSearch] = useState('');
+  const { colors, resolved } = useTheme();
+  const styles = makeStyles(colors);
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle={resolved === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <FadeInView>
           <Text style={styles.title}>Jelajahi</Text>
@@ -38,17 +41,17 @@ export default function ExploreScreen() {
 
         <FadeInView delay={80}>
           <View style={styles.searchCard}>
-            <MaterialIcons name="search" size={20} color={COLORS.textTertiary} />
+            <MaterialIcons name="search" size={20} color={colors.textTertiary} />
             <TextInput
               style={styles.searchInput}
               placeholder="Cari lapangan atau olahraga"
-              placeholderTextColor={COLORS.textTertiary}
+              placeholderTextColor={colors.textTertiary}
               value={search}
               onChangeText={setSearch}
             />
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <MaterialIcons name="close" size={18} color={COLORS.textTertiary} />
+                <MaterialIcons name="close" size={18} color={colors.textTertiary} />
               </TouchableOpacity>
             )}
           </View>
@@ -67,8 +70,8 @@ export default function ExploreScreen() {
                   activeOpacity={0.85}
                   onPress={() => router.push('/(tabs)/fields')}
                 >
-                  <View style={[styles.categoryIcon, { backgroundColor: category.color + '18' }]}>
-                    <MaterialIcons name={category.icon} size={24} color={category.color} />
+                  <View style={styles.categoryIcon}>
+                    <MaterialIcons name={category.icon} size={24} color={colors.primary} />
                   </View>
                   <Text style={styles.categoryLabel}>{category.label}</Text>
                   <MaterialIcons name="arrow-forward" size={16} color={COLORS.textTertiary} />
@@ -82,13 +85,13 @@ export default function ExploreScreen() {
           <Text style={styles.sectionTitle}>REKOMENDASI</Text>
           <TouchableOpacity style={styles.infoCard} activeOpacity={0.85} onPress={() => router.push('/(tabs)/fields')}>
             <View style={styles.infoIcon}>
-              <MaterialIcons name="place" size={22} color={COLORS.primary} />
+              <MaterialIcons name="place" size={22} color={colors.primary} />
             </View>
             <View style={styles.infoTextBlock}>
               <Text style={styles.infoTitle}>Lapangan Terdekat</Text>
               <Text style={styles.infoDesc}>Temukan lapangan favorit di sekitarmu.</Text>
             </View>
-            <MaterialIcons name="chevron-right" size={20} color={COLORS.textTertiary} />
+            <MaterialIcons name="chevron-right" size={20} color={colors.textTertiary} />
           </TouchableOpacity>
         </FadeInView>
 
@@ -96,7 +99,7 @@ export default function ExploreScreen() {
           <Text style={styles.sectionTitle}>POPULER MINGGU INI</Text>
           <View style={styles.emptyCard}>
             <View style={styles.emptyIconWrap}>
-              <MaterialIcons name="trending-up" size={32} color={COLORS.textTertiary} />
+              <MaterialIcons name="trending-up" size={32} color={colors.textTertiary} />
             </View>
             <Text style={styles.emptyTitle}>Belum ada data populer</Text>
             <Text style={styles.emptyDesc}>Data pertandingan populer akan muncul di sini.</Text>
@@ -107,10 +110,10 @@ export default function ExploreScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     paddingTop: Platform.OS === 'ios' ? 60 : 48,
@@ -123,21 +126,21 @@ const styles = StyleSheet.create({
   title: {
     ...FONTS.headlineLg,
     fontSize: 28,
-    color: COLORS.text,
+    color: colors.text,
     marginBottom: 6,
   },
   subtitle: {
     ...FONTS.bodyMd,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 22,
   },
   searchCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.bgElevated,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.borderSubtle,
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 24,
@@ -147,12 +150,13 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     ...FONTS.bodyMd,
-    color: COLORS.text,
+    color: colors.text,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}),
   },
   sectionTitle: {
     fontSize: 11,
     fontWeight: '800',
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: 14,
@@ -164,11 +168,11 @@ const styles = StyleSheet.create({
   categoryCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surface,
     borderRadius: SIZES.borderRadiusLg,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.borderSubtle,
     gap: 14,
     ...SHADOWS.sm,
   },
@@ -178,20 +182,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.primaryMuted,
   },
   categoryLabel: {
     flex: 1,
     ...FONTS.titleMd,
-    color: COLORS.text,
+    color: colors.text,
   },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surface,
     borderRadius: SIZES.borderRadiusLg,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.borderSubtle,
     gap: 14,
     marginBottom: 24,
     ...SHADOWS.sm,
@@ -200,7 +205,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: COLORS.primaryLight,
+    backgroundColor: colors.primaryMuted,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -209,19 +214,19 @@ const styles = StyleSheet.create({
   },
   infoTitle: {
     ...FONTS.titleLg,
-    color: COLORS.text,
+    color: colors.text,
     marginBottom: 2,
   },
   infoDesc: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 18,
   },
   emptyCard: {
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surface,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.borderSubtle,
     padding: 28,
     alignItems: 'center',
     ...SHADOWS.sm,
@@ -230,7 +235,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: COLORS.surfaceContainerLow,
+    backgroundColor: colors.bgElevated,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
@@ -238,12 +243,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     ...FONTS.headlineSm,
     fontSize: 15,
-    color: COLORS.text,
+    color: colors.text,
     marginBottom: 6,
   },
   emptyDesc: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
   },
