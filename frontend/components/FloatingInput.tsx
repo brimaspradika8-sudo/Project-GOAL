@@ -47,11 +47,11 @@ export default function FloatingInput({
     }),
     color: animatedIsFocused.interpolate({
       inputRange: [0, 1],
-      outputRange: [colors.textSecondary, colors.primary],
+      outputRange: ['#9CA3AF', '#10B981'],
     }),
     backgroundColor: animatedIsFocused.interpolate({
       inputRange: [0, 0.5, 1],
-      outputRange: ['transparent', 'transparent', colors.bgElevated],
+      outputRange: ['transparent', 'transparent', '#2D3748'],
     }),
     paddingHorizontal: animatedIsFocused.interpolate({
       inputRange: [0, 1],
@@ -68,11 +68,13 @@ export default function FloatingInput({
         style={[
           styles.input,
           {
-            backgroundColor: isFocused ? colors.bgElevated : colors.surfaceContainerLow,
-            borderColor: isFocused ? colors.primary : colors.borderSubtle,
-            color: colors.textPrimary,
+            backgroundColor: '#2D3748',
+            borderColor: isFocused ? '#10B981' : 'rgba(255,255,255,0.1)',
+            borderWidth: isFocused ? 1.5 : 1,
+            color: '#F9FAFB',
           },
-          isFocused && focusRing(colors.focusRing),
+          isFocused && focusRing('#10B981'),
+          Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {},
         ]}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
@@ -90,7 +92,7 @@ export default function FloatingInput({
           <MaterialIcons
             name={isPasswordVisible ? 'visibility' : 'visibility-off'}
             size={22}
-            color={isFocused ? colors.primary : colors.textTertiary}
+            color={isFocused ? '#10B981' : '#6B7280'}
           />
         </TouchableOpacity>
       )}
@@ -125,6 +127,6 @@ const styles = StyleSheet.create({
 
 function focusRing(color: string) {
   return Platform.OS === 'web'
-    ? { outlineStyle: 'none' as const }
-    : { shadowColor: color, shadowOpacity: 1, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 2 };
+    ? ({ outlineStyle: 'none' } as any)
+    : { shadowColor: color, shadowOpacity: 0.25, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 0 };
 }

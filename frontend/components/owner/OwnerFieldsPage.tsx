@@ -514,8 +514,8 @@ export default function OwnerFieldsPage() {
         visible={!!editTarget}
         title="Edit Venue"
         iconName="edit"
-        iconColor={colors.accentPurple}
-        iconBg={colors.accentPurpleLight}
+        iconColor={colors.primary}
+        iconBg={colors.primaryContainer}
         form={editForm}
         errors={editErrors}
         error={editError}
@@ -900,7 +900,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1.5, borderColor: colors.outline,
   },
   fieldRowError: { borderColor: colors.error, backgroundColor: colors.errorContainer + '30' },
-  fieldInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}) },
+  fieldInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}) },
 
   fieldErrorRow: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
