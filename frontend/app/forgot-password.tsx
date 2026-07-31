@@ -8,6 +8,7 @@ import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
+import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
 
@@ -185,6 +186,7 @@ export default function ForgotPasswordScreen() {
               onChangeText={onFpEmailChange}
               keyboardType="email-address"
               error={emailError}
+              colors={AUTH_DARK_COLORS}
             />
 
             <TouchableOpacity

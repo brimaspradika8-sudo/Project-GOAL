@@ -24,7 +24,10 @@ import { SIZES, FONTS, SHADOWS } from '../../components/goalTheme';
 import AuthInput from '../../components/AuthInput';
 import { useTheme } from '../../lib/theme';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
+import AlertBox from '../../components/shared/AlertBox';
+import NotificationCenter from '../../components/shared/NotificationCenter';
 import { useToastStore } from '../../store/toastStore';
+import { useNotificationStore } from '../../store/notificationStore';
 
 const SPORT_ICONS: Record<string, string> = {
   futsal: 'sports-soccer',
@@ -54,6 +57,12 @@ export default function ProfileScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const { refresh: refreshNotifications, clear: clearNotifications, unreadCount } = useNotificationStore();
+
+  useEffect(() => {
+    refreshNotifications().catch(() => {});
+  }, [refreshNotifications]);
 
   const ownValidateName = (v: string) => { if (!v.trim()) return 'Nama wajib diisi.'; if (v.trim().length > 255) return 'Nama maksimal 255 karakter.'; return ''; };
   const ownValidateEmail = (v: string) => { if (!v.trim()) return 'Email wajib diisi.'; if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) return 'Format email tidak valid.'; return ''; };
@@ -97,9 +106,9 @@ export default function ProfileScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchProfile(), fetchOwnerStatus()]);
+    await Promise.all([fetchProfile(), fetchOwnerStatus(), refreshNotifications()]);
     setRefreshing(false);
-  }, [fetchProfile, fetchOwnerStatus]);
+  }, [fetchProfile, fetchOwnerStatus, refreshNotifications]);
 
   useEffect(() => {
     if (profile) {
@@ -178,6 +187,7 @@ export default function ProfileScreen() {
       }
       await AsyncStorage.removeItem(TOKEN_KEY);
       await clearProfile();
+      clearNotifications();
       router.replace('/login');
     } catch {
       useToastStore.getState().show({ type: 'error', title: 'Gagal', description: 'Terjadi kesalahan saat keluar akun.' });
@@ -413,12 +423,17 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   style={styles.settingRow}
                   activeOpacity={0.8}
-                  onPress={() => useToastStore.getState().show({ type: 'info', title: 'Segera Hadir', description: 'Fitur notifikasi akan segera tersedia.' })}
+                  onPress={() => setShowNotifications(true)}
                 >
                   <View style={styles.settingIconBox}>
                     <MaterialIcons name="notifications-none" size={20} color={colors.primary} />
                   </View>
                   <Text style={styles.settingLabel}>Notifikasi</Text>
+                  {unreadCount() > 0 ? (
+                    <View style={styles.notifBadgeCount}>
+                      <Text style={styles.notifBadgeText}>{unreadCount() > 99 ? '99+' : unreadCount()}</Text>
+                    </View>
+                  ) : null}
                   <MaterialIcons name="chevron-right" size={20} color={colors.outline} />
                 </TouchableOpacity>
                 <View style={styles.divider} />
@@ -470,10 +485,7 @@ export default function ProfileScreen() {
             </View>
 
             {submitError ? (
-              <View style={styles.errorBox}>
-                <MaterialIcons name="error-outline" size={16} color={colors.error} />
-                <Text style={styles.errorText}>{submitError}</Text>
-              </View>
+              <AlertBox type="error" title={submitError} style={styles.alertBox} />
             ) : null}
 
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -549,6 +561,8 @@ export default function ProfileScreen() {
         onConfirm={doActualLogout}
         onCancel={() => setShowLogoutConfirm(false)}
       />
+
+      <NotificationCenter visible={showNotifications} onClose={() => setShowNotifications(false)} />
     </View>
   );
 }
@@ -754,6 +768,21 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  notifBadgeCount: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  notifBadgeText: {
+    ...FONTS.labelMd,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.onPrimary,
+  },
   settingLabel: {
     flex: 1,
     ...FONTS.bodyMd,
@@ -825,21 +854,8 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   inputContainer: {
     marginBottom: 16,
   },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: colors.errorLight,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.destructive + '40',
-    padding: 14,
+  alertBox: {
     marginBottom: 14,
-  },
-  errorText: {
-    color: colors.error,
-    ...FONTS.bodySm,
-    flex: 1,
   },
   modalActions: {
     flexDirection: 'row',

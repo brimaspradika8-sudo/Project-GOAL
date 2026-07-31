@@ -9,6 +9,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FloatingInput from '../components/FloatingInput';
+import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
 import { TOKEN_KEY } from '../lib/auth';
@@ -192,6 +193,7 @@ export default function LoginScreen() {
               onChangeText={onEmailChange}
               keyboardType="email-address"
               error={emailError}
+              colors={AUTH_DARK_COLORS}
             />
 
             <FloatingInput
@@ -200,6 +202,7 @@ export default function LoginScreen() {
               onChangeText={onPasswordChange}
               secureTextEntry={true}
               error={passwordError}
+              colors={AUTH_DARK_COLORS}
             />
 
             <View style={styles.rowBetween}>

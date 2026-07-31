@@ -10,6 +10,7 @@ import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import ConfirmDialog from '../shared/ConfirmDialog';
+import AnimatedDeleteButton from '../shared/AnimatedDeleteButton';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme } from '../../lib/theme';
 
@@ -175,10 +176,9 @@ export default function TrashedFieldsPage() {
                 <MaterialIcons name="restore" size={16} color={colors.primary} />
                 <Text style={[st.restoreBtnText, { color: colors.primary }]}>Pulihkan</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[st.deleteBtn, { backgroundColor: resolved === 'dark' ? '#2A1F26' : colors.errorContainer, borderColor: colors.error + '30' }]} onPress={() => handleForceDelete(f.id, f.name)} activeOpacity={0.8}>
-                <MaterialIcons name="delete-forever" size={16} color={colors.error} />
-                <Text style={[st.deleteBtnText, { color: colors.error }]}>Hapus Permanen</Text>
-              </TouchableOpacity>
+              <AnimatedDeleteButton
+                onPress={() => handleForceDelete(f.id, f.name)}
+              />
             </View>
           </View>
         ))}
@@ -269,10 +269,4 @@ const st = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.primary + '30', minHeight: 44,
   },
   restoreBtnText: { ...FONTS.titleSm, color: COLORS.primary },
-  deleteBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    backgroundColor: COLORS.errorContainer, paddingVertical: 11, borderRadius: 12,
-    borderWidth: 1, borderColor: COLORS.error + '30', minHeight: 44,
-  },
-  deleteBtnText: { ...FONTS.titleSm, color: COLORS.error },
 });

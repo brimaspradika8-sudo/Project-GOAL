@@ -18,7 +18,7 @@ import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../components/goalTheme';
 import { SafeImage } from '../components/SafeImage';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
 import { useFavoriteStore } from '../store/favoriteStore';
-import { useNotificationStore } from '../store/notificationStore';
+
 import { useTheme } from '../lib/theme';
 import { useBreakpoint } from '../lib/responsive';
 import type { Field } from '../store/fieldStore';
@@ -52,7 +52,6 @@ export default function VenueDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const { hydrate, isFavorite, toggleFavorite } = useFavoriteStore();
-  const { addNotification } = useNotificationStore();
 
   useEffect(() => {
     hydrate().catch(() => {});
@@ -149,7 +148,6 @@ export default function VenueDetailScreen() {
               description,
               durationMs: 2500,
             });
-            addNotification({ title, description }).catch(() => {});
           }}
         >
           <MaterialIcons name={liked ? 'favorite' : 'favorite-border'} size={22} color={liked ? '#F87171' : '#ffffff'} />

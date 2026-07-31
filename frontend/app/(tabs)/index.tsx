@@ -55,7 +55,7 @@ export default function HomeScreen() {
   const [notifVisible, setNotifVisible] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 150);
   const { colors } = useTheme();
-  const { hydrate: hydrateNotifications, unreadCount } = useNotificationStore();
+  const { refresh: refreshNotifications, unreadCount } = useNotificationStore();
 
   useEffect(() => {
     if (!profile) fetchProfile();
@@ -84,8 +84,8 @@ export default function HomeScreen() {
   }, [fetchPopularFields]);
 
   useEffect(() => {
-    hydrateNotifications().catch(() => {});
-  }, [hydrateNotifications]);
+    refreshNotifications().catch(() => {});
+  }, [refreshNotifications]);
 
   useFocusEffect(
     useCallback(() => {

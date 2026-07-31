@@ -15,6 +15,8 @@ import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
+import AlertBox from '../shared/AlertBox';
+import AnimatedDeleteButton from '../shared/AnimatedDeleteButton';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import {
@@ -474,13 +476,9 @@ export default function OwnerFieldsPage() {
                       >
                         <MaterialIcons name="edit" size={16} color={colors.onPrimary} />
                       </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[st.actionBtn, { backgroundColor: colors.errorContainer }]}
+                      <AnimatedDeleteButton
                         onPress={() => handleDelete(f.id, f.name)}
-                        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-                      >
-                        <MaterialIcons name="delete-outline" size={17} color={colors.error} />
-                      </TouchableOpacity>
+                      />
                     </View>
                   </View>
                 </View>
@@ -583,10 +581,7 @@ function FieldModal({
           </View>
 
           {error ? (
-            <View style={st.errorBox}>
-              <MaterialIcons name="error-outline" size={16} color={colors.error} />
-              <Text style={st.errorText}>{error}</Text>
-            </View>
+            <AlertBox type="error" title={error} style={st.alertBox} />
           ) : null}
 
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -847,12 +842,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   sheetIconWrap: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
   sheetTitle: { ...FONTS.headlineSm, fontSize: 18, color: colors.text, flex: 1 },
   sheetClose: { padding: 6, backgroundColor: colors.surfaceContainerLow, borderRadius: 20 },
-  errorBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: colors.errorContainer, borderRadius: 12,
-    padding: 14, marginBottom: 16, borderWidth: 1, borderColor: colors.error + '30',
-  },
-  errorText: { color: colors.error, ...FONTS.bodySm, flex: 1 },
+  alertBox: { marginBottom: 16 },
 
   // Image picker
   imagePicker: {

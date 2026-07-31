@@ -28,6 +28,7 @@ import { useUsernameCheck } from '../hooks/useUsernameCheck';
 import { TOKEN_KEY } from '../lib/auth';
 import { COLORS, FONTS, SHADOWS } from '../components/goalTheme';
 import AuthInput from '../components/AuthInput';
+import AlertBox from '../components/shared/AlertBox';
 import { useTheme } from '../lib/theme';
 
 const SPORTS = [
@@ -437,10 +438,7 @@ export default function OnboardingScreen() {
               {step === 1 ? renderStepOne() : renderStepTwo()}
 
               {submitError && (
-                <View style={styles.errorBox}>
-                  <MaterialIcons name="error-outline" size={16} color={colors.error} />
-                  <Text style={styles.errorText}>{submitError}</Text>
-                </View>
+                <AlertBox type="error" title={submitError} style={styles.alertBox} />
               )}
             </View>
           </View>
@@ -932,21 +930,8 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.destructiveMuted,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.errorContainer,
-    padding: 12,
+  alertBox: {
     marginTop: 14,
-  },
-  errorText: {
-    ...FONTS.bodySm,
-    color: colors.error,
-    flex: 1,
   },
   footer: {
     position: 'absolute',

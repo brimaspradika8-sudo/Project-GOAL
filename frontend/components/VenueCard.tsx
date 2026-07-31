@@ -8,7 +8,7 @@ import { SPORT_LABELS } from '../lib/fieldValidation';
 import { useTheme } from '../lib/theme';
 import { useToastStore } from '../store/toastStore';
 import { useFavoriteStore } from '../store/favoriteStore';
-import { useNotificationStore } from '../store/notificationStore';
+
 import type { Field } from '../store/fieldStore';
 
 const SPORT_ICONS: Record<string, string> = {
@@ -40,7 +40,6 @@ export default function VenueCard({ field, onFavoriteToggle, isFavorite = false 
   const sportLabel = SPORT_LABELS[field.sport_type] || field.sport_type;
   const sportIcon = (SPORT_ICONS[field.sport_type] || 'sports') as React.ComponentProps<typeof MaterialIcons>['name'];
   const { hydrate, isFavorite: checkFavorite, toggleFavorite } = useFavoriteStore();
-  const { addNotification } = useNotificationStore();
   const isLiked = checkFavorite(field.id) || isFavorite;
 
   useEffect(() => {
@@ -86,7 +85,6 @@ export default function VenueCard({ field, onFavoriteToggle, isFavorite = false 
               description,
               durationMs: 2500,
             });
-            addNotification({ title, description }).catch(() => {});
           }}
         >
           <MaterialIcons
