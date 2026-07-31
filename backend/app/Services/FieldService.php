@@ -4,14 +4,21 @@ namespace App\Services;
 
 use App\Enums\SportType;
 use App\Models\Field;
+use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
+use App\Services\SupabaseStorageService;
 
 class FieldService
 {
     private string $cachePrefix = 'fields_';
     private int $cacheTtl = 60;
+
+    public function __construct(
+        private SupabaseStorageService $storage,
+        private NotificationService $notifications
+    ) {}
 
     private const SPORT_ALIASES = [
         'futsal'      => ['futsal'],
@@ -154,6 +161,10 @@ class FieldService
             'name', 'sport_type', 'location', 'description', 'price_per_hour', 'image_url',
         ])->filter(fn ($v) => $v !== null)->toArray();
 
+        if (array_key_exists('image_url', $allowed) && $field->image_url && $allowed['image_url'] !== $field->image_url) {
+            $this->storage->delete($field->image_url);
+        }
+
         $field->update($allowed);
 
         if ($field->status === 'rejected') {
@@ -169,6 +180,9 @@ class FieldService
 
     public function delete(Field $field): bool
     {
+        if ($field->image_url) {
+            $this->storage->delete($field->image_url);
+        }
         return $field->delete();
     }
 
@@ -185,7 +199,34 @@ class FieldService
             'rejection_reason' => $status === 'rejected' ? $reason : null,
         ])->save();
 
+        $this->notifyOwner($field, $status, $reason);
+
         return $field->fresh('owner:id,name', 'approver:id,name');
+    }
+
+    private function notifyOwner(Field $field, string $status, ?string $reason = null): void
+    {
+        $owner = $field->owner;
+
+        if (!$owner) {
+            return;
+        }
+
+        $approved = $status === 'approved';
+
+        $this->notifications->create(
+            $owner,
+            $approved ? Notification::TYPE_FIELD_APPROVED : Notification::TYPE_FIELD_REJECTED,
+            $approved ? 'Lapangan Disetujui' : 'Lapangan Ditolak',
+            $approved
+                ? "Lapangan {$field->name} sudah disetujui dan sekarang tampil untuk umum."
+                : "Lapangan {$field->name} ditolak." . ($reason ? " Alasan: {$reason}" : ''),
+            [
+                'field_id' => $field->id,
+                'field_name' => $field->name,
+                'status' => $status,
+            ]
+        );
     }
 
     public function listTrashed(): LengthAwarePaginator
@@ -207,6 +248,12 @@ class FieldService
     {
         $field = Field::onlyTrashed()->find($id);
 
-        return $field ? (bool) $field->forceDelete() : false;
+        if (!$field) return false;
+
+        if ($field->image_url) {
+            $this->storage->delete($field->image_url);
+        }
+
+        return (bool) $field->forceDelete();
     }
 }

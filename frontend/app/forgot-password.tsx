@@ -8,11 +8,19 @@ import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
+import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
 
+function fpValidateEmail(v: string): string {
+  if (!v.trim()) return 'Email wajib diisi.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) return 'Format email tidak valid.';
+  return '';
+}
+
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
   const [emailSent, setEmailSent] = useState(false);
@@ -31,14 +39,18 @@ export default function ForgotPasswordScreen() {
     }).start();
   };
 
-  async function handleSend() {
-    setMessage(null);
-    Keyboard.dismiss();
+  function onFpEmailChange(v: string) { setEmail(v); setEmailError(fpValidateEmail(v)); }
 
-    if (!email) {
-      showMessage('Masukkan alamat email Anda terlebih dahulu.', 'error');
+  async function handleSend() {
+    const eErr = fpValidateEmail(email);
+    setEmailError(eErr);
+    if (eErr) {
+      showMessage('Periksa kembali email Anda.', 'error');
       return;
     }
+
+    setMessage(null);
+    Keyboard.dismiss();
 
     setLoading(true);
     try {
@@ -171,8 +183,10 @@ export default function ForgotPasswordScreen() {
             <FloatingInput
               label="Email Address"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={onFpEmailChange}
               keyboardType="email-address"
+              error={emailError}
+              colors={AUTH_DARK_COLORS}
             />
 
             <TouchableOpacity

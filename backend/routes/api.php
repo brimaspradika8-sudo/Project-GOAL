@@ -9,6 +9,7 @@ use App\Http\Controllers\Owner\OwnerRequestController;
 use App\Http\Controllers\Owner\AdminOwnerController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\UploadController;
+use App\Http\Controllers\NotificationController;
     Route::middleware('throttle:10,1')->group(function () {
     Route::post('/auth/register',    [AuthController::class, 'register']);
     Route::post('/auth/login',       [AuthController::class, 'login']);
@@ -33,6 +34,11 @@ use App\Http\Controllers\UploadController;
         Route::post('/me/onboarding',[OnboardingController::class, 'submit']);
         // Image upload
         Route::post('/upload/image', [UploadController::class, 'image']);
+        // Notifications
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+        Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
         // Owner upgrade request
         Route::post('/me/owner-request',[OwnerRequestController::class, 'store'])->middleware('throttle:5,1');
         Route::get('/me/owner-request', [OwnerRequestController::class, 'status']);

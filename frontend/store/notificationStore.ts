@@ -1,8 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-
-const NOTIFICATIONS_STORAGE_KEY = 'goal_notifications';
-const MAX_NOTIFICATIONS = 30;
+import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
+import { TOKEN_KEY } from '../lib/auth';
 
 export interface AppNotification {
   id: string;
@@ -10,55 +9,124 @@ export interface AppNotification {
   description: string;
   created_at: string;
   read: boolean;
+  type?: string;
+  data?: any;
+}
+
+interface ServerNotification {
+  id: number;
+  type: string;
+  title: string;
+  body: string | null;
+  data: any;
+  read: boolean;
+  created_at: string;
 }
 
 interface NotificationState {
   items: AppNotification[];
   hydrated: boolean;
-  hydrate: () => Promise<void>;
-  addNotification: (payload: { title: string; description: string }) => Promise<void>;
+  loading: boolean;
+  refresh: () => Promise<void>;
+  clear: () => void;
+  markAsRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
   unreadCount: () => number;
 }
 
-async function persistNotifications(items: AppNotification[]) {
-  await AsyncStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(items));
+function mapNotification(raw: ServerNotification): AppNotification {
+  return {
+    id: String(raw.id),
+    title: raw.title,
+    description: raw.body ?? '',
+    created_at: raw.created_at,
+    read: raw.read,
+    type: raw.type,
+    data: raw.data,
+  };
 }
+
+let inFlight = false;
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   items: [],
   hydrated: false,
+  loading: false,
 
-  hydrate: async () => {
-    if (get().hydrated) return;
+  clear: () => {
+    set({ items: [], hydrated: false, loading: false });
+  },
+
+  refresh: async () => {
+    if (inFlight) return;
+    inFlight = true;
+    set({ loading: true });
 
     try {
-      const raw = await AsyncStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      set({ items: Array.isArray(parsed) ? parsed : [], hydrated: true });
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      if (!token) {
+        set({ items: [], hydrated: true, loading: false });
+        return;
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
+
+      const res = await fetch(`${API_BASE_URL}/notifications?page=1`, {
+        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (res.ok) {
+        const data = await res.json();
+        const list = Array.isArray(data?.data) ? data.data.map(mapNotification) : [];
+        set({ items: list, hydrated: true, loading: false });
+      } else {
+        set({ items: [], hydrated: true, loading: false });
+      }
     } catch {
-      set({ items: [], hydrated: true });
+      set({ hydrated: true, loading: false });
+    } finally {
+      inFlight = false;
     }
   },
 
-  addNotification: async ({ title, description }) => {
-    const nextItem: AppNotification = {
-      id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      title,
-      description,
-      created_at: new Date().toISOString(),
-      read: false,
-    };
+  markAsRead: async (id: string) => {
+    const item = get().items.find((n) => n.id === id);
+    if (!item || item.read) return;
 
-    const next = [nextItem, ...get().items].slice(0, MAX_NOTIFICATIONS);
-    set({ items: next });
-    await persistNotifications(next);
+    set({
+      items: get().items.map((n) => (n.id === id ? { ...n, read: true } : n)),
+    });
+
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      if (!token) return;
+      await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
+        method: 'POST',
+        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      set({
+        items: get().items.map((n) => (n.id === id ? { ...n, read: false } : n)),
+      });
+    }
   },
 
   markAllRead: async () => {
-    const next = get().items.map((item) => ({ ...item, read: true }));
-    set({ items: next });
-    await persistNotifications(next);
+    set({ items: get().items.map((n) => ({ ...n, read: true })) });
+
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      if (!token) return;
+      await fetch(`${API_BASE_URL}/notifications/read-all`, {
+        method: 'POST',
+        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      await get().refresh();
+    }
   },
 
   unreadCount: () => get().items.filter((item) => !item.read).length,

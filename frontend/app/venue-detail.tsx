@@ -18,11 +18,13 @@ import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../components/goalTheme';
 import { SafeImage } from '../components/SafeImage';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
 import { useFavoriteStore } from '../store/favoriteStore';
-import { useNotificationStore } from '../store/notificationStore';
+
 import { useTheme } from '../lib/theme';
 import { useBreakpoint } from '../lib/responsive';
 import type { Field } from '../store/fieldStore';
 import { useToastStore } from '../store/toastStore';
+import { SPORT_LABELS } from '../lib/fieldValidation';
+import * as Linking from 'expo-linking';
 
 const SPORT_ICONS: Record<string, string> = {
   futsal: 'sports-soccer',
@@ -50,7 +52,6 @@ export default function VenueDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const { hydrate, isFavorite, toggleFavorite } = useFavoriteStore();
-  const { addNotification } = useNotificationStore();
 
   useEffect(() => {
     hydrate().catch(() => {});
@@ -147,7 +148,6 @@ export default function VenueDetailScreen() {
               description,
               durationMs: 2500,
             });
-            addNotification({ title, description }).catch(() => {});
           }}
         >
           <MaterialIcons name={liked ? 'favorite' : 'favorite-border'} size={22} color={liked ? '#F87171' : '#ffffff'} />
@@ -168,7 +168,7 @@ export default function VenueDetailScreen() {
       <View style={st.infoRow}>
         <View style={st.infoItem}>
           <MaterialIcons name="sports" size={18} color={colors.primary} />
-          <Text style={st.infoText}>{f.sport_type}</Text>
+          <Text style={st.infoText}>{SPORT_LABELS[f.sport_type] ?? f.sport_type}</Text>
         </View>
         <View style={st.infoDivider} />
         <View style={st.infoItem}>
@@ -212,9 +212,20 @@ export default function VenueDetailScreen() {
       <View style={st.section}>
         <Text style={st.sectionTitle}>Lokasi</Text>
         <View style={st.mapCard}>
-          <View style={st.mapIconRow}>
-            <View style={[st.mapIconCircle, { backgroundColor: colors.primaryContainer }]}>
-              <MaterialIcons name="map" size={24} color={colors.primary} />
+          <View style={[st.mapCanvas, { backgroundColor: colors.primaryContainer }]}>
+            <View style={st.mapDots}>
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                <View key={i} style={[st.mapDot, { backgroundColor: colors.primary + '20' }]} />
+              ))}
+            </View>
+            <View style={st.mapDecoPinTop}>
+              <MaterialIcons name="location-on" size={14} color={colors.error || '#EF4444'} />
+            </View>
+            <View style={st.mapDecoPinRight}>
+              <MaterialIcons name="location-on" size={10} color={colors.primary} />
+            </View>
+            <View style={st.mapCenterPin}>
+              <MaterialIcons name="location-on" size={40} color={colors.error || '#EF4444'} />
             </View>
           </View>
           <Text style={st.mapAddress}>{f.location}</Text>
@@ -222,13 +233,8 @@ export default function VenueDetailScreen() {
             style={[st.mapButton, { backgroundColor: colors.primary }]}
             activeOpacity={0.8}
             onPress={() => {
-              const query = encodeURIComponent(`${f.name} ${f.location}`);
-              const url = Platform.OS === 'web'
-                ? `https://www.google.com/maps/search/${query}`
-                : `https://www.google.com/maps/search/${query}`;
-              if (Platform.OS === 'web') {
-                window.open(url, '_blank');
-              }
+              const q = encodeURIComponent(`${f.name} ${f.location}`);
+              Linking.openURL(`https://www.google.com/maps/search/${q}`);
             }}
           >
             <MaterialIcons name="directions" size={18} color={colors.onPrimary} />
@@ -527,35 +533,67 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isDesktop: bo
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
     borderColor: colors.divider,
-    padding: 24,
-    alignItems: 'center',
-    gap: 12,
+    overflow: 'hidden',
     ...SHADOWS.sm,
   },
-  mapIconRow: {
-    flexDirection: 'row',
+  mapCanvas: {
+    height: 160,
+    position: 'relative',
+    overflow: 'hidden',
     justifyContent: 'center',
-  },
-  mapIconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
     alignItems: 'center',
-    justifyContent: 'center',
+  },
+  mapDots: {
+    position: 'absolute',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    top: 12,
+    left: 12,
+    right: 12,
+    bottom: 12,
+  },
+  mapDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    margin: 6,
+  },
+  mapDecoPinTop: {
+    position: 'absolute',
+    top: 16,
+    left: '30%',
+    opacity: 0.6,
+  },
+  mapDecoPinRight: {
+    position: 'absolute',
+    top: '45%',
+    right: '20%',
+    opacity: 0.4,
+  },
+  mapCenterPin: {
+    zIndex: 2,
   },
   mapAddress: {
     ...FONTS.bodyMd,
     color: colors.textSecondary,
     textAlign: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 4,
   },
   mapButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     borderRadius: SIZES.borderRadius,
     paddingHorizontal: 20,
     paddingVertical: 12,
-    marginTop: 4,
+    marginHorizontal: 20,
+    marginTop: 12,
+    marginBottom: 20,
   },
   mapButtonText: {
     ...FONTS.titleMd,

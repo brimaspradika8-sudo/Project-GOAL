@@ -8,14 +8,30 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
+import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
+
+function rpValidatePassword(v: string): string {
+  if (!v) return 'Password wajib diisi.';
+  if (v.length < 8) return 'Password minimal 8 karakter.';
+  if (!/[A-Z]/.test(v)) return 'Password harus mengandung huruf besar.';
+  if (!/[0-9]/.test(v)) return 'Password harus mengandung angka.';
+  return '';
+}
+function rpValidateConfirm(v: string, password: string): string {
+  if (!v) return 'Verifikasi password wajib diisi.';
+  if (v !== password) return 'Password dan Verifikasi Password tidak cocok!';
+  return '';
+}
 
 export default function ResetPasswordScreen() {
   const params = useLocalSearchParams<{ token?: string; email?: string }>();
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmError, setConfirmError] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
 
@@ -32,22 +48,21 @@ export default function ResetPasswordScreen() {
 
   const isValid = params.token && params.email;
 
+  function onRpPasswordChange(v: string) { setPassword(v); setPasswordError(rpValidatePassword(v)); if (confirmPassword) setConfirmError(rpValidateConfirm(confirmPassword, v)); }
+  function onRpConfirmChange(v: string) { setConfirmPassword(v); setConfirmError(rpValidateConfirm(v, password)); }
+
   async function handleResetPassword() {
+    const pErr = rpValidatePassword(password);
+    const cErr = rpValidateConfirm(confirmPassword, password);
+    setPasswordError(pErr);
+    setConfirmError(cErr);
+    if (pErr || cErr) {
+      showMessage('Periksa kembali isian Anda.', 'error');
+      return;
+    }
+
     setMessage(null);
     Keyboard.dismiss();
-
-    if (!password || !confirmPassword) {
-      showMessage('Semua kolom wajib diisi.', 'error'); return;
-    }
-    if (password !== confirmPassword) {
-      showMessage('Password dan Verifikasi Password tidak cocok!', 'error'); return;
-    }
-    if (password.length < 8) {
-      showMessage('Password minimal 8 karakter.', 'error'); return;
-    }
-    if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
-      showMessage('Password harus mengandung huruf besar dan angka.', 'error'); return;
-    }
 
     setLoading(true);
     try {
@@ -115,8 +130,8 @@ export default function ResetPasswordScreen() {
                 <Text style={styles.messageText}>{message.text}</Text>
               </Animated.View>
             )}
-            <FloatingInput label="Password Baru" value={password} onChangeText={setPassword} secureTextEntry={true} />
-            <FloatingInput label="Ulangi Password Baru" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={true} />
+            <FloatingInput label="Password Baru" value={password} onChangeText={onRpPasswordChange} secureTextEntry={true} error={passwordError} colors={AUTH_DARK_COLORS} />
+            <FloatingInput label="Ulangi Password Baru" value={confirmPassword} onChangeText={onRpConfirmChange} secureTextEntry={true} error={confirmError} colors={AUTH_DARK_COLORS} />
             <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleResetPassword} disabled={loading} activeOpacity={0.8}>
               {loading ? <ActivityIndicator color="#0e2a14" /> : (
                 <View style={styles.buttonContent}>

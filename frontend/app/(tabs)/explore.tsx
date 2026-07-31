@@ -12,38 +12,38 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { SIZES, SHADOWS, FONTS } from '../../components/goalTheme';
-import { FadeInView } from '../../components/FadeInView';
 import { useTheme } from '../../lib/theme';
+import { FadeInView } from '../../components/FadeInView';
 
 const CATEGORIES = [
-  { key: 'futsal', label: 'Futsal', icon: 'sports-soccer' as const },
-  { key: 'basket', label: 'Basket', icon: 'sports-basketball' as const },
-  { key: 'badminton', label: 'Badminton', icon: 'sports-tennis' as const },
-  { key: 'volley', label: 'Voli', icon: 'sports-volleyball' as const },
-  { key: 'tennis', label: 'Tenis', icon: 'sports-tennis' as const },
-  { key: 'minisoccer', label: 'Mini Soccer', icon: 'sports-soccer' as const },
-  { key: 'padel', label: 'Padel', icon: 'sports-tennis' as const },
+  { key: 'futsal', label: 'Futsal', icon: 'sports-soccer' as const, color: '#1E8A4C' },
+  { key: 'basketball', label: 'Basket', icon: 'sports-basketball' as const, color: '#f59e0b' },
+  { key: 'badminton', label: 'Badminton', icon: 'sports-tennis' as const, color: '#3b82f6' },
+  { key: 'volleyball', label: 'Voli', icon: 'sports-volleyball' as const, color: '#8b5cf6' },
+  { key: 'tennis', label: 'Tenis', icon: 'sports-tennis' as const, color: '#06b6d4' },
+  { key: 'mini_soccer', label: 'Mini Soccer', icon: 'sports-soccer' as const, color: '#10b981' },
+  { key: 'padel', label: 'Padel', icon: 'sports-tennis' as const, color: '#8b5cf6' },
 ];
 
 export default function ExploreScreen() {
   const [search, setSearch] = useState('');
   const { colors, resolved } = useTheme();
-  const styles = makeStyles(colors);
+  const st = makeStyles(colors);
 
   return (
-    <View style={styles.container}>
+    <View style={st.container}>
       <StatusBar barStyle={resolved === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={st.scrollContent} showsVerticalScrollIndicator={false}>
         <FadeInView>
-          <Text style={styles.title}>Jelajahi</Text>
-          <Text style={styles.subtitle}>Temukan lapangan, pertandingan, dan teman olahraga.</Text>
+          <Text style={st.title}>Jelajahi</Text>
+          <Text style={st.subtitle}>Temukan lapangan, pertandingan, dan teman olahraga.</Text>
         </FadeInView>
 
         <FadeInView delay={80}>
-          <View style={styles.searchCard}>
+          <View style={st.searchCard}>
             <MaterialIcons name="search" size={20} color={colors.textTertiary} />
             <TextInput
-              style={styles.searchInput}
+              style={st.searchInput}
               placeholder="Cari lapangan atau olahraga"
               placeholderTextColor={colors.textTertiary}
               value={search}
@@ -58,23 +58,23 @@ export default function ExploreScreen() {
         </FadeInView>
 
         <FadeInView delay={160}>
-          <Text style={styles.sectionTitle}>KATEGORI</Text>
-          <View style={styles.categoryGrid}>
+          <Text style={st.sectionTitle}>KATEGORI</Text>
+          <View style={st.categoryGrid}>
             {CATEGORIES.map((category) => {
               const filtered = search && !category.label.toLowerCase().includes(search.toLowerCase());
               if (filtered) return null;
               return (
                 <TouchableOpacity
                   key={category.key}
-                  style={styles.categoryCard}
+                  style={st.categoryCard}
                   activeOpacity={0.85}
                   onPress={() => router.push('/(tabs)/fields')}
                 >
-                  <View style={styles.categoryIcon}>
-                    <MaterialIcons name={category.icon} size={24} color={colors.primary} />
+                  <View style={[st.categoryIcon, { backgroundColor: category.color + '18' }]}>
+                    <MaterialIcons name={category.icon} size={24} color={category.color} />
                   </View>
-                  <Text style={styles.categoryLabel}>{category.label}</Text>
-                  <MaterialIcons name="arrow-forward" size={16} color={COLORS.textTertiary} />
+                  <Text style={st.categoryLabel}>{category.label}</Text>
+                  <MaterialIcons name="arrow-forward" size={16} color={colors.textTertiary} />
                 </TouchableOpacity>
               );
             })}
@@ -82,27 +82,27 @@ export default function ExploreScreen() {
         </FadeInView>
 
         <FadeInView delay={240}>
-          <Text style={styles.sectionTitle}>REKOMENDASI</Text>
-          <TouchableOpacity style={styles.infoCard} activeOpacity={0.85} onPress={() => router.push('/(tabs)/fields')}>
-            <View style={styles.infoIcon}>
+          <Text style={st.sectionTitle}>REKOMENDASI</Text>
+          <TouchableOpacity style={st.infoCard} activeOpacity={0.85} onPress={() => router.push('/(tabs)/fields')}>
+            <View style={st.infoIcon}>
               <MaterialIcons name="place" size={22} color={colors.primary} />
             </View>
-            <View style={styles.infoTextBlock}>
-              <Text style={styles.infoTitle}>Lapangan Terdekat</Text>
-              <Text style={styles.infoDesc}>Temukan lapangan favorit di sekitarmu.</Text>
+            <View style={st.infoTextBlock}>
+              <Text style={st.infoTitle}>Lapangan Terdekat</Text>
+              <Text style={st.infoDesc}>Temukan lapangan favorit di sekitarmu.</Text>
             </View>
             <MaterialIcons name="chevron-right" size={20} color={colors.textTertiary} />
           </TouchableOpacity>
         </FadeInView>
 
         <FadeInView delay={320}>
-          <Text style={styles.sectionTitle}>POPULER MINGGU INI</Text>
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyIconWrap}>
+          <Text style={st.sectionTitle}>POPULER MINGGU INI</Text>
+          <View style={st.emptyCard}>
+            <View style={st.emptyIconWrap}>
               <MaterialIcons name="trending-up" size={32} color={colors.textTertiary} />
             </View>
-            <Text style={styles.emptyTitle}>Belum ada data populer</Text>
-            <Text style={styles.emptyDesc}>Data pertandingan populer akan muncul di sini.</Text>
+            <Text style={st.emptyTitle}>Belum ada data populer</Text>
+            <Text style={st.emptyDesc}>Data pertandingan populer akan muncul di sini.</Text>
           </View>
         </FadeInView>
       </ScrollView>
@@ -110,7 +110,7 @@ export default function ExploreScreen() {
   );
 }
 
-const makeStyles = (colors: any) => StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -137,10 +137,10 @@ const makeStyles = (colors: any) => StyleSheet.create({
   searchCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.bgElevated,
+    backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: colors.divider,
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 24,
@@ -151,7 +151,6 @@ const makeStyles = (colors: any) => StyleSheet.create({
     flex: 1,
     ...FONTS.bodyMd,
     color: colors.text,
-    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}),
   },
   sectionTitle: {
     fontSize: 11,
@@ -168,11 +167,11 @@ const makeStyles = (colors: any) => StyleSheet.create({
   categoryCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadiusLg,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: colors.divider,
     gap: 14,
     ...SHADOWS.sm,
   },
@@ -182,7 +181,6 @@ const makeStyles = (colors: any) => StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.primaryMuted,
   },
   categoryLabel: {
     flex: 1,
@@ -192,11 +190,11 @@ const makeStyles = (colors: any) => StyleSheet.create({
   infoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadiusLg,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: colors.divider,
     gap: 14,
     marginBottom: 24,
     ...SHADOWS.sm,
@@ -205,7 +203,7 @@ const makeStyles = (colors: any) => StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: colors.primaryMuted,
+    backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -223,10 +221,10 @@ const makeStyles = (colors: any) => StyleSheet.create({
     lineHeight: 18,
   },
   emptyCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: colors.divider,
     padding: 28,
     alignItems: 'center',
     ...SHADOWS.sm,
@@ -235,7 +233,7 @@ const makeStyles = (colors: any) => StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: colors.bgElevated,
+    backgroundColor: colors.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,

@@ -40,6 +40,10 @@ export interface ThemeColors {
   onPrimaryContainer: string;
   success: string;
   successLight: string;
+  info: string;
+  infoLight: string;
+  onInfo: string;
+  onWarning: string;
   text: string;
   textSecondary: string;
   textTertiary: string;
@@ -93,6 +97,10 @@ const LIGHT_COLORS: ThemeColors = {
   onPrimaryContainer: '#0F3D22',
   success: '#1E8A4C',
   successLight: '#E6F4E8',
+  info: '#2563EB',
+  infoLight: '#DBEAFE',
+  onInfo: '#1E3A8A',
+  onWarning: '#92400E',
   text: '#16201A',
   textSecondary: '#5B6960',
   textTertiary: '#889189',
@@ -117,7 +125,7 @@ const LIGHT_COLORS: ThemeColors = {
 const DARK_COLORS: ThemeColors = {
   bgBase: '#0C1219',
   bgSurface: '#161E28',
-  bgElevated: '#1E2A36',
+  bgElevated: '#1C1C1C',
   borderSubtle: '#263040',
   textPrimary: '#F0F4F2',
   textMuted: '#5C6B62',
@@ -132,7 +140,7 @@ const DARK_COLORS: ThemeColors = {
   surface: '#161E28',
   surfaceWhite: '#1E2A36',
   surfaceContainer: '#131B24',
-  surfaceContainerLow: '#101820',
+  surfaceContainerLow: '#141414',
   surfaceContainerLowest: '#0A1018',
   surfaceContainerHigh: '#1E2A36',
   surfaceContainerHighest: '#263444',
@@ -146,6 +154,10 @@ const DARK_COLORS: ThemeColors = {
   onPrimaryContainer: '#A8F5C8',
   success: '#34D07B',
   successLight: '#162E24',
+  info: '#60A5FA',
+  infoLight: '#1E3A8A',
+  onInfo: '#DBEAFE',
+  onWarning: '#FDE68A',
   text: '#F0F4F2',
   textSecondary: '#8B9A91',
   textTertiary: '#5C6B62',
@@ -168,6 +180,9 @@ const DARK_COLORS: ThemeColors = {
 };
 
 function getAutoMode(systemScheme: string | null | undefined): ResolvedMode {
+  if (systemScheme === 'dark' || systemScheme === 'light') {
+    return systemScheme;
+  }
   const hour = new Date().getHours();
   if (hour >= 6 && hour < 18) return 'light';
   return 'dark';
@@ -239,8 +254,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 
   if (!loaded) {
+    const initialResolved = systemScheme === 'dark' ? 'dark' : (systemScheme === 'light' ? 'light' : getAutoMode(systemScheme));
+    const initialColors = initialResolved === 'dark' ? DARK_COLORS : LIGHT_COLORS;
     return (
-      <ThemeContext.Provider value={{ mode: 'auto', resolved: 'light', colors: LIGHT_COLORS, setMode: () => {}, toggleTheme: () => {} }}>
+      <ThemeContext.Provider value={{ mode: 'auto', resolved: initialResolved, colors: initialColors, setMode: () => {}, toggleTheme: () => {} }}>
         {children}
       </ThemeContext.Provider>
     );
@@ -252,5 +269,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     </ThemeContext.Provider>
   );
 }
+
+export const AUTH_DARK_COLORS: ThemeColors = {
+  ...DARK_COLORS,
+  borderSubtle: DARK_COLORS.surfaceStrong,
+  textTertiary: DARK_COLORS.textSecondary,
+};
 
 export { LIGHT_COLORS, DARK_COLORS };

@@ -16,8 +16,8 @@ export const SPORT_LABELS: Record<string, string> = Object.fromEntries(
   Object.entries(SPORT_MAP).map(([label, key]) => [key, label]),
 );
 
-const ALLOWED_IMAGE_MIMES = ['image/jpeg'];
-const ALLOWED_IMAGE_EXTS = ['jpg', 'jpeg'];
+const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp'];
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
 
 export type FieldFormErrors = {
@@ -71,19 +71,20 @@ export function validateFieldImage(uri: string, existingUrl: string, mimeType?: 
   if (!source) return 'Foto venue wajib diunggah';
   if (mimeType) {
     if (!ALLOWED_IMAGE_MIMES.includes(mimeType.toLowerCase())) {
-      return 'Format gambar harus JPG/JPEG';
+      return 'Format gambar harus JPG, PNG, atau WEBP';
     }
     return '';
   }
   const ext = source.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
   if (!ALLOWED_IMAGE_EXTS.includes(ext)) {
-    return 'Format gambar harus JPG/JPEG';
+    return 'Format gambar harus JPG, PNG, atau WEBP';
   }
   return '';
 }
 
 export function mimeFromExt(ext: string): string {
-  return 'image/jpeg';
+  const map: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+  return map[ext.toLowerCase()] || 'image/jpeg';
 }
 
 export function validateFieldImageSize(fileSize: number): string {

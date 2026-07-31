@@ -24,7 +24,10 @@ import { SIZES, FONTS, SHADOWS } from '../../components/goalTheme';
 import AuthInput from '../../components/AuthInput';
 import { useTheme } from '../../lib/theme';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
+import AlertBox from '../../components/shared/AlertBox';
+import NotificationCenter from '../../components/shared/NotificationCenter';
 import { useToastStore } from '../../store/toastStore';
+import { useNotificationStore } from '../../store/notificationStore';
 
 const SPORT_ICONS: Record<string, string> = {
   futsal: 'sports-soccer',
@@ -50,9 +53,28 @@ export default function ProfileScreen() {
   const [ownerRequestData, setOwnerRequestData] = useState<any>(null);
   const [showOwnerModal, setShowOwnerModal] = useState(false);
   const [ownerForm, setOwnerForm] = useState({ name: '', email: '', business_name: '', address: '', phone: '' });
+  const [ownerErrors, setOwnerErrors] = useState({ name: '', email: '', business_name: '', address: '', phone: '' });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const { refresh: refreshNotifications, clear: clearNotifications, unreadCount } = useNotificationStore();
+
+  useEffect(() => {
+    refreshNotifications().catch(() => {});
+  }, [refreshNotifications]);
+
+  const ownValidateName = (v: string) => { if (!v.trim()) return 'Nama wajib diisi.'; if (v.trim().length > 255) return 'Nama maksimal 255 karakter.'; return ''; };
+  const ownValidateEmail = (v: string) => { if (!v.trim()) return 'Email wajib diisi.'; if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) return 'Format email tidak valid.'; return ''; };
+  const ownValidateBiz = (v: string) => { if (!v.trim()) return 'Nama usaha wajib diisi.'; if (v.trim().length > 255) return 'Nama usaha maksimal 255 karakter.'; return ''; };
+  const ownValidateAddr = (v: string) => { if (!v.trim()) return 'Alamat wajib diisi.'; if (v.trim().length > 500) return 'Alamat maksimal 500 karakter.'; return ''; };
+  const ownValidatePhone = (v: string) => { if (!v.trim()) return 'Nomor telepon wajib diisi.'; const d = v.replace(/[^0-9]/g, ''); if (d.length < 8 || d.length > 15) return 'Nomor telepon harus 8-15 digit.'; return ''; };
+
+  const setOwnErr = (key: keyof typeof ownerErrors) => (err: string) => setOwnerErrors(p => ({ ...p, [key]: err }));
+  const onOwnField = (key: keyof typeof ownerErrors, validate: (v: string) => string) => (v: string) => {
+    setOwnerForm(p => ({ ...p, [key]: v }));
+    setOwnErr(key)(validate(v));
+  };
 
   const fetchOwnerStatus = useCallback(async () => {
     try {
@@ -84,9 +106,9 @@ export default function ProfileScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchProfile(), fetchOwnerStatus()]);
+    await Promise.all([fetchProfile(), fetchOwnerStatus(), refreshNotifications()]);
     setRefreshing(false);
-  }, [fetchProfile, fetchOwnerStatus]);
+  }, [fetchProfile, fetchOwnerStatus, refreshNotifications]);
 
   useEffect(() => {
     if (profile) {
@@ -99,38 +121,22 @@ export default function ProfileScreen() {
   }, [profile]);
 
   async function handleSubmitOwner() {
+    const nErr = ownValidateName(ownerForm.name);
+    const eErr = ownValidateEmail(ownerForm.email);
+    const bErr = ownValidateBiz(ownerForm.business_name);
+    const aErr = ownValidateAddr(ownerForm.address);
+    const pErr = ownValidatePhone(ownerForm.phone);
+    setOwnerErrors({ name: nErr, email: eErr, business_name: bErr, address: aErr, phone: pErr });
+    if (nErr || eErr || bErr || aErr || pErr) {
+      setSubmitError('Periksa kembali isian Anda.');
+      return;
+    }
+
     const trimmedName = ownerForm.name.trim();
     const trimmedEmail = ownerForm.email.trim();
     const trimmedBusiness = ownerForm.business_name.trim();
     const trimmedAddress = ownerForm.address.trim();
     const trimmedPhone = ownerForm.phone.trim();
-
-    if (!trimmedName || !trimmedEmail || !trimmedBusiness || !trimmedAddress || !trimmedPhone) {
-      setSubmitError('Semua kolom wajib diisi.');
-      return;
-    }
-    if (trimmedName.length > 255) {
-      setSubmitError('Nama maksimal 255 karakter.');
-      return;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      setSubmitError('Format email tidak valid.');
-      return;
-    }
-    if (trimmedBusiness.length > 255) {
-      setSubmitError('Nama usaha maksimal 255 karakter.');
-      return;
-    }
-    if (trimmedAddress.length > 500) {
-      setSubmitError('Alamat maksimal 500 karakter.');
-      return;
-    }
-    if (!/^[0-9]{8,15}$/.test(trimmedPhone.replace(/[^0-9]/g, ''))) {
-      setSubmitError('Nomor telepon harus 8-15 digit angka.');
-      return;
-    }
-
     setOwnerForm({ name: trimmedName, email: trimmedEmail, business_name: trimmedBusiness, address: trimmedAddress, phone: trimmedPhone });
 
     setSubmitting(true);
@@ -181,6 +187,7 @@ export default function ProfileScreen() {
       }
       await AsyncStorage.removeItem(TOKEN_KEY);
       await clearProfile();
+      clearNotifications();
       router.replace('/login');
     } catch {
       useToastStore.getState().show({ type: 'error', title: 'Gagal', description: 'Terjadi kesalahan saat keluar akun.' });
@@ -416,12 +423,17 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   style={styles.settingRow}
                   activeOpacity={0.8}
-                  onPress={() => useToastStore.getState().show({ type: 'info', title: 'Segera Hadir', description: 'Fitur notifikasi akan segera tersedia.' })}
+                  onPress={() => setShowNotifications(true)}
                 >
                   <View style={styles.settingIconBox}>
                     <MaterialIcons name="notifications-none" size={20} color={colors.primary} />
                   </View>
                   <Text style={styles.settingLabel}>Notifikasi</Text>
+                  {unreadCount() > 0 ? (
+                    <View style={styles.notifBadgeCount}>
+                      <Text style={styles.notifBadgeText}>{unreadCount() > 99 ? '99+' : unreadCount()}</Text>
+                    </View>
+                  ) : null}
                   <MaterialIcons name="chevron-right" size={20} color={colors.outline} />
                 </TouchableOpacity>
                 <View style={styles.divider} />
@@ -473,51 +485,53 @@ export default function ProfileScreen() {
             </View>
 
             {submitError ? (
-              <View style={styles.errorBox}>
-                <MaterialIcons name="error-outline" size={16} color={colors.error} />
-                <Text style={styles.errorText}>{submitError}</Text>
-              </View>
+              <AlertBox type="error" title={submitError} style={styles.alertBox} />
             ) : null}
 
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              <AuthInput
-                label="Nama Lengkap"
-                icon="person-outline"
-                value={ownerForm.name}
-                onChangeText={(value) => setOwnerForm((prev) => ({ ...prev, name: value }))}
-                containerStyle={styles.inputContainer}
-              />
-              <AuthInput
-                label="Email"
-                icon="mail-outline"
-                value={ownerForm.email}
-                onChangeText={(value) => setOwnerForm((prev) => ({ ...prev, email: value }))}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                containerStyle={styles.inputContainer}
-              />
-              <AuthInput
-                label="Nama Usaha"
-                icon="store"
-                value={ownerForm.business_name}
-                onChangeText={(value) => setOwnerForm((prev) => ({ ...prev, business_name: value }))}
-                containerStyle={styles.inputContainer}
-              />
-              <AuthInput
-                label="Alamat"
-                icon="location-on"
-                value={ownerForm.address}
-                onChangeText={(value) => setOwnerForm((prev) => ({ ...prev, address: value }))}
-                containerStyle={styles.inputContainer}
-              />
-              <AuthInput
-                label="Nomor Telepon"
-                icon="phone"
-                value={ownerForm.phone}
-                onChangeText={(value) => setOwnerForm((prev) => ({ ...prev, phone: value }))}
-                keyboardType="phone-pad"
-                containerStyle={styles.inputContainer}
-              />
+        <AuthInput
+          label="Nama Lengkap"
+          icon="person-outline"
+          value={ownerForm.name}
+          onChangeText={onOwnField('name', ownValidateName)}
+          containerStyle={styles.inputContainer}
+          error={ownerErrors.name}
+        />
+        <AuthInput
+          label="Email"
+          icon="mail-outline"
+          value={ownerForm.email}
+          onChangeText={onOwnField('email', ownValidateEmail)}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          containerStyle={styles.inputContainer}
+          error={ownerErrors.email}
+        />
+        <AuthInput
+          label="Nama Usaha"
+          icon="store"
+          value={ownerForm.business_name}
+          onChangeText={onOwnField('business_name', ownValidateBiz)}
+          containerStyle={styles.inputContainer}
+          error={ownerErrors.business_name}
+        />
+        <AuthInput
+          label="Alamat"
+          icon="location-on"
+          value={ownerForm.address}
+          onChangeText={onOwnField('address', ownValidateAddr)}
+          containerStyle={styles.inputContainer}
+          error={ownerErrors.address}
+        />
+        <AuthInput
+          label="Nomor Telepon"
+          icon="phone"
+          value={ownerForm.phone}
+          onChangeText={onOwnField('phone', ownValidatePhone)}
+          keyboardType="phone-pad"
+          containerStyle={styles.inputContainer}
+          error={ownerErrors.phone}
+        />
             </ScrollView>
 
             <View style={styles.modalActions}>
@@ -547,6 +561,8 @@ export default function ProfileScreen() {
         onConfirm={doActualLogout}
         onCancel={() => setShowLogoutConfirm(false)}
       />
+
+      <NotificationCenter visible={showNotifications} onClose={() => setShowNotifications(false)} />
     </View>
   );
 }
@@ -752,6 +768,21 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  notifBadgeCount: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  notifBadgeText: {
+    ...FONTS.labelMd,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.onPrimary,
+  },
   settingLabel: {
     flex: 1,
     ...FONTS.bodyMd,
@@ -823,21 +854,8 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   inputContainer: {
     marginBottom: 16,
   },
-  errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: colors.errorLight,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.destructive + '40',
-    padding: 14,
+  alertBox: {
     marginBottom: 14,
-  },
-  errorText: {
-    color: colors.error,
-    ...FONTS.bodySm,
-    flex: 1,
   },
   modalActions: {
     flexDirection: 'row',
