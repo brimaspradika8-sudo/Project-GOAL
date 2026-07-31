@@ -8,8 +8,33 @@ import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
+import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
+
+function regValidateName(v: string): string {
+  if (!v.trim()) return 'Nama wajib diisi.';
+  if (v.trim().length > 255) return 'Nama maksimal 255 karakter.';
+  return '';
+}
+function regValidateEmail(v: string): string {
+  if (!v.trim()) return 'Email wajib diisi.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) return 'Format email tidak valid.';
+  return '';
+}
+function regValidatePassword(v: string): string {
+  if (!v) return 'Password wajib diisi.';
+  if (v.length < 8) return 'Password minimal 8 karakter.';
+  if (!/[a-z]/.test(v)) return 'Password harus mengandung huruf kecil.';
+  if (!/[A-Z]/.test(v)) return 'Password harus mengandung huruf besar.';
+  if (!/[0-9]/.test(v)) return 'Password harus mengandung angka.';
+  return '';
+}
+function regValidateConfirm(v: string, password: string): string {
+  if (!v) return 'Verifikasi password wajib diisi.';
+  if (v !== password) return 'Password dan Verifikasi Password tidak cocok!';
+  return '';
+}
 
 export default function RegisterScreen() {
   const { width } = useWindowDimensions();
@@ -17,6 +42,10 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [nameErr, setNameErr] = useState('');
+  const [emailErr, setEmailErr] = useState('');
+  const [passwordErr, setPasswordErr] = useState('');
+  const [confirmErr, setConfirmErr] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
 
@@ -34,50 +63,24 @@ export default function RegisterScreen() {
     }).start();
   };
 
+  function onRegNameChange(v: string) { setName(v); setNameErr(regValidateName(v)); }
+  function onRegEmailChange(v: string) { setEmail(v); setEmailErr(regValidateEmail(v)); }
+  function onRegPasswordChange(v: string) { setPassword(v); setPasswordErr(regValidatePassword(v)); if (confirmPassword) setConfirmErr(regValidateConfirm(confirmPassword, v)); }
+  function onRegConfirmChange(v: string) { setConfirmPassword(v); setConfirmErr(regValidateConfirm(v, password)); }
+
   async function signUpWithEmail() {
+    const nErr = regValidateName(name);
+    const eErr = regValidateEmail(email);
+    const pErr = regValidatePassword(password);
+    const cErr = regValidateConfirm(confirmPassword, password);
+    setNameErr(nErr); setEmailErr(eErr); setPasswordErr(pErr); setConfirmErr(cErr);
+    if (nErr || eErr || pErr || cErr) {
+      showMessage('Periksa kembali isian Anda.', 'error');
+      return;
+    }
+
     setMessage(null);
     Keyboard.dismiss();
-
-    if (!name.trim() || !email.trim() || !password || !confirmPassword) {
-      showMessage('Semua kolom wajib diisi.', 'error');
-      return;
-    }
-
-    if (name.trim().length > 255) {
-      showMessage('Nama maksimal 255 karakter.', 'error');
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      showMessage('Format email tidak valid.', 'error');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      showMessage('Password dan Verifikasi Password tidak cocok!', 'error');
-      return;
-    }
-
-    if (password.length < 8) {
-      showMessage('Password minimal 8 karakter.', 'error');
-      return;
-    }
-
-    if (!/[a-z]/.test(password)) {
-      showMessage('Password harus mengandung huruf kecil.', 'error');
-      return;
-    }
-
-    if (!/[A-Z]/.test(password)) {
-      showMessage('Password harus mengandung huruf besar.', 'error');
-      return;
-    }
-
-    if (!/[0-9]/.test(password)) {
-      showMessage('Password harus mengandung angka.', 'error');
-      return;
-    }
 
     setLoading(true);
     try {
@@ -142,29 +145,37 @@ export default function RegisterScreen() {
             <FloatingInput
               label="Nama Lengkap"
               value={name}
-              onChangeText={setName}
+              onChangeText={onRegNameChange}
               autoCapitalize="words"
+              error={nameErr}
+              colors={AUTH_DARK_COLORS}
             />
 
             <FloatingInput
               label="Email Address"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={onRegEmailChange}
               keyboardType="email-address"
+              error={emailErr}
+              colors={AUTH_DARK_COLORS}
             />
 
             <FloatingInput
               label="Password"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={onRegPasswordChange}
               secureTextEntry={true}
+              error={passwordErr}
+              colors={AUTH_DARK_COLORS}
             />
 
             <FloatingInput
               label="Verifikasi Password"
               value={confirmPassword}
-              onChangeText={setConfirmPassword}
+              onChangeText={onRegConfirmChange}
               secureTextEntry={true}
+              error={confirmErr}
+              colors={AUTH_DARK_COLORS}
             />
 
             <TouchableOpacity

@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { COLORS, FONTS, SHADOWS, SIZES } from './goalTheme';
+import { FONTS, SHADOWS, SIZES } from './goalTheme';
+import { useTheme, ThemeColors } from '../lib/theme';
 
 interface Props {
   children: React.ReactNode;
@@ -12,8 +13,8 @@ interface State {
   error: Error | null;
 }
 
-export class ErrorBoundary extends React.Component<Props, State> {
-  constructor(props: Props) {
+class ErrorBoundaryClass extends React.Component<Props & { colors: ThemeColors }, State> {
+  constructor(props: Props & { colors: ThemeColors }) {
     super(props);
     this.state = { hasError: false, error: null };
   }
@@ -27,24 +28,25 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   render() {
+    const { colors } = this.props;
     if (this.state.hasError) {
       return (
-        <View style={styles.container}>
-          <View style={styles.iconWrap}>
-            <MaterialIcons name="error-outline" size={48} color={COLORS.error} />
+        <View style={[st.container, { backgroundColor: colors.background }]}>
+          <View style={st.iconWrap}>
+            <MaterialIcons name="error-outline" size={48} color={colors.error} />
           </View>
-          <Text style={styles.title}>Terjadi Kesalahan</Text>
-          <Text style={styles.desc}>Aplikasi mengalami error yang tidak terduga.</Text>
-          <Text style={styles.errorText} numberOfLines={4}>
+          <Text style={[st.title, { color: colors.text }]}>Terjadi Kesalahan</Text>
+          <Text style={[st.desc, { color: colors.textSecondary }]}>Aplikasi mengalami error yang tidak terduga.</Text>
+          <Text style={[st.errorText, { color: colors.error, backgroundColor: '#fef2f2' }]} numberOfLines={4}>
             {this.state.error?.message || 'Unknown error'}
           </Text>
           <TouchableOpacity
-            style={styles.btn}
+            style={[st.btn, { backgroundColor: colors.primary }]}
             activeOpacity={0.85}
             onPress={() => this.setState({ hasError: false, error: null })}
           >
             <MaterialIcons name="refresh" size={20} color="#ffffff" />
-            <Text style={styles.btnText}>Coba Lagi</Text>
+            <Text style={st.btnText}>Coba Lagi</Text>
           </TouchableOpacity>
         </View>
       );
@@ -54,10 +56,14 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 }
 
-const styles = StyleSheet.create({
+export function ErrorBoundary({ children }: Props) {
+  const { colors } = useTheme();
+  return <ErrorBoundaryClass colors={colors}>{children}</ErrorBoundaryClass>;
+}
+
+const st = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
@@ -74,19 +80,15 @@ const styles = StyleSheet.create({
   },
   title: {
     ...FONTS.headlineLg,
-    color: COLORS.text,
     textAlign: 'center',
   },
   desc: {
     ...FONTS.bodyMd,
-    color: COLORS.textSecondary,
     textAlign: 'center',
   },
   errorText: {
     fontFamily: 'monospace',
     fontSize: 12,
-    color: COLORS.error,
-    backgroundColor: '#fef2f2',
     padding: 12,
     borderRadius: 10,
     textAlign: 'center',
@@ -96,7 +98,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: COLORS.primary,
     borderRadius: SIZES.borderRadius,
     paddingHorizontal: 24,
     paddingVertical: 14,

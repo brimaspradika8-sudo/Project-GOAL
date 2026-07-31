@@ -9,14 +9,36 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import FloatingInput from '../components/FloatingInput';
+import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
 import { TOKEN_KEY } from '../lib/auth';
+
+function cpValidateCurrent(v: string): string {
+  if (!v) return 'Password saat ini wajib diisi.';
+  return '';
+}
+function cpValidatePassword(v: string): string {
+  if (!v) return 'Password baru wajib diisi.';
+  if (v.length < 8) return 'Password minimal 8 karakter.';
+  if (!/[a-z]/.test(v)) return 'Password harus mengandung huruf kecil.';
+  if (!/[A-Z]/.test(v)) return 'Password harus mengandung huruf besar.';
+  if (!/[0-9]/.test(v)) return 'Password harus mengandung angka.';
+  return '';
+}
+function cpValidateConfirm(v: string, password: string): string {
+  if (!v) return 'Verifikasi password wajib diisi.';
+  if (v !== password) return 'Password baru tidak cocok!';
+  return '';
+}
 
 export default function ChangePasswordScreen() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [currentError, setCurrentError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmError, setConfirmError] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
   const { fadeAnim, slideAnim, pulseAnim, bgScaleAnim } = useAuthAnimations();
@@ -29,31 +51,26 @@ export default function ChangePasswordScreen() {
     }).start();
   };
 
-  async function handleChangePassword() {
-    setMessage(null);
-    Keyboard.dismiss();
+  function onCpCurrentChange(v: string) { setCurrentPassword(v); setCurrentError(cpValidateCurrent(v)); }
+  function onCpPasswordChange(v: string) { setPassword(v); setPasswordError(cpValidatePassword(v)); if (confirmPassword) setConfirmError(cpValidateConfirm(confirmPassword, v)); }
+  function onCpConfirmChange(v: string) { setConfirmPassword(v); setConfirmError(cpValidateConfirm(v, password)); }
 
-    if (!currentPassword || !password || !confirmPassword) {
-      showMessage('Semua kolom wajib diisi.', 'error'); return;
-    }
-    if (password !== confirmPassword) {
-      showMessage('Password baru tidak cocok!', 'error'); return;
-    }
-    if (password.length < 8) {
-      showMessage('Password minimal 8 karakter.', 'error'); return;
-    }
-    if (!/[a-z]/.test(password)) {
-      showMessage('Password harus mengandung huruf kecil.', 'error'); return;
-    }
-    if (!/[A-Z]/.test(password)) {
-      showMessage('Password harus mengandung huruf besar.', 'error'); return;
-    }
-    if (!/[0-9]/.test(password)) {
-      showMessage('Password harus mengandung angka.', 'error'); return;
+  async function handleChangePassword() {
+    const cErr = cpValidateCurrent(currentPassword);
+    const pErr = cpValidatePassword(password);
+    const cfErr = cpValidateConfirm(confirmPassword, password);
+    setCurrentError(cErr); setPasswordError(pErr); setConfirmError(cfErr);
+    if (cErr || pErr || cfErr) {
+      showMessage('Periksa kembali isian Anda.', 'error');
+      return;
     }
     if (password === currentPassword) {
-      showMessage('Password baru harus berbeda dari password saat ini.', 'error'); return;
+      showMessage('Password baru harus berbeda dari password saat ini.', 'error');
+      return;
     }
+
+    setMessage(null);
+    Keyboard.dismiss();
 
     setLoading(true);
     try {
@@ -102,9 +119,9 @@ export default function ChangePasswordScreen() {
                 <Text style={styles.messageText}>{message.text}</Text>
               </Animated.View>
             )}
-            <FloatingInput label="Password Saat Ini" value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry={true} />
-            <FloatingInput label="Password Baru" value={password} onChangeText={setPassword} secureTextEntry={true} />
-            <FloatingInput label="Ulangi Password Baru" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={true} />
+            <FloatingInput label="Password Saat Ini" value={currentPassword} onChangeText={onCpCurrentChange} secureTextEntry={true} error={currentError} colors={AUTH_DARK_COLORS} />
+            <FloatingInput label="Password Baru" value={password} onChangeText={onCpPasswordChange} secureTextEntry={true} error={passwordError} colors={AUTH_DARK_COLORS} />
+            <FloatingInput label="Ulangi Password Baru" value={confirmPassword} onChangeText={onCpConfirmChange} secureTextEntry={true} error={confirmError} colors={AUTH_DARK_COLORS} />
             <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleChangePassword} disabled={loading} activeOpacity={0.8}>
               {loading ? <ActivityIndicator color="#0e2a14" /> : (
                 <View style={styles.buttonContent}>

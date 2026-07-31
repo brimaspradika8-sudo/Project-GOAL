@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Notification;
 use App\Models\OwnerRequest;
 use App\Models\Profile;
 use App\Models\User;
@@ -10,6 +11,9 @@ use Illuminate\Support\Facades\DB;
 
 class OwnerRequestService
 {
+    public function __construct(
+        private NotificationService $notifications
+    ) {}
     public function getPendingRequest(User $user): ?OwnerRequest
     {
         return OwnerRequest::where('user_id', $user->id)
@@ -87,6 +91,8 @@ class OwnerRequestService
                         'onboarding_completed' => true,
                     ]);
                 }
+
+                $this->notify($request->user, Notification::TYPE_OWNER_REQUEST_APPROVED, $request);
             } else {
                 $request->update([
                     'status' => 'rejected',
@@ -94,6 +100,8 @@ class OwnerRequestService
                     'reviewed_by' => $reviewer->id,
                     'reviewed_at' => now(),
                 ]);
+
+                $this->notify($request->user, Notification::TYPE_OWNER_REQUEST_REJECTED, $request, $reason);
             }
 
             return $request->fresh('user:id,name,email');
@@ -105,5 +113,23 @@ class OwnerRequestService
         return OwnerRequest::where('user_id', $user->id)
             ->latest()
             ->first();
+    }
+
+    private function notify(User $user, string $type, OwnerRequest $request, ?string $reason = null): void
+    {
+        $approved = $type === Notification::TYPE_OWNER_REQUEST_APPROVED;
+
+        $this->notifications->create(
+            $user,
+            $type,
+            $approved ? 'Pengajuan Owner Disetujui' : 'Pengajuan Owner Ditolak',
+            $approved
+                ? 'Selamat! Pengajuan owner Anda disetujui. Anda sekarang dapat mengelola lapangan.'
+                : 'Pengajuan owner Anda ditolak.' . ($reason ? " Alasan: {$reason}" : ''),
+            [
+                'owner_request_id' => $request->id,
+                'status' => $approved ? 'approved' : 'rejected',
+            ]
+        );
     }
 }

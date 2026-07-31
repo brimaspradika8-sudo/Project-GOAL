@@ -3,8 +3,9 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform } from 're
 import { MaterialIcons } from '@expo/vector-icons';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { useTheme } from '../../lib/theme';
+import { getAlertPalette, type AlertType } from './alertPalette';
 
-export type ToastType = 'success' | 'error' | 'info';
+export type ToastType = AlertType;
 
 interface AppToastProps {
   visible: boolean;
@@ -15,17 +16,13 @@ interface AppToastProps {
   durationMs?: number;
 }
 
-const ICON_BY_TYPE: Record<ToastType, keyof typeof MaterialIcons.glyphMap> = {
-  success: 'check-circle',
-  error: 'error',
-  info: 'info',
-};
-
 export default function AppToast({
   visible, type = 'success', title, description, onDismiss, durationMs = 3000,
 }: AppToastProps) {
-  const { colors } = useTheme();
+  const { colors, resolved } = useTheme();
   const opacity = useRef(new Animated.Value(0)).current;
+  const palette = getAlertPalette(type, colors, resolved);
+  const st = makeStyles(colors);
 
   const ACCENT_BY_TYPE: Record<ToastType, string> = {
     success: colors.primary,
@@ -48,42 +45,45 @@ export default function AppToast({
   const accent = ACCENT_BY_TYPE[type];
 
   return (
-    <Animated.View style={[
-      st.wrap,
-      {
-        opacity,
-        backgroundColor: colors.surface,
-        borderColor: colors.outline,
-        ...(Platform.OS === 'web'
-          ? { boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }
-          : { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 }),
-      },
-    ]}>
-      <View style={[st.iconWrap, { backgroundColor: accent + '20' }]}>
-        <MaterialIcons name={ICON_BY_TYPE[type]} size={20} color={accent} />
+    <Animated.View
+      style={[
+        st.wrap,
+        { backgroundColor: palette.background, borderColor: palette.border, opacity },
+      ]}
+    >
+      <View style={[st.accentBar, { backgroundColor: palette.accent }]} />
+      <View style={[st.iconWrap, { backgroundColor: palette.accent + '1A' }]}>
+        <MaterialIcons name={palette.icon} size={20} color={palette.accent} />
       </View>
       <View style={st.textWrap}>
-        <Text style={[st.title, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
-        {description ? <Text style={[st.desc, { color: colors.textSecondary }]} numberOfLines={2} ellipsizeMode="tail">{description}</Text> : null}
+        <Text style={[st.title, { color: palette.text }]} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
+        {description ? <Text style={[st.desc, { color: palette.text }]} numberOfLines={2} ellipsizeMode="tail">{description}</Text> : null}
       </View>
       <TouchableOpacity onPress={onDismiss} hitSlop={8} style={st.closeBtn}>
-        <MaterialIcons name="close" size={18} color={colors.textTertiary} />
+        <MaterialIcons name="close" size={18} color={palette.accent} />
       </TouchableOpacity>
     </Animated.View>
   );
 }
 
-const st = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   wrap: {
     position: 'absolute', top: 50, left: 16, right: 16,
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    paddingVertical: 12, paddingHorizontal: 12, zIndex: 999,
+    borderLeftWidth: 0,
+    paddingVertical: 12, paddingLeft: 14, paddingRight: 12, zIndex: 999,
+    overflow: 'hidden',
+    ...SHADOWS.md,
+  },
+  accentBar: {
+    position: 'absolute', left: 0, top: 0, bottom: 0,
+    width: 4,
   },
   iconWrap: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   textWrap: { flex: 1 },
   title: { ...FONTS.bodyMd, fontWeight: '700' },
-  desc: { ...FONTS.bodySm, marginTop: 1 },
+  desc: { ...FONTS.bodySm, opacity: 0.85, marginTop: 1 },
   closeBtn: { padding: 4 },
 });
