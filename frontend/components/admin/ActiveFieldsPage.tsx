@@ -13,6 +13,8 @@ import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
+import AlertBox from '../shared/AlertBox';
+import AnimatedDeleteButton from '../shared/AnimatedDeleteButton';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -354,14 +356,9 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
                         <MaterialIcons name="edit" size={16} color={colors.primary} />
                         <Text style={[st.editBtnText, { color: colors.primary }]}>Edit</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[st.delBtn, { backgroundColor: colors.errorLight, borderColor: colors.error + '30' }]}
-                        activeOpacity={0.8}
+                      <AnimatedDeleteButton
                         onPress={() => setDeleteTarget({ id: f.id, name: f.name })}
-                      >
-                        <MaterialIcons name="delete-outline" size={16} color={colors.error} />
-                        <Text style={[st.delBtnText, { color: colors.error }]}>Hapus</Text>
-                      </TouchableOpacity>
+                      />
                     </View>
                   </View>
                 </View>
@@ -388,10 +385,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
             </View>
 
             {editError ? (
-              <View style={[st.errorBox, { backgroundColor: colors.errorContainer, borderColor: colors.error + '30' }]}>
-                <MaterialIcons name="error-outline" size={16} color={colors.error} />
-                <Text style={[st.errorText, { color: colors.error }]}>{editError}</Text>
-              </View>
+              <AlertBox type="error" title={editError} style={st.alertBox} />
             ) : null}
 
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -610,11 +604,6 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingVertical: 9, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1,
   },
   editBtnText: { ...FONTS.titleSm, fontSize: 12 },
-  delBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingVertical: 9, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1,
-  },
-  delBtnText: { ...FONTS.titleSm, fontSize: 12 },
 
   // Edit modal
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
@@ -633,11 +622,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   sheetIconWrap: { width: 42, height: 42, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
   sheetTitle: { ...FONTS.headlineSm, fontSize: 18, flex: 1 },
   sheetClose: { padding: 6, borderRadius: 20 },
-  errorBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1,
-  },
-  errorText: { ...FONTS.bodySm, flex: 1 },
+  alertBox: { marginBottom: 16 },
 
   imagePicker: {
     borderRadius: 16, overflow: 'hidden', borderWidth: 1.5,

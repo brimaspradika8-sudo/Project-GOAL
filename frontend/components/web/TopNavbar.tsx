@@ -6,6 +6,8 @@ import { useTheme } from '../../lib/theme';
 import { FONT_FAMILY } from '../goalTheme';
 import { useBreakpoint } from '../../lib/responsive';
 import ThemeToggle from '../ThemeToggle';
+import NotificationCenter from '../shared/NotificationCenter';
+import { useNotificationStore } from '../../store/notificationStore';
 
 interface NavItem {
   href: string;
@@ -24,10 +26,18 @@ export default function TopNavbar() {
   const pathname = usePathname();
   const router = useRouter();
   const breakpoint = useBreakpoint();
+  const [notifVisible, setNotifVisible] = React.useState(false);
+  const { refresh, unreadCount } = useNotificationStore();
+
+  React.useEffect(() => {
+    refresh().catch(() => {});
+  }, [refresh]);
 
   if (breakpoint === 'mobile') {
     return <MobileTopNavbar colors={colors} pathname={pathname} router={router} />;
   }
+
+  const unread = unreadCount();
 
   return (
     <View style={[styles.navbar, { backgroundColor: colors.surface, borderBottomColor: colors.outline }]}>
@@ -66,9 +76,13 @@ export default function TopNavbar() {
         {/* ZONA KANAN — toggle tema, bell, avatar (urutan sesuai request) */}
         <View style={styles.zoneRight}>
           <ThemeToggle size={18} />
-          <View style={[styles.iconBtn, { backgroundColor: colors.surfaceWhite, borderColor: colors.divider }]}>
+          <Pressable
+            style={[styles.iconBtn, { backgroundColor: colors.surfaceWhite, borderColor: colors.divider }]}
+            onPress={() => setNotifVisible(true)}
+          >
             <MaterialIcons name="notifications-none" size={20} color={colors.onSurface} />
-          </View>
+            {unread > 0 ? <View style={styles.notifBadge} /> : null}
+          </Pressable>
           <Pressable
             style={[styles.avatar, { backgroundColor: colors.primaryLight }]}
             onPress={() => router.push('/profile')}
@@ -78,6 +92,7 @@ export default function TopNavbar() {
         </View>
 
       </View>
+      <NotificationCenter visible={notifVisible} onClose={() => setNotifVisible(false)} />
     </View>
   );
 }
@@ -248,6 +263,17 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  notifBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
   },
   mobileHeader: {
     flexDirection: 'row',

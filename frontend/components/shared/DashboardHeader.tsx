@@ -34,11 +34,11 @@ export default function DashboardHeader({
   const backButtonIcon = resolved === 'dark' ? colors.onPrimaryContainer : colors.primary;
 
   const [notifVisible, setNotifVisible] = useState(false);
-  const { hydrate, unreadCount } = useNotificationStore();
+  const { refresh, unreadCount } = useNotificationStore();
 
   useEffect(() => {
-    hydrate().catch(() => {});
-  }, [hydrate]);
+    refresh().catch(() => {});
+  }, [refresh]);
 
   const handleBack = () => {
     if (onBack) {

@@ -8,6 +8,7 @@ import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
+import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
 
@@ -147,6 +148,7 @@ export default function RegisterScreen() {
               onChangeText={onRegNameChange}
               autoCapitalize="words"
               error={nameErr}
+              colors={AUTH_DARK_COLORS}
             />
 
             <FloatingInput
@@ -155,6 +157,7 @@ export default function RegisterScreen() {
               onChangeText={onRegEmailChange}
               keyboardType="email-address"
               error={emailErr}
+              colors={AUTH_DARK_COLORS}
             />
 
             <FloatingInput
@@ -163,6 +166,7 @@ export default function RegisterScreen() {
               onChangeText={onRegPasswordChange}
               secureTextEntry={true}
               error={passwordErr}
+              colors={AUTH_DARK_COLORS}
             />
 
             <FloatingInput
@@ -171,6 +175,7 @@ export default function RegisterScreen() {
               onChangeText={onRegConfirmChange}
               secureTextEntry={true}
               error={confirmErr}
+              colors={AUTH_DARK_COLORS}
             />
 
             <TouchableOpacity

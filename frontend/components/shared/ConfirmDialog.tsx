@@ -3,6 +3,7 @@ import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } fr
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { useTheme } from '../../lib/theme';
+import AlertBox from './AlertBox';
 
 export interface ConfirmOption {
   label: string;
@@ -57,10 +58,7 @@ export default function ConfirmDialog({
           {description ? <Text style={st.desc}>{description}</Text> : null}
 
           {error ? (
-            <View style={st.errorBox}>
-              <MaterialIcons name="error-outline" size={14} color={COLORS.error} />
-              <Text style={st.errorText}>{error}</Text>
-            </View>
+            <AlertBox type="error" title={error} style={st.alertBox} />
           ) : null}
 
           {hasOptions ? (
@@ -127,12 +125,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   },
   title: { ...FONTS.headlineSm, color: colors.text, textAlign: 'center', marginBottom: 6 },
   desc: { ...FONTS.bodySm, color: colors.textSecondary, textAlign: 'center', marginBottom: 18 },
-  errorBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: COLORS.errorContainer, borderRadius: 10,
-    padding: 12, marginBottom: 16, borderWidth: 1, borderColor: COLORS.error + '30',
-  },
-  errorText: { ...FONTS.bodySm, color: COLORS.error, flex: 1 },
+  alertBox: { marginBottom: 16 },
   actions: { flexDirection: 'row', gap: 10, width: '100%' },
   btn: { flex: 1, paddingVertical: 12, borderRadius: SIZES.borderRadius, alignItems: 'center' },
   btnCancel: { backgroundColor: colors.surfaceContainerHigh, borderWidth: 1, borderColor: colors.outline },

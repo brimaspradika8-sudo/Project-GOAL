@@ -14,6 +14,8 @@ import { useDebounce } from '../../hooks/useDebounce';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
+import AlertBox from '../shared/AlertBox';
+import AnimatedDeleteButton from '../shared/AnimatedDeleteButton';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 
@@ -385,16 +387,12 @@ export default function UserPage() {
 
                     {/* Merah — Hapus User */}
                     {!isOwnRow && (
-                      <TouchableOpacity
-                        style={[st.actionBtn, { backgroundColor: colors.errorContainer }]}
+                      <AnimatedDeleteButton
                         onPress={() => {
                           setDeleteTarget({ id: u.id, name: u.name });
                           setDeleteError(null);
                         }}
-                        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-                      >
-                        <MaterialIcons name="delete-outline" size={17} color={colors.error} />
-                      </TouchableOpacity>
+                      />
                     )}
                   </View>
                 </View>
@@ -422,10 +420,7 @@ export default function UserPage() {
             </View>
 
             {createError ? (
-              <View style={st.errorBox}>
-                <MaterialIcons name="error-outline" size={14} color={colors.error} />
-                <Text style={st.errorText}>{createError}</Text>
-              </View>
+              <AlertBox type="error" title={createError} style={st.alertBox} />
             ) : null}
 
             <FormField label="Nama Lengkap" icon="person-outline" value={createForm.name}
@@ -492,10 +487,7 @@ export default function UserPage() {
             </View>
 
             {editError ? (
-              <View style={st.errorBox}>
-                <MaterialIcons name="error-outline" size={14} color={colors.error} />
-                <Text style={st.errorText}>{editError}</Text>
-              </View>
+              <AlertBox type="error" title={editError} style={st.alertBox} />
             ) : null}
 
             <FormField label="Nama Lengkap" icon="person-outline" value={editForm.name}
@@ -712,8 +704,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   sheetTitle: { ...FONTS.headlineSm, color: colors.text },
 
-  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.errorContainer, borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: colors.error + '30' },
-  errorText: { ...FONTS.bodySm, color: colors.error, flex: 1 },
+  alertBox: { marginBottom: 14 },
 
   fieldWrap: { marginBottom: 14 },
   fieldLabel: { ...FONTS.labelSm, color: colors.textSecondary, marginBottom: 6, letterSpacing: 0.5, textTransform: 'uppercase' },

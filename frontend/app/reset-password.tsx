@@ -8,6 +8,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
+import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
 
@@ -129,8 +130,8 @@ export default function ResetPasswordScreen() {
                 <Text style={styles.messageText}>{message.text}</Text>
               </Animated.View>
             )}
-            <FloatingInput label="Password Baru" value={password} onChangeText={onRpPasswordChange} secureTextEntry={true} error={passwordError} />
-            <FloatingInput label="Ulangi Password Baru" value={confirmPassword} onChangeText={onRpConfirmChange} secureTextEntry={true} error={confirmError} />
+            <FloatingInput label="Password Baru" value={password} onChangeText={onRpPasswordChange} secureTextEntry={true} error={passwordError} colors={AUTH_DARK_COLORS} />
+            <FloatingInput label="Ulangi Password Baru" value={confirmPassword} onChangeText={onRpConfirmChange} secureTextEntry={true} error={confirmError} colors={AUTH_DARK_COLORS} />
             <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleResetPassword} disabled={loading} activeOpacity={0.8}>
               {loading ? <ActivityIndicator color="#0e2a14" /> : (
                 <View style={styles.buttonContent}>
