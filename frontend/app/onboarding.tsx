@@ -640,10 +640,12 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     alignItems: 'stretch',
   },
   sidePanel: {
-    backgroundColor: colors.inverseSurface,
+    backgroundColor: '#0D1A0F',
     borderRadius: 24,
     padding: 22,
     marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#1A3D1F',
   },
   sidePanelDesktop: {
     width: 340,
@@ -1048,7 +1050,7 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     ...FONTS.bodyMd,
     color: colors.text,
     padding: 0,
-    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}),
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
   },
   emptyText: {
     ...FONTS.bodySm,

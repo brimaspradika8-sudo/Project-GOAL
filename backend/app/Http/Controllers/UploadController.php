@@ -18,7 +18,7 @@ class UploadController extends Controller
         }
 
         $request->validate([
-            'image' => 'required|file|image|mimes:jpg,jpeg|max:2048',
+            'image' => 'required|file|image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 
         try {
@@ -29,21 +29,13 @@ class UploadController extends Controller
                 return response()->json(['message' => 'File tidak valid.'], 400);
             }
 
-            $ext = $file->getClientOriginalExtension();
-            if (!$ext) {
-                $ext = 'jpg';
-            }
-
+            $ext = $file->getClientOriginalExtension() ?: 'jpg';
             $filename = time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
-            $path = 'fields/' . $filename;
 
-            $supabaseUrl = config('services.supabase.url');
-            $supabaseKey = config('services.supabase.key');
-            $bucket = config('services.supabase.bucket');
-
-            if (!$supabaseUrl || !$supabaseKey || !$bucket) {
-                Log::error('Upload failed: Supabase credentials not configured');
-                return response()->json(['message' => 'Konfigurasi penyimpanan tidak lengkap.'], 500);
+            $contents = file_get_contents($file->getRealPath());
+            if ($contents === false) {
+                Log::error('Upload failed: could not read temp file');
+                return response()->json(['message' => 'Gagal membaca file.'], 500);
             }
 
             $stored = Storage::disk('public')->put('fields/' . $filename, $contents);

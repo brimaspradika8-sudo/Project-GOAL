@@ -64,7 +64,7 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
 
     const labelColor = animatedValue.interpolate({
       inputRange: [0, 1],
-      outputRange: [hasError ? colors.destructive : colors.textSecondary, hasError ? colors.destructive : colors.primary],
+      outputRange: [hasError ? colors.destructive : '#9CA3AF', hasError ? colors.destructive : '#10B981'],
     });
 
     return (
@@ -73,7 +73,7 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
           styles.container,
           {
             borderColor,
-            backgroundColor: isFocused || hasError ? colors.bgElevated : colors.surfaceContainerLow,
+            backgroundColor: '#2D3748',
             ...(isFocused ? focusRing(colors.focusRing) : null),
           },
         ]}>
@@ -82,7 +82,7 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
               <MaterialIcons
                 name={icon}
                 size={24}
-                color={isActive || hasError ? (hasError ? colors.destructive : colors.primary) : colors.textTertiary}
+                color={isActive || hasError ? (hasError ? colors.destructive : '#10B981') : '#6B7280'}
               />
             </View>
           )}
@@ -91,7 +91,7 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
             {
               transform: [{ translateY: labelTranslateY }, { scale: labelScale }],
                 left: icon ? 52 : 18,
-                backgroundColor: isActive ? colors.bgElevated : 'transparent',
+                backgroundColor: isActive ? '#2D3748' : 'transparent',
               },
             ]}>
             <Animated.Text style={[styles.label, { color: labelColor }]}>{label}</Animated.Text>
@@ -105,6 +105,7 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
                 paddingRight: isPassword || rightElement ? 44 : 18,
                 color: colors.textPrimary,
               },
+              Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {},
             ]}
             value={value}
             onFocus={handleFocus}
@@ -187,8 +188,8 @@ const styles = StyleSheet.create({
 
 function focusRing(color: string) {
   return Platform.OS === 'web'
-    ? { outlineStyle: 'none' as const }
-    : { shadowColor: color, shadowOpacity: 1, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 2 };
+    ? ({ outlineStyle: 'none' } as any)
+    : { shadowColor: color, shadowOpacity: 0.25, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 0 };
 }
 
 export default AuthInput;
