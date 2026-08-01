@@ -31,6 +31,7 @@ interface NotificationState {
   clear: () => void;
   markAsRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
+  clearAll: () => Promise<number>;
   unreadCount: () => number;
 }
 
@@ -126,6 +127,30 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       });
     } catch {
       await get().refresh();
+    }
+  },
+
+  clearAll: async () => {
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      set({ items: [] });
+      return 0;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/notifications/clear-all`, {
+        method: 'POST',
+        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        set({ items: [] });
+        const data = await res.json().catch(() => ({}));
+        return Number(data?.deleted ?? 0);
+      }
+      return 0;
+    } catch {
+      await get().refresh();
+      return 0;
     }
   },
 

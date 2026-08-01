@@ -16,8 +16,8 @@ export const SPORT_LABELS: Record<string, string> = Object.fromEntries(
   Object.entries(SPORT_MAP).map(([label, key]) => [key, label]),
 );
 
-const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/webp'];
-const ALLOWED_IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp'];
+const ALLOWED_IMAGE_MIMES = ['image/jpeg'];
+const ALLOWED_IMAGE_EXTS = ['jpg', 'jpeg'];
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
 
 export type FieldFormErrors = {
@@ -62,7 +62,7 @@ export function validateFieldPrice(value: string): string {
   const num = parseInt(cleaned, 10);
   if (isNaN(num)) return 'Harga harus berupa angka.';
   if (num < 10000) return 'Harga per jam tidak boleh kurang dari Rp 10.000.';
-  if (num > 1000000000) return 'Harga per jam tidak boleh lebih dari Rp 1.000.000.000';
+  if (num > 100000000) return 'Harga per jam tidak boleh lebih dari Rp 100.000.00';
   return '';
 }
 
@@ -71,19 +71,19 @@ export function validateFieldImage(uri: string, existingUrl: string, mimeType?: 
   if (!source) return 'Foto venue wajib diunggah';
   if (mimeType) {
     if (!ALLOWED_IMAGE_MIMES.includes(mimeType.toLowerCase())) {
-      return 'Format gambar harus JPG, PNG, atau WEBP';
+      return 'Hanya Menggunakan Format JPG';
     }
     return '';
   }
   const ext = source.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
   if (!ALLOWED_IMAGE_EXTS.includes(ext)) {
-    return 'Format gambar harus JPG, PNG, atau WEBP';
+    return 'Hanya JPG yang diperbolehkan';
   }
   return '';
 }
 
 export function mimeFromExt(ext: string): string {
-  const map: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+  const map: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg' };
   return map[ext.toLowerCase()] || 'image/jpeg';
 }
 

@@ -38,6 +38,7 @@ use App\Http\Controllers\NotificationController;
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
         Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+        Route::post('/notifications/clear-all', [NotificationController::class, 'clearAll']);
         Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
         // Owner upgrade request
         Route::post('/me/owner-request',[OwnerRequestController::class, 'store'])->middleware('throttle:5,1');
@@ -57,6 +58,10 @@ use App\Http\Controllers\NotificationController;
             Route::post('/fields/{id}/approve',[FieldController::class, 'approve']);
             Route::post('/fields/{id}/restore',[FieldController::class, 'restore']);
             Route::delete('/fields/{id}/force',[FieldController::class, 'forceDelete']);
+            Route::post('/fields/bulk-approve', [FieldController::class, 'bulkApprove']);
+            Route::post('/fields/bulk-delete',  [FieldController::class, 'bulkDestroy']);
+            Route::post('/fields/bulk-restore', [FieldController::class, 'bulkRestore']);
+            Route::post('/fields/bulk-force',   [FieldController::class, 'bulkForceDelete']);
         });
         // Owner requests - super_admin only
         Route::middleware('role:super_admin')->group(function () {
@@ -67,6 +72,7 @@ use App\Http\Controllers\NotificationController;
         Route::middleware('role:super_admin')->group(function () {
             Route::get('/admin/users',          [UserController::class, 'index']);
             Route::post('/admin/users',         [UserController::class, 'store']);
+            Route::post('/admin/users/bulk-delete', [UserController::class, 'bulkDestroy']);
             Route::put('/admin/users/{id}',     [UserController::class, 'update']);
             Route::put('/admin/users/{id}/role',[UserController::class, 'updateRole']);
             Route::delete('/admin/users/{id}',  [UserController::class, 'destroy']);

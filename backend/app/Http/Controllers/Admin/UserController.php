@@ -86,4 +86,20 @@ class UserController extends Controller
 
         return response()->json(['message' => 'User berhasil dihapus.']);
     }
+
+    public function bulkDestroy(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer'],
+        ]);
+
+        try {
+            $count = $this->userService->deleteUsers($data['ids'], $request->user());
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 403);
+        }
+
+        return response()->json(['message' => "{$count} user berhasil dihapus.", 'deleted' => $count]);
+    }
 }

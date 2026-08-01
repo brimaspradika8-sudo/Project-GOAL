@@ -13,6 +13,8 @@ import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
+import SelectCheckbox from '../shared/SelectCheckbox';
+import BulkActionBar from '../shared/BulkActionBar';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme } from '../../lib/theme';
 
@@ -27,6 +29,11 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
   const [approveTarget, setApproveTarget] = useState<{ id: number; name: string } | null>(null);
   const [rejectTarget, setRejectTarget] = useState<{ id: number; name: string } | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkTarget, setBulkTarget] = useState<null | 'approve' | 'reject'>(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   const fetchFields = useCallback(async () => {
     try {
@@ -111,6 +118,94 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
     }
   };
 
+  // ── BULK ────────────────────────────────────────────────
+  const toggleSelect = (id: number) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const visibleIds = fields.map(f => f.id);
+    setSelected(prev => {
+      const allPicked = visibleIds.length > 0 && visibleIds.every(id => prev.has(id));
+      if (allPicked) return new Set();
+      return new Set(visibleIds);
+    });
+  };
+
+  const confirmBulkApprove = async () => {
+    if (selected.size === 0) return;
+    setBulkLoading(true);
+    setBulkError(null);
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const res = await fetch(`${API_BASE_URL}/fields/bulk-approve`, {
+        method: 'POST',
+        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ids: Array.from(selected), status: 'approved' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setBulkError(getErrorMessage(data, 'Gagal menyetujui lapangan.'));
+        return;
+      }
+      setBulkTarget(null);
+      setSelected(new Set());
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: data.message || 'Lapangan disetujui.' });
+      fetchFields();
+    } catch {
+      setBulkError('Tidak dapat terhubung ke server.');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const confirmBulkReject = async () => {
+    if (selected.size === 0) return;
+    const reason = rejectReason.trim();
+    if (!reason) {
+      useToastStore.getState().show({ type: 'error', title: 'Alasan wajib diisi', description: 'Tuliskan alasan penolakan terlebih dahulu.' });
+      return;
+    }
+    setBulkLoading(true);
+    setBulkError(null);
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const res = await fetch(`${API_BASE_URL}/fields/bulk-approve`, {
+        method: 'POST',
+        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ids: Array.from(selected), status: 'rejected', reason }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setBulkError(getErrorMessage(data, 'Gagal menolak lapangan.'));
+        return;
+      }
+      setBulkTarget(null);
+      setSelected(new Set());
+      setRejectReason('');
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: data.message || 'Lapangan ditolak.' });
+      fetchFields();
+    } catch {
+      setBulkError('Tidak dapat terhubung ke server.');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const onRejectConfirm = () => {
+    if (bulkTarget === 'reject') confirmBulkReject(); else confirmReject();
+  };
+
+  const closeRejectModal = () => {
+    setRejectTarget(null);
+    setBulkTarget(null);
+    setRejectReason('');
+  };
+
   if (loading) {
     return (
       <View style={[st.screen, { backgroundColor: colors.background }]}>
@@ -131,6 +226,7 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
         )}
 
         <ScrollView
+          style={st.scroll}
           contentContainerStyle={st.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
           showsVerticalScrollIndicator={false}
@@ -156,7 +252,7 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
             fields.map((f: any) => (
               <TouchableOpacity
                 key={f.id}
-                style={[st.card, { backgroundColor: cardSurface, borderColor: colors.outline }]}
+                style={[st.card, { backgroundColor: cardSurface, borderColor: colors.outline }, selected.has(f.id) && { borderColor: colors.primary }]}
                 activeOpacity={0.85}
                 onPress={() => router.push(`/venue-detail?id=${f.id}`)}
               >
@@ -171,7 +267,9 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
                       <Text style={[st.sportText, { color: colors.warning }]}>{f.sport_type?.toUpperCase()}</Text>
                     </View>
                   </View>
-                  <MaterialIcons name="chevron-right" size={20} color={colors.textTertiary} />
+                  <TouchableOpacity onPress={() => toggleSelect(f.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} activeOpacity={0.7} style={st.checkbox}>
+                    <SelectCheckbox selected={selected.has(f.id)} colors={colors} size={20} />
+                  </TouchableOpacity>
                 </View>
 
                 {f.location && (
@@ -205,9 +303,20 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
             ))
           )}
         </ScrollView>
+
+        <BulkActionBar
+          count={selected.size}
+          allSelected={fields.length > 0 && fields.every(f => selected.has(f.id))}
+          onSelectAll={toggleSelectAll}
+          onClear={() => setSelected(new Set())}
+          actions={[
+            { label: 'Setujui', icon: 'verified', color: COLORS.primary, onPress: () => { setBulkError(null); setBulkTarget('approve'); } },
+            { label: 'Tolak', icon: 'cancel', color: colors.error, onPress: () => { setBulkError(null); setBulkTarget('reject'); setRejectReason(''); } },
+          ]}
+        />
       </View>
 
-      <Modal visible={!!rejectTarget} transparent animationType="fade" onRequestClose={() => setRejectTarget(null)}>
+      <Modal visible={!!rejectTarget || bulkTarget === 'reject'} transparent animationType="fade" onRequestClose={closeRejectModal}>
         <View style={st.modalOverlay}>
           <View style={[st.rejectModal, { backgroundColor: cardSurface, borderColor: colors.outline }]}>
             <View style={st.rejectHeader}>
@@ -217,7 +326,9 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
               <Text style={[st.rejectTitle, { color: colors.text }]}>Alasan Penolakan</Text>
             </View>
             <Text style={[st.rejectSubtitle, { color: colors.textSecondary }]}>
-              Alasan ini akan disimpan saat lapangan ditolak.
+              {bulkTarget === 'reject'
+                ? `Alasan ini akan berlaku untuk ${selected.size} lapangan yang dipilih.`
+                : 'Alasan ini akan disimpan saat lapangan ditolak.'}
             </Text>
             <TextInput
               style={[st.rejectInput, { backgroundColor: softSurface, color: colors.text, borderColor: colors.outline }]}
@@ -230,16 +341,16 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
             <View style={st.rejectActions}>
               <TouchableOpacity
                 style={[st.cancelBtn, { backgroundColor: softSurface, borderColor: colors.outline }]}
-                onPress={() => { setRejectTarget(null); setRejectReason(''); }}
+                onPress={closeRejectModal}
               >
                 <Text style={[st.cancelBtnText, { color: colors.textSecondary }]}>Batal</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[st.confirmRejectBtn, submittingId !== null && st.disabledBtn]}
-                onPress={confirmReject}
-                disabled={submittingId !== null}
+                style={[st.confirmRejectBtn, (submittingId !== null || bulkLoading) && st.disabledBtn]}
+                onPress={onRejectConfirm}
+                disabled={submittingId !== null || bulkLoading}
               >
-                <Text style={st.confirmRejectText}>Tolak Lapangan</Text>
+                <Text style={st.confirmRejectText}>{bulkTarget === 'reject' ? 'Tolak Lapangan Terpilih' : 'Tolak Lapangan'}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -259,13 +370,31 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
         confirmLabel="Setujui Lapangan"
         onConfirm={confirmApprove}
       />
+
+      {/* Bulk Approve Confirm Modal */}
+      <ConfirmDialog
+        visible={bulkTarget === 'approve'}
+        title={`Setujui ${selected.size} lapangan terpilih?`}
+        description="Semua lapangan terpilih akan disetujui dan terlihat oleh semua pengguna."
+        icon="check-circle"
+        iconColor={COLORS.primary}
+        iconBg={COLORS.primaryContainer}
+        loading={bulkLoading}
+        error={bulkError}
+        onCancel={() => setBulkTarget(null)}
+        confirmLabel="Setujui Bersama"
+        onConfirm={confirmBulkApprove}
+      />
     </>
   );
 }
 
 const st = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
-  list: { padding: SIZES.gutter, paddingBottom: 60 },
+  list: { padding: SIZES.gutter, paddingBottom: 24 },
+  scroll: { flex: 1 },
+
+  checkbox: { padding: 4 },
 
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   countPill: {

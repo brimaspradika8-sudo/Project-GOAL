@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\SportType;
 use App\Models\Field;
 use App\Models\Notification;
+use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
@@ -148,6 +149,16 @@ class FieldService
             'approved_at' => $isSuperAdmin ? now() : null,
         ])->save();
 
+        if (!$isSuperAdmin) {
+            $this->notifications->createForRole(
+                Profile::ROLE_SUPER_ADMIN,
+                Notification::TYPE_FIELD_SUBMITTED,
+                'Pengajuan Lapangan Baru',
+                "Lapangan baru \"{$field->name}\" diajukan oleh {$user->name} dan menunggu persetujuan.",
+                ['field_id' => $field->id, 'field_name' => $field->name, 'status' => 'pending']
+            );
+        }
+
         return $field;
     }
 
@@ -175,15 +186,135 @@ class FieldService
             ])->save();
         }
 
+        if ($isAdmin) {
+            $owner = $field->owner;
+            if ($owner) {
+                $this->notifications->create(
+                    $owner,
+                    Notification::TYPE_FIELD_UPDATED,
+                    'Lapangan Diperbarui',
+                    "Lapangan \"{$field->name}\" Anda diperbarui oleh admin.",
+                    ['field_id' => $field->id, 'field_name' => $field->name]
+                );
+            }
+        } else {
+            $this->notifications->createForRole(
+                Profile::ROLE_SUPER_ADMIN,
+                Notification::TYPE_FIELD_UPDATED,
+                'Lapangan Diperbarui',
+                "Lapangan \"{$field->name}\" diperbarui oleh pemiliknya.",
+                ['field_id' => $field->id, 'field_name' => $field->name]
+            );
+        }
+
         return $field->fresh('owner:id,name');
     }
 
-    public function delete(Field $field): bool
+    public function delete(Field $field, User $actor): bool
     {
         if ($field->image_url) {
             $this->storage->delete($field->image_url);
         }
+
+        $this->notifyFieldDeletion($field, $actor);
+
         return $field->delete();
+    }
+
+    private function notifyFieldDeletion(Field $field, User $actor): void
+    {
+        $isAdmin = $actor->profile?->role === Profile::ROLE_SUPER_ADMIN;
+
+        if ($isAdmin) {
+            $owner = $field->owner;
+            if ($owner) {
+                $this->notifications->create(
+                    $owner,
+                    Notification::TYPE_FIELD_DELETED,
+                    'Lapangan Dihapus',
+                    "Lapangan \"{$field->name}\" Anda telah dihapus oleh admin.",
+                    ['field_id' => $field->id, 'field_name' => $field->name]
+                );
+            }
+        } else {
+            $this->notifications->createForRole(
+                Profile::ROLE_SUPER_ADMIN,
+                Notification::TYPE_FIELD_DELETED,
+                'Lapangan Dihapus',
+                "Lapangan \"{$field->name}\" dihapus oleh pemiliknya.",
+                ['field_id' => $field->id, 'field_name' => $field->name]
+            );
+        }
+    }
+
+    public function approveBatch(array $ids, User $approver, string $status, ?string $reason = null): int
+    {
+        $processed = 0;
+
+        Field::with('owner:id,name')
+            ->whereIn('id', $ids)
+            ->get()
+            ->each(function (Field $field) use ($approver, $status, $reason, &$processed) {
+                if ($field->owner_id === $approver->id) {
+                    return;
+                }
+
+                $field->forceFill([
+                    'status' => $status,
+                    'approved_by' => $approver->id,
+                    'approved_at' => now(),
+                    'rejection_reason' => $status === 'rejected' ? $reason : null,
+                ])->save();
+
+                $this->notifyOwner($field, $status, $reason);
+                $processed++;
+            });
+
+        return $processed;
+    }
+
+    public function deleteBatch(array $ids, User $actor): int
+    {
+        $deleted = 0;
+
+        Field::with('owner:id,name')
+            ->whereIn('id', $ids)
+            ->get()
+            ->each(function (Field $field) use ($actor, &$deleted) {
+                if ($field->image_url) {
+                    $this->storage->delete($field->image_url);
+                }
+
+                $this->notifyFieldDeletion($field, $actor);
+                $field->delete();
+                $deleted++;
+            });
+
+        return $deleted;
+    }
+
+    public function restoreBatch(array $ids): int
+    {
+        return (int) Field::onlyTrashed()->whereIn('id', $ids)->restore();
+    }
+
+    public function forceDeleteBatch(array $ids): int
+    {
+        $deleted = 0;
+
+        Field::onlyTrashed()
+            ->whereIn('id', $ids)
+            ->get()
+            ->each(function (Field $field) use (&$deleted) {
+                if ($field->image_url) {
+                    $this->storage->delete($field->image_url);
+                }
+
+                $field->forceDelete();
+                $deleted++;
+            });
+
+        return $deleted;
     }
 
     public function approve(Field $field, User $approver, string $status, ?string $reason = null): Field
