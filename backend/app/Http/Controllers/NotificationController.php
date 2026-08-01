@@ -52,4 +52,15 @@ class NotificationController extends Controller
             'unread_count' => 0,
         ]);
     }
+
+    public function clearAll(Request $request): JsonResponse
+    {
+        $deleted = $this->notifications->deleteAll($request->user());
+
+        return response()->json([
+            'message' => 'Semua notifikasi dihapus.',
+            'deleted' => $deleted,
+            'unread_count' => 0,
+        ]);
+    }
 }

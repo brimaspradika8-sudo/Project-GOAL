@@ -22,6 +22,7 @@ class Profile extends Model
         'region',
         'avatar_url',
         'age',
+        'role',
         'onboarding_completed',
     ];
 

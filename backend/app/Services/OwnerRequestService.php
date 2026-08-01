@@ -23,7 +23,7 @@ class OwnerRequestService
 
     public function submit(User $user, array $data): OwnerRequest
     {
-        return DB::transaction(function () use ($user, $data) {
+        $request = DB::transaction(function () use ($user, $data) {
             $pending = OwnerRequest::where('user_id', $user->id)
                 ->where('status', 'pending')
                 ->lockForUpdate()
@@ -43,6 +43,16 @@ class OwnerRequestService
                 'status' => 'pending',
             ]);
         });
+
+        $this->notifications->createForRole(
+            Profile::ROLE_SUPER_ADMIN,
+            Notification::TYPE_OWNER_REQUEST_SUBMITTED,
+            'Pengajuan Owner Baru',
+            "{$request->name} ({$request->email}) mengajukan permintaan menjadi owner.",
+            ['owner_request_id' => $request->id, 'status' => 'pending']
+        );
+
+        return $request;
     }
 
     public function listPending(): LengthAwarePaginator

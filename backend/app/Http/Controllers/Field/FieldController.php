@@ -115,7 +115,7 @@ class FieldController extends Controller
             return response()->json(['message' => 'Anda bukan pemilik lapangan ini.'], 403);
         }
 
-        $this->fieldService->delete($field);
+        $this->fieldService->delete($field, $request->user());
 
         $this->fieldService->invalidateCache();
 
@@ -196,5 +196,65 @@ class FieldController extends Controller
         $this->fieldService->invalidateCache();
 
         return response()->json(['message' => 'Lapangan berhasil dihapus permanen.']);
+    }
+
+    public function bulkApprove(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer'],
+            'status' => ['required', 'in:approved,rejected'],
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $count = $this->fieldService->approveBatch($data['ids'], $request->user(), $data['status'], $data['reason'] ?? null);
+
+        $this->fieldService->invalidateCache();
+
+        $verb = $data['status'] === 'approved' ? 'disetujui' : 'ditolak';
+
+        return response()->json(['message' => "{$count} lapangan berhasil {$verb}.", 'processed' => $count]);
+    }
+
+    public function bulkDestroy(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer'],
+        ]);
+
+        $count = $this->fieldService->deleteBatch($data['ids'], $request->user());
+
+        $this->fieldService->invalidateCache();
+
+        return response()->json(['message' => "{$count} lapangan berhasil dihapus.", 'deleted' => $count]);
+    }
+
+    public function bulkRestore(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer'],
+        ]);
+
+        $count = $this->fieldService->restoreBatch($data['ids']);
+
+        $this->fieldService->invalidateCache();
+
+        return response()->json(['message' => "{$count} lapangan berhasil dipulihkan.", 'restored' => $count]);
+    }
+
+    public function bulkForceDelete(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer'],
+        ]);
+
+        $count = $this->fieldService->forceDeleteBatch($data['ids']);
+
+        $this->fieldService->invalidateCache();
+
+        return response()->json(['message' => "{$count} lapangan berhasil dihapus permanen.", 'deleted' => $count]);
     }
 }

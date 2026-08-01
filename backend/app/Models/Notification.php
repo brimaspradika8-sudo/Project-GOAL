@@ -11,6 +11,11 @@ class Notification extends Model
     public const TYPE_FIELD_REJECTED        = 'field_rejected';
     public const TYPE_OWNER_REQUEST_APPROVED = 'owner_request_approved';
     public const TYPE_OWNER_REQUEST_REJECTED = 'owner_request_rejected';
+    public const TYPE_FIELD_SUBMITTED       = 'field_submitted';
+    public const TYPE_OWNER_REQUEST_SUBMITTED = 'owner_request_submitted';
+    public const TYPE_FIELD_UPDATED         = 'field_updated';
+    public const TYPE_FIELD_DELETED         = 'field_deleted';
+    public const TYPE_ROLE_CHANGED          = 'role_changed';
 
     protected $table = 'notifications';
 

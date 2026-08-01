@@ -16,6 +16,8 @@ import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import AlertBox from '../shared/AlertBox';
 import AnimatedDeleteButton from '../shared/AnimatedDeleteButton';
+import SelectCheckbox from '../shared/SelectCheckbox';
+import BulkActionBar from '../shared/BulkActionBar';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 
@@ -67,6 +69,11 @@ export default function UserPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkDeleteTarget, setBulkDeleteTarget] = useState(false);
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+  const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
 
   const debouncedSearch = useDebounce(search, 400);
 
@@ -237,6 +244,51 @@ export default function UserPage() {
     }
   };
 
+  // ── BULK DELETE ────────────────────────────────────────
+  const toggleSelect = (id: number) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const visibleIds = filteredUsers.filter(u => u.id !== loggedInUserId).map(u => u.id);
+    setSelected(prev => {
+      const allPicked = visibleIds.length > 0 && visibleIds.every(id => prev.has(id));
+      if (allPicked) return new Set();
+      return new Set(visibleIds);
+    });
+  };
+
+  const confirmBulkDelete = async () => {
+    if (selected.size === 0) return;
+    setBulkDeleteLoading(true);
+    setBulkDeleteError(null);
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const res = await fetch(`${API_BASE_URL}/admin/users/bulk-delete`, {
+        method: 'POST',
+        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ids: Array.from(selected) }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setBulkDeleteError(data.message || 'Gagal menghapus user.');
+        return;
+      }
+      setBulkDeleteTarget(false);
+      setSelected(new Set());
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: data.message || 'User berhasil dihapus.' });
+      fetchUsers(search);
+    } catch {
+      setBulkDeleteError('Tidak dapat terhubung ke server.');
+    } finally {
+      setBulkDeleteLoading(false);
+    }
+  };
+
   // ── Filter ──────────────────────────────────────────────
   const filteredUsers = users.filter(u => {
     const role = u.profile?.role || 'player';
@@ -320,6 +372,7 @@ export default function UserPage() {
         )}
 
         <ScrollView
+          style={st.scroll}
           contentContainerStyle={st.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
           showsVerticalScrollIndicator={false}
@@ -347,7 +400,17 @@ export default function UserPage() {
               const isOwnRow = u.id === loggedInUserId;
 
               return (
-                <View key={u.id} style={st.card}>
+                <View key={u.id} style={[st.card, selected.has(u.id) && { borderColor: colors.primary, backgroundColor: colors.primaryContainer + '20' }]}>
+                  {!isOwnRow && (
+                    <TouchableOpacity
+                      onPress={() => toggleSelect(u.id)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      style={st.checkbox}
+                      activeOpacity={0.7}
+                    >
+                      <SelectCheckbox selected={selected.has(u.id)} colors={colors} size={20} />
+                    </TouchableOpacity>
+                  )}
                   <View style={st.cardLeft}>
                     <View style={[st.avatar, { backgroundColor: rc.bg }]}>
                       <Text style={[st.avatarText, { color: rc.color }]}>{(u.name || '?').charAt(0).toUpperCase()}</Text>
@@ -388,6 +451,7 @@ export default function UserPage() {
                     {/* Merah — Hapus User */}
                     {!isOwnRow && (
                       <AnimatedDeleteButton
+                        size={36}
                         onPress={() => {
                           setDeleteTarget({ id: u.id, name: u.name });
                           setDeleteError(null);
@@ -400,6 +464,14 @@ export default function UserPage() {
             })
           )}
         </ScrollView>
+
+        <BulkActionBar
+          count={selected.size}
+          allSelected={filteredUsers.filter(u => u.id !== loggedInUserId).length > 0 && filteredUsers.filter(u => u.id !== loggedInUserId).every(u => selected.has(u.id))}
+          onSelectAll={toggleSelectAll}
+          onClear={() => setSelected(new Set())}
+          actions={[{ label: 'Hapus', icon: 'delete', color: colors.error, onPress: () => { setBulkDeleteError(null); setBulkDeleteTarget(true); } }]}
+        />
       </View>
 
       {/* ── CREATE MODAL ── */}
@@ -565,6 +637,19 @@ export default function UserPage() {
         confirmLabel="Ya, Hapus"
         onConfirm={handleDeleteUser}
       />
+
+      {/* ── BULK DELETE CONFIRM MODAL ── */}
+      <ConfirmDialog
+        visible={bulkDeleteTarget}
+        title={`Hapus ${selected.size} user terpilih?`}
+        description="Tindakan ini tidak bisa dibatalkan. User dan semua data terkait akan dihapus permanen."
+        destructive
+        loading={bulkDeleteLoading}
+        error={bulkDeleteError}
+        onCancel={() => setBulkDeleteTarget(false)}
+        confirmLabel="Ya, Hapus"
+        onConfirm={confirmBulkDelete}
+      />
     </>
   );
 }
@@ -645,7 +730,10 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   addBtnText: { ...FONTS.titleSm, color: colors.primary },
 
-  list: { padding: SIZES.gutter, paddingBottom: 60 },
+  list: { padding: SIZES.gutter, paddingBottom: 24 },
+  scroll: { flex: 1 },
+
+  checkbox: { marginRight: 10, justifyContent: 'center', alignItems: 'center' },
 
   emptyWrap: { alignItems: 'center', marginTop: 60, gap: 12 },
   emptyIcon: {
@@ -677,7 +765,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   roleBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 6, paddingVertical: 3, paddingHorizontal: 8, alignSelf: 'flex-start' },
   roleDot: { width: 5, height: 5, borderRadius: 3 },
   roleText: { ...FONTS.labelSm },
-  actions: { flexDirection: 'row', gap: 6, marginLeft: 6 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 6 },
   actionBtn: {
     width: 36,
     height: 36,

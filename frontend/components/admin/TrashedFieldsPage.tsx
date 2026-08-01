@@ -11,6 +11,8 @@ import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import AnimatedDeleteButton from '../shared/AnimatedDeleteButton';
+import SelectCheckbox from '../shared/SelectCheckbox';
+import BulkActionBar from '../shared/BulkActionBar';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme } from '../../lib/theme';
 
@@ -25,6 +27,11 @@ export default function TrashedFieldsPage() {
   const [restoreLoading, setRestoreLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkTarget, setBulkTarget] = useState<null | 'restore' | 'force'>(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   const fetchFields = useCallback(async () => {
     try {
@@ -108,6 +115,54 @@ export default function TrashedFieldsPage() {
     }
   };
 
+  // ── BULK ────────────────────────────────────────────────
+  const toggleSelect = (id: number) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const visibleIds = fields.map(f => f.id);
+    setSelected(prev => {
+      const allPicked = visibleIds.length > 0 && visibleIds.every(id => prev.has(id));
+      if (allPicked) return new Set();
+      return new Set(visibleIds);
+    });
+  };
+
+  const runBulk = async (path: string, successMsg: string) => {
+    if (selected.size === 0) return;
+    setBulkLoading(true);
+    setBulkError(null);
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const res = await fetch(`${API_BASE_URL}${path}`, {
+        method: 'POST',
+        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ids: Array.from(selected) }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setBulkError(data.message || 'Tindakan gagal.');
+        return;
+      }
+      setBulkTarget(null);
+      setSelected(new Set());
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: data.message || successMsg });
+      fetchFields();
+    } catch {
+      setBulkError('Tidak dapat terhubung ke server.');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const confirmBulkRestore = () => runBulk('/fields/bulk-restore', 'Lapangan dipulihkan.');
+  const confirmBulkForce = () => runBulk('/fields/bulk-force', 'Lapangan dihapus permanen.');
+
   if (loading) {
     return (
       <View style={[st.screen, { backgroundColor: colors.background }]}>
@@ -131,6 +186,7 @@ export default function TrashedFieldsPage() {
   return (
     <View style={[st.screen, { backgroundColor: colors.background }]}>
       <ScrollView
+        style={st.scroll}
         contentContainerStyle={st.container}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
         showsVerticalScrollIndicator={false}
@@ -144,8 +200,11 @@ export default function TrashedFieldsPage() {
         </View>
 
         {fields.map((f: any) => (
-          <View key={f.id} style={[st.card, { backgroundColor: cardSurface, borderColor: colors.outline }]}>
+          <View key={f.id} style={[st.card, { backgroundColor: cardSurface, borderColor: colors.outline }, selected.has(f.id) && { borderColor: colors.primary }]}>
             <View style={st.cardMain}>
+              <TouchableOpacity onPress={() => toggleSelect(f.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={st.checkbox} activeOpacity={0.7}>
+                <SelectCheckbox selected={selected.has(f.id)} colors={colors} size={20} />
+              </TouchableOpacity>
               <View style={[st.fieldIconWrap, { backgroundColor: resolved === 'dark' ? '#2A1F26' : colors.errorContainer, borderColor: colors.error + '30' }]}>
                 <MaterialIcons name="delete" size={20} color={colors.error} />
               </View>
@@ -184,6 +243,17 @@ export default function TrashedFieldsPage() {
         ))}
       </ScrollView>
 
+      <BulkActionBar
+        count={selected.size}
+        allSelected={fields.length > 0 && fields.every(f => selected.has(f.id))}
+        onSelectAll={toggleSelectAll}
+        onClear={() => setSelected(new Set())}
+        actions={[
+          { label: 'Pulihkan', icon: 'restore', color: colors.primary, onPress: () => { setBulkError(null); setBulkTarget('restore'); } },
+          { label: 'Hapus', icon: 'delete-forever', color: colors.error, onPress: () => { setBulkError(null); setBulkTarget('force'); } },
+        ]}
+      />
+
       {/* Restore Confirm Modal */}
       <ConfirmDialog
         visible={!!restoreTarget}
@@ -212,13 +282,47 @@ export default function TrashedFieldsPage() {
         destructive
         onConfirm={confirmForceDelete}
       />
+
+      {/* Bulk Restore Confirm Modal */}
+      <ConfirmDialog
+        visible={bulkTarget === 'restore'}
+        title={`Pulihkan ${selected.size} lapangan?`}
+        description="Semua lapangan terpilih akan dikembalikan dan terlihat oleh semua pengguna."
+        icon="restore"
+        iconColor={COLORS.primary}
+        iconBg={COLORS.primaryContainer}
+        loading={bulkLoading}
+        error={bulkError}
+        onCancel={() => setBulkTarget(null)}
+        confirmLabel="Pulihkan Semua"
+        onConfirm={confirmBulkRestore}
+      />
+
+      {/* Bulk Force Delete Confirm Modal */}
+      <ConfirmDialog
+        visible={bulkTarget === 'force'}
+        title={`Hapus permanen ${selected.size} lapangan?`}
+        description="Tindakan ini tidak bisa dibatalkan. Semua lapangan terpilih akan dihapus selamanya."
+        icon="delete-forever"
+        iconColor={COLORS.error}
+        iconBg={COLORS.errorContainer}
+        loading={bulkLoading}
+        error={bulkError}
+        onCancel={() => setBulkTarget(null)}
+        confirmLabel="Ya, Hapus Permanen"
+        destructive
+        onConfirm={confirmBulkForce}
+      />
     </View>
   );
 }
 
 const st = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
-  container: { padding: SIZES.gutter, paddingBottom: 48 },
+  container: { padding: SIZES.gutter, paddingBottom: 24 },
+  scroll: { flex: 1 },
+
+  checkbox: { marginRight: 10, justifyContent: 'center', alignItems: 'center' },
 
   emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 100 },
   emptyIconWrap: {
@@ -262,7 +366,7 @@ const st = StyleSheet.create({
   deletedRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 14 },
   deletedAt: { ...FONTS.bodySm, color: COLORS.textSecondary },
 
-  actions: { flexDirection: 'row', gap: 10 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   restoreBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
     backgroundColor: COLORS.primaryContainer, paddingVertical: 11, borderRadius: 12,

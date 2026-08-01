@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
@@ -16,7 +17,18 @@ type Tab = 'active' | 'pending' | 'trashed';
 export default function ManageFieldsPage() {
   const { colors } = useTheme();
   const st = makeStyles(colors);
-  const [activeTab, setActiveTab] = useState<Tab>('active');
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const tabParam = params.tab;
+
+  const validTab = (t?: string): t is Tab => t === 'active' || t === 'pending' || t === 'trashed';
+  const [activeTab, setActiveTab] = useState<Tab>(validTab(tabParam) ? tabParam : 'active');
+
+  useEffect(() => {
+    if (validTab(tabParam) && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabParam]);
 
   const [activeCount, setActiveCount] = useState<number | null>(null);
   const [pendingCount, setPendingCount] = useState<number | null>(null);

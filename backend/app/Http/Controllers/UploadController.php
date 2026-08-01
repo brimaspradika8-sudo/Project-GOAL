@@ -22,7 +22,7 @@ class UploadController extends Controller
         }
 
         $request->validate([
-            'image' => 'required|file|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'image' => 'required|file|image|mimes:jpg,jpeg|max:2048',
         ]);
 
         try {

@@ -15,6 +15,8 @@ import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import AlertBox from '../shared/AlertBox';
 import AnimatedDeleteButton from '../shared/AnimatedDeleteButton';
+import SelectCheckbox from '../shared/SelectCheckbox';
+import BulkActionBar from '../shared/BulkActionBar';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -53,6 +55,11 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkDeleteTarget, setBulkDeleteTarget] = useState(false);
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+  const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
 
   const fetchFields = useCallback(async () => {
     try {
@@ -245,6 +252,51 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
     }
   };
 
+  // ── BULK DELETE ────────────────────────────────────────
+  const toggleSelect = (id: number) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const visibleIds = fields.map(f => f.id);
+    setSelected(prev => {
+      const allPicked = visibleIds.length > 0 && visibleIds.every(id => prev.has(id));
+      if (allPicked) return new Set();
+      return new Set(visibleIds);
+    });
+  };
+
+  const confirmBulkDelete = async () => {
+    if (selected.size === 0) return;
+    setBulkDeleteLoading(true);
+    setBulkDeleteError(null);
+    try {
+      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const res = await fetch(`${API_BASE_URL}/fields/bulk-delete`, {
+        method: 'POST',
+        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ids: Array.from(selected) }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setBulkDeleteError(getErrorMessage(data, 'Gagal menghapus lapangan.'));
+        return;
+      }
+      setBulkDeleteTarget(false);
+      setSelected(new Set());
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: data.message || 'Lapangan berhasil dihapus.' });
+      fetchFields();
+    } catch {
+      setBulkDeleteError('Tidak dapat terhubung ke server.');
+    } finally {
+      setBulkDeleteLoading(false);
+    }
+  };
+
   const SPORT_CHIPS = ['Semua', ...SPORT_OPTIONS];
   const sportValue = (s: string) => s === 'Semua' ? null : (SPORT_MAP[s] ?? null);
 
@@ -281,23 +333,45 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
           </View>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.chipScroll}>
+        <View style={st.chipWrap}>
           {SPORT_CHIPS.map(s => {
             const active = (filterSport === null && s === 'Semua') || filterSport === sportValue(s);
             return (
               <TouchableOpacity
                 key={s}
-                style={[st.chip, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline }, active && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                style={[
+                  st.chip,
+                  { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline },
+                  active && { backgroundColor: colors.primary, borderColor: colors.primary },
+                ]}
                 onPress={() => setFilterSport(sportValue(s))}
                 activeOpacity={0.8}
               >
+                {active && <MaterialIcons name="check" size={14} color={colors.onPrimary} />}
                 <Text style={[st.chipText, { color: colors.textSecondary }, active && { color: colors.onPrimary }]}>{s}</Text>
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
+
+        <View style={st.resultRow}>
+          <Text style={[st.resultText, { color: colors.textTertiary }]}>
+            Menampilkan {fields.length} lapangan
+          </Text>
+          {(search || filterSport) && (
+            <TouchableOpacity
+              onPress={() => { setSearch(''); setFilterSport(null); }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={st.resultResetBtn}
+            >
+              <MaterialIcons name="filter-alt-off" size={14} color={colors.primary} />
+              <Text style={[st.resultReset, { color: colors.primary }]}>Reset</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         <ScrollView
+          style={st.scroll}
           contentContainerStyle={st.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
           showsVerticalScrollIndicator={false}
@@ -319,7 +393,15 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
                 ? `Rp${Number(f.price_per_hour).toLocaleString('id-ID')}`
                 : '-';
               return (
-                <View key={f.id} style={[st.card, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
+                <View key={f.id} style={[st.card, { backgroundColor: colors.surface, borderColor: colors.outline }, selected.has(f.id) && { borderColor: colors.primary, backgroundColor: colors.primaryContainer + '20' }]}>
+                  <TouchableOpacity
+                    onPress={() => toggleSelect(f.id)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={st.checkbox}
+                    activeOpacity={0.7}
+                  >
+                    <SelectCheckbox selected={selected.has(f.id)} colors={colors} size={20} />
+                  </TouchableOpacity>
                   <View style={st.cardImgWrap}>
                     <Image source={{ uri: getAssetUrl(img) || img }} style={st.cardImg} />
                   </View>
@@ -366,6 +448,14 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
             })
           )}
         </ScrollView>
+
+        <BulkActionBar
+          count={selected.size}
+          allSelected={fields.length > 0 && fields.every(f => selected.has(f.id))}
+          onSelectAll={toggleSelectAll}
+          onClear={() => setSelected(new Set())}
+          actions={[{ label: 'Hapus', icon: 'delete', color: colors.error, onPress: () => { setBulkDeleteError(null); setBulkDeleteTarget(true); } }]}
+        />
       </View>
 
       {/* ─── Edit Modal ─── */}
@@ -506,6 +596,18 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      <ConfirmDialog
+        visible={bulkDeleteTarget}
+        title={`Hapus ${selected.size} lapangan terpilih?`}
+        description="Lapangan akan dihapus secara permanen. Tindakan ini tidak bisa dibatalkan."
+        destructive
+        loading={bulkDeleteLoading}
+        error={bulkDeleteError}
+        confirmLabel="Ya, Hapus"
+        onConfirm={confirmBulkDelete}
+        onCancel={() => setBulkDeleteTarget(false)}
+      />
     </>
   );
 }
@@ -560,14 +662,39 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}) },
 
-  chipScroll: { paddingHorizontal: SIZES.gutter, gap: 8, marginBottom: 12 },
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingHorizontal: SIZES.gutter,
+    marginBottom: 12,
+  },
   chip: {
-    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
     borderWidth: 1,
   },
   chipText: { ...FONTS.labelMd, fontSize: 12, fontWeight: '600' },
 
-  list: { padding: SIZES.gutter, paddingBottom: 60 },
+  resultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SIZES.gutter,
+    marginBottom: 10,
+  },
+  resultText: { ...FONTS.labelMd, fontSize: 12 },
+  resultResetBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  resultReset: { ...FONTS.labelMd, fontSize: 12, fontWeight: '700' },
+
+  list: { padding: SIZES.gutter, paddingBottom: 24 },
+  scroll: { flex: 1 },
+
+  checkbox: { padding: 4, alignSelf: 'flex-start', marginBottom: 6 },
 
   emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12 },
   emptyIconWrap: {

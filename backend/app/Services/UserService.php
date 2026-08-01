@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Notification;
 use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -9,6 +10,10 @@ use Illuminate\Support\Facades\DB;
 
 class UserService
 {
+    public function __construct(
+        private NotificationService $notifications
+    ) {}
+
     public function listUsers(?string $search = null, ?string $role = null): LengthAwarePaginator
     {
         return User::with('profile')
@@ -97,6 +102,14 @@ class UserService
         }
 
         $user->profile?->forceFill(['role' => $role])->save();
+
+        $this->notifications->create(
+            $user,
+            Notification::TYPE_ROLE_CHANGED,
+            'Role Akun Diubah',
+            "Role akun Anda diubah menjadi {$role}.",
+            ['role' => $role]
+        );
     }
 
     public function deleteUser(User $user, User $currentUser): void
@@ -113,5 +126,30 @@ class UserService
 
         $user->profile?->delete();
         $user->delete();
+    }
+
+    public function deleteUsers(array $ids, User $currentUser): int
+    {
+        $currentUserRole = $currentUser->profile?->role;
+        $deleted = 0;
+
+        User::with('profile')
+            ->whereIn('id', $ids)
+            ->get()
+            ->each(function (User $user) use ($currentUser, $currentUserRole, &$deleted) {
+                if ($user->id === $currentUser->id) {
+                    return;
+                }
+
+                if ($user->profile && $user->profile->role === 'super_admin' && $currentUserRole !== 'super_admin') {
+                    return;
+                }
+
+                $user->profile?->delete();
+                $user->delete();
+                $deleted++;
+            });
+
+        return $deleted;
     }
 }
