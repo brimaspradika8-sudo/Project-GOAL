@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { useTheme } from '../../lib/theme';
@@ -24,6 +24,13 @@ export default function AppToast({
   const palette = getAlertPalette(type, colors, resolved);
   const st = makeStyles(colors);
 
+  const ACCENT_BY_TYPE: Record<ToastType, string> = {
+    success: colors.primary,
+    error: colors.error,
+    info: colors.floodlight,
+    warning: colors.warning,
+  };
+
   useEffect(() => {
     if (!visible) { opacity.setValue(0); return; }
     Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
@@ -35,6 +42,8 @@ export default function AppToast({
   }, [durationMs, onDismiss, opacity, visible]);
 
   if (!visible) return null;
+
+  const accent = ACCENT_BY_TYPE[type];
 
   return (
     <Animated.View
