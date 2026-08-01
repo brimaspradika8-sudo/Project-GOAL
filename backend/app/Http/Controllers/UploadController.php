@@ -22,7 +22,7 @@ class UploadController extends Controller
         }
 
         $request->validate([
-            'image' => 'required|file|image|mimes:jpg,jpeg|max:2048',
+            'image' => 'required|file|image|mimes:jpg,jpeg,png,webp|max:5120',
         ]);
 
         try {
@@ -33,7 +33,7 @@ class UploadController extends Controller
                 return response()->json(['message' => 'File tidak valid.'], 400);
             }
 
-            $ext = $file->getClientOriginalExtension() ?: 'jpg';
+            $ext = strtolower($file->getClientOriginalExtension()) ?: 'jpg';
             $filename = time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
             $path = 'fields/' . $filename;
 
@@ -43,7 +43,7 @@ class UploadController extends Controller
 
             if (!$supabaseUrl || !$supabaseKey || !$bucket) {
                 Log::error('Upload failed: Supabase credentials not configured');
-                return response()->json(['message' => 'Konfigurasi penyimpanan tidak lengkap.'], 500);
+                return response()->json(['message' => 'Konfigurasi penyimpanan Supabase belum lengkap.'], 500);
             }
 
             $mime = $file->getMimeType() ?: 'image/jpeg';
@@ -55,11 +55,14 @@ class UploadController extends Controller
                 'url' => $publicUrl,
             ]);
 
-            return response()->json(['url' => $publicUrl]);
+            return response()->json([
+                'url' => $publicUrl,
+                'path' => $path,
+            ]);
         } catch (\Exception $e) {
             Log::error('Upload exception: ' . $e->getMessage());
             return response()->json([
-                'message' => 'Gagal mengunggah foto. Silakan coba lagi.',
+                'message' => $e->getMessage() ?: 'Gagal mengunggah foto. Silakan coba lagi.',
             ], 500);
         }
     }
