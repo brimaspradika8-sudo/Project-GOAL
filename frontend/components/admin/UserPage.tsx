@@ -22,9 +22,9 @@ import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 
 const getRoleConfig = (colors: ThemeColors): Record<string, { label: string; color: string; bg: string }> => ({
-  player:      { label: 'Pemain',      color: colors.textSecondary, bg: colors.surfaceContainerHigh },
-  owner:       { label: 'Pemilik',     color: colors.primary, bg: colors.primaryContainer },
-  super_admin: { label: 'Super Admin', color: colors.warning, bg: colors.warningMuted },
+  player:      { label: 'Pemain',      color: '#9CA3AF', bg: '#2D3748' },
+  owner:       { label: 'Pemilik',     color: '#10B981', bg: 'rgba(16, 185, 129, 0.15)' },
+  super_admin: { label: 'Super Admin', color: '#FBBF24', bg: 'rgba(251, 191, 36, 0.15)' },
 });
 
 type Tab = 'user' | 'owner';
@@ -427,11 +427,11 @@ export default function UserPage() {
                   <View style={st.actions}>
                     {/* Ungu — Edit User (semua baris) */}
                     <TouchableOpacity
-                      style={[st.actionBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                      style={[st.actionBtn, { backgroundColor: '#10B981', borderColor: '#10B981' }]}
                       onPress={() => openEdit(u)}
                       hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                     >
-                      <MaterialIcons name="edit" size={16} color={colors.onPrimary} />
+                      <MaterialIcons name="edit" size={16} color="#FFFFFF" />
                     </TouchableOpacity>
 
                     {/* Oranye — Upgrade Role (super_admin only, bukan baris super_admin) */}
@@ -738,9 +738,9 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   emptyWrap: { alignItems: 'center', marginTop: 60, gap: 12 },
   emptyIcon: {
     width: 80, height: 80, borderRadius: 24,
-    backgroundColor: colors.surfaceContainerHigh,
+    backgroundColor: '#1E293B',
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: colors.outline,
+    borderWidth: 1, borderColor: '#334155',
   },
   emptyTitle: { ...FONTS.titleMd, color: colors.textSecondary },
   emptyAction: {
@@ -772,9 +772,9 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.surfaceContainerHigh,
+    backgroundColor: '#1E293B',
     borderWidth: 1,
-    borderColor: colors.outline,
+    borderColor: '#334155',
   },
 
   modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.45)', padding: 20 },
