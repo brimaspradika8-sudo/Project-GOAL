@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Http\Requests\Auth\CheckEmailRequest;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -65,12 +64,5 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Logout berhasil.',
         ]);
-    }
-
-    public function checkEmail(CheckEmailRequest $request): JsonResponse
-    {
-        $this->auth->checkEmail($request->email);
-
-        return response()->json(['message' => 'Request diterima.']);
     }
 }

@@ -1,6 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
+import * as SecureStore from '../lib/secureStorage';
 import { TOKEN_KEY } from '../lib/auth';
 
 export interface AppNotification {
@@ -64,7 +64,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({ loading: true });
 
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (!token) {
         set({ items: [], hydrated: true, loading: false });
         return;
@@ -102,7 +102,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     });
 
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (!token) return;
       await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
         method: 'POST',
@@ -119,7 +119,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({ items: get().items.map((n) => ({ ...n, read: true })) });
 
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (!token) return;
       await fetch(`${API_BASE_URL}/notifications/read-all`, {
         method: 'POST',
@@ -131,7 +131,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   clearAll: async () => {
-    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const token = await SecureStore.getItemAsync(TOKEN_KEY);
     if (!token) {
       set({ items: [] });
       return 0;

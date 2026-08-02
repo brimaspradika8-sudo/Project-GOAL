@@ -13,7 +13,6 @@ use App\Http\Controllers\NotificationController;
     Route::middleware('throttle:10,1')->group(function () {
     Route::post('/auth/register',    [AuthController::class, 'register']);
     Route::post('/auth/login',       [AuthController::class, 'login']);
-    Route::post('/auth/check-email', [AuthController::class, 'checkEmail']);
     Route::post('/auth/verify-token',[PasswordResetController::class, 'token']);
     Route::post('/auth/reset-password',[PasswordResetController::class, 'reset']);
 });

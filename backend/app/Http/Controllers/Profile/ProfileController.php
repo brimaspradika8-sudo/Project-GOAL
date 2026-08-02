@@ -29,7 +29,7 @@ class ProfileController extends Controller
         $validated = $request->validate([
             'full_name' => 'sometimes|string|max:100',
             'region'    => 'sometimes|string|max:100',
-            'avatar_url' => ['sometimes', 'nullable', 'url', 'max:500'],
+            'avatar_url' => ['sometimes', 'nullable', 'url', 'max:2048', 'regex:/^https?:\/\//i'],
             'age'       => 'sometimes|nullable|integer|min:10|max:100',
         ]);
 
@@ -75,10 +75,14 @@ class ProfileController extends Controller
             'password' => $request->password,
         ]);
 
-        $user->tokens()->delete();
+        $currentToken = $user->currentAccessToken();
+
+        $user->tokens()
+            ->when($currentToken, fn ($query) => $query->where('id', '!=', $currentToken->id))
+            ->delete();
 
         return response()->json([
-            'message' => 'Password berhasil diperbarui. Silakan login kembali.',
+            'message' => 'Password berhasil diperbarui.',
         ]);
     }
 }

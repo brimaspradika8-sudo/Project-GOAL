@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from '../../lib/secureStorage';
 import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
 import { FONTS, SIZES } from '../goalTheme';
@@ -36,7 +36,7 @@ export default function ManageFieldsPage() {
 
   const fetchCounts = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (!token) return;
       const headers = { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` };
 
@@ -66,7 +66,7 @@ export default function ManageFieldsPage() {
   const refreshCount = useCallback((tab: Tab) => {
     const fetchers: Record<Tab, () => Promise<void>> = {
       active: async () => {
-        const token = await AsyncStorage.getItem(TOKEN_KEY);
+        const token = await SecureStore.getItemAsync(TOKEN_KEY);
         if (!token) return;
         const res = await fetch(`${API_BASE_URL}/fields?page=1`, { headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` } });
         if (res.ok) {
@@ -75,7 +75,7 @@ export default function ManageFieldsPage() {
         }
       },
       pending: async () => {
-        const token = await AsyncStorage.getItem(TOKEN_KEY);
+        const token = await SecureStore.getItemAsync(TOKEN_KEY);
         if (!token) return;
         const res = await fetch(`${API_BASE_URL}/fields/pending/list?page=1`, { headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` } });
         if (res.ok) {
@@ -84,7 +84,7 @@ export default function ManageFieldsPage() {
         }
       },
       trashed: async () => {
-        const token = await AsyncStorage.getItem(TOKEN_KEY);
+        const token = await SecureStore.getItemAsync(TOKEN_KEY);
         if (!token) return;
         const res = await fetch(`${API_BASE_URL}/fields/trashed/list?page=1`, { headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` } });
         if (res.ok) {

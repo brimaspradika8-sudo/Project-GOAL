@@ -3,10 +3,10 @@ import React, { useState, useEffect } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProfileStore } from '../../store/profileStore';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
 import { useTheme } from '../../lib/theme';
+import * as SecureStore from '../../lib/secureStorage';
 import { TOKEN_KEY } from '../../lib/auth';
 import { FONT_FAMILY } from '../../components/goalTheme';
 import Sidebar, { isSidebarRouteActive, SidebarItem } from '../../components/web/Sidebar';
@@ -15,6 +15,7 @@ import { useBreakpoint } from '../../lib/responsive';
 
 export default function AdminTabLayout() {
   const profile = useProfileStore((s) => s.profile);
+  const profileLoading = useProfileStore((s) => s.loading);
   const { colors } = useTheme();
   const role = profile?.role || '';
   const isSuperAdmin = role === 'super_admin';
@@ -23,13 +24,24 @@ export default function AdminTabLayout() {
   const pathname = usePathname();
   const router = useRouter();
 
+  useEffect(() => {
+    if (profileLoading) return;
+    if (!profile) {
+      router.replace('/login');
+      return;
+    }
+    if (profile.role !== 'super_admin') {
+      router.replace(profile.role === 'owner' ? '/(owner)' : '/(tabs)');
+    }
+  }, [profile, profileLoading, router]);
+
   const [ownerRequestBadge, setOwnerRequestBadge] = useState<number | undefined>(undefined);
   const [manageFieldsBadge, setManageFieldsBadge] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     const fetchBadges = async () => {
       try {
-        const token = await AsyncStorage.getItem(TOKEN_KEY);
+        const token = await SecureStore.getItemAsync(TOKEN_KEY);
         if (!token) return;
         const headers = {
           ...DEFAULT_HEADERS,

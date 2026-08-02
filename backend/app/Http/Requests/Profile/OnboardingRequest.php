@@ -20,7 +20,7 @@ class OnboardingRequest extends FormRequest
             'sports'     => 'required|array|min:1',
             'sports.*'   => ['string', 'max:100', Rule::in(SportType::values())],
             'region'     => 'nullable|string|max:100',
-            'avatar_url' => 'nullable|url|max:2048',
+            'avatar_url' => ['nullable', 'url', 'max:2048', 'regex:/^https?:\/\//i'],
         ];
     }
 

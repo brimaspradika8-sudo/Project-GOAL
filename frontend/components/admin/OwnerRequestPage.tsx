@@ -6,10 +6,10 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from '../../lib/secureStorage';
 import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../../lib/api';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
@@ -18,6 +18,7 @@ import { useTheme } from '../../lib/theme';
 
 export default function OwnerRequestPage() {
   const { colors, resolved } = useTheme();
+  const st = makeStyles(colors, resolved);
   const cardSurface = colors.surface;
   const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
   const [requests, setRequests] = useState<any[]>([]);
@@ -30,7 +31,7 @@ export default function OwnerRequestPage() {
 
   const fetchRequests = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/owner-requests/pending`, {
         headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
       });
@@ -48,7 +49,7 @@ export default function OwnerRequestPage() {
   const onRefresh = () => { setRefreshing(true); fetchRequests(); };
 
   const reviewRequest = async (id: number, status: 'approved' | 'rejected', reason?: string) => {
-    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const token = await SecureStore.getItemAsync(TOKEN_KEY);
     const res = await fetch(`${API_BASE_URL}/owner-requests/${id}/review`, {
       method: 'POST',
       headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -177,16 +178,16 @@ export default function OwnerRequestPage() {
                     activeOpacity={0.8}
                     disabled={submitting}
                   >
-                    <MaterialIcons name="check-circle" size={16} color={COLORS.onPrimary} />
+                    <MaterialIcons name="check-circle" size={16} color={colors.onPrimary} />
                     <Text style={st.approveBtnText}>Setujui</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[st.rejectBtn, { backgroundColor: resolved === 'dark' ? '#2A1F26' : colors.errorContainer, borderColor: colors.error + '30' }, submitting && st.disabledBtn]}
+                    style={[st.rejectBtn, submitting && st.disabledBtn]}
                     onPress={() => setRejectModal({ id: r.id, visible: true })}
                     activeOpacity={0.8}
                     disabled={submitting}
                   >
-                    <MaterialIcons name="cancel" size={16} color={COLORS.error} />
+                    <MaterialIcons name="cancel" size={16} color={colors.error} />
                     <Text style={st.rejectBtnText}>Tolak</Text>
                   </TouchableOpacity>
                 </View>
@@ -229,7 +230,7 @@ export default function OwnerRequestPage() {
                 disabled={submitting}
               >
                 {submitting
-                  ? <ActivityIndicator color={COLORS.onPrimary} size="small" />
+                  ? <ActivityIndicator color={colors.onPrimary} size="small" />
                   : <Text style={st.confirmText}>Tolak</Text>}
               </TouchableOpacity>
             </View>
@@ -243,8 +244,8 @@ export default function OwnerRequestPage() {
         title={`Setujui "${approveTarget?.name ?? ''}"?`}
         description="Pengajuan owner akan disetujui dan user akan mendapatkan akses owner."
         icon="check-circle"
-        iconColor={COLORS.primary}
-        iconBg={COLORS.primaryContainer}
+        iconColor={colors.primary}
+        iconBg={colors.primaryContainer}
         loading={submitting}
         onCancel={() => setApproveTarget(null)}
         confirmLabel="Setujui"
@@ -254,97 +255,97 @@ export default function OwnerRequestPage() {
   );
 }
 
-const st = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.background },
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark') => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.background },
   list: { padding: SIZES.gutter, paddingBottom: 60 },
 
   headerRow: { flexDirection: 'row', marginBottom: 14 },
   countPill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: COLORS.floodlight + '20', borderRadius: 20,
+    backgroundColor: colors.floodlight + '20', borderRadius: 20,
     paddingHorizontal: 12, paddingVertical: 5,
-    borderWidth: 1, borderColor: COLORS.floodlight + '50',
+    borderWidth: 1, borderColor: colors.floodlight + '50',
   },
-  countText: { ...FONTS.labelSm, color: COLORS.warningText },
+  countText: { ...FONTS.labelSm, color: colors.onWarning },
 
   emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12 },
   emptyIconWrap: {
     width: 80, height: 80, borderRadius: 24,
-    backgroundColor: COLORS.surfaceContainerHigh,
+    backgroundColor: colors.surfaceContainerHigh,
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: COLORS.outline, marginBottom: 4,
+    borderWidth: 1, borderColor: colors.outline, marginBottom: 4,
   },
-  emptyTitle: { ...FONTS.titleLg, color: COLORS.text },
-  emptyDesc: { ...FONTS.bodyMd, color: COLORS.textSecondary },
+  emptyTitle: { ...FONTS.titleLg, color: colors.text },
+  emptyDesc: { ...FONTS.bodyMd, color: colors.textSecondary },
 
   card: {
-    backgroundColor: COLORS.surface, borderRadius: 18, padding: 16, marginBottom: 14,
-    borderWidth: 1, borderColor: COLORS.outline, ...SHADOWS.sm,
+    backgroundColor: colors.surface, borderRadius: 18, padding: 16, marginBottom: 14,
+    borderWidth: 1, borderColor: colors.outline, ...SHADOWS.sm,
   },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
   businessIconWrap: {
     width: 44, height: 44, borderRadius: 13,
-    backgroundColor: COLORS.floodlight + '20',
+    backgroundColor: colors.floodlight + '20',
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: COLORS.floodlight + '40',
+    borderWidth: 1, borderColor: colors.floodlight + '40',
   },
   cardTopInfo: { flex: 1 },
-  businessName: { ...FONTS.titleLg, color: COLORS.text, marginBottom: 5 },
+  businessName: { ...FONTS.titleLg, color: colors.text, marginBottom: 5 },
   pendingBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
-  pulseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.floodlight },
-  pendingText: { ...FONTS.labelMd, color: COLORS.warningText },
-  divider: { height: 1, backgroundColor: COLORS.outline, marginBottom: 12 },
+  pulseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.floodlight },
+  pendingText: { ...FONTS.labelMd, color: colors.onWarning },
+  divider: { height: 1, backgroundColor: colors.outline, marginBottom: 12 },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 7 },
-  detailText: { ...FONTS.bodyMd, color: COLORS.textSecondary, flex: 1 },
+  detailText: { ...FONTS.bodyMd, color: colors.textSecondary, flex: 1 },
 
   actions: { flexDirection: 'row', gap: 10, marginTop: 14 },
   approveBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    backgroundColor: COLORS.primary, paddingVertical: 12, borderRadius: 12,
+    backgroundColor: colors.primary, paddingVertical: 12, borderRadius: 12,
     minHeight: 46,
   },
-  approveBtnText: { ...FONTS.titleSm, color: COLORS.onPrimary },
+  approveBtnText: { ...FONTS.titleSm, color: colors.onPrimary },
   rejectBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    backgroundColor: COLORS.errorContainer, paddingVertical: 12, borderRadius: 12,
-    borderWidth: 1, borderColor: COLORS.error + '30',
+    backgroundColor: colors.errorContainer, paddingVertical: 12, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.error + '30',
     minHeight: 46,
   },
-  rejectBtnText: { ...FONTS.titleSm, color: COLORS.error },
+  rejectBtnText: { ...FONTS.titleSm, color: colors.error },
   disabledBtn: { opacity: 0.6 },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
   modal: {
-    backgroundColor: COLORS.surface, borderRadius: 20, padding: 22,
-    borderWidth: 1, borderColor: COLORS.outline, ...SHADOWS.lg,
+    backgroundColor: colors.surface, borderRadius: 20, padding: 22,
+    borderWidth: 1, borderColor: colors.outline, ...SHADOWS.lg,
   },
   modalHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 6 },
   modalIconWrap: {
     width: 38, height: 38, borderRadius: 11,
-    backgroundColor: COLORS.errorContainer,
+    backgroundColor: colors.errorContainer,
     justifyContent: 'center', alignItems: 'center',
   },
-  modalTitle: { ...FONTS.headlineSm, color: COLORS.text },
-  modalSub: { ...FONTS.bodySm, color: COLORS.textSecondary, marginBottom: 16, marginLeft: 50 },
+  modalTitle: { ...FONTS.headlineSm, color: colors.text },
+  modalSub: { ...FONTS.bodySm, color: colors.textSecondary, marginBottom: 16, marginLeft: 50 },
   modalInput: {
-    backgroundColor: COLORS.surfaceContainerLow, borderRadius: 12, padding: 14,
-    color: COLORS.text, fontSize: 14, minHeight: 90,
+    backgroundColor: colors.surfaceContainerLow, borderRadius: 12, padding: 14,
+    color: colors.text, fontSize: 14, minHeight: 90,
     textAlignVertical: 'top', marginBottom: 16,
-    borderWidth: 1, borderColor: COLORS.outline,
+    borderWidth: 1, borderColor: colors.outline,
     ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}),
   },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
   cancelBtn: {
     paddingVertical: 11, paddingHorizontal: 20, borderRadius: 10,
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderWidth: 1, borderColor: COLORS.outline,
+    backgroundColor: colors.surfaceContainerLow,
+    borderWidth: 1, borderColor: colors.outline,
     minHeight: 44, justifyContent: 'center',
   },
-  cancelText: { ...FONTS.titleSm, color: COLORS.textSecondary },
+  cancelText: { ...FONTS.titleSm, color: colors.textSecondary },
   confirmBtn: {
     paddingVertical: 11, paddingHorizontal: 24, borderRadius: 10,
-    backgroundColor: COLORS.error, minHeight: 44, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.error, minHeight: 44, justifyContent: 'center', alignItems: 'center',
   },
-  confirmText: { ...FONTS.titleSm, color: COLORS.onPrimary },
+  confirmText: { ...FONTS.titleSm, color: colors.onPrimary },
 });

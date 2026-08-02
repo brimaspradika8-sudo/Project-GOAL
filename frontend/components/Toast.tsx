@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { FONT_FAMILY } from './goalTheme';
+import { useTheme } from '../lib/theme';
+import { getAlertPalette } from './shared/alertPalette';
 
 export type ToastType = 'success' | 'error' | 'info';
 
@@ -21,49 +23,13 @@ interface ToastData {
   duration?: number;
 }
 
-const TOAST_CONFIG: Record<ToastType, {
-  cardBg: string;
-  iconBg: string;
-  iconColor: string;
-  icon: keyof typeof MaterialIcons.glyphMap;
-  titleColor: string;
-  messageColor: string;
-  closeBg: string;
-}> = {
-  error: {
-    cardBg: '#232531',
-    iconBg: 'rgba(255,255,255,0.06)',
-    iconColor: '#d65563',
-    icon: 'error-outline',
-    titleColor: '#ffffff',
-    messageColor: '#6b7280',
-    closeBg: 'rgba(255,255,255,0.08)',
-  },
-  success: {
-    cardBg: '#232531',
-    iconBg: 'rgba(255,255,255,0.06)',
-    iconColor: '#4ade80',
-    icon: 'check-circle-outline',
-    titleColor: '#ffffff',
-    messageColor: '#6b7280',
-    closeBg: 'rgba(255,255,255,0.08)',
-  },
-  info: {
-    cardBg: '#232531',
-    iconBg: 'rgba(255,255,255,0.06)',
-    iconColor: '#60a5fa',
-    icon: 'info-outline',
-    titleColor: '#ffffff',
-    messageColor: '#6b7280',
-    closeBg: 'rgba(255,255,255,0.08)',
-  },
-};
-
 function ToastItem({ toast, onDismiss }: { toast: ToastData; onDismiss: (id: number) => void }) {
   const slideAnim = useRef(new Animated.Value(-80)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
-  const config = TOAST_CONFIG[toast.type];
+  const { colors, resolved } = useTheme();
+  const palette = getAlertPalette(toast.type, colors, resolved);
+  const accent = palette.accent;
 
   const dismiss = useCallback(() => {
     Animated.parallel([
@@ -122,15 +88,15 @@ function ToastItem({ toast, onDismiss }: { toast: ToastData; onDismiss: (id: num
       ]}
       pointerEvents="box-none"
     >
-      <View style={[styles.toastCard, { backgroundColor: config.cardBg }]}>
-        <View style={[styles.iconContainer, { backgroundColor: config.iconBg }]}>
-          <MaterialIcons name={config.icon} size={22} color={config.iconColor} />
+      <View style={[styles.toastCard, { backgroundColor: colors.inverseSurface }]}>
+        <View style={[styles.iconContainer, { backgroundColor: accent + '1A' }]}>
+          <MaterialIcons name={palette.icon} size={22} color={accent} />
         </View>
 
         <View style={styles.textContainer}>
-          <Text style={[styles.title, { color: config.titleColor }]} numberOfLines={1} ellipsizeMode="tail">{toast.title}</Text>
+          <Text style={[styles.title, { color: colors.inverseOnSurface }]} numberOfLines={1} ellipsizeMode="tail">{toast.title}</Text>
           {toast.message ? (
-            <Text style={[styles.message, { color: config.messageColor }]} numberOfLines={2} ellipsizeMode="tail">{toast.message}</Text>
+            <Text style={[styles.message, { color: colors.inverseOnSurface + 'B3' }]} numberOfLines={2} ellipsizeMode="tail">{toast.message}</Text>
           ) : null}
         </View>
 
@@ -138,9 +104,9 @@ function ToastItem({ toast, onDismiss }: { toast: ToastData; onDismiss: (id: num
           onPress={dismiss}
           activeOpacity={0.7}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={[styles.closeButton, { backgroundColor: config.closeBg }]}
+          style={[styles.closeButton, { backgroundColor: colors.inverseOnSurface + '1F' }]}
         >
-          <MaterialIcons name="close" size={16} color="#6b7280" />
+          <MaterialIcons name="close" size={16} color={colors.inverseOnSurface + 'B3'} />
         </TouchableOpacity>
       </View>
     </Animated.View>

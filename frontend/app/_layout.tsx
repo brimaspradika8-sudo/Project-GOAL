@@ -10,7 +10,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import LoadingScreen from '../components/LoadingScreen';
 import SplashScreen from '../components/SplashScreen';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
 import { useProfileStore } from '../store/profileStore';
@@ -19,6 +18,7 @@ import { ThemeProvider, useTheme } from '../lib/theme';
 import AppToast from '../components/shared/AppToast';
 import { useToastStore } from '../store/toastStore';
 
+import * as SecureStore from '../lib/secureStorage';
 import { TOKEN_KEY } from '../lib/auth';
 
 NativeSplash.preventAutoHideAsync();
@@ -34,7 +34,7 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
   }
 }
 
-async function fetchProfile(token: string) {
+async function fetchProfile(token: string): Promise<{ profile: any | null; unauthorized: boolean }> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000);
   try {
@@ -45,10 +45,15 @@ async function fetchProfile(token: string) {
       },
       signal: controller.signal,
     });
-    if (!res.ok) return null;
-    return await res.json();
+    if (res.status === 401 || res.status === 403) {
+      return { profile: null, unauthorized: true };
+    }
+    if (!res.ok) {
+      return { profile: null, unauthorized: false };
+    }
+    return { profile: await res.json(), unauthorized: false };
   } catch {
-    return null;
+    return { profile: null, unauthorized: false };
   } finally {
     clearTimeout(timeout);
   }
@@ -110,11 +115,19 @@ function RootLayoutInner() {
     routingRef.current = true;
     setLoadingMessage('Memeriksa data profil');
 
-    const profile = await fetchProfile(token);
+    let { profile, unauthorized } = await fetchProfile(token);
+
+    if (!profile && !unauthorized) {
+      setLoadingMessage('Koneksi terputus. Mencoba ulang...');
+      await new Promise((r) => setTimeout(r, 1500));
+      ({ profile, unauthorized } = await fetchProfile(token));
+    }
 
     if (!profile) {
-      await AsyncStorage.removeItem(TOKEN_KEY);
-      useProfileStore.getState().clearProfile();
+      if (unauthorized) {
+        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        useProfileStore.getState().clearProfile();
+      }
       routeToLogin();
       return;
     }
@@ -145,22 +158,9 @@ function RootLayoutInner() {
     const initialize = async () => {
       setLoadingMessage('Memeriksa sesi');
 
-      const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
+      const storedToken = await SecureStore.getItemAsync(TOKEN_KEY);
       if (storedToken) {
-        const profile = await fetchProfile(storedToken);
-        if (profile) {
-          useProfileStore.setState({ profile, loading: false });
-          if (profile.onboarding_completed === false) {
-            router.replace('/onboarding');
-          } else if (profile.role === 'super_admin') {
-            router.replace('/(admin)/dashboard');
-          } else {
-            router.replace('/(tabs)');
-          }
-        } else {
-          await AsyncStorage.removeItem(TOKEN_KEY);
-          routeToLogin();
-        }
+        await routeByProfile(storedToken);
       } else {
         routeToLogin();
       }
@@ -200,7 +200,6 @@ function RootLayoutInner() {
             <Stack.Screen name="onboarding" options={{ gestureEnabled: false, animation: 'fade' }} />
             <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
             <Stack.Screen name="venue-detail" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="booking" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="e-ticket" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
           </Stack>
           {!isReady && Platform.OS !== 'web' && (

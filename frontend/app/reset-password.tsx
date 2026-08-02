@@ -15,6 +15,7 @@ import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
 function rpValidatePassword(v: string): string {
   if (!v) return 'Password wajib diisi.';
   if (v.length < 8) return 'Password minimal 8 karakter.';
+  if (!/[a-z]/.test(v)) return 'Password harus mengandung huruf kecil.';
   if (!/[A-Z]/.test(v)) return 'Password harus mengandung huruf besar.';
   if (!/[0-9]/.test(v)) return 'Password harus mengandung angka.';
   return '';

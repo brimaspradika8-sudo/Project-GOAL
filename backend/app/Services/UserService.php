@@ -2,16 +2,19 @@
 
 namespace App\Services;
 
+use App\Models\Field;
 use App\Models\Notification;
 use App\Models\Profile;
 use App\Models\User;
+use App\Services\SupabaseStorageService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 class UserService
 {
     public function __construct(
-        private NotificationService $notifications
+        private NotificationService $notifications,
+        private SupabaseStorageService $storage
     ) {}
 
     public function listUsers(?string $search = null, ?string $role = null): LengthAwarePaginator
@@ -95,10 +98,18 @@ class UserService
             throw new \RuntimeException('Role tidak valid.');
         }
 
+        if ($user->id === $currentUser->id) {
+            throw new \RuntimeException('Anda tidak dapat mengubah role akun Anda sendiri.');
+        }
+
         $currentUserRole = $currentUser->profile?->role;
 
         if (($user->profile?->role === 'super_admin' || $role === 'super_admin') && $currentUserRole !== 'super_admin') {
             throw new \RuntimeException('Hanya Super Admin yang dapat mengelola role Super Admin.');
+        }
+
+        if ($user->profile?->role === 'super_admin' && $role !== 'super_admin' && $this->countSuperAdmins() <= 1) {
+            throw new \RuntimeException('Tidak dapat mengubah role Super Admin terakhir.');
         }
 
         $user->profile?->forceFill(['role' => $role])->save();
@@ -120,10 +131,17 @@ class UserService
 
         $currentUserRole = $currentUser->profile?->role;
 
-        if ($user->profile && $user->profile->role === 'super_admin' && $currentUserRole !== 'super_admin') {
-            throw new \RuntimeException('Hanya Super Admin yang dapat menghapus akun Super Admin.');
+        if ($user->profile && $user->profile->role === 'super_admin') {
+            if ($currentUserRole !== 'super_admin') {
+                throw new \RuntimeException('Hanya Super Admin yang dapat menghapus akun Super Admin.');
+            }
+
+            if ($this->countSuperAdmins() <= 1) {
+                throw new \RuntimeException('Tidak dapat menghapus Super Admin terakhir.');
+            }
         }
 
+        $this->deleteUserFieldImages($user);
         $user->profile?->delete();
         $user->delete();
     }
@@ -141,15 +159,38 @@ class UserService
                     return;
                 }
 
-                if ($user->profile && $user->profile->role === 'super_admin' && $currentUserRole !== 'super_admin') {
-                    return;
+                if ($user->profile && $user->profile->role === 'super_admin') {
+                    if ($currentUserRole !== 'super_admin') {
+                        return;
+                    }
+
+                    if ($this->countSuperAdmins() <= 1) {
+                        return;
+                    }
                 }
 
+                $this->deleteUserFieldImages($user);
                 $user->profile?->delete();
                 $user->delete();
                 $deleted++;
             });
 
         return $deleted;
+    }
+
+    private function countSuperAdmins(): int
+    {
+        return (int) User::whereHas('profile', function ($query) {
+            $query->where('role', Profile::ROLE_SUPER_ADMIN);
+        })->count();
+    }
+
+    private function deleteUserFieldImages(User $user): void
+    {
+        Field::withTrashed()
+            ->where('owner_id', $user->id)
+            ->pluck('image_url')
+            ->filter()
+            ->each(fn (string $url) => $this->storage->delete($url));
     }
 }

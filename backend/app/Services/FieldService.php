@@ -9,6 +9,7 @@ use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use App\Services\SupabaseStorageService;
 
 class FieldService
@@ -172,11 +173,20 @@ class FieldService
             'name', 'sport_type', 'location', 'description', 'price_per_hour', 'image_url',
         ])->filter(fn ($v) => $v !== null)->toArray();
 
+        $oldImageUrl = null;
         if (array_key_exists('image_url', $allowed) && $field->image_url && $allowed['image_url'] !== $field->image_url) {
-            $this->storage->delete($field->image_url);
+            $oldImageUrl = $field->image_url;
         }
 
         $field->update($allowed);
+
+        if ($oldImageUrl) {
+            try {
+                $this->storage->delete($oldImageUrl);
+            } catch (\Exception $e) {
+                Log::warning('Gagal menghapus gambar lapangan lama: ' . $e->getMessage());
+            }
+        }
 
         if ($field->status === 'rejected') {
             $field->forceFill([
@@ -212,10 +222,6 @@ class FieldService
 
     public function delete(Field $field, User $actor): bool
     {
-        if ($field->image_url) {
-            $this->storage->delete($field->image_url);
-        }
-
         $this->notifyFieldDeletion($field, $actor);
 
         return $field->delete();
@@ -281,10 +287,6 @@ class FieldService
             ->whereIn('id', $ids)
             ->get()
             ->each(function (Field $field) use ($actor, &$deleted) {
-                if ($field->image_url) {
-                    $this->storage->delete($field->image_url);
-                }
-
                 $this->notifyFieldDeletion($field, $actor);
                 $field->delete();
                 $deleted++;

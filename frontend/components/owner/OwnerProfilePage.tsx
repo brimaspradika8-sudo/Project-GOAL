@@ -4,12 +4,12 @@ import {
   StyleSheet,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useProfileStore } from '../../store/profileStore';
+import * as SecureStore from '../../lib/secureStorage';
 import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
@@ -26,14 +26,14 @@ export default function OwnerProfilePage() {
   const doActualLogout = async () => {
     setLogoutLoading(true);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (token) {
         await fetch(`${API_BASE_URL}/auth/logout`, {
           method: 'POST',
           headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
         }).catch(() => {});
       }
-      await AsyncStorage.removeItem(TOKEN_KEY);
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
       await clearProfile();
       router.replace('/login');
     } catch {
@@ -84,7 +84,7 @@ export default function OwnerProfilePage() {
               {profile?.email || ''}
             </Text>
             <View style={st.rolePill}>
-              <MaterialIcons name="store" size={12} color={COLORS.primary} />
+              <MaterialIcons name="store" size={12} color={colors.primary} />
               <Text style={st.rolePillText}>Owner</Text>
             </View>
           </View>
@@ -97,10 +97,10 @@ export default function OwnerProfilePage() {
             <React.Fragment key={item.label}>
               <TouchableOpacity style={st.menuRow} onPress={item.onPress} activeOpacity={0.75}>
                 <View style={st.menuIconBox}>
-                  <MaterialIcons name={item.icon} size={20} color={COLORS.primary} />
+                  <MaterialIcons name={item.icon} size={20} color={colors.primary} />
                 </View>
                 <Text style={st.menuLabel}>{item.label}</Text>
-                <MaterialIcons name="chevron-right" size={20} color={COLORS.outline} />
+                <MaterialIcons name="chevron-right" size={20} color={colors.outline} />
               </TouchableOpacity>
               {idx < MENU_ITEMS.length - 1 && <View style={st.divider} />}
             </React.Fragment>
@@ -109,7 +109,7 @@ export default function OwnerProfilePage() {
 
         {/* Sign out */}
         <TouchableOpacity style={st.signOutBtn} onPress={() => setShowLogoutConfirm(true)} activeOpacity={0.8}>
-          <MaterialIcons name="logout" size={20} color={COLORS.error} />
+          <MaterialIcons name="logout" size={20} color={colors.error} />
           <Text style={st.signOutText}>Keluar Akun</Text>
         </TouchableOpacity>
 

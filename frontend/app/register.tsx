@@ -132,7 +132,7 @@ export default function RegisterScreen() {
               <MaterialIcons name="sports-soccer" size={56} color="#4be277" />
             </Animated.View>
             <Text style={[styles.title, { fontSize: Math.min(48, width * 0.13) }]}>REGISTER</Text>
-            <Text style={styles.subtitle}>Join G.O.A.L and start playing</Text>
+            <Text style={styles.subtitle}>Gabung G.O.A.L dan mulai bermain</Text>
           </Animated.View>
 
           <Animated.View style={[styles.glassCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
@@ -152,7 +152,7 @@ export default function RegisterScreen() {
             />
 
             <FloatingInput
-              label="Email Address"
+              label="Email"
               value={email}
               onChangeText={onRegEmailChange}
               keyboardType="email-address"
@@ -197,9 +197,9 @@ export default function RegisterScreen() {
           </Animated.View>
 
           <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
-            <Text style={styles.footerText}>Already have an account? </Text>
+            <Text style={styles.footerText}>Sudah punya akun? </Text>
             <TouchableOpacity onPress={() => router.push('/login')}>
-              <Text style={styles.footerLink}>Sign In</Text>
+              <Text style={styles.footerLink}>Masuk</Text>
             </TouchableOpacity>
           </Animated.View>
         </View>

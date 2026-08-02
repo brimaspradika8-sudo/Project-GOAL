@@ -4,25 +4,25 @@ import {
   RefreshControl,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from '../../lib/secureStorage';
 import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import DashboardHeader from '../shared/DashboardHeader';
 import { SkeletonCards } from '../Skeleton';
 import { useTheme } from '../../lib/theme';
 
-const STATUS_CFG: Record<string, { label: string; bg: string; color: string; icon: string }> = {
-  confirmed: { label: 'Terkonfirmasi', bg: COLORS.primaryContainer, color: COLORS.primary, icon: 'check-circle' },
-  pending:   { label: 'Menunggu',      bg: COLORS.floodlight + '20', color: '#92400e', icon: 'schedule' },
-  completed: { label: 'Selesai',       bg: COLORS.surfaceContainerHigh, color: COLORS.textSecondary, icon: 'done-all' },
-  cancelled: { label: 'Dibatalkan',    bg: COLORS.errorContainer, color: COLORS.error, icon: 'cancel' },
-};
-
 export default function OwnerBookingsPage() {
   const { colors, resolved } = useTheme();
+  const st = makeStyles(colors, resolved);
   const cardSurface = colors.surface;
   const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
+  const statusCfg: Record<string, { label: string; bg: string; color: string; icon: string }> = {
+    confirmed: { label: 'Terkonfirmasi', bg: colors.primaryContainer, color: colors.primary, icon: 'check-circle' },
+    pending:   { label: 'Menunggu',      bg: colors.floodlight + '20', color: colors.onWarning, icon: 'schedule' },
+    completed: { label: 'Selesai',       bg: colors.surfaceContainerHigh, color: colors.textSecondary, icon: 'done-all' },
+    cancelled: { label: 'Dibatalkan',    bg: colors.errorContainer, color: colors.error, icon: 'cancel' },
+  };
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -30,7 +30,7 @@ export default function OwnerBookingsPage() {
 
   const fetchBookings = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/owner/bookings`, {
         headers: {
           ...DEFAULT_HEADERS,
@@ -106,7 +106,7 @@ export default function OwnerBookingsPage() {
             </View>
           ) : (
             filteredBookings.map((b: any) => {
-              const status = STATUS_CFG[b.status] || STATUS_CFG.pending;
+              const status = statusCfg[b.status] || statusCfg.pending;
               const priceStr = b.total_price
                 ? `Rp${Number(b.total_price).toLocaleString('id-ID')}`
                 : '-';
@@ -181,45 +181,45 @@ export default function OwnerBookingsPage() {
   );
 }
 
-const st = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.background },
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark') => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.background },
   tabRow: {
     flexDirection: 'row', paddingHorizontal: SIZES.gutter,
     paddingVertical: 12, gap: 8,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1, borderBottomColor: COLORS.outline,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1, borderBottomColor: colors.outline,
   },
   tabBtn: {
     paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderWidth: 1, borderColor: COLORS.outline,
+    backgroundColor: colors.surfaceContainerLow,
+    borderWidth: 1, borderColor: colors.outline,
   },
-  tabBtnActive: { backgroundColor: COLORS.primaryContainer, borderColor: COLORS.primary + '60' },
-  tabText: { ...FONTS.labelMd, color: COLORS.textSecondary },
-  tabTextActive: { color: COLORS.primary },
+  tabBtnActive: { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '60' },
+  tabText: { ...FONTS.labelMd, color: colors.textSecondary },
+  tabTextActive: { color: colors.primary },
   loadingWrap: { padding: SIZES.gutter, paddingTop: 16 },
   contentList: { padding: SIZES.gutter, paddingBottom: 100 },
   emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12 },
   emptyIcon: {
     width: 80, height: 80, borderRadius: 24,
-    backgroundColor: COLORS.surfaceContainerHigh,
+    backgroundColor: colors.surfaceContainerHigh,
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: COLORS.outline,
+    borderWidth: 1, borderColor: colors.outline,
   },
-  emptyTitle: { ...FONTS.titleLg, color: COLORS.text },
-  emptyDesc: { ...FONTS.bodyMd, color: COLORS.textSecondary, textAlign: 'center' },
+  emptyTitle: { ...FONTS.titleLg, color: colors.text },
+  emptyDesc: { ...FONTS.bodyMd, color: colors.textSecondary, textAlign: 'center' },
   card: {
-    backgroundColor: COLORS.surface, borderRadius: 20, padding: 18, marginBottom: 16,
-    borderWidth: 1, borderColor: COLORS.outline, ...SHADOWS.sm,
+    backgroundColor: colors.surface, borderRadius: 20, padding: 18, marginBottom: 16,
+    borderWidth: 1, borderColor: colors.outline, ...SHADOWS.sm,
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   iconWrap: {
     width: 32, height: 32, borderRadius: 10,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: colors.primaryContainer,
     justifyContent: 'center', alignItems: 'center',
   },
-  bookingCode: { ...FONTS.titleLg, color: COLORS.text, letterSpacing: 0.5 },
+  bookingCode: { ...FONTS.titleLg, color: colors.text, letterSpacing: 0.5 },
   statusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1,
@@ -227,25 +227,25 @@ const st = StyleSheet.create({
   statusText: { ...FONTS.labelSm },
   detailGrid: {
     flexDirection: 'row',
-    backgroundColor: COLORS.surfaceContainerLow,
+    backgroundColor: colors.surfaceContainerLow,
     borderRadius: 14, padding: 14, marginBottom: 16,
-    borderWidth: 1, borderColor: COLORS.outline,
+    borderWidth: 1, borderColor: colors.outline,
   },
   detailCol: { flex: 1 },
-  colDivider: { width: 1, backgroundColor: COLORS.outline, marginHorizontal: 14 },
+  colDivider: { width: 1, backgroundColor: colors.outline, marginHorizontal: 14 },
   detailLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
-  detailLabel: { ...FONTS.labelSm, color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
-  detailVal: { ...FONTS.titleMd, color: COLORS.text, marginBottom: 2 },
-  detailSub: { ...FONTS.bodySm, color: COLORS.textSecondary },
+  detailLabel: { ...FONTS.labelSm, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
+  detailVal: { ...FONTS.titleMd, color: colors.text, marginBottom: 2 },
+  detailSub: { ...FONTS.bodySm, color: colors.textSecondary },
   scheduleRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4 },
   scheduleItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  scheduleText: { ...FONTS.labelMd, color: COLORS.text },
-  scheduleDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: COLORS.outline, marginHorizontal: 10 },
+  scheduleText: { ...FONTS.labelMd, color: colors.text },
+  scheduleDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.outline, marginHorizontal: 10 },
   pricePill: {
     marginLeft: 'auto',
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: colors.primaryContainer,
     paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 10, borderWidth: 1, borderColor: COLORS.primary + '30',
+    borderRadius: 10, borderWidth: 1, borderColor: colors.primary + '30',
   },
-  priceText: { ...FONTS.titleMd, color: COLORS.primary },
+  priceText: { ...FONTS.titleMd, color: colors.primary },
 });

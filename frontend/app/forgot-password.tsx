@@ -181,7 +181,7 @@ export default function ForgotPasswordScreen() {
             )}
 
             <FloatingInput
-              label="Email Address"
+              label="Email"
               value={email}
               onChangeText={onFpEmailChange}
               keyboardType="email-address"

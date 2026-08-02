@@ -15,9 +15,9 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useProfileStore } from '../../store/profileStore';
+import * as SecureStore from '../../lib/secureStorage';
 import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
 import { SIZES, FONTS, SHADOWS } from '../../components/goalTheme';
@@ -78,7 +78,7 @@ export default function ProfileScreen() {
 
   const fetchOwnerStatus = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (!token) return;
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 20000);
@@ -142,7 +142,7 @@ export default function ProfileScreen() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/me/owner-request`, {
         method: 'POST',
         headers: {
@@ -178,14 +178,14 @@ export default function ProfileScreen() {
   const doActualLogout = async () => {
     setLogoutLoading(true);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (token) {
         await fetch(`${API_BASE_URL}/auth/logout`, {
           method: 'POST',
           headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
         }).catch(() => {});
       }
-      await AsyncStorage.removeItem(TOKEN_KEY);
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
       await clearProfile();
       clearNotifications();
       router.replace('/login');
