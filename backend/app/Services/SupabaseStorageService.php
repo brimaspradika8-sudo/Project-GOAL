@@ -18,7 +18,7 @@ class SupabaseStorageService
     {
         $this->projectUrl = rtrim(config('services.supabase.url'), '/');
         $this->serviceKey = config('services.supabase.key');
-        $this->bucket = config('services.supabase.bucket', 'images');
+        $this->bucket = config('services.supabase.bucket', 'project-goal');
         $this->baseUrl = "{$this->projectUrl}/storage/v1/object";
         $this->publicBase = "{$this->projectUrl}/storage/v1/object/public";
     }
@@ -26,8 +26,8 @@ class SupabaseStorageService
     private function auth(): PendingRequest
     {
         return Http::withToken($this->serviceKey)
-            ->acceptJson()
-            ->throw();
+            ->withHeaders(['apikey' => $this->serviceKey])
+            ->acceptJson();
     }
 
     public function upload(string $path, string $contents, string $contentType = 'image/jpeg'): string
@@ -35,6 +35,7 @@ class SupabaseStorageService
         $fullPath = "{$this->bucket}/{$path}";
 
         $response = $this->auth()->withBody($contents, $contentType)
+            ->withHeaders(['x-upsert' => 'false'])
             ->post("{$this->baseUrl}/{$fullPath}");
 
         if (!$response->successful()) {
@@ -46,7 +47,7 @@ class SupabaseStorageService
             throw new \RuntimeException('Gagal mengunggah gambar ke penyimpanan.');
         }
 
-        return "{$this->publicBase}/{$fullPath}";
+        return $this->getPublicUrl($path);
     }
 
     public function delete(string $publicUrl): bool

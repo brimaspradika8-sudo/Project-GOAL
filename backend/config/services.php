@@ -23,9 +23,9 @@ return [
     ],
 
     'supabase' => [
-        'url'    => env('SUPABASE_URL'),
-        'key'    => env('SUPABASE_SERVICE_KEY'),
-        'bucket' => env('SUPABASE_BUCKET', 'images'),
+        'url'    => trim((string) env('SUPABASE_URL', '')),
+        'key'    => trim((string) env('SUPABASE_SERVICE_ROLE_KEY', env('SUPABASE_SERVICE_KEY', ''))),
+        'bucket' => trim((string) env('SUPABASE_STORAGE_BUCKET', env('SUPABASE_BUCKET', 'project-goal'))),
     ],
 
 ];
