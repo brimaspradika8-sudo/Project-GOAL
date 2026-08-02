@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, FONTS, SHADOWS } from '../goalTheme';
+import { FONTS, SHADOWS } from '../goalTheme';
 import { useTheme } from '../../lib/theme';
 import NotificationCenter from './NotificationCenter';
 import { useNotificationStore } from '../../store/notificationStore';
@@ -27,6 +27,7 @@ export default function DashboardHeader({
 }: DashboardHeaderProps) {
   const { colors, resolved } = useTheme();
   const insets = useSafeAreaInsets();
+  const st = makeStyles(colors);
   const headerBackground = resolved === 'dark' ? colors.primaryContainer : colors.primary;
   const headerTextColor = '#FFFFFF';
   const headerSubtextColor = resolved === 'dark' ? colors.onPrimaryContainer : 'rgba(255,255,255,0.82)';
@@ -97,7 +98,7 @@ export default function DashboardHeader({
   );
 }
 
-const st = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   wrap: {
     paddingBottom: 16,
     paddingHorizontal: 20,
@@ -135,7 +136,7 @@ const st = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

@@ -1,5 +1,5 @@
 import { Tabs, usePathname, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -9,14 +9,28 @@ import { FONT_FAMILY } from '../../components/goalTheme';
 import Sidebar, { SidebarItem } from '../../components/web/Sidebar';
 import MobileWebHeader from '../../components/web/MobileWebHeader';
 import { useBreakpoint } from '../../lib/responsive';
+import { useProfileStore } from '../../store/profileStore';
 
 export default function OwnerTabLayout() {
+  const profile = useProfileStore((s) => s.profile);
+  const profileLoading = useProfileStore((s) => s.loading);
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === 'web';
   const breakpoint = useBreakpoint();
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    if (profileLoading) return;
+    if (!profile) {
+      router.replace('/login');
+      return;
+    }
+    if (profile.role !== 'owner') {
+      router.replace(profile.role === 'super_admin' ? '/(admin)/dashboard' : '/(tabs)');
+    }
+  }, [profile, profileLoading, router]);
 
   const sidebarItems: SidebarItem[] = [
     { href: '/(owner)/fields', label: 'Kelola Lapangan', icon: 'stadium' },

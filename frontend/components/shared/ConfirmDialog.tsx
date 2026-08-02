@@ -1,7 +1,7 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { useTheme } from '../../lib/theme';
 import AlertBox from './AlertBox';
 
@@ -40,8 +40,8 @@ export default function ConfirmDialog({
   const hasOptions = options && options.length > 0;
   const showIcon = icon || destructive;
   const resolvedIcon = icon || (destructive ? 'logout' : 'help-outline');
-  const resolvedIconColor = iconColor || (destructive ? COLORS.error : colors.primary);
-  const resolvedIconBg = iconBg || (destructive ? COLORS.errorLight : colors.primaryLight);
+  const resolvedIconColor = iconColor || (destructive ? colors.error : colors.primary);
+  const resolvedIconBg = iconBg || (destructive ? colors.errorLight : colors.primaryLight);
   const st = makeStyles(colors);
 
   return (
@@ -64,8 +64,8 @@ export default function ConfirmDialog({
           {hasOptions ? (
             <View style={st.options}>
               {options!.map((opt, idx) => {
-                const btnColor = opt.destructive ? COLORS.error : (opt.color ?? colors.primary);
-                const bg = opt.destructive ? COLORS.errorContainer : colors.primaryContainer;
+                const btnColor = opt.destructive ? colors.error : (opt.color ?? colors.primary);
+                const bg = opt.destructive ? colors.errorContainer : colors.primaryContainer;
                 return (
                   <TouchableOpacity
                     key={idx}
@@ -131,7 +131,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   btnCancel: { backgroundColor: colors.surfaceContainerHigh, borderWidth: 1, borderColor: colors.outline },
   btnCancelText: { ...FONTS.buttonMd, color: colors.textSecondary },
   btnPrimary: { backgroundColor: colors.primary },
-  btnDanger: { backgroundColor: COLORS.error },
+  btnDanger: { backgroundColor: colors.error },
   btnConfirmText: { ...FONTS.buttonMd, color: colors.onPrimary },
   options: { gap: 10, width: '100%', marginBottom: 12 },
   optionBtn: {

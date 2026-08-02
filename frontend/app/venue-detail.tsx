@@ -304,7 +304,7 @@ export default function VenueDetailScreen() {
           onPress={() => {
             if (!isApproved) return;
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            router.push({ pathname: '/booking', params: { venueId: String(f.id) } });
+            router.push({ pathname: '/(tabs)/booking', params: { venueId: String(f.id) } });
           }}
           disabled={!isApproved}
         >

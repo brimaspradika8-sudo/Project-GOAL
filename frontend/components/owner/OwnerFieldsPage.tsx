@@ -6,9 +6,9 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useFieldStore } from '../../store/fieldStore';
+import * as SecureStore from '../../lib/secureStorage';
 import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../../lib/api';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
@@ -69,7 +69,7 @@ export default function OwnerFieldsPage() {
 
   const fetchFields = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/my/list`, {
         headers: {
           ...DEFAULT_HEADERS,
@@ -197,7 +197,7 @@ export default function OwnerFieldsPage() {
     setCreateLoading(true);
     setCreateError(null);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
 
       let imageUrl = createForm.image_url;
       if (createForm.image_uri && !imageUrl) {
@@ -266,7 +266,7 @@ export default function OwnerFieldsPage() {
     setEditLoading(true);
     setEditError(null);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
 
       let imageUrl = editForm.image_url;
       if (editForm.image_uri) {
@@ -354,7 +354,7 @@ export default function OwnerFieldsPage() {
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleteLoading(true);
-    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const token = await SecureStore.getItemAsync(TOKEN_KEY);
     const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}`, {
       method: 'DELETE',
       headers: {

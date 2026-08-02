@@ -5,8 +5,8 @@ import {
   Modal, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useProfileStore } from '../../store/profileStore';
+import * as SecureStore from '../../lib/secureStorage';
 import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../../lib/api';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
@@ -83,7 +83,7 @@ export default function UserPage() {
 
   const fetchUsers = useCallback(async (q?: string) => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const params = q ? `?search=${encodeURIComponent(q)}` : '';
       const res = await fetch(`${API_BASE_URL}/admin/users${params}`, {
         headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
@@ -107,7 +107,7 @@ export default function UserPage() {
   const onRefresh = () => { setRefreshing(true); fetchUsers(search); };
 
   const updateUserRole = async (userId: number, role: string) => {
-    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const token = await SecureStore.getItemAsync(TOKEN_KEY);
     const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/role`, {
       method: 'PUT',
       headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -135,7 +135,7 @@ export default function UserPage() {
     setCreateLoading(true);
     setCreateError(null);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/admin/users`, {
         method: 'POST',
         headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -178,7 +178,7 @@ export default function UserPage() {
     setEditLoading(true);
     setEditError(null);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const body: any = { name: editForm.name, email: editForm.email };
       if (editForm.password.trim()) body.password = editForm.password;
       const res = await fetch(`${API_BASE_URL}/admin/users/${editTarget.id}`, {
@@ -224,7 +224,7 @@ export default function UserPage() {
     setDeleteLoading(true);
     setDeleteError(null);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/admin/users/${deleteTarget.id}`, {
         method: 'DELETE',
         headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
@@ -267,7 +267,7 @@ export default function UserPage() {
     setBulkDeleteLoading(true);
     setBulkDeleteError(null);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/admin/users/bulk-delete`, {
         method: 'POST',
         headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

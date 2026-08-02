@@ -7,11 +7,11 @@ import {
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import FloatingInput from '../components/FloatingInput';
 import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
+import * as SecureStore from '../lib/secureStorage';
 import { TOKEN_KEY } from '../lib/auth';
 
 function cpValidateCurrent(v: string): string {
@@ -74,7 +74,7 @@ export default function ChangePasswordScreen() {
 
     setLoading(true);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/me/password`, {
         method: 'PUT',
         headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

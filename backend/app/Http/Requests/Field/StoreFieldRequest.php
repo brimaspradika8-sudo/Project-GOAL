@@ -21,7 +21,7 @@ class StoreFieldRequest extends FormRequest
             'location'        => 'nullable|string|max:255',
             'description'     => 'nullable|string|min:10|max:1000',
             'price_per_hour'  => ['nullable', 'numeric', 'min:0'],
-            'image_url'       => 'nullable|url|max:5000',
+            'image_url'       => 'nullable|url|max:2048',
         ];
 
         $min = config('goal.price_min');
@@ -40,6 +40,10 @@ class StoreFieldRequest extends FormRequest
 
     public function messages(): array
     {
+        $min = config('goal.price_min');
+        $max = config('goal.price_max');
+        $fmt = fn (int $v) => 'Rp ' . number_format($v, 0, ',', '.');
+
         return [
             'name.required'           => 'Nama lapangan wajib diisi.',
             'name.string'             => 'Nama lapangan harus berupa teks.',
@@ -51,15 +55,14 @@ class StoreFieldRequest extends FormRequest
             'sport_type.in'           => 'Jenis olahraga tidak valid. Pilih salah satu kategori yang tersedia.',
             'location.string'         => 'Lokasi harus berupa teks.',
             'location.max'            => 'Lokasi tidak boleh lebih dari 255 karakter.',
-            'location.min'            => 'Lokasi tidak boleh lebih dari 20 karakter.',
             'description.string'      => 'Deskripsi harus berupa teks.',
-            'description.min'         => 'Deskripsi minimal 50 karakter jika diisi.',
-            'description.max'         => 'Deskripsi tidak boleh lebih dari 255 karakter.',
+            'description.min'         => 'Deskripsi minimal 10 karakter jika diisi.',
+            'description.max'         => 'Deskripsi tidak boleh lebih dari 1000 karakter.',
             'price_per_hour.numeric'  => 'Harga harus berupa angka.',
-            'price_per_hour.min'      => 'Harga per jam tidak boleh kurang dari Rp 10.000.',
-            'price_per_hour.max'      => 'Harga per jam tidak boleh lebih dari Rp 1.000.000.000',
+            'price_per_hour.min'      => 'Harga per jam tidak boleh kurang dari ' . $fmt((int) $min) . '.',
+            'price_per_hour.max'      => 'Harga per jam tidak boleh lebih dari ' . $fmt((int) $max) . '.',
             'image_url.url'           => 'URL gambar harus berformat URL yang valid.',
-            'image_url.max'           => 'URL gambar tidak boleh lebih dari 5000 karakter.',
+            'image_url.max'           => 'URL gambar tidak boleh lebih dari 2048 karakter.',
         ];
     }
 }

@@ -4,10 +4,10 @@ import {
   RefreshControl,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from '../../lib/secureStorage';
 import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import AnimatedDeleteButton from '../shared/AnimatedDeleteButton';
@@ -18,6 +18,7 @@ import { useTheme } from '../../lib/theme';
 
 export default function TrashedFieldsPage() {
   const { colors, resolved } = useTheme();
+  const st = makeStyles(colors, resolved);
   const cardSurface = colors.surface;
   const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
   const [fields, setFields] = useState<any[]>([]);
@@ -35,7 +36,7 @@ export default function TrashedFieldsPage() {
 
   const fetchFields = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/trashed/list`, {
         headers: {
           ...DEFAULT_HEADERS,
@@ -63,7 +64,7 @@ export default function TrashedFieldsPage() {
     if (!restoreTarget) return;
     setRestoreLoading(true);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/${restoreTarget.id}/restore`, {
         method: 'POST',
         headers: {
@@ -93,7 +94,7 @@ export default function TrashedFieldsPage() {
     if (!deleteTarget) return;
     setDeleteLoading(true);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}/force`, {
         method: 'DELETE',
         headers: {
@@ -138,7 +139,7 @@ export default function TrashedFieldsPage() {
     setBulkLoading(true);
     setBulkError(null);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}${path}`, {
         method: 'POST',
         headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -260,8 +261,8 @@ export default function TrashedFieldsPage() {
         title={`Pulihkan "${restoreTarget?.name ?? ''}"?`}
         description="Lapangan akan dikembalikan dan terlihat oleh semua pengguna."
         icon="restore"
-        iconColor={COLORS.primary}
-        iconBg={COLORS.primaryContainer}
+        iconColor={colors.primary}
+        iconBg={colors.primaryContainer}
         loading={restoreLoading}
         onCancel={() => setRestoreTarget(null)}
         confirmLabel="Pulihkan"
@@ -274,8 +275,8 @@ export default function TrashedFieldsPage() {
         title={`Hapus permanen "${deleteTarget?.name ?? ''}"?`}
         description="Tindakan ini tidak bisa dibatalkan. Lapangan akan dihapus selamanya."
         icon="delete-forever"
-        iconColor={COLORS.error}
-        iconBg={COLORS.errorContainer}
+        iconColor={colors.error}
+        iconBg={colors.errorContainer}
         loading={deleteLoading}
         onCancel={() => setDeleteTarget(null)}
         confirmLabel="Ya, Hapus Permanen"
@@ -289,8 +290,8 @@ export default function TrashedFieldsPage() {
         title={`Pulihkan ${selected.size} lapangan?`}
         description="Semua lapangan terpilih akan dikembalikan dan terlihat oleh semua pengguna."
         icon="restore"
-        iconColor={COLORS.primary}
-        iconBg={COLORS.primaryContainer}
+        iconColor={colors.primary}
+        iconBg={colors.primaryContainer}
         loading={bulkLoading}
         error={bulkError}
         onCancel={() => setBulkTarget(null)}
@@ -304,8 +305,8 @@ export default function TrashedFieldsPage() {
         title={`Hapus permanen ${selected.size} lapangan?`}
         description="Tindakan ini tidak bisa dibatalkan. Semua lapangan terpilih akan dihapus selamanya."
         icon="delete-forever"
-        iconColor={COLORS.error}
-        iconBg={COLORS.errorContainer}
+        iconColor={colors.error}
+        iconBg={colors.errorContainer}
         loading={bulkLoading}
         error={bulkError}
         onCancel={() => setBulkTarget(null)}
@@ -317,8 +318,8 @@ export default function TrashedFieldsPage() {
   );
 }
 
-const st = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.background },
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark') => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.background },
   container: { padding: SIZES.gutter, paddingBottom: 24 },
   scroll: { flex: 1 },
 
@@ -326,51 +327,51 @@ const st = StyleSheet.create({
 
   emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 100 },
   emptyIconWrap: {
-    width: 80, height: 80, borderRadius: 24, backgroundColor: COLORS.surfaceContainerHigh,
-    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.outline, marginBottom: 4,
+    width: 80, height: 80, borderRadius: 24, backgroundColor: colors.surfaceContainerHigh,
+    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.outline, marginBottom: 4,
   },
-  emptyTitle: { ...FONTS.titleLg, color: COLORS.text },
-  emptyDesc: { ...FONTS.bodyMd, color: COLORS.textSecondary },
+  emptyTitle: { ...FONTS.titleLg, color: colors.text },
+  emptyDesc: { ...FONTS.bodyMd, color: colors.textSecondary },
 
   headerRow: { marginBottom: 14 },
   countPill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: COLORS.errorContainer, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
-    borderWidth: 1, borderColor: COLORS.error + '30', alignSelf: 'flex-start', marginBottom: 6,
+    backgroundColor: colors.errorContainer, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
+    borderWidth: 1, borderColor: colors.error + '30', alignSelf: 'flex-start', marginBottom: 6,
   },
-  countText: { ...FONTS.labelSm, color: COLORS.error },
-  warningText: { ...FONTS.bodySm, color: COLORS.textSecondary },
+  countText: { ...FONTS.labelSm, color: colors.error },
+  warningText: { ...FONTS.bodySm, color: colors.textSecondary },
 
   card: {
-    backgroundColor: COLORS.surface, borderRadius: 18, padding: 16, marginBottom: 12,
-    borderWidth: 1, borderColor: COLORS.outline, ...SHADOWS.sm,
+    backgroundColor: colors.surface, borderRadius: 18, padding: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: colors.outline, ...SHADOWS.sm,
   },
   cardMain: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   fieldIconWrap: {
-    width: 44, height: 44, borderRadius: 13, backgroundColor: COLORS.errorContainer,
-    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: COLORS.error + '30',
+    width: 44, height: 44, borderRadius: 13, backgroundColor: colors.errorContainer,
+    justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.error + '30',
   },
   cardInfo: { flex: 1 },
-  fieldName: { ...FONTS.titleLg, color: COLORS.text, marginBottom: 6 },
+  fieldName: { ...FONTS.titleLg, color: colors.text, marginBottom: 6 },
   tagRow: { flexDirection: 'row', gap: 6 },
   sportTag: {
-    backgroundColor: COLORS.surfaceContainerHigh, borderRadius: 5, paddingVertical: 2, paddingHorizontal: 7,
+    backgroundColor: colors.surfaceContainerHigh, borderRadius: 5, paddingVertical: 2, paddingHorizontal: 7,
   },
-  sportText: { ...FONTS.labelSm, color: COLORS.textSecondary },
+  sportText: { ...FONTS.labelSm, color: colors.textSecondary },
   deletedTag: {
-    backgroundColor: COLORS.errorContainer, borderRadius: 5, paddingVertical: 2, paddingHorizontal: 7,
-    borderWidth: 1, borderColor: COLORS.error + '30',
+    backgroundColor: colors.errorContainer, borderRadius: 5, paddingVertical: 2, paddingHorizontal: 7,
+    borderWidth: 1, borderColor: colors.error + '30',
   },
-  deletedText: { ...FONTS.labelSm, color: COLORS.error },
+  deletedText: { ...FONTS.labelSm, color: colors.error },
 
   deletedRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 14 },
-  deletedAt: { ...FONTS.bodySm, color: COLORS.textSecondary },
+  deletedAt: { ...FONTS.bodySm, color: colors.textSecondary },
 
   actions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   restoreBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
-    backgroundColor: COLORS.primaryContainer, paddingVertical: 11, borderRadius: 12,
-    borderWidth: 1, borderColor: COLORS.primary + '30', minHeight: 44,
+    backgroundColor: colors.primaryContainer, paddingVertical: 11, borderRadius: 12,
+    borderWidth: 1, borderColor: colors.primary + '30', minHeight: 44,
   },
-  restoreBtnText: { ...FONTS.titleSm, color: COLORS.primary },
+  restoreBtnText: { ...FONTS.titleSm, color: colors.primary },
 });

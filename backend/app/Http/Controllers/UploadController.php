@@ -52,7 +52,6 @@ class UploadController extends Controller
 
             Log::info('Upload success', [
                 'filename' => $filename,
-                'url' => $publicUrl,
             ]);
 
             return response()->json(['url' => $publicUrl]);

@@ -40,6 +40,7 @@ class Authenticate
         }
 
         $this->auth->guard('sanctum')->setUser($user);
+        $user->withAccessToken($accessToken);
 
         $request->setUserResolver(fn () => $user);
         $request->attributes->set('sanctum.access_token', $accessToken);

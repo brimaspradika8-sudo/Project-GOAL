@@ -40,6 +40,10 @@ class UpdateFieldRequest extends FormRequest
 
     public function messages(): array
     {
+        $min = config('goal.price_min');
+        $max = config('goal.price_max');
+        $fmt = fn (int $v) => 'Rp ' . number_format($v, 0, ',', '.');
+
         return [
             'name.required'           => 'Nama lapangan wajib diisi saat diperbarui.',
             'name.string'             => 'Nama lapangan harus berupa teks.',
@@ -55,8 +59,8 @@ class UpdateFieldRequest extends FormRequest
             'description.min'         => 'Deskripsi minimal 10 karakter jika diisi.',
             'description.max'         => 'Deskripsi tidak boleh lebih dari 1000 karakter.',
             'price_per_hour.numeric'  => 'Harga harus berupa angka.',
-            'price_per_hour.min'      => 'Harga per jam tidak boleh kurang dari batas minimum.',
-            'price_per_hour.max'      => 'Harga per jam terlalu besar dan tidak wajar.',
+            'price_per_hour.min'      => 'Harga per jam tidak boleh kurang dari ' . $fmt((int) $min) . '.',
+            'price_per_hour.max'      => 'Harga per jam tidak boleh lebih dari ' . $fmt((int) $max) . '.',
             'image_url.url'           => 'URL gambar harus berformat URL yang valid.',
             'image_url.max'           => 'URL gambar tidak boleh lebih dari 2048 karakter.',
         ];

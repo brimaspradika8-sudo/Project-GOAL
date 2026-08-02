@@ -6,10 +6,10 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from '../../lib/secureStorage';
 import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../../lib/api';
-import { COLORS, FONTS, SIZES, SHADOWS } from '../goalTheme';
+import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
@@ -20,6 +20,7 @@ import { useTheme } from '../../lib/theme';
 
 export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean } = {}) {
   const { colors, resolved } = useTheme();
+  const st = makeStyles(colors, resolved);
   const cardSurface = colors.surface;
   const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
   const [fields, setFields] = useState<any[]>([]);
@@ -37,7 +38,7 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
 
   const fetchFields = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/pending/list`, {
         headers: {
           ...DEFAULT_HEADERS,
@@ -58,7 +59,7 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
   const onRefresh = () => { setRefreshing(true); fetchFields(); };
 
   const reviewField = async (id: number, status: 'approved' | 'rejected', reason?: string) => {
-    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const token = await SecureStore.getItemAsync(TOKEN_KEY);
     const res = await fetch(`${API_BASE_URL}/fields/${id}/approve`, {
       method: 'POST',
       headers: {
@@ -141,7 +142,7 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
     setBulkLoading(true);
     setBulkError(null);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/bulk-approve`, {
         method: 'POST',
         headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -173,7 +174,7 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
     setBulkLoading(true);
     setBulkError(null);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/bulk-approve`, {
         method: 'POST',
         headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -286,11 +287,11 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
                     activeOpacity={0.8}
                     disabled={submittingId === f.id}
                   >
-                    <MaterialIcons name="verified" size={16} color={COLORS.onPrimary} />
+                    <MaterialIcons name="verified" size={16} color={colors.onPrimary} />
                     <Text style={st.approveBtnText}>{submittingId === f.id ? 'Menyetujui...' : 'Setujui'}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[st.rejectBtn, { backgroundColor: resolved === 'dark' ? '#2A1F26' : colors.errorContainer, borderColor: colors.error + '30' }, submittingId === f.id && st.disabledBtn]}
+                    style={[st.rejectBtn, submittingId === f.id && st.disabledBtn]}
                     onPress={() => { setRejectTarget({ id: f.id, name: f.name }); setRejectReason(''); }}
                     activeOpacity={0.8}
                     disabled={submittingId === f.id}
@@ -310,7 +311,7 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
           onSelectAll={toggleSelectAll}
           onClear={() => setSelected(new Set())}
           actions={[
-            { label: 'Setujui', icon: 'verified', color: COLORS.primary, onPress: () => { setBulkError(null); setBulkTarget('approve'); } },
+            { label: 'Setujui', icon: 'verified', color: colors.primary, onPress: () => { setBulkError(null); setBulkTarget('approve'); } },
             { label: 'Tolak', icon: 'cancel', color: colors.error, onPress: () => { setBulkError(null); setBulkTarget('reject'); setRejectReason(''); } },
           ]}
         />
@@ -321,7 +322,7 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
           <View style={[st.rejectModal, { backgroundColor: cardSurface, borderColor: colors.outline }]}>
             <View style={st.rejectHeader}>
               <View style={[st.rejectIconWrap, { backgroundColor: colors.errorContainer }]}>
-                <MaterialIcons name="cancel" size={22} color={COLORS.error} />
+                <MaterialIcons name="cancel" size={22} color={colors.error} />
               </View>
               <Text style={[st.rejectTitle, { color: colors.text }]}>Alasan Penolakan</Text>
             </View>
@@ -363,8 +364,8 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
         title={`Setujui "${approveTarget?.name ?? ''}"?`}
         description="Lapangan akan disetujui dan terlihat oleh semua pengguna."
         icon="check-circle"
-        iconColor={COLORS.primary}
-        iconBg={COLORS.primaryContainer}
+        iconColor={colors.primary}
+        iconBg={colors.primaryContainer}
         loading={submittingId !== null}
         onCancel={() => setApproveTarget(null)}
         confirmLabel="Setujui Lapangan"
@@ -377,8 +378,8 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
         title={`Setujui ${selected.size} lapangan terpilih?`}
         description="Semua lapangan terpilih akan disetujui dan terlihat oleh semua pengguna."
         icon="check-circle"
-        iconColor={COLORS.primary}
-        iconBg={COLORS.primaryContainer}
+        iconColor={colors.primary}
+        iconBg={colors.primaryContainer}
         loading={bulkLoading}
         error={bulkError}
         onCancel={() => setBulkTarget(null)}
@@ -389,8 +390,8 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
   );
 }
 
-const st = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.background },
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark') => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.background },
   list: { padding: SIZES.gutter, paddingBottom: 24 },
   scroll: { flex: 1 },
 
@@ -399,50 +400,52 @@ const st = StyleSheet.create({
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   countPill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: COLORS.warningBg, borderRadius: 20,
+    backgroundColor: colors.warningMuted, borderRadius: 20,
     paddingHorizontal: 12, paddingVertical: 5,
-    borderWidth: 1, borderColor: COLORS.warningBorder,
+    borderWidth: 1, borderColor: colors.warning + '40',
   },
-  countText: { ...FONTS.labelSm, color: COLORS.warningText },
+  countText: { ...FONTS.labelSm, color: colors.onWarning },
 
   emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12 },
   emptyIconWrap: {
     width: 80, height: 80, borderRadius: 24,
-    backgroundColor: COLORS.primaryContainer,
+    backgroundColor: colors.primaryContainer,
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: COLORS.primary + '30', marginBottom: 4,
+    borderWidth: 1, borderColor: colors.primary + '30', marginBottom: 4,
   },
-  emptyTitle: { ...FONTS.titleLg, color: COLORS.text },
-  emptyDesc: { ...FONTS.bodyMd, color: COLORS.textSecondary },
+  emptyTitle: { ...FONTS.titleLg, color: colors.text },
+  emptyDesc: { ...FONTS.bodyMd, color: colors.textSecondary },
 
   card: {
-    backgroundColor: COLORS.surface, borderRadius: 18, padding: 16, marginBottom: 12,
-    borderWidth: 1, borderColor: COLORS.outline, ...SHADOWS.sm,
+    backgroundColor: colors.surface, borderRadius: 18, padding: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: colors.outline, ...SHADOWS.sm,
   },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   fieldIconWrap: {
     width: 44, height: 44, borderRadius: 13,
-    backgroundColor: COLORS.warningBg, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: COLORS.warningBorder,
+    backgroundColor: colors.warningMuted, justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: colors.warning + '40',
   },
   cardTopInfo: { flex: 1 },
-  fieldName: { ...FONTS.titleLg, color: COLORS.text, marginBottom: 5 },
+  fieldName: { ...FONTS.titleLg, color: colors.text, marginBottom: 5 },
   sportTag: { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start' },
-  sportText: { ...FONTS.labelSm, color: COLORS.warningText },
+  sportText: { ...FONTS.labelSm, color: colors.onWarning },
   addressRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 },
-  addressText: { ...FONTS.bodySm, color: COLORS.textSecondary, flex: 1 },
+  addressText: { ...FONTS.bodySm, color: colors.textSecondary, flex: 1 },
 
   approveBtn: {
     flex: 1,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: COLORS.primary, paddingVertical: 12, borderRadius: 12,
+    backgroundColor: colors.primary, paddingVertical: 12, borderRadius: 12,
     minHeight: 46,
   },
-  approveBtnText: { ...FONTS.titleSm, color: COLORS.onPrimary },
+  approveBtnText: { ...FONTS.titleSm, color: colors.onPrimary },
   actionRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
   rejectBtn: {
     flex: 1,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: colors.errorContainer,
+    borderColor: colors.error + '30',
     paddingVertical: 12, borderRadius: 12,
     borderWidth: 1, minHeight: 46,
   },
@@ -482,7 +485,7 @@ const st = StyleSheet.create({
   cancelBtnText: { ...FONTS.titleSm },
   confirmRejectBtn: {
     paddingVertical: 11, paddingHorizontal: 24, borderRadius: 10,
-    backgroundColor: COLORS.error, minHeight: 44, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.error, minHeight: 44, justifyContent: 'center', alignItems: 'center',
   },
-  confirmRejectText: { ...FONTS.titleSm, color: COLORS.onPrimary },
+  confirmRejectText: { ...FONTS.titleSm, color: colors.onPrimary },
 });

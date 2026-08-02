@@ -35,10 +35,7 @@ class AuthService
                 'username' => 'user_' . $user->id,
             ]);
 
-            $token = $user->createToken('app-token')->plainTextToken;
-
             return [
-                'token' => $token,
                 'user'  => [
                     'id'    => $user->id,
                     'name'  => $user->name,
@@ -48,26 +45,17 @@ class AuthService
         });
     }
 
+    private const DUMMY_HASH = '$2y$10$f2batemc/LsfmnAQtyko/.VnqyLEC5QijkPHFvPlSM8hteMaRBhci';
+
     public function login(string $email, string $password): array
     {
         $email = strtolower(trim($email));
-        Log::info('[LOGIN] attempt', ['email_raw' => $email]);
 
         $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
 
-        if ($user) {
-            Log::info('[LOGIN] user found', ['id' => $user->id, 'name' => $user->name]);
-        } else {
-            Log::warning('[LOGIN] user not found', ['email' => $email]);
-        }
+        $storedHash = $user?->password ?? self::DUMMY_HASH;
 
-        if (!$user) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'email' => ['Email tidak terdaftar.'],
-            ])->status(401);
-        }
-
-        if (!Hash::check($password, $user->password)) {
+        if (!$user || !Hash::check($password, $storedHash)) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'email' => ['Email atau password salah.'],
             ])->status(401);
@@ -97,10 +85,5 @@ class AuthService
         } catch (\Exception $e) {
             Log::warning('Logout failed: ' . $e->getMessage());
         }
-    }
-
-    public function checkEmail(string $email): bool
-    {
-        return User::whereRaw('LOWER(email) = ?', [strtolower(trim($email))])->exists();
     }
 }

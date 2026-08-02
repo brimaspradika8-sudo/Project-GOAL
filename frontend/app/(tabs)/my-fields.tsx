@@ -12,10 +12,10 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { COLORS, SIZES, FONTS, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
+import { SIZES, FONTS, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
+import * as SecureStore from '../../lib/secureStorage';
 import { TOKEN_KEY } from '../../lib/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeImage } from '../../components/SafeImage';
 import type { Field } from '../../store/fieldStore';
 import { useTheme } from '../../lib/theme';
@@ -27,12 +27,6 @@ const DEFAULT_IMAGES: Record<string, string> = {
   basketball: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop',
   badminton: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?q=80&w=800&auto=format&fit=crop',
   default: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
-};
-
-const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  approved: { label: 'Disetujui', color: COLORS.primary, bg: COLORS.successLight },
-  pending:  { label: 'Menunggu', color: COLORS.warningIcon, bg: COLORS.warningBg },
-  rejected: { label: 'Ditolak', color: COLORS.error, bg: COLORS.errorLight },
 };
 
 function formatPrice(price: number | null): string {
@@ -47,13 +41,19 @@ export default function MyFieldsScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
-  const { colors } = useTheme();
+  const { colors, resolved } = useTheme();
+  const st = makeStyles(colors);
+  const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
+    approved: { label: 'Disetujui', color: colors.primary, bg: colors.successLight },
+    pending:  { label: 'Menunggu', color: colors.warning, bg: colors.warningMuted },
+    rejected: { label: 'Ditolak', color: colors.error, bg: colors.errorLight },
+  };
   const [deleteTarget, setDeleteTarget] = useState<Field | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fetchFields = useCallback(async (pageNum: number = 1, append = false) => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       if (!token) return;
 
       const controller = new AbortController();
@@ -111,7 +111,7 @@ export default function MyFieldsScreen() {
     if (!deleteTarget) return;
     setDeleteLoading(true);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}`, {
         method: 'DELETE',
         headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
@@ -130,8 +130,8 @@ export default function MyFieldsScreen() {
   const renderFooter = () => {
     if (!loadingMore) return null;
     return (
-      <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={COLORS.primary} />
+      <View style={st.footerLoader}>
+        <ActivityIndicator size="small" color={colors.primary} />
       </View>
     );
   };
@@ -139,70 +139,70 @@ export default function MyFieldsScreen() {
   const renderEmpty = () => {
     if (loading) {
       return (
-        <View style={styles.emptyState}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+        <View style={st.emptyState}>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       );
     }
     return (
-      <View style={styles.emptyState}>
-        <MaterialIcons name="stadium" size={48} color={COLORS.textTertiary} />
-        <Text style={styles.emptyTitle}>Belum ada lapangan</Text>
-        <Text style={styles.emptyDesc}>Ketuk tombol + untuk menambah lapangan baru.</Text>
+      <View style={st.emptyState}>
+        <MaterialIcons name="stadium" size={48} color={colors.textTertiary} />
+        <Text style={st.emptyTitle}>Belum ada lapangan</Text>
+        <Text style={st.emptyDesc}>Ketuk tombol + untuk menambah lapangan baru.</Text>
       </View>
     );
   };
 
   const renderItem = ({ item }: { item: Field }) => {
     const imgUrl = item.image_url || DEFAULT_IMAGES[item.sport_type] || DEFAULT_IMAGES.default;
-    const status = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
+    const status = statusConfig[item.status] || statusConfig.pending;
 
     return (
-      <View style={styles.card}>
-        <View style={styles.cardImageWrap}>
-          <SafeImage source={{ uri: imgUrl }} style={styles.cardImage} fallbackSize={24} />
-          <View style={styles.cardImageOverlay} />
-          <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-            <View style={[styles.statusDot, { backgroundColor: status.color }]} />
-            <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+      <View style={st.card}>
+        <View style={st.cardImageWrap}>
+          <SafeImage source={{ uri: imgUrl }} style={st.cardImage} fallbackSize={24} />
+          <View style={st.cardImageOverlay} />
+          <View style={[st.statusBadge, { backgroundColor: status.bg }]}>
+            <View style={[st.statusDot, { backgroundColor: status.color }]} />
+            <Text style={[st.statusText, { color: status.color }]}>{status.label}</Text>
           </View>
         </View>
-        <View style={styles.cardBody}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardName} numberOfLines={1}>{item.name}</Text>
-            <Text style={styles.cardPrice}>{formatPrice(item.price_per_hour)}/jam</Text>
+        <View style={st.cardBody}>
+          <View style={st.cardHeader}>
+            <Text style={st.cardName} numberOfLines={1}>{item.name}</Text>
+            <Text style={st.cardPrice}>{formatPrice(item.price_per_hour)}/jam</Text>
           </View>
-          <View style={styles.cardLocationRow}>
-            <MaterialIcons name="location-on" size={14} color={COLORS.textTertiary} />
-            <Text style={styles.cardLocation} numberOfLines={1}>{item.location}</Text>
+          <View style={st.cardLocationRow}>
+            <MaterialIcons name="location-on" size={14} color={colors.textTertiary} />
+            <Text style={st.cardLocation} numberOfLines={1}>{item.location}</Text>
           </View>
           {item.owner && (
-            <View style={styles.cardLocationRow}>
-              <MaterialIcons name="person" size={14} color={COLORS.textTertiary} />
-              <Text style={styles.cardLocation} numberOfLines={1}>{item.owner.name}</Text>
+            <View style={st.cardLocationRow}>
+              <MaterialIcons name="person" size={14} color={colors.textTertiary} />
+              <Text style={st.cardLocation} numberOfLines={1}>{item.owner.name}</Text>
             </View>
           )}
-          <View style={styles.cardTags}>
-            <View style={styles.tag}>
-              <Text style={styles.tagText}>{item.sport_type}</Text>
+          <View style={st.cardTags}>
+            <View style={st.tag}>
+              <Text style={st.tagText}>{item.sport_type}</Text>
             </View>
           </View>
-          <View style={styles.cardActions}>
+          <View style={st.cardActions}>
             <TouchableOpacity
-              style={styles.actionBtn}
+              style={st.actionBtn}
               activeOpacity={0.7}
               onPress={() => router.push({ pathname: '/venue-detail', params: { id: String(item.id) } })}
             >
-              <MaterialIcons name="visibility" size={16} color={COLORS.primary} />
-              <Text style={styles.actionText}>Lihat</Text>
+              <MaterialIcons name="visibility" size={16} color={colors.primary} />
+              <Text style={st.actionText}>Lihat</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionBtn, styles.deleteAction]}
+              style={[st.actionBtn, st.deleteAction]}
               activeOpacity={0.7}
               onPress={() => handleDelete(item)}
             >
-              <MaterialIcons name="delete-outline" size={16} color={COLORS.error} />
-              <Text style={[styles.actionText, { color: COLORS.error }]}>Hapus</Text>
+              <MaterialIcons name="delete-outline" size={16} color={colors.error} />
+              <Text style={[st.actionText, { color: colors.error }]}>Hapus</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -211,14 +211,14 @@ export default function MyFieldsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
+    <View style={[st.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={resolved === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} activeOpacity={0.8} onPress={() => router.push('/(tabs)')}>
-          <MaterialIcons name="arrow-back" size={20} color={COLORS.text} />
+      <View style={st.header}>
+        <TouchableOpacity style={st.backBtn} activeOpacity={0.8} onPress={() => router.push('/(tabs)')}>
+          <MaterialIcons name="arrow-back" size={20} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lapangan Saya</Text>
+        <Text style={st.headerTitle}>Lapangan Saya</Text>
       </View>
 
       <FlatList
@@ -226,13 +226,13 @@ export default function MyFieldsScreen() {
         keyExtractor={(item) => String(item.id)}
         renderItem={renderItem}
         ListHeaderComponent={
-          <Text style={styles.subtitle}>
+          <Text style={st.subtitle}>
             {fields.length > 0 ? `${fields.length} lapangan terdaftar` : ''}
           </Text>
         }
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={st.listContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -260,10 +260,10 @@ export default function MyFieldsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -280,16 +280,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.divider,
   },
   headerTitle: {
     ...FONTS.headlineSm,
     fontSize: 18,
-    color: COLORS.text,
+    color: colors.text,
   },
   listContent: {
     paddingHorizontal: 20,
@@ -300,14 +300,14 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 16,
   },
   card: {
-    backgroundColor: COLORS.surfaceWhite,
+    backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: COLORS.divider,
+    borderColor: colors.divider,
     marginBottom: 16,
     overflow: 'hidden',
     ...SHADOWS.md,
@@ -357,14 +357,14 @@ const styles = StyleSheet.create({
   cardName: {
     ...FONTS.headlineSm,
     fontSize: 15,
-    color: COLORS.text,
+    color: colors.text,
     flex: 1,
     marginRight: 8,
   },
   cardPrice: {
     ...FONTS.headlineSm,
     fontSize: 14,
-    color: COLORS.primary,
+    color: colors.primary,
   },
   cardLocationRow: {
     flexDirection: 'row',
@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
   },
   cardLocation: {
     ...FONTS.bodySm,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     flex: 1,
   },
   cardTags: {
@@ -386,18 +386,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: COLORS.surfaceContainerLow,
+    backgroundColor: colors.surfaceContainerLow,
   },
   tagText: {
     ...FONTS.labelMd,
     fontSize: 11,
-    color: COLORS.onSurfaceVariant,
+    color: colors.onSurfaceVariant,
   },
   cardActions: {
     flexDirection: 'row',
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: COLORS.divider,
+    borderTopColor: colors.divider,
     paddingTop: 10,
   },
   actionBtn: {
@@ -407,15 +407,15 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: COLORS.successLight,
+    backgroundColor: colors.successLight,
   },
   deleteAction: {
-    backgroundColor: COLORS.errorLight,
+    backgroundColor: colors.errorLight,
   },
   actionText: {
     ...FONTS.labelMd,
     fontSize: 12,
-    color: COLORS.primary,
+    color: colors.primary,
   },
   footerLoader: {
     paddingVertical: 20,
@@ -428,11 +428,11 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     ...FONTS.headlineSm,
-    color: COLORS.text,
+    color: colors.text,
   },
   emptyDesc: {
     ...FONTS.bodySm,
-    color: COLORS.textTertiary,
+    color: colors.textTertiary,
     textAlign: 'center',
   },
 });

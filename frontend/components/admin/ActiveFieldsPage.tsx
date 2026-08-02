@@ -5,8 +5,8 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import * as SecureStore from '../../lib/secureStorage';
 import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS, getAssetUrl } from '../../lib/api';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
@@ -63,7 +63,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
 
   const fetchFields = useCallback(async () => {
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const params = new URLSearchParams();
       if (debouncedSearch) params.set('search', debouncedSearch);
       if (filterSport) params.set('sport', filterSport);
@@ -192,7 +192,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
     setEditLoading(true);
     setEditError(null);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       let imageUrl = editForm.image_url;
       if (editForm.image_uri) {
         const uploaded = await uploadImage(editForm.image_uri, token!, editForm.image_mime);
@@ -232,7 +232,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
     if (!deleteTarget) return;
     setDeleteLoading(true);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}`, {
         method: 'DELETE',
         headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
@@ -275,7 +275,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
     setBulkDeleteLoading(true);
     setBulkDeleteError(null);
     try {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const res = await fetch(`${API_BASE_URL}/fields/bulk-delete`, {
         method: 'POST',
         headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

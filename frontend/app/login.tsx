@@ -7,11 +7,11 @@ import {
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import FloatingInput from '../components/FloatingInput';
 import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
+import * as SecureStore from '../lib/secureStorage';
 import { TOKEN_KEY } from '../lib/auth';
 import { useProfileStore } from '../store/profileStore';
 
@@ -33,9 +33,6 @@ async function parseApiResponse(res: Response) {
 
 function getApiErrorMessage(data: any, status: number) {
   if (status === 401) {
-    if (data?.message === 'Email tidak terdaftar.') {
-      return 'Email tidak terdaftar. Silakan registrasi terlebih dahulu.';
-    }
     return 'Email atau password salah.';
   }
 
@@ -122,7 +119,7 @@ export default function LoginScreen() {
       }
 
         if (data?.token) {
-          await AsyncStorage.setItem(TOKEN_KEY, data.token);
+          await SecureStore.setItemAsync(TOKEN_KEY, data.token);
 
           const profileRes = await fetch(`${API_BASE_URL}/me`, {
             headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${data.token}` },
@@ -134,20 +131,20 @@ export default function LoginScreen() {
 
             if (profileData.onboarding_completed === false) {
               router.replace('/onboarding');
+            } else if (profileData.role === 'super_admin') {
+              router.replace('/(admin)/dashboard');
             } else {
               router.replace('/(tabs)');
             }
           } else {
-            await AsyncStorage.removeItem(TOKEN_KEY);
+            await SecureStore.deleteItemAsync(TOKEN_KEY);
             showMessage('Gagal memuat profil. Silakan coba login lagi.', 'error');
           }
         } else {
         showMessage('Gagal login. Silakan coba lagi.', 'error');
       }
-    } catch (e: any) {
-      const errMsg = e?.message || String(e);
-      console.error('[LOGIN ERROR]', e);
-      showMessage(`Terjadi kesalahan sistem. Detail: ${errMsg}`, 'error');
+    } catch {
+      showMessage('Terjadi kesalahan sistem. Silakan coba lagi.', 'error');
     } finally {
       setLoading(false);
     }
@@ -188,7 +185,7 @@ export default function LoginScreen() {
             )}
 
             <FloatingInput
-              label="Email Address"
+              label="Email"
               value={email}
               onChangeText={onEmailChange}
               keyboardType="email-address"
@@ -208,7 +205,7 @@ export default function LoginScreen() {
             <View style={styles.rowBetween}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }} />
               <TouchableOpacity onPress={() => router.push('/forgot-password')}>
-                <Text style={styles.forgotText}>Forgot Password?</Text>
+                <Text style={styles.forgotText}>Lupa Password?</Text>
               </TouchableOpacity>
             </View>
 
@@ -233,7 +230,7 @@ export default function LoginScreen() {
           <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
             <Text style={styles.footerText}>Belum punya akun? </Text>
             <TouchableOpacity onPress={() => router.push('/register')}>
-              <Text style={styles.footerLink}>Register for free</Text>
+              <Text style={styles.footerLink}>Daftar Gratis</Text>
             </TouchableOpacity>
           </Animated.View>
 
