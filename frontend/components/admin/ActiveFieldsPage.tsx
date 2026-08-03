@@ -20,6 +20,7 @@ import BulkActionBar from '../shared/BulkActionBar';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useDebounce } from '../../hooks/useDebounce';
+import { fieldError } from '../../lib/formValidation';
 import {
   SPORT_OPTIONS, SPORT_MAP, SPORT_LABELS,
   type FieldFormErrors, type FieldFormData,
@@ -35,6 +36,9 @@ const EMPTY_FORM: FieldFormData = {
   name: '', sport_type: '', description: '', price_per_hour: '',
   image_url: '', image_uri: '', image_mime: '', location: '',
 };
+
+type FieldTouched = { name: boolean; sport_type: boolean; price_per_hour: boolean; description: boolean; location: boolean };
+const EMPTY_TOUCHED: FieldTouched = { name: false, sport_type: false, price_per_hour: false, description: false, location: false };
 
 export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean } = {}) {
   const { colors } = useTheme();
@@ -52,6 +56,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editErrors, setEditErrors] = useState<FieldFormErrors>(EMPTY_ERRORS);
+  const [editTouched, setEditTouched] = useState<FieldTouched>(EMPTY_TOUCHED);
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -99,30 +104,39 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
     });
     setEditError(null);
     setEditErrors(EMPTY_ERRORS);
+    setEditTouched(EMPTY_TOUCHED);
   };
 
-  const validateSingleField = (key: keyof FieldFormData, value: string, form: FieldFormData) => {
+  const validateSingleField = (key: keyof FieldFormData, value: string, form: FieldFormData, touched: boolean) => {
     let err = '';
     switch (key) {
-      case 'name': err = validateFieldName(value); break;
-      case 'sport_type': err = validateFieldSportType(value); break;
-      case 'price_per_hour': err = validateFieldPrice(value); break;
-      case 'description': err = validateFieldDescription(value); break;
-      case 'location': err = validateFieldLocation(value); break;
+      case 'name': err = fieldError(value, validateFieldName(value), touched); break;
+      case 'sport_type': err = fieldError(value, validateFieldSportType(value), touched); break;
+      case 'price_per_hour': err = fieldError(value, validateFieldPrice(value), touched); break;
+      case 'description': err = fieldError(value, validateFieldDescription(value), touched); break;
+      case 'location': err = fieldError(value, validateFieldLocation(value), touched); break;
       case 'image_uri': err = validateFieldImage(value, form.image_url, form.image_mime); break;
     }
     setEditErrors(prev => ({ ...prev, [key]: err }));
   };
 
   const onFormFieldChange = (key: keyof FieldFormData, value: string) => {
+    const isSport = key === 'sport_type';
+    if (isSport) setEditTouched(p => ({ ...p, sport_type: true }));
     setEditForm(p => {
       const next = { ...p, [key]: value };
-      validateSingleField(key, value, next);
+      validateSingleField(key, value, next, isSport || editTouched[key as keyof FieldTouched]);
       return next;
     });
   };
 
+  const onFormFieldBlur = (key: keyof FieldTouched) => {
+    setEditTouched(p => ({ ...p, [key]: true }));
+    validateSingleField(key, editForm[key], editForm, true);
+  };
+
   const onAllFieldsTouched = () => {
+    setEditTouched({ ...EMPTY_TOUCHED, name: true, sport_type: true, price_per_hour: true, description: true, location: true });
     const errs = validateAllFields(editForm);
     setEditErrors(errs);
   };
@@ -517,6 +531,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
                 label="Nama Lapangan" icon="stadium"
                 value={editForm.name}
                 onChangeText={(v) => onFormFieldChange('name', v)}
+                onBlur={() => onFormFieldBlur('name')}
                 placeholder="Contoh: Futsal Arena Gemilang"
                 error={editErrors.name} st={st} colors={colors}
               />
@@ -549,6 +564,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
                 label="Deskripsi" icon="notes"
                 value={editForm.description}
                 onChangeText={(v) => onFormFieldChange('description', v)}
+                onBlur={() => onFormFieldBlur('description')}
                 placeholder="Fasilitas yang tersedia..."
                 multiline error={editErrors.description} st={st} colors={colors}
               />
@@ -557,6 +573,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
                 label="Sewa Per Jam (Rp)" icon="payments"
                 value={editForm.price_per_hour}
                 onChangeText={(v) => onFormFieldChange('price_per_hour', v)}
+                onBlur={() => onFormFieldBlur('price_per_hour')}
                 placeholder="Contoh: 150000"
                 keyboardType="numeric"
                 error={editErrors.price_per_hour} st={st} colors={colors}
@@ -566,6 +583,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
                 label="Lokasi (opsional)" icon="location-on"
                 value={editForm.location}
                 onChangeText={(v) => onFormFieldChange('location', v)}
+                onBlur={() => onFormFieldBlur('location')}
                 placeholder="Contoh: Jl. Merdeka No. 10"
                 error={editErrors.location} st={st} colors={colors}
               />
@@ -614,9 +632,10 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
 
 // ── Reusable field components (same pattern as OwnerFieldsPage) ──
 
-function FField({ label, icon, value, onChangeText, placeholder, keyboardType, multiline, error, st, colors }: {
+function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboardType, multiline, error, st, colors }: {
   label: string; icon: string; value: string;
   onChangeText: (v: string) => void;
+  onBlur?: () => void;
   placeholder?: string; keyboardType?: any; multiline?: boolean;
   error?: string; st: ReturnType<typeof makeStyles>; colors: ThemeColors;
 }) {
@@ -633,6 +652,7 @@ function FField({ label, icon, value, onChangeText, placeholder, keyboardType, m
           style={[st.fieldInput, { color: colors.text }, multiline && { minHeight: 80, textAlignVertical: 'top' }]}
           value={value}
           onChangeText={onChangeText}
+          onBlur={onBlur}
           placeholder={placeholder ?? label}
           placeholderTextColor={colors.textTertiary}
           keyboardType={keyboardType}

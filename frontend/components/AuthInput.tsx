@@ -21,11 +21,12 @@ interface AuthInputProps extends TextInputProps {
   isPassword?: boolean;
   containerStyle?: ViewStyle;
   error?: string;
+  onBlur?: () => void;
   rightElement?: React.ReactNode;
 }
 
 const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
-  ({ label, icon, isPassword = false, containerStyle, error, value, rightElement, ...props }, ref) => {
+  ({ label, icon, isPassword = false, containerStyle, error, value, rightElement, onBlur: onBlurProp, ...props }, ref) => {
     const { colors } = useTheme();
     const [isFocused, setIsFocused] = useState(false);
     const [isSecure, setIsSecure] = useState(isPassword);
@@ -41,7 +42,7 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
     }, [isFocused, value, animatedValue]);
 
     const handleFocus = () => setIsFocused(true);
-    const handleBlur = () => setIsFocused(false);
+    const handleBlur = () => { setIsFocused(false); onBlurProp?.(); };
     const toggleSecure = () => setIsSecure(v => !v);
 
     const hasError = !!error;
@@ -64,7 +65,7 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
 
     const labelColor = animatedValue.interpolate({
       inputRange: [0, 1],
-      outputRange: [hasError ? colors.destructive : '#9CA3AF', hasError ? colors.destructive : '#10B981'],
+      outputRange: [hasError ? colors.destructive : colors.textTertiary, hasError ? colors.destructive : colors.primary],
     });
 
     return (
@@ -73,7 +74,7 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
           styles.container,
           {
             borderColor,
-            backgroundColor: '#2D3748',
+            backgroundColor: colors.bgElevated,
             ...(isFocused ? focusRing(colors.focusRing) : null),
           },
         ]}>
@@ -82,7 +83,7 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
               <MaterialIcons
                 name={icon}
                 size={24}
-                color={isActive || hasError ? (hasError ? colors.destructive : '#10B981') : '#6B7280'}
+                color={isActive || hasError ? (hasError ? colors.destructive : colors.primary) : colors.textTertiary}
               />
             </View>
           )}
@@ -91,7 +92,7 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
             {
               transform: [{ translateY: labelTranslateY }, { scale: labelScale }],
                 left: icon ? 52 : 18,
-                backgroundColor: isActive ? '#2D3748' : 'transparent',
+                backgroundColor: isActive ? colors.bgElevated : 'transparent',
               },
             ]}>
             <Animated.Text style={[styles.label, { color: labelColor }]}>{label}</Animated.Text>

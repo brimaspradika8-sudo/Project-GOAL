@@ -19,6 +19,7 @@ import AlertBox from '../shared/AlertBox';
 import AnimatedDeleteButton from '../shared/AnimatedDeleteButton';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
+import { fieldError } from '../../lib/formValidation';
 import {
   SPORT_OPTIONS, SPORT_MAP,
   type FieldFormErrors, type FieldFormData,
@@ -47,6 +48,9 @@ const EMPTY_FORM: FieldFormData = {
   location: '',
 };
 
+type FieldTouched = { name: boolean; sport_type: boolean; price_per_hour: boolean; description: boolean; location: boolean };
+const EMPTY_TOUCHED: FieldTouched = { name: false, sport_type: false, price_per_hour: false, description: false, location: false };
+
 export default function OwnerFieldsPage() {
   const { colors } = useTheme();
   const st = makeStyles(colors);
@@ -60,12 +64,14 @@ export default function OwnerFieldsPage() {
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createErrors, setCreateErrors] = useState<FieldFormErrors>(EMPTY_ERRORS);
+  const [createTouched, setCreateTouched] = useState<FieldTouched>(EMPTY_TOUCHED);
 
   const [editTarget, setEditTarget] = useState<any | null>(null);
   const [editForm, setEditForm] = useState(EMPTY_FORM);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editErrors, setEditErrors] = useState<FieldFormErrors>(EMPTY_ERRORS);
+  const [editTouched, setEditTouched] = useState<FieldTouched>(EMPTY_TOUCHED);
 
   const fetchFields = useCallback(async () => {
     try {
@@ -94,14 +100,15 @@ export default function OwnerFieldsPage() {
     value: string,
     form: FieldFormData,
     isCreate: boolean,
+    touched: boolean,
   ) => {
     let err = '';
     switch (key) {
-      case 'name': err = validateFieldName(value); break;
-      case 'sport_type': err = validateFieldSportType(value); break;
-      case 'price_per_hour': err = validateFieldPrice(value); break;
-      case 'description': err = validateFieldDescription(value); break;
-      case 'location': err = validateFieldLocation(value); break;
+      case 'name': err = fieldError(value, validateFieldName(value), touched); break;
+      case 'sport_type': err = fieldError(value, validateFieldSportType(value), touched); break;
+      case 'price_per_hour': err = fieldError(value, validateFieldPrice(value), touched); break;
+      case 'description': err = fieldError(value, validateFieldDescription(value), touched); break;
+      case 'location': err = fieldError(value, validateFieldLocation(value), touched); break;
       case 'image_uri': err = validateFieldImage(value, form.image_url, form.image_mime); break;
     }
     if (isCreate) {
@@ -116,22 +123,44 @@ export default function OwnerFieldsPage() {
     value: string,
     isCreate: boolean,
   ) => {
+    const touched = isCreate ? createTouched[key as keyof FieldTouched] : editTouched[key as keyof FieldTouched];
+    const isSport = key === 'sport_type';
+    if (isSport) {
+      if (isCreate) setCreateTouched(p => ({ ...p, sport_type: true }));
+      else setEditTouched(p => ({ ...p, sport_type: true }));
+    }
     if (isCreate) {
       setCreateForm(p => {
         const next = { ...p, [key]: value };
-        validateSingleField(key, value, next, true);
+        validateSingleField(key, value, next, true, isSport || touched);
         return next;
       });
     } else {
       setEditForm(p => {
         const next = { ...p, [key]: value };
-        validateSingleField(key, value, next, false);
+        validateSingleField(key, value, next, false, isSport || touched);
         return next;
       });
     }
   };
 
+  const onFormFieldBlur = (key: keyof FieldTouched, isCreate: boolean) => {
+    if (isCreate) {
+      setCreateTouched(p => ({ ...p, [key]: true }));
+      validateSingleField(key, createForm[key], createForm, true, true);
+    } else {
+      setEditTouched(p => ({ ...p, [key]: true }));
+      validateSingleField(key, editForm[key], editForm, false, true);
+    }
+  };
+
   const onAllFieldsTouched = (isCreate: boolean) => {
+    const touchedAll = { ...EMPTY_TOUCHED, name: true, sport_type: true, price_per_hour: true, description: true, location: true };
+    if (isCreate) {
+      setCreateTouched(touchedAll);
+    } else {
+      setEditTouched(touchedAll);
+    }
     const form = isCreate ? createForm : editForm;
     const errs = validateAllFields(form);
     if (isCreate) {
@@ -185,6 +214,7 @@ export default function OwnerFieldsPage() {
     setCreateForm(EMPTY_FORM);
     setCreateError(null);
     setCreateErrors(EMPTY_ERRORS);
+    setCreateTouched(EMPTY_TOUCHED);
     setShowCreate(true);
   };
 
@@ -254,6 +284,7 @@ export default function OwnerFieldsPage() {
     });
     setEditError(null);
     setEditErrors(EMPTY_ERRORS);
+    setEditTouched(EMPTY_TOUCHED);
   };
 
   const handleEdit = async () => {
@@ -499,6 +530,7 @@ export default function OwnerFieldsPage() {
         error={createError}
         loading={createLoading}
         onFieldChange={(key, val) => onFormFieldChange(key, val, true)}
+        onFieldBlur={key => onFormFieldBlur(key, true)}
         onPickImage={() => pickImage(setCreateForm, setCreateErrors, true)}
         onClose={() => setShowCreate(false)}
         onSubmit={handleCreate}
@@ -519,6 +551,7 @@ export default function OwnerFieldsPage() {
         error={editError}
         loading={editLoading}
         onFieldChange={(key, val) => onFormFieldChange(key, val, false)}
+        onFieldBlur={key => onFormFieldBlur(key, false)}
         onPickImage={() => pickImage(setEditForm, setEditErrors, false)}
         onClose={() => setEditTarget(null)}
         onSubmit={handleEdit}
@@ -545,7 +578,7 @@ export default function OwnerFieldsPage() {
 function FieldModal({
   visible, title, iconName, iconColor, iconBg,
   form, errors, error, loading,
-  onFieldChange, onPickImage, onClose, onSubmit, submitLabel, submitBg, st, colors,
+  onFieldChange, onFieldBlur, onPickImage, onClose, onSubmit, submitLabel, submitBg, st, colors,
 }: {
   visible: boolean; title: string;
   iconName: string; iconColor: string; iconBg: string;
@@ -553,6 +586,7 @@ function FieldModal({
   errors: FieldFormErrors;
   error: string | null; loading: boolean;
   onFieldChange: (key: keyof FieldFormData, val: string) => void;
+  onFieldBlur: (key: keyof FieldTouched) => void;
   onPickImage: () => void;
   onClose: () => void; onSubmit: () => void;
   submitLabel: string; submitBg: string;
@@ -560,6 +594,7 @@ function FieldModal({
   colors: ThemeColors;
 }) {
   const set = (key: keyof FieldFormData) => (val: string) => onFieldChange(key, val);
+  const blur = (key: keyof FieldFormData) => () => onFieldBlur(key as keyof FieldTouched);
   const previewUri = form.image_uri || form.image_url || null;
   const isSubmitDisabled = loading || hasErrors(errors);
 
@@ -615,6 +650,7 @@ function FieldModal({
               label="Nama Lapangan" icon="stadium"
               value={form.name}
               onChangeText={set('name')}
+              onBlur={blur('name')}
               placeholder="Contoh: Futsal Arena Gemilang"
               error={errors.name}
               st={st}
@@ -644,6 +680,7 @@ function FieldModal({
               label="Deskripsi" icon="notes"
               value={form.description}
               onChangeText={set('description')}
+              onBlur={blur('description')}
               placeholder="Fasilitas yang tersedia..."
               multiline
               error={errors.description}
@@ -655,6 +692,7 @@ function FieldModal({
               label="Sewa Per Jam (Rp)" icon="payments"
               value={form.price_per_hour}
               onChangeText={set('price_per_hour')}
+              onBlur={blur('price_per_hour')}
               placeholder="Contoh: 150000"
               keyboardType="numeric"
               error={errors.price_per_hour}
@@ -666,6 +704,7 @@ function FieldModal({
               label="Lokasi (opsional)" icon="location-on"
               value={form.location}
               onChangeText={set('location')}
+              onBlur={blur('location')}
               placeholder="Contoh: Jl. Merdeka No. 10, Kota Bandung"
               error={errors.location}
               st={st}
@@ -702,9 +741,10 @@ function FieldError({ message, st, colors }: { message: string; st: ReturnType<t
 }
 
 // ── Text input field ──────────────────────────────────────────────────────────
-function FField({ label, icon, value, onChangeText, placeholder, keyboardType, multiline, error, st, colors }: {
+function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboardType, multiline, error, st, colors }: {
   label: string; icon: string; value: string;
   onChangeText: (v: string) => void;
+  onBlur?: () => void;
   placeholder?: string; keyboardType?: any; multiline?: boolean;
   error?: string;
   st: ReturnType<typeof makeStyles>;
@@ -723,6 +763,7 @@ function FField({ label, icon, value, onChangeText, placeholder, keyboardType, m
           style={[st.fieldInput, multiline && { minHeight: 80, textAlignVertical: 'top' }]}
           value={value}
           onChangeText={onChangeText}
+          onBlur={onBlur}
           placeholder={placeholder ?? label}
           placeholderTextColor={colors.textTertiary}
           keyboardType={keyboardType}

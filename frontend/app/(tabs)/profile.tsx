@@ -28,16 +28,17 @@ import AlertBox from '../../components/shared/AlertBox';
 import NotificationCenter from '../../components/shared/NotificationCenter';
 import { useToastStore } from '../../store/toastStore';
 import { useNotificationStore } from '../../store/notificationStore';
+import { fieldError } from '../../lib/formValidation';
 
 const SPORT_ICONS: Record<string, string> = {
   futsal: 'sports-soccer',
   basketball: 'sports-basketball',
   badminton: 'sports-tennis',
   volleyball: 'sports-volleyball',
-  minisoccer: 'sports-soccer',
+  mini_soccer: 'sports-soccer',
   tennis: 'sports-tennis',
-  tabletennis: 'sports',
-  others: 'more-horiz',
+  padel: 'sports',
+  other: 'more-horiz',
 };
 
 type OwnerRequestStatus = 'none' | 'pending' | 'approved' | 'rejected';
@@ -54,6 +55,7 @@ export default function ProfileScreen() {
   const [showOwnerModal, setShowOwnerModal] = useState(false);
   const [ownerForm, setOwnerForm] = useState({ name: '', email: '', business_name: '', address: '', phone: '' });
   const [ownerErrors, setOwnerErrors] = useState({ name: '', email: '', business_name: '', address: '', phone: '' });
+  const [ownerTouched, setOwnerTouched] = useState({ name: false, email: false, business_name: false, address: false, phone: false });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -73,7 +75,18 @@ export default function ProfileScreen() {
   const setOwnErr = (key: keyof typeof ownerErrors) => (err: string) => setOwnerErrors(p => ({ ...p, [key]: err }));
   const onOwnField = (key: keyof typeof ownerErrors, validate: (v: string) => string) => (v: string) => {
     setOwnerForm(p => ({ ...p, [key]: v }));
-    setOwnErr(key)(validate(v));
+    setOwnErr(key)(fieldError(v, validate(v), ownerTouched[key]));
+  };
+  const onOwnBlur = (key: keyof typeof ownerErrors, validate: (v: string) => string) => () => {
+    setOwnerTouched(p => ({ ...p, [key]: true }));
+    setOwnErr(key)(validate(ownerForm[key]));
+  };
+
+  const openOwnerModal = () => {
+    setSubmitError(null);
+    setOwnerErrors({ name: '', email: '', business_name: '', address: '', phone: '' });
+    setOwnerTouched({ name: false, email: false, business_name: false, address: false, phone: false });
+    setShowOwnerModal(true);
   };
 
   const fetchOwnerStatus = useCallback(async () => {
@@ -121,6 +134,7 @@ export default function ProfileScreen() {
   }, [profile]);
 
   async function handleSubmitOwner() {
+    setOwnerTouched({ name: true, email: true, business_name: true, address: true, phone: true });
     const nErr = ownValidateName(ownerForm.name);
     const eErr = ownValidateEmail(ownerForm.email);
     const bErr = ownValidateBiz(ownerForm.business_name);
@@ -232,7 +246,7 @@ export default function ProfileScreen() {
         <TouchableOpacity
           style={[styles.ownerCard, { backgroundColor: colors.destructiveMuted, borderColor: colors.destructive + '40' }]}
           activeOpacity={0.8}
-          onPress={() => setShowOwnerModal(true)}
+          onPress={() => openOwnerModal()}
         >
           <View style={styles.ownerCardLeft}>
             <View style={[styles.ownerIconBox, { backgroundColor: colors.destructiveMuted }]}>
@@ -259,7 +273,7 @@ export default function ProfileScreen() {
             borderColor: colors.primary + '40',
           }]}
           activeOpacity={0.8}
-          onPress={() => setShowOwnerModal(true)}
+          onPress={() => openOwnerModal()}
         >
           <View style={styles.ownerCardLeft}>
             <View style={[styles.ownerIconBox, { backgroundColor: colors.primaryMuted }]}>
@@ -494,6 +508,7 @@ export default function ProfileScreen() {
           icon="person-outline"
           value={ownerForm.name}
           onChangeText={onOwnField('name', ownValidateName)}
+          onBlur={onOwnBlur('name', ownValidateName)}
           containerStyle={styles.inputContainer}
           error={ownerErrors.name}
         />
@@ -502,6 +517,7 @@ export default function ProfileScreen() {
           icon="mail-outline"
           value={ownerForm.email}
           onChangeText={onOwnField('email', ownValidateEmail)}
+          onBlur={onOwnBlur('email', ownValidateEmail)}
           keyboardType="email-address"
           autoCapitalize="none"
           containerStyle={styles.inputContainer}
@@ -512,6 +528,7 @@ export default function ProfileScreen() {
           icon="store"
           value={ownerForm.business_name}
           onChangeText={onOwnField('business_name', ownValidateBiz)}
+          onBlur={onOwnBlur('business_name', ownValidateBiz)}
           containerStyle={styles.inputContainer}
           error={ownerErrors.business_name}
         />
@@ -520,6 +537,7 @@ export default function ProfileScreen() {
           icon="location-on"
           value={ownerForm.address}
           onChangeText={onOwnField('address', ownValidateAddr)}
+          onBlur={onOwnBlur('address', ownValidateAddr)}
           containerStyle={styles.inputContainer}
           error={ownerErrors.address}
         />
@@ -528,6 +546,7 @@ export default function ProfileScreen() {
           icon="phone"
           value={ownerForm.phone}
           onChangeText={onOwnField('phone', ownValidatePhone)}
+          onBlur={onOwnBlur('phone', ownValidatePhone)}
           keyboardType="phone-pad"
           containerStyle={styles.inputContainer}
           error={ownerErrors.phone}

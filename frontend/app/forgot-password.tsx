@@ -11,6 +11,7 @@ import FloatingInput from '../components/FloatingInput';
 import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
+import { fieldError } from '../lib/formValidation';
 
 function fpValidateEmail(v: string): string {
   if (!v.trim()) return 'Email wajib diisi.';
@@ -20,6 +21,7 @@ function fpValidateEmail(v: string): string {
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
+  const [emailTouched, setEmailTouched] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
@@ -39,9 +41,11 @@ export default function ForgotPasswordScreen() {
     }).start();
   };
 
-  function onFpEmailChange(v: string) { setEmail(v); setEmailError(fpValidateEmail(v)); }
+  function onFpEmailChange(v: string) { setEmail(v); setEmailError(fieldError(v, fpValidateEmail(v), emailTouched)); }
+  function onFpEmailBlur() { setEmailTouched(true); setEmailError(fpValidateEmail(email)); }
 
   async function handleSend() {
+    setEmailTouched(true);
     const eErr = fpValidateEmail(email);
     setEmailError(eErr);
     if (eErr) {
@@ -184,6 +188,7 @@ export default function ForgotPasswordScreen() {
               label="Email"
               value={email}
               onChangeText={onFpEmailChange}
+              onBlur={onFpEmailBlur}
               keyboardType="email-address"
               error={emailError}
               colors={AUTH_DARK_COLORS}

@@ -11,6 +11,7 @@ import FloatingInput from '../components/FloatingInput';
 import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
+import { fieldError } from '../lib/formValidation';
 
 function rpValidatePassword(v: string): string {
   if (!v) return 'Password wajib diisi.';
@@ -31,6 +32,8 @@ export default function ResetPasswordScreen() {
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [confirmTouched, setConfirmTouched] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [confirmError, setConfirmError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -49,10 +52,18 @@ export default function ResetPasswordScreen() {
 
   const isValid = params.token && params.email;
 
-  function onRpPasswordChange(v: string) { setPassword(v); setPasswordError(rpValidatePassword(v)); if (confirmPassword) setConfirmError(rpValidateConfirm(confirmPassword, v)); }
-  function onRpConfirmChange(v: string) { setConfirmPassword(v); setConfirmError(rpValidateConfirm(v, password)); }
+  function onRpPasswordChange(v: string) {
+    setPassword(v);
+    setPasswordError(fieldError(v, rpValidatePassword(v), passwordTouched));
+    if (confirmPassword) setConfirmError(rpValidateConfirm(confirmPassword, v));
+  }
+  function onRpConfirmChange(v: string) { setConfirmPassword(v); setConfirmError(fieldError(v, rpValidateConfirm(v, password), confirmTouched)); }
+
+  function onRpPasswordBlur() { setPasswordTouched(true); setPasswordError(rpValidatePassword(password)); }
+  function onRpConfirmBlur() { setConfirmTouched(true); setConfirmError(rpValidateConfirm(confirmPassword, password)); }
 
   async function handleResetPassword() {
+    setPasswordTouched(true); setConfirmTouched(true);
     const pErr = rpValidatePassword(password);
     const cErr = rpValidateConfirm(confirmPassword, password);
     setPasswordError(pErr);
@@ -131,8 +142,8 @@ export default function ResetPasswordScreen() {
                 <Text style={styles.messageText}>{message.text}</Text>
               </Animated.View>
             )}
-            <FloatingInput label="Password Baru" value={password} onChangeText={onRpPasswordChange} secureTextEntry={true} error={passwordError} colors={AUTH_DARK_COLORS} />
-            <FloatingInput label="Ulangi Password Baru" value={confirmPassword} onChangeText={onRpConfirmChange} secureTextEntry={true} error={confirmError} colors={AUTH_DARK_COLORS} />
+            <FloatingInput label="Password Baru" value={password} onChangeText={onRpPasswordChange} onBlur={onRpPasswordBlur} secureTextEntry={true} error={passwordError} colors={AUTH_DARK_COLORS} />
+            <FloatingInput label="Ulangi Password Baru" value={confirmPassword} onChangeText={onRpConfirmChange} onBlur={onRpConfirmBlur} secureTextEntry={true} error={confirmError} colors={AUTH_DARK_COLORS} />
             <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleResetPassword} disabled={loading} activeOpacity={0.8}>
               {loading ? <ActivityIndicator color="#0e2a14" /> : (
                 <View style={styles.buttonContent}>

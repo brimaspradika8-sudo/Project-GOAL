@@ -13,6 +13,7 @@ import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
 import * as SecureStore from '../lib/secureStorage';
 import { TOKEN_KEY } from '../lib/auth';
+import { fieldError } from '../lib/formValidation';
 
 function cpValidateCurrent(v: string): string {
   if (!v) return 'Password saat ini wajib diisi.';
@@ -36,6 +37,9 @@ export default function ChangePasswordScreen() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [currentTouched, setCurrentTouched] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [confirmTouched, setConfirmTouched] = useState(false);
   const [currentError, setCurrentError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmError, setConfirmError] = useState('');
@@ -51,11 +55,20 @@ export default function ChangePasswordScreen() {
     }).start();
   };
 
-  function onCpCurrentChange(v: string) { setCurrentPassword(v); setCurrentError(cpValidateCurrent(v)); }
-  function onCpPasswordChange(v: string) { setPassword(v); setPasswordError(cpValidatePassword(v)); if (confirmPassword) setConfirmError(cpValidateConfirm(confirmPassword, v)); }
-  function onCpConfirmChange(v: string) { setConfirmPassword(v); setConfirmError(cpValidateConfirm(v, password)); }
+  function onCpCurrentChange(v: string) { setCurrentPassword(v); setCurrentError(fieldError(v, cpValidateCurrent(v), currentTouched)); }
+  function onCpPasswordChange(v: string) {
+    setPassword(v);
+    setPasswordError(fieldError(v, cpValidatePassword(v), passwordTouched));
+    if (confirmPassword) setConfirmError(cpValidateConfirm(confirmPassword, v));
+  }
+  function onCpConfirmChange(v: string) { setConfirmPassword(v); setConfirmError(fieldError(v, cpValidateConfirm(v, password), confirmTouched)); }
+
+  function onCpCurrentBlur() { setCurrentTouched(true); setCurrentError(cpValidateCurrent(currentPassword)); }
+  function onCpPasswordBlur() { setPasswordTouched(true); setPasswordError(cpValidatePassword(password)); }
+  function onCpConfirmBlur() { setConfirmTouched(true); setConfirmError(cpValidateConfirm(confirmPassword, password)); }
 
   async function handleChangePassword() {
+    setCurrentTouched(true); setPasswordTouched(true); setConfirmTouched(true);
     const cErr = cpValidateCurrent(currentPassword);
     const pErr = cpValidatePassword(password);
     const cfErr = cpValidateConfirm(confirmPassword, password);
@@ -119,9 +132,9 @@ export default function ChangePasswordScreen() {
                 <Text style={styles.messageText}>{message.text}</Text>
               </Animated.View>
             )}
-            <FloatingInput label="Password Saat Ini" value={currentPassword} onChangeText={onCpCurrentChange} secureTextEntry={true} error={currentError} colors={AUTH_DARK_COLORS} />
-            <FloatingInput label="Password Baru" value={password} onChangeText={onCpPasswordChange} secureTextEntry={true} error={passwordError} colors={AUTH_DARK_COLORS} />
-            <FloatingInput label="Ulangi Password Baru" value={confirmPassword} onChangeText={onCpConfirmChange} secureTextEntry={true} error={confirmError} colors={AUTH_DARK_COLORS} />
+            <FloatingInput label="Password Saat Ini" value={currentPassword} onChangeText={onCpCurrentChange} onBlur={onCpCurrentBlur} secureTextEntry={true} error={currentError} colors={AUTH_DARK_COLORS} />
+            <FloatingInput label="Password Baru" value={password} onChangeText={onCpPasswordChange} onBlur={onCpPasswordBlur} secureTextEntry={true} error={passwordError} colors={AUTH_DARK_COLORS} />
+            <FloatingInput label="Ulangi Password Baru" value={confirmPassword} onChangeText={onCpConfirmChange} onBlur={onCpConfirmBlur} secureTextEntry={true} error={confirmError} colors={AUTH_DARK_COLORS} />
             <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleChangePassword} disabled={loading} activeOpacity={0.8}>
               {loading ? <ActivityIndicator color="#0e2a14" /> : (
                 <View style={styles.buttonContent}>
