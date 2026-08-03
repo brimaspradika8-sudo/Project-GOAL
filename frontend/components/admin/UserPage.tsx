@@ -450,17 +450,17 @@ export default function UserPage() {
                       <MaterialIcons name="edit" size={16} color="#FFFFFF" />
                     </TouchableOpacity>
 
-                    {/* Oranye — Upgrade Role (super_admin only, bukan baris super_admin) */}
+                    {/* Hijau — Upgrade Role (super_admin only, bukan baris super_admin) */}
                     {isSuperAdmin && roleKey !== 'super_admin' && (
                       <TouchableOpacity
-                        style={st.actionBtn}
+                        style={[st.actionBtn, { backgroundColor: '#10B981', borderColor: '#10B981' }]}
                         onPress={() => {
                           setUpgradeTarget({ id: u.id, name: u.name, currentRole: roleKey });
                           setUpgradeError(null);
                         }}
                         hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                       >
-                        <MaterialIcons name="admin-panel-settings" size={15} color={colors.textSecondary} />
+                        <MaterialIcons name="admin-panel-settings" size={16} color="#FFFFFF" />
                       </TouchableOpacity>
                     )}
 
@@ -642,7 +642,6 @@ export default function UserPage() {
             ? [{
                 label: 'Jadikan Super Admin',
                 icon: 'shield',
-                color: colors.primary,
                 onPress: () => handleUpgrade('super_admin'),
               }]
             : []),
