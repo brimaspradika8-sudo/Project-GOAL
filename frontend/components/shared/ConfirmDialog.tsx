@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { useTheme } from '../../lib/theme';
@@ -11,6 +11,7 @@ export interface ConfirmOption {
   destructive?: boolean;
   icon?: string;
   color?: string;
+  iconBg?: string;
 }
 
 interface ConfirmDialogProps {
@@ -48,6 +49,16 @@ export default function ConfirmDialog({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <View style={st.backdrop}>
         <View style={st.card}>
+          <TouchableOpacity
+            style={st.closeBtn}
+            onPress={onCancel}
+            disabled={loading}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityLabel="Tutup"
+          >
+            <MaterialIcons name="close" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+
           {showIcon && (
             <View style={[st.iconWrap, { backgroundColor: resolvedIconBg }]}>
               <MaterialIcons name={resolvedIcon as any} size={24} color={resolvedIconColor} />
@@ -66,6 +77,7 @@ export default function ConfirmDialog({
               {options!.map((opt, idx) => {
                 const btnColor = opt.destructive ? colors.error : (opt.color ?? colors.primary);
                 const bg = opt.destructive ? colors.errorContainer : colors.primaryContainer;
+                const iconBgColor = opt.iconBg || (opt.destructive ? (colors.error + '20') : (btnColor + '20'));
                 return (
                   <TouchableOpacity
                     key={idx}
@@ -75,7 +87,7 @@ export default function ConfirmDialog({
                     disabled={loading}
                   >
                     {opt.icon && (
-                      <View style={[st.optionIcon, { backgroundColor: btnColor + '15' }]}>
+                      <View style={[st.optionIcon, { backgroundColor: iconBgColor }]}>
                         <MaterialIcons name={opt.icon as any} size={18} color={btnColor} />
                       </View>
                     )}
@@ -117,7 +129,21 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     width: '100%', maxWidth: 340, backgroundColor: colors.surface,
     borderRadius: SIZES.borderRadiusLg, padding: 22, alignItems: 'center',
     borderWidth: 1, borderColor: colors.outline,
+    position: 'relative',
     ...SHADOWS.md,
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceContainerLow,
+    zIndex: 10,
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
   },
   iconWrap: {
     width: 52, height: 52, borderRadius: 16,
@@ -127,7 +153,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   desc: { ...FONTS.bodySm, color: colors.textSecondary, textAlign: 'center', marginBottom: 18 },
   alertBox: { marginBottom: 16 },
   actions: { flexDirection: 'row', gap: 10, width: '100%' },
-  btn: { flex: 1, paddingVertical: 12, borderRadius: SIZES.borderRadius, alignItems: 'center' },
+  btn: { flex: 1, paddingVertical: 12, borderRadius: SIZES.borderRadius, alignItems: 'center', ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}) },
   btnCancel: { backgroundColor: colors.surfaceContainerHigh, borderWidth: 1, borderColor: colors.outline },
   btnCancelText: { ...FONTS.buttonMd, color: colors.textSecondary },
   btnPrimary: { backgroundColor: colors.primary },
@@ -138,6 +164,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 14, paddingHorizontal: 16,
     borderRadius: 14, borderWidth: 1.5, minHeight: 52,
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
   },
   optionIcon: {
     width: 36, height: 36, borderRadius: 10,
