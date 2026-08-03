@@ -20,9 +20,10 @@ import SelectCheckbox from '../shared/SelectCheckbox';
 import BulkActionBar from '../shared/BulkActionBar';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
+import { fieldError } from '../../lib/formValidation';
 
 const getRoleConfig = (colors: ThemeColors): Record<string, { label: string; color: string; bg: string }> => ({
-  player:      { label: 'Pemain',      color: '#9CA3AF', bg: '#2D3748' },
+  player:      { label: 'Pemain',      color: colors.textSecondary, bg: colors.surfaceContainerHigh },
   owner:       { label: 'Pemilik',     color: '#10B981', bg: 'rgba(16, 185, 129, 0.15)' },
   super_admin: { label: 'Super Admin', color: '#FBBF24', bg: 'rgba(251, 191, 36, 0.15)' },
 });
@@ -57,6 +58,8 @@ export default function UserPage() {
 
   const [createFieldErrors, setCreateFieldErrors] = useState({ name: '', email: '', password: '' });
   const [editFieldErrors, setEditFieldErrors] = useState({ name: '', email: '', password: '' });
+  const [createTouched, setCreateTouched] = useState({ name: false, email: false, password: false });
+  const [editTouched, setEditTouched] = useState({ name: false, email: false, password: false });
 
   const valName = (v: string) => { if (!v.trim()) return 'Nama wajib diisi.'; return ''; };
   const valEmail = (v: string) => { if (!v.trim()) return 'Email wajib diisi.'; if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) return 'Format email tidak valid.'; return ''; };
@@ -119,7 +122,17 @@ export default function UserPage() {
   };
 
   // ── CREATE ──────────────────────────────────────────────
+  const openCreate = () => {
+    setCreateError(null);
+    setCreateForm(EMPTY_CREATE);
+    setCreateFieldErrors({ name: '', email: '', password: '' });
+    setCreateTouched({ name: false, email: false, password: false });
+    setShowCreatePwd(false);
+    setShowCreate(true);
+  };
+
   const handleCreate = async () => {
+    setCreateTouched({ name: true, email: true, password: true });
     const nErr = valName(createForm.name);
     const eErr = valEmail(createForm.email);
     const pErr = valPwd(createForm.password);
@@ -162,11 +175,14 @@ export default function UserPage() {
     setEditTarget(u);
     setEditForm({ name: u.name || '', email: u.email || '', password: '' });
     setEditError(null);
+    setEditFieldErrors({ name: '', email: '', password: '' });
+    setEditTouched({ name: false, email: false, password: false });
     setShowEditPwd(false);
   };
 
   const handleEdit = async () => {
     if (!editTarget) return;
+    setEditTouched({ name: true, email: true, password: true });
     const nErr = valName(editForm.name);
     const eErr = valEmail(editForm.email);
     const pErr = valPwd(editForm.password);
@@ -363,7 +379,7 @@ export default function UserPage() {
         {activeTab === 'owner' && (
           <TouchableOpacity
             style={st.addBtn}
-            onPress={() => { setCreateError(null); setCreateForm(EMPTY_CREATE); setShowCreate(true); }}
+            onPress={openCreate}
             activeOpacity={0.8}
           >
             <MaterialIcons name="add-circle-outline" size={17} color={colors.primary} />
@@ -386,7 +402,7 @@ export default function UserPage() {
               {activeTab === 'owner' && (
                 <TouchableOpacity
                   style={st.emptyAction}
-                  onPress={() => { setCreateError(null); setCreateForm(EMPTY_CREATE); setShowCreate(true); }}
+                  onPress={openCreate}
                 >
                   <MaterialIcons name="add" size={16} color={colors.onPrimary} />
                   <Text style={st.emptyActionText}>Tambah Owner</Text>
@@ -496,12 +512,16 @@ export default function UserPage() {
             ) : null}
 
             <FormField label="Nama Lengkap" icon="person-outline" value={createForm.name}
-              onChangeText={v => { setCreateForm(p => ({ ...p, name: v })); setCreateFieldErrors(p => ({ ...p, name: valName(v) })); }} st={st} colors={colors} error={createFieldErrors.name} />
+              onChangeText={v => { setCreateForm(p => ({ ...p, name: v })); setCreateFieldErrors(p => ({ ...p, name: fieldError(v, valName(v), createTouched.name) })); }}
+              onBlur={() => { setCreateTouched(p => ({ ...p, name: true })); setCreateFieldErrors(p => ({ ...p, name: valName(createForm.name) })); }}
+              st={st} colors={colors} error={createFieldErrors.name} />
             <FormField label="Email" icon="mail-outline" value={createForm.email}
-              onChangeText={v => { setCreateForm(p => ({ ...p, email: v })); setCreateFieldErrors(p => ({ ...p, email: valEmail(v) })); }}
+              onChangeText={v => { setCreateForm(p => ({ ...p, email: v })); setCreateFieldErrors(p => ({ ...p, email: fieldError(v, valEmail(v), createTouched.email) })); }}
+              onBlur={() => { setCreateTouched(p => ({ ...p, email: true })); setCreateFieldErrors(p => ({ ...p, email: valEmail(createForm.email) })); }}
               keyboardType="email-address" autoCapitalize="none" st={st} colors={colors} error={createFieldErrors.email} />
             <FormField label="Password" icon="lock-outline" value={createForm.password}
-              onChangeText={v => { setCreateForm(p => ({ ...p, password: v })); setCreateFieldErrors(p => ({ ...p, password: valPwd(v) })); }}
+              onChangeText={v => { setCreateForm(p => ({ ...p, password: v })); setCreateFieldErrors(p => ({ ...p, password: fieldError(v, valPwd(v), createTouched.password) })); }}
+              onBlur={() => { setCreateTouched(p => ({ ...p, password: true })); setCreateFieldErrors(p => ({ ...p, password: valPwd(createForm.password) })); }}
               secureTextEntry={!showCreatePwd}
               rightIcon={showCreatePwd ? 'visibility-off' : 'visibility'}
               onRightIconPress={() => setShowCreatePwd(p => !p)} st={st} colors={colors} error={createFieldErrors.password} />
@@ -563,12 +583,16 @@ export default function UserPage() {
             ) : null}
 
             <FormField label="Nama Lengkap" icon="person-outline" value={editForm.name}
-              onChangeText={v => { setEditForm(p => ({ ...p, name: v })); setEditFieldErrors(p => ({ ...p, name: valName(v) })); }} st={st} colors={colors} error={editFieldErrors.name} />
+              onChangeText={v => { setEditForm(p => ({ ...p, name: v })); setEditFieldErrors(p => ({ ...p, name: fieldError(v, valName(v), editTouched.name) })); }}
+              onBlur={() => { setEditTouched(p => ({ ...p, name: true })); setEditFieldErrors(p => ({ ...p, name: valName(editForm.name) })); }}
+              st={st} colors={colors} error={editFieldErrors.name} />
             <FormField label="Email" icon="mail-outline" value={editForm.email}
-              onChangeText={v => { setEditForm(p => ({ ...p, email: v })); setEditFieldErrors(p => ({ ...p, email: valEmail(v) })); }}
+              onChangeText={v => { setEditForm(p => ({ ...p, email: v })); setEditFieldErrors(p => ({ ...p, email: fieldError(v, valEmail(v), editTouched.email) })); }}
+              onBlur={() => { setEditTouched(p => ({ ...p, email: true })); setEditFieldErrors(p => ({ ...p, email: valEmail(editForm.email) })); }}
               keyboardType="email-address" autoCapitalize="none" st={st} colors={colors} error={editFieldErrors.email} />
-            <FormField label="Password Baru (opsional)" icon="lock-outline" value={editForm.password}
-              onChangeText={v => { setEditForm(p => ({ ...p, password: v })); setEditFieldErrors(p => ({ ...p, password: valPwd(v) })); }}
+            <FormField label="Password (opsional)" icon="lock-outline" value={editForm.password}
+              onChangeText={v => { setEditForm(p => ({ ...p, password: v })); setEditFieldErrors(p => ({ ...p, password: fieldError(v, valPwd(v), editTouched.password) })); }}
+              onBlur={() => { setEditTouched(p => ({ ...p, password: true })); setEditFieldErrors(p => ({ ...p, password: valPwd(editForm.password) })); }}
               secureTextEntry={!showEditPwd}
               rightIcon={showEditPwd ? 'visibility-off' : 'visibility'}
               onRightIconPress={() => setShowEditPwd(p => !p)}
@@ -654,9 +678,10 @@ export default function UserPage() {
   );
 }
 
-function FormField({ label, icon, value, onChangeText, keyboardType, autoCapitalize, secureTextEntry, rightIcon, onRightIconPress, placeholder, error, st, colors }: {
+function FormField({ label, icon, value, onChangeText, onBlur, keyboardType, autoCapitalize, secureTextEntry, rightIcon, onRightIconPress, placeholder, error, st, colors }: {
   label: string; icon: string; value: string;
   onChangeText: (v: string) => void;
+  onBlur?: () => void;
   keyboardType?: any; autoCapitalize?: any;
   secureTextEntry?: boolean;
   rightIcon?: string; onRightIconPress?: () => void;
@@ -674,6 +699,7 @@ function FormField({ label, icon, value, onChangeText, keyboardType, autoCapital
           style={st.fieldInput}
           value={value}
           onChangeText={onChangeText}
+          onBlur={onBlur}
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize ?? 'sentences'}
           secureTextEntry={secureTextEntry}
@@ -738,9 +764,9 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   emptyWrap: { alignItems: 'center', marginTop: 60, gap: 12 },
   emptyIcon: {
     width: 80, height: 80, borderRadius: 24,
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.surfaceContainerHigh,
     justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1, borderColor: '#334155',
+    borderWidth: 1, borderColor: colors.outline,
   },
   emptyTitle: { ...FONTS.titleMd, color: colors.textSecondary },
   emptyAction: {
@@ -772,9 +798,9 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.surfaceContainerHigh,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: colors.outline,
   },
 
   modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.45)', padding: 20 },

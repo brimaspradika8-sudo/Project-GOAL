@@ -21,8 +21,12 @@ class UploadController extends Controller
             return response()->json(['message' => 'Anda tidak memiliki akses untuk mengupload gambar.'], 403);
         }
 
+        // PENTING: validasi ini SENGAJA dibatasi 2MB & JPG-only (keputusan
+        // produk). JANGAN diubah/dilonggarkan tanpa konfirmasi eksplisit —
+        // pernah tidak sengaja mundur ke versi lama (5MB, terima PNG/WebP)
+        // saat proses git merge, jangan sampai terulang.
         $request->validate([
-            'image' => 'required|file|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'image' => 'required|file|image|mimes:jpg,jpeg|max:2048',
         ]);
 
         try {

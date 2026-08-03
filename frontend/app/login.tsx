@@ -14,6 +14,7 @@ import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
 import * as SecureStore from '../lib/secureStorage';
 import { TOKEN_KEY } from '../lib/auth';
 import { useProfileStore } from '../store/profileStore';
+import { fieldError } from '../lib/formValidation';
 
 const RATE_LIMIT_MS = 5000;
 const lastAttemptRef = { current: 0 };
@@ -57,6 +58,8 @@ function validatePassword(v: string): string {
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,15 +79,27 @@ export default function LoginScreen() {
 
   function onEmailChange(v: string) {
     setEmail(v);
-    setEmailError(validateEmail(v));
+    setEmailError(fieldError(v, validateEmail(v), emailTouched));
   }
 
   function onPasswordChange(v: string) {
     setPassword(v);
-    setPasswordError(validatePassword(v));
+    setPasswordError(fieldError(v, validatePassword(v), passwordTouched));
+  }
+
+  function onEmailBlur() {
+    setEmailTouched(true);
+    setEmailError(validateEmail(email));
+  }
+
+  function onPasswordBlur() {
+    setPasswordTouched(true);
+    setPasswordError(validatePassword(password));
   }
 
   async function signInWithEmail() {
+    setEmailTouched(true);
+    setPasswordTouched(true);
     const eErr = validateEmail(email);
     const pErr = validatePassword(password);
     setEmailError(eErr);
@@ -188,6 +203,7 @@ export default function LoginScreen() {
               label="Email"
               value={email}
               onChangeText={onEmailChange}
+              onBlur={onEmailBlur}
               keyboardType="email-address"
               error={emailError}
               colors={AUTH_DARK_COLORS}
@@ -197,6 +213,7 @@ export default function LoginScreen() {
               label="Password"
               value={password}
               onChangeText={onPasswordChange}
+              onBlur={onPasswordBlur}
               secureTextEntry={true}
               error={passwordError}
               colors={AUTH_DARK_COLORS}

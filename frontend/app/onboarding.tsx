@@ -36,9 +36,9 @@ const SPORTS = [
   { id: 'basketball', label: 'Basket', icon: 'sports-basketball' as const },
   { id: 'badminton', label: 'Badminton', icon: 'sports-tennis' as const },
   { id: 'volleyball', label: 'Voli', icon: 'sports-volleyball' as const },
-  { id: 'minisoccer', label: 'Mini Soccer', icon: 'sports-soccer' as const },
+  { id: 'mini_soccer', label: 'Mini Soccer', icon: 'sports-soccer' as const },
   { id: 'tennis', label: 'Tenis', icon: 'sports-tennis' as const },
-  { id: 'tabletennis', label: 'Padel', icon: 'sports' as const },
+  { id: 'padel', label: 'Padel', icon: 'sports' as const },
 ];
 
 const USERNAME_PREFIXES = [
@@ -639,12 +639,12 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     alignItems: 'stretch',
   },
   sidePanel: {
-    backgroundColor: '#0D1A0F',
+    backgroundColor: colors.primaryContainer,
     borderRadius: 24,
     padding: 22,
     marginBottom: 18,
     borderWidth: 1,
-    borderColor: '#1A3D1F',
+    borderColor: colors.outline,
   },
   sidePanelDesktop: {
     width: 340,
@@ -662,11 +662,11 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   sideTitle: {
     ...FONTS.headlineLg,
-    color: '#ffffff',
+    color: colors.onPrimaryContainer,
   },
   sideSubtitle: {
     ...FONTS.bodyMd,
-    color: 'rgba(255,255,255,0.76)',
+    color: colors.textSecondary,
     marginTop: 8,
   },
   stepList: {
@@ -679,17 +679,20 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     gap: 10,
     borderRadius: 14,
     padding: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: colors.bgElevated,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   stepItemActive: {
-    backgroundColor: colors.bgElevated,
+    backgroundColor: colors.primaryMuted,
+    borderColor: colors.primary,
   },
   stepItemText: {
     ...FONTS.labelLg,
-    color: 'rgba(255,255,255,0.72)',
+    color: colors.textSecondary,
   },
   stepItemTextActive: {
-    color: colors.text,
+    color: colors.onPrimaryContainer,
   },
   contentPanel: {
     flex: 1,

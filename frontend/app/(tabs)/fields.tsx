@@ -10,11 +10,12 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { SIZES, FONTS, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
-import { useFieldStore, Field } from '../../store/fieldStore';
+import { useFieldStore } from '../../store/fieldStore';
 import { SkeletonVenueList } from '../../components/Skeleton';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useTheme } from '../../lib/theme';
@@ -22,11 +23,9 @@ import VenueCard from '../../components/VenueCard';
 import { SPORT_OPTIONS, SPORT_MAP } from '../../lib/fieldValidation';
 
 const FILTERS = ['Semua', ...SPORT_OPTIONS];
-function VenueCardInline({ item }: { item: Field }) {
-  return <VenueCard field={item} />;
-}
 
 export default function FieldsScreen() {
+  const { width } = useWindowDimensions();
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('Semua');
   const debouncedSearch = useDebounce(search, 150);
@@ -34,6 +33,9 @@ export default function FieldsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const { colors } = useTheme();
   const styles = makeStyles(colors);
+
+  const isDesktop = width >= 900;
+  const numColumns = isDesktop ? (width >= 1200 ? 3 : 2) : 1;
 
   const lastFetchRef = useRef(debouncedSearch);
 
@@ -131,13 +133,20 @@ export default function FieldsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
       <FlatList
+        key={String(numColumns)}
         data={fields}
+        numColumns={numColumns}
         keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => <VenueCardInline item={item} />}
+        renderItem={({ item }) => (
+          numColumns > 1
+            ? <View style={styles.gridCell}><VenueCard field={item} /></View>
+            : <VenueCard field={item} />
+        )}
+        columnWrapperStyle={numColumns > 1 ? styles.gridRow : undefined}
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -165,9 +174,19 @@ const makeStyles = (colors: any) => StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 48,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    maxWidth: 440,
+    maxWidth: 1120,
     alignSelf: 'center',
     width: '100%',
+  },
+  scrollContentDesktop: {
+    maxWidth: 1120,
+    paddingHorizontal: 24,
+  },
+  gridRow: {
+    gap: 16,
+  },
+  gridCell: {
+    flex: 1,
   },
   title: {
     ...FONTS.headlineLg,

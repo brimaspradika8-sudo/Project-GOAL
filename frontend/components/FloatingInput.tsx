@@ -12,6 +12,7 @@ interface FloatingInputProps {
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   error?: string;
+  onBlur?: () => void;
   colors?: ThemeColors;
 }
 
@@ -23,6 +24,7 @@ export default function FloatingInput({
   keyboardType = 'default',
   autoCapitalize = 'none',
   error,
+  onBlur,
   colors: colorsOverride,
 }: FloatingInputProps) {
   const { colors: themeColors } = useTheme();
@@ -83,7 +85,7 @@ export default function FloatingInput({
           Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {},
         ]}
         onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
+        onBlur={() => { setIsFocused(false); onBlur?.(); }}
         onChangeText={onChangeText}
         value={value}
         secureTextEntry={secureTextEntry && !isPasswordVisible}

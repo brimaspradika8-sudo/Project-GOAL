@@ -11,6 +11,7 @@ import FloatingInput from '../components/FloatingInput';
 import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
+import { fieldError } from '../lib/formValidation';
 
 function regValidateName(v: string): string {
   if (!v.trim()) return 'Nama wajib diisi.';
@@ -42,6 +43,10 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [nameTouched, setNameTouched] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
+  const [passwordTouched, setPasswordTouched] = useState(false);
+  const [confirmTouched, setConfirmTouched] = useState(false);
   const [nameErr, setNameErr] = useState('');
   const [emailErr, setEmailErr] = useState('');
   const [passwordErr, setPasswordErr] = useState('');
@@ -63,12 +68,22 @@ export default function RegisterScreen() {
     }).start();
   };
 
-  function onRegNameChange(v: string) { setName(v); setNameErr(regValidateName(v)); }
-  function onRegEmailChange(v: string) { setEmail(v); setEmailErr(regValidateEmail(v)); }
-  function onRegPasswordChange(v: string) { setPassword(v); setPasswordErr(regValidatePassword(v)); if (confirmPassword) setConfirmErr(regValidateConfirm(confirmPassword, v)); }
-  function onRegConfirmChange(v: string) { setConfirmPassword(v); setConfirmErr(regValidateConfirm(v, password)); }
+  function onRegNameChange(v: string) { setName(v); setNameErr(fieldError(v, regValidateName(v), nameTouched)); }
+  function onRegEmailChange(v: string) { setEmail(v); setEmailErr(fieldError(v, regValidateEmail(v), emailTouched)); }
+  function onRegPasswordChange(v: string) {
+    setPassword(v);
+    setPasswordErr(fieldError(v, regValidatePassword(v), passwordTouched));
+    if (confirmPassword) setConfirmErr(regValidateConfirm(confirmPassword, v));
+  }
+  function onRegConfirmChange(v: string) { setConfirmPassword(v); setConfirmErr(fieldError(v, regValidateConfirm(v, password), confirmTouched)); }
+
+  function onRegNameBlur() { setNameTouched(true); setNameErr(regValidateName(name)); }
+  function onRegEmailBlur() { setEmailTouched(true); setEmailErr(regValidateEmail(email)); }
+  function onRegPasswordBlur() { setPasswordTouched(true); setPasswordErr(regValidatePassword(password)); }
+  function onRegConfirmBlur() { setConfirmTouched(true); setConfirmErr(regValidateConfirm(confirmPassword, password)); }
 
   async function signUpWithEmail() {
+    setNameTouched(true); setEmailTouched(true); setPasswordTouched(true); setConfirmTouched(true);
     const nErr = regValidateName(name);
     const eErr = regValidateEmail(email);
     const pErr = regValidatePassword(password);
@@ -146,6 +161,7 @@ export default function RegisterScreen() {
               label="Nama Lengkap"
               value={name}
               onChangeText={onRegNameChange}
+              onBlur={onRegNameBlur}
               autoCapitalize="words"
               error={nameErr}
               colors={AUTH_DARK_COLORS}
@@ -155,6 +171,7 @@ export default function RegisterScreen() {
               label="Email"
               value={email}
               onChangeText={onRegEmailChange}
+              onBlur={onRegEmailBlur}
               keyboardType="email-address"
               error={emailErr}
               colors={AUTH_DARK_COLORS}
@@ -164,6 +181,7 @@ export default function RegisterScreen() {
               label="Password"
               value={password}
               onChangeText={onRegPasswordChange}
+              onBlur={onRegPasswordBlur}
               secureTextEntry={true}
               error={passwordErr}
               colors={AUTH_DARK_COLORS}
@@ -173,6 +191,7 @@ export default function RegisterScreen() {
               label="Verifikasi Password"
               value={confirmPassword}
               onChangeText={onRegConfirmChange}
+              onBlur={onRegConfirmBlur}
               secureTextEntry={true}
               error={confirmErr}
               colors={AUTH_DARK_COLORS}
