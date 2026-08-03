@@ -201,9 +201,12 @@ export default function OwnerFieldsPage() {
 
       let imageUrl = createForm.image_url;
       if (createForm.image_uri && !imageUrl) {
-        const uploaded = await uploadImage(createForm.image_uri, token!, createForm.image_mime);
-        if (!uploaded) { setCreateError('Gagal mengunggah foto. Coba lagi.'); return; }
-        imageUrl = uploaded;
+        const uploadRes = await uploadImageDetailed(createForm.image_uri, token!, createForm.image_mime);
+        if (!uploadRes.url) {
+          setCreateError(uploadRes.error || 'Gagal mengunggah foto. Coba lagi.');
+          return;
+        }
+        imageUrl = uploadRes.url;
       }
 
       const body: any = {
@@ -309,7 +312,7 @@ export default function OwnerFieldsPage() {
     }
   };
 
-  const uploadImage = async (uri: string, token: string, mime?: string): Promise<string | null> => {
+  const uploadImageDetailed = async (uri: string, token: string, mime?: string): Promise<{ url: string | null; error?: string }> => {
     try {
       const formData = new FormData();
       const filename = uri.split('/').pop() || 'photo.jpg';
@@ -334,14 +337,17 @@ export default function OwnerFieldsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        console.error('[uploadImage] gagal:', res.status, data);
-        return null;
+        return { url: null, error: data.message || 'Gagal mengunggah foto. Silakan coba lagi.' };
       }
-      return data.url;
+      return { url: data.url };
     } catch (err: any) {
-      console.error('[uploadImage] exception:', err?.message ?? err);
-      return null;
+      return { url: null, error: 'Gagal terhubung ke server upload.' };
     }
+  };
+
+  const uploadImage = async (uri: string, token: string, mime?: string): Promise<string | null> => {
+    const res = await uploadImageDetailed(uri, token, mime);
+    return res.url;
   };
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);

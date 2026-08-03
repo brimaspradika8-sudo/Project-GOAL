@@ -67,9 +67,9 @@ return Application::configure(basePath: dirname(__DIR__))
             report($e);
 
             return response()->json([
-                'message' => $status === 500
-                    ? 'Terjadi kesalahan server. Silakan coba lagi.'
-                    : 'Terjadi kesalahan.',
+                'message' => config('app.debug') && $e->getMessage()
+                    ? $e->getMessage()
+                    : ($status === 500 ? 'Terjadi kesalahan server. Silakan coba lagi.' : 'Terjadi kesalahan.'),
             ], $status);
         });
     })->create();

@@ -41,6 +41,8 @@ const DEFAULT_IMAGES: Record<string, string> = {
 
 function getSportFilter(category: string): string | undefined {
   if (category === 'Semua') return undefined;
+  const categoryItem = CATEGORIES.find(c => c.label === category || c.key === category);
+  if (categoryItem) return categoryItem.key;
   return SPORT_MAP[category] || category.toLowerCase();
 }
 
@@ -49,6 +51,7 @@ export default function HomeScreen() {
   const { profile, loading: profileLoading, fetchProfile } = useProfileStore();
   const { fields, loading: fieldsLoading, fetchFields } = useFieldStore();
   const [popularFields, setPopularFields] = useState<Field[]>([]);
+  const [popularLoading, setPopularLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeCategory, setActiveCategory] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,13 +65,19 @@ export default function HomeScreen() {
   }, [profile, fetchProfile]);
 
   const fetchPopularFields = useCallback(async () => {
-    const params = new URLSearchParams({ page: '1' });
-    const res = await fetch(`${API_BASE_URL}/fields?${params.toString()}`, {
-      headers: { ...DEFAULT_HEADERS },
-    });
-    if (!res.ok) throw new Error('Gagal memuat venue populer');
-    const body = await res.json();
-    setPopularFields(body.data ?? []);
+    try {
+      const params = new URLSearchParams({ page: '1' });
+      const res = await fetch(`${API_BASE_URL}/fields?${params.toString()}`, {
+        headers: { ...DEFAULT_HEADERS },
+      });
+      if (!res.ok) throw new Error('Gagal memuat venue populer');
+      const body = await res.json();
+      setPopularFields(body.data ?? []);
+    } catch {
+      // silent
+    } finally {
+      setPopularLoading(false);
+    }
   }, []);
 
   const lastSearchRef = useRef(debouncedSearch);
@@ -105,12 +114,14 @@ export default function HomeScreen() {
 
   const isFiltering = activeCategory !== 'Semua' || debouncedSearch.length > 0;
   const filteredVenues = useMemo(() => isFiltering ? fields : popularFields.slice(0, 5), [fields, popularFields, isFiltering]);
-  const rekomendasi = useMemo(() => fields.slice(0, 4), [fields]);
+  // rekomendasi uses popularFields (approved-only) to avoid showing non-approved fields from cache
+  const rekomendasi = useMemo(() => popularFields.slice(0, 4), [popularFields]);
 
   const styles = makeStyles(colors);
   const isDesktop = width >= 900;
   const sports = profile?.sports ?? [];
   const userName = profile?.full_name || profile?.username || 'Pengguna';
+  const isOwnerOrAdmin = profile?.role === 'owner' || profile?.role === 'super_admin';
 
   if (profileLoading && !refreshing) {
     return (
@@ -238,10 +249,15 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {filteredVenues.length === 0 ? (
+          {(isFiltering ? fieldsLoading : popularLoading) ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.emptyText}>Memuat lapangan...</Text>
+            </View>
+          ) : filteredVenues.length === 0 ? (
             <View style={styles.emptyState}>
               <MaterialIcons name="search-off" size={40} color={colors.textTertiary} />
-              <Text style={styles.emptyText}>Tidak ada venue ditemukan</Text>
+              <Text style={styles.emptyText}>{isFiltering ? 'Tidak ada venue ditemukan' : 'Belum ada lapangan tersedia'}</Text>
             </View>
           ) : (
             <View style={[styles.venueGrid, isDesktop && styles.venueGridDesktop]}>
@@ -304,8 +320,19 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      <TouchableOpacity style={styles.fab} activeOpacity={0.85} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/(tabs)/fields'); }}>
-        <MaterialIcons name="add" size={28} color="#ffffff" />
+      <TouchableOpacity
+        style={styles.fab}
+        activeOpacity={0.85}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          if (isOwnerOrAdmin) {
+            router.push('/(owner)/fields');
+          } else {
+            router.push('/(tabs)/fields');
+          }
+        }}
+      >
+        <MaterialIcons name={isOwnerOrAdmin ? 'add-business' : 'search'} size={26} color="#ffffff" />
       </TouchableOpacity>
       <NotificationCenter visible={notifVisible} onClose={() => setNotifVisible(false)} />
     </View>
