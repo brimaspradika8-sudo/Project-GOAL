@@ -319,7 +319,7 @@ export default function UserPage() {
   if (loading) {
     return (
       <View style={st.screen}>
-        <DashboardHeader title="Kelola Pengguna" subtitle="Manajemen user & owner" />
+        <DashboardHeader title="Kelola Pengguna" subtitle="Manajemen user & owner" showBack={false} />
         <SkeletonCards count={5} />
       </View>
     );
@@ -328,7 +328,7 @@ export default function UserPage() {
   return (
     <>
       <View style={st.screen}>
-        <DashboardHeader title="Kelola Pengguna" subtitle="Manajemen user & owner" />
+        <DashboardHeader title="Kelola Pengguna" subtitle="Manajemen user & owner" showBack={false} />
 
         <View style={st.searchWrap}>
           <View style={[st.searchBox, focused && st.searchBoxFocused]}>

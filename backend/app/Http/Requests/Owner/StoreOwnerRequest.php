@@ -18,7 +18,7 @@ class StoreOwnerRequest extends FormRequest
             'email'          => 'required|email|max:255',
             'business_name'  => 'required|string|max:255',
             'address'        => 'required|string|max:500',
-            'phone'          => 'required|string|max:20|min:8|regex:/^[+]?[0-9\s\-()]+$/',
+            'phone'          => 'required|string|digits_between:8,15',
         ];
     }
 
@@ -31,8 +31,7 @@ class StoreOwnerRequest extends FormRequest
             'business_name.required' => 'Nama usaha wajib diisi.',
             'address.required'       => 'Alamat wajib diisi.',
             'phone.required'         => 'Nomor telepon wajib diisi.',
-            'phone.min'              => 'Nomor telepon minimal 8 karakter.',
-            'phone.regex'            => 'Nomor telepon hanya boleh berisi angka, spasi, dan tanda hubung.',
+            'phone.digits_between'   => 'Nomor telepon hanya boleh berisi angka dengan panjang 8-15 digit.',
         ];
     }
 }

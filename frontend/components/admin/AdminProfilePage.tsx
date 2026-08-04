@@ -66,6 +66,7 @@ export default function AdminProfilePage() {
       <DashboardHeader
         title="Profil Admin"
         subtitle={ROLE_LABEL[role] ?? role}
+        showBack={false}
       />
       <ScrollView
         contentContainerStyle={st.content}

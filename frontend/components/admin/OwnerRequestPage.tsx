@@ -104,7 +104,7 @@ export default function OwnerRequestPage() {
   if (loading) {
     return (
       <View style={[st.screen, { backgroundColor: colors.background }]}>
-        <DashboardHeader title="Pengajuan Owner" subtitle="Review permohonan owner baru" />
+        <DashboardHeader title="Pengajuan Owner" subtitle="Review permohonan owner baru" showBack={false} />
         <SkeletonCards count={3} />
       </View>
     );
@@ -113,7 +113,7 @@ export default function OwnerRequestPage() {
   return (
     <>
       <View style={[st.screen, { backgroundColor: colors.background }]}>
-        <DashboardHeader title="Pengajuan Owner" subtitle="Review permohonan owner baru" />
+        <DashboardHeader title="Pengajuan Owner" subtitle="Review permohonan owner baru" showBack={false} />
 
         <ScrollView
           contentContainerStyle={st.list}
