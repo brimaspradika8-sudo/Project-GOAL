@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   RefreshControl,
   useWindowDimensions,
+  Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -20,6 +21,8 @@ import { useProfileStore } from '../../store/profileStore';
 import * as SecureStore from '../../lib/secureStorage';
 import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
+import * as ImagePicker from 'expo-image-picker';
+import { mimeFromExt } from '../../lib/fieldValidation';
 import { SIZES, FONTS, SHADOWS } from '../../components/goalTheme';
 import AuthInput from '../../components/AuthInput';
 import { useTheme } from '../../lib/theme';
@@ -122,6 +125,88 @@ export default function ProfileScreen() {
     await Promise.all([fetchProfile(), fetchOwnerStatus(), refreshNotifications()]);
     setRefreshing(false);
   }, [fetchProfile, fetchOwnerStatus, refreshNotifications]);
+
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  const changeAvatar = async () => {
+    if (avatarUploading) return;
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Izin Diperlukan', 'Silakan izinkan akses galeri untuk memilih foto profil.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets[0]) return;
+
+      const asset = result.assets[0];
+      const mime = asset.mimeType || '';
+      const uri = asset.uri;
+      const ext = uri.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
+      const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+      const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
+      if (!allowedMimes.includes(mime) && !allowedExts.includes(ext)) {
+        Alert.alert('Format Tidak Didukung', 'Foto harus berformat JPG, JPEG, PNG, atau WEBP.');
+        return;
+      }
+      if ((asset.fileSize ?? 0) > 5 * 1024 * 1024) {
+        Alert.alert('Ukuran Terlalu Besar', 'Ukuran foto maksimal 5MB.');
+        return;
+      }
+
+      setAvatarUploading(true);
+      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      if (!token) {
+        setAvatarUploading(false);
+        Alert.alert('Gagal', 'Sesi berakhir. Silakan login ulang.');
+        return;
+      }
+
+      const formData = new FormData();
+      const filename = uri.split('/').pop() || 'avatar.jpg';
+
+      if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        formData.append('avatar', blob, filename);
+      } else {
+        formData.append('avatar', { uri, name: filename, type: mimeFromExt(ext) } as any);
+      }
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/me/avatar`, {
+          method: 'POST',
+          headers: {
+            ...DEFAULT_HEADERS,
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.message || 'Gagal mengunggah foto profil.');
+        }
+
+        if (profile) {
+          useProfileStore.setState({ profile: { ...profile, avatar_url: data.avatar_url } });
+        }
+        useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Foto profil diperbarui.' });
+      } catch (err: any) {
+        useToastStore.getState().show({ type: 'error', title: 'Gagal', description: err?.message || 'Gagal mengunggah foto profil.' });
+      } finally {
+        setAvatarUploading(false);
+      }
+    } catch {
+      Alert.alert('Kesalahan', 'Gagal membuka galeri. Silakan coba lagi.');
+    }
+  };
 
   useEffect(() => {
     if (profile) {
@@ -364,10 +449,19 @@ export default function ProfileScreen() {
             {/* ===== KOLOM KIRI: Profil + OLAHRAGA + Owner Card ===== */}
             <View style={[styles.profileColumn, isDesktop && { flex: 1 }]}>
               <View style={styles.profileCard}>
-                <Image
-                  source={{ uri: profile?.avatar_url || 'https://api.dicebear.com/7.x/bottts/png?seed=goal&backgroundColor=ffffff&textColor=00A651' }}
-                  style={styles.avatar}
-                />
+                <TouchableOpacity style={styles.avatarWrap} onPress={changeAvatar} activeOpacity={0.85}>
+                  <Image
+                    source={{ uri: profile?.avatar_url || 'https://api.dicebear.com/7.x/bottts/png?seed=goal&backgroundColor=ffffff&textColor=00A651' }}
+                    style={styles.avatar}
+                  />
+                  <View style={styles.avatarEditBadge}>
+                    {avatarUploading ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <MaterialIcons name="photo-camera" size={14} color="#ffffff" />
+                    )}
+                  </View>
+                </TouchableOpacity>
                 <View style={styles.profileInfo}>
                   <Text style={styles.profileName} numberOfLines={1} ellipsizeMode="tail">
                     {profile?.full_name ?? profile?.username ?? 'Pengguna'}
@@ -632,6 +726,22 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     height: 68,
     borderRadius: 20,
     backgroundColor: colors.surfaceContainer,
+  },
+  avatarWrap: {
+    position: 'relative',
+  },
+  avatarEditBadge: {
+    position: 'absolute',
+    right: -4,
+    bottom: -4,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.surface,
   },
   profileInfo: {
     flex: 1,

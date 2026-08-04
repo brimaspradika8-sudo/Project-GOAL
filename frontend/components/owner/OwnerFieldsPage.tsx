@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
   ActivityIndicator, Alert, RefreshControl, Image,
-  Modal, KeyboardAvoidingView, Platform, TextInput,
+  Modal, KeyboardAvoidingView, Platform, TextInput, Animated,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useFieldStore } from '../../store/fieldStore';
 import * as SecureStore from '../../lib/secureStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TOKEN_KEY } from '../../lib/auth';
 import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../../lib/api';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
@@ -29,6 +30,7 @@ import {
 } from '../../lib/fieldValidation';
 
 const IMG_PLACEHOLDER = 'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop';
+const FIELD_DRAFT_KEY = 'goal_field_create_draft';
 
 const getStatusCfg = (colors: ThemeColors): Record<string, { label: string; bg: string; color: string }> => ({
   approved: { label: 'Aktif',    bg: colors.primaryContainer, color: colors.primary },
@@ -64,6 +66,7 @@ export default function OwnerFieldsPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [createErrors, setCreateErrors] = useState<FieldFormErrors>(EMPTY_ERRORS);
   const [createTouched, setCreateTouched] = useState<FieldTouched>(EMPTY_TOUCHED);
+  const [draftAvailable, setDraftAvailable] = useState(false);
 
   const [editTarget, setEditTarget] = useState<any | null>(null);
   const [editForm, setEditForm] = useState(EMPTY_FORM);
@@ -209,12 +212,58 @@ export default function OwnerFieldsPage() {
     }
   };
 
-  const openCreate = () => {
+  const openCreate = async () => {
     setCreateForm(EMPTY_FORM);
     setCreateError(null);
     setCreateErrors(EMPTY_ERRORS);
     setCreateTouched(EMPTY_TOUCHED);
+    setDraftAvailable(false);
     setShowCreate(true);
+
+    try {
+      const raw = await AsyncStorage.getItem(FIELD_DRAFT_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        const hasContent = Object.values(draft).some((v) => typeof v === 'string' && v.trim());
+        if (hasContent) setDraftAvailable(true);
+      }
+    } catch {}
+  };
+
+  const restoreDraft = async () => {
+    try {
+      const raw = await AsyncStorage.getItem(FIELD_DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      setCreateForm({ ...EMPTY_FORM, ...draft });
+      setCreateErrors(EMPTY_ERRORS);
+      setCreateTouched(EMPTY_TOUCHED);
+      await clearDraft();
+      setDraftAvailable(false);
+      useToastStore.getState().show({
+        type: 'success',
+        title: 'Draft Dipulihkan',
+        description: 'Isian draft sebelumnya dikembalikan.',
+      });
+    } catch {}
+  };
+
+  const saveDraft = async () => {
+    try {
+      await AsyncStorage.setItem(FIELD_DRAFT_KEY, JSON.stringify(createForm));
+      setShowCreate(false);
+      useToastStore.getState().show({
+        type: 'success',
+        title: 'Draft Tersimpan',
+        description: 'Formulir disimpan sementara. Anda bisa melanjutkannya kapan saja.',
+      });
+    } catch {
+      useToastStore.getState().show({ type: 'error', title: 'Gagal', description: 'Gagal menyimpan draft.' });
+    }
+  };
+
+  const clearDraft = async () => {
+    try { await AsyncStorage.removeItem(FIELD_DRAFT_KEY); } catch {}
   };
 
   const handleCreate = async () => {
@@ -262,8 +311,10 @@ export default function OwnerFieldsPage() {
         return;
       }
       setShowCreate(false);
+      setDraftAvailable(false);
       useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Lapangan berhasil ditambahkan dan menunggu approval Super Admin.' });
       await useFieldStore.getState().clearCache().catch(() => {});
+      clearDraft();
       fetchFields();
     } catch {
       setCreateError('Gagal terhubung ke server.');
@@ -539,6 +590,9 @@ export default function OwnerFieldsPage() {
         onPickImage={() => pickImage(setCreateForm, setCreateErrors, true)}
         onClose={() => setShowCreate(false)}
         onSubmit={handleCreate}
+        onSaveDraft={saveDraft}
+        draftAvailable={draftAvailable}
+        onRestoreDraft={restoreDraft}
         submitLabel="Simpan Lapangan"
         submitBg={colors.primary}
         st={st}
@@ -583,7 +637,7 @@ export default function OwnerFieldsPage() {
 function FieldModal({
   visible, title, iconName, iconColor, iconBg,
   form, errors, error, loading,
-  onFieldChange, onFieldBlur, onPickImage, onClose, onSubmit, submitLabel, submitBg, st, colors,
+  onFieldChange, onFieldBlur, onPickImage, onClose, onSubmit, onSaveDraft, draftAvailable, onRestoreDraft, submitLabel, submitBg, st, colors,
 }: {
   visible: boolean; title: string;
   iconName: string; iconColor: string; iconBg: string;
@@ -594,20 +648,51 @@ function FieldModal({
   onFieldBlur: (key: keyof FieldTouched) => void;
   onPickImage: () => void;
   onClose: () => void; onSubmit: () => void;
+  onSaveDraft?: () => void;
+  draftAvailable?: boolean;
+  onRestoreDraft?: () => void;
   submitLabel: string; submitBg: string;
   st: ReturnType<typeof makeStyles>;
   colors: ThemeColors;
 }) {
+  const sheetAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (visible) sheetAnim.setValue(0);
+  }, [visible, sheetAnim]);
   const set = (key: keyof FieldFormData) => (val: string) => onFieldChange(key, val);
   const blur = (key: keyof FieldFormData) => () => onFieldBlur(key as keyof FieldTouched);
   const previewUri = form.image_uri || form.image_url || null;
   const isSubmitDisabled = loading || hasErrors(errors);
 
+  const handleSaveDraft = () => {
+    Animated.timing(sheetAnim, {
+      toValue: 1,
+      duration: 240,
+      useNativeDriver: true,
+    }).start(() => onSaveDraft?.());
+  };
+
+  const handleDraftButton = () => {
+    if (draftAvailable && onRestoreDraft) {
+      onRestoreDraft();
+    } else {
+      handleSaveDraft();
+    }
+  };
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView style={st.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={onClose} />
-        <View style={st.sheet}>
+        <Animated.View
+          style={[
+            st.sheet,
+            {
+              transform: [{ translateY: sheetAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 640] }) }],
+              opacity: sheetAnim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [1, 1, 0] }),
+            },
+          ]}
+        >
           <View style={st.sheetHandle} />
 
           <View style={st.sheetHeader}>
@@ -718,6 +803,23 @@ function FieldModal({
           </ScrollView>
 
           <View style={st.sheetActions}>
+            {onSaveDraft ? (
+              <TouchableOpacity
+                style={[
+                  st.draftBtn,
+                  draftAvailable
+                    ? { borderColor: colors.primary, backgroundColor: colors.primaryMuted }
+                    : { borderColor: colors.divider },
+                ]}
+                onPress={handleDraftButton}
+                disabled={loading}
+                activeOpacity={0.7}
+                accessibilityLabel={draftAvailable ? 'Pulihkan draft' : 'Simpan sementara'}
+              >
+                <MaterialIcons name="drafts" size={20} color={draftAvailable ? colors.primary : colors.textSecondary} />
+                {draftAvailable ? <View style={[st.draftBadge, { backgroundColor: colors.primary }]} /> : null}
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
               style={[st.submitBtn, { backgroundColor: submitBg }, isSubmitDisabled && { opacity: 0.5 }]}
               onPress={onSubmit}
@@ -728,7 +830,7 @@ function FieldModal({
                 : <Text style={st.submitText}>{submitLabel}</Text>}
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -951,6 +1053,25 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     borderTopColor: colors.outline,
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    gap: 10,
+  },
+  draftBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  draftBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: colors.surfaceWhite,
   },
   submitBtn: {
     maxWidth: 320, width: '100%', paddingVertical: 14, paddingHorizontal: 24,

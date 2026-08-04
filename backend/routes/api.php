@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Profile\ProfileController;
 use App\Http\Controllers\Profile\OnboardingController;
+use App\Http\Controllers\Profile\AvatarController;
 use App\Http\Controllers\Field\FieldController;
 use App\Http\Controllers\Owner\OwnerRequestController;
 use App\Http\Controllers\Owner\AdminOwnerController;
@@ -29,8 +30,9 @@ use App\Http\Controllers\NotificationController;
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/me', [ProfileController::class, 'me']);
         Route::put('/me', [ProfileController::class, 'update']);
-        Route::put('/me/password', [ProfileController::class, 'updatePassword']);
+        Route::put('/me/password',[ProfileController::class, 'updatePassword']);
         Route::post('/me/onboarding',[OnboardingController::class, 'submit']);
+        Route::post('/me/avatar',[AvatarController::class, 'store']);
         // Image upload
         Route::post('/upload/image', [UploadController::class, 'image']);
         // Notifications

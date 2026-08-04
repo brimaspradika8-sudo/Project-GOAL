@@ -148,6 +148,8 @@ export default function LoginScreen() {
               router.replace('/onboarding');
             } else if (profileData.role === 'super_admin') {
               router.replace('/(admin)/dashboard');
+            } else if (profileData.role === 'owner') {
+              router.replace('/(owner)');
             } else {
               router.replace('/(tabs)');
             }

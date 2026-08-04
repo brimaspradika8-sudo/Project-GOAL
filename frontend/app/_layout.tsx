@@ -138,6 +138,8 @@ function RootLayoutInner() {
       router.replace('/onboarding');
     } else if (profile.role === 'super_admin') {
       router.replace('/(admin)/dashboard');
+    } else if (profile.role === 'owner') {
+      router.replace('/(owner)');
     } else {
       router.replace('/(tabs)');
     }
