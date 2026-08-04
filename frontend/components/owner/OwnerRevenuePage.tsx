@@ -14,6 +14,7 @@ export default function OwnerRevenuePage() {
       <DashboardHeader
         title="Pendapatan"
         subtitle="Ringkasan keuangan lapangan Anda"
+        showBack={false}
       />
       <View style={st.body}>
         <View style={st.card}>

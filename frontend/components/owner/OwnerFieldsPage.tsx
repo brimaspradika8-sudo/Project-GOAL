@@ -5,7 +5,6 @@ import {
   Modal, KeyboardAvoidingView, Platform, TextInput,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useFieldStore } from '../../store/fieldStore';
 import * as SecureStore from '../../lib/secureStorage';
@@ -416,7 +415,7 @@ export default function OwnerFieldsPage() {
   if (loading) {
     return (
       <View style={st.screen}>
-        <DashboardHeader title="Kelola Lapangan" subtitle="Kelola aset lapangan olahraga Anda" onBack={() => router.push('/(tabs)')} />
+        <DashboardHeader title="Kelola Lapangan" subtitle="Kelola aset lapangan olahraga Anda" showBack={false} />
         <SkeletonCards count={3} />
       </View>
     );
@@ -428,7 +427,7 @@ export default function OwnerFieldsPage() {
         <DashboardHeader
           title="Kelola Lapangan"
           subtitle="Kelola aset lapangan olahraga Anda"
-          onBack={() => router.push('/(tabs)')}
+          showBack={false}
           right={
             <TouchableOpacity style={st.headerAddBtn} activeOpacity={0.8} onPress={openCreate}>
               <MaterialIcons name="add" size={20} color={colors.primary} />

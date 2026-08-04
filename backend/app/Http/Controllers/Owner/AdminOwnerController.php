@@ -8,16 +8,15 @@ use App\Http\Resources\OwnerRequestResource;
 use App\Models\OwnerRequest;
 use App\Services\OwnerRequestService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class AdminOwnerController extends Controller
 {
     public function __construct(private OwnerRequestService $ownerRequestService) {}
 
-    public function pending(): JsonResponse
+    public function pending(): AnonymousResourceCollection
     {
-        $requests = $this->ownerRequestService->listPending();
-
-        return response()->json(OwnerRequestResource::collection($requests));
+        return OwnerRequestResource::collection($this->ownerRequestService->listPending());
     }
 
     public function review(ReviewOwnerRequest $request, int $id): JsonResponse

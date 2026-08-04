@@ -210,7 +210,7 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
   if (loading) {
     return (
       <View style={[st.screen, { backgroundColor: colors.background }]}>
-        {!hideHeader && <DashboardHeader title="Persetujuan Lapangan" subtitle="Verifikasi lapangan baru" />}
+        {!hideHeader && <DashboardHeader title="Persetujuan Lapangan" subtitle="Verifikasi lapangan baru" showBack={false} />}
         <SkeletonCards count={3} />
       </View>
     );
@@ -223,6 +223,7 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
           <DashboardHeader
             title="Persetujuan Lapangan"
             subtitle="Verifikasi lapangan baru"
+            showBack={false}
           />
         )}
 

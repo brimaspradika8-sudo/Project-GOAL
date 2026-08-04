@@ -66,7 +66,7 @@ export default function OwnerBookingsPage() {
 
   return (
     <View style={[st.screen, { backgroundColor: colors.background }]}>
-      <DashboardHeader title="Daftar Booking" subtitle="Pantau dan kelola jadwal lapangan Anda" />
+      <DashboardHeader title="Daftar Booking" subtitle="Pantau dan kelola jadwal lapangan Anda" showBack={false} />
       
       {/* Tab filter */}
       <View style={[st.tabRow, { backgroundColor: cardSurface, borderBottomColor: colors.outline }]}>

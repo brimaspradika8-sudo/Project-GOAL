@@ -70,7 +70,7 @@ export default function ProfileScreen() {
   const ownValidateEmail = (v: string) => { if (!v.trim()) return 'Email wajib diisi.'; if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) return 'Format email tidak valid.'; return ''; };
   const ownValidateBiz = (v: string) => { if (!v.trim()) return 'Nama usaha wajib diisi.'; if (v.trim().length > 255) return 'Nama usaha maksimal 255 karakter.'; return ''; };
   const ownValidateAddr = (v: string) => { if (!v.trim()) return 'Alamat wajib diisi.'; if (v.trim().length > 500) return 'Alamat maksimal 500 karakter.'; return ''; };
-  const ownValidatePhone = (v: string) => { if (!v.trim()) return 'Nomor telepon wajib diisi.'; const d = v.replace(/[^0-9]/g, ''); if (d.length < 8 || d.length > 15) return 'Nomor telepon harus 8-15 digit.'; return ''; };
+  const ownValidatePhone = (v: string) => { const t = v.trim(); if (!t) return 'Nomor telepon wajib diisi.'; if (!/^\d+$/.test(t)) return 'Nomor telepon hanya boleh berisi angka.'; if (t.length < 8) return 'Nomor telepon minimal 8 digit.'; if (t.length > 15) return 'Nomor telepon maksimal 15 digit.'; return ''; };
 
   const setOwnErr = (key: keyof typeof ownerErrors) => (err: string) => setOwnerErrors(p => ({ ...p, [key]: err }));
   const onOwnField = (key: keyof typeof ownerErrors, validate: (v: string) => string) => (v: string) => {

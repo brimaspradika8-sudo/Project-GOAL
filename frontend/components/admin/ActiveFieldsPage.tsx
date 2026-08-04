@@ -317,7 +317,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
   if (loading) {
     return (
       <View style={st.screen}>
-        {!hideHeader && <DashboardHeader title="Lapangan Aktif" subtitle="Kelola semua lapangan yang sudah disetujui" />}
+        {!hideHeader && <DashboardHeader title="Lapangan Aktif" subtitle="Kelola semua lapangan yang sudah disetujui" showBack={false} />}
         <SkeletonCards count={3} />
       </View>
     );
@@ -326,7 +326,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
   return (
     <>
       <View style={st.screen}>
-        {!hideHeader && <DashboardHeader title="Lapangan Aktif" subtitle="Kelola semua lapangan yang sudah disetujui" />}
+        {!hideHeader && <DashboardHeader title="Lapangan Aktif" subtitle="Kelola semua lapangan yang sudah disetujui" showBack={false} />}
 
         <View style={st.searchWrap}>
           <View style={[st.searchBar, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline }]}>

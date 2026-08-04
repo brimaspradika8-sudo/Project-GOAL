@@ -66,6 +66,7 @@ export default function OwnerProfilePage() {
       <DashboardHeader
         title="Profil Owner"
         subtitle="Kelola akun dan pengaturan Anda"
+        showBack={false}
       />
       <ScrollView
         contentContainerStyle={st.content}

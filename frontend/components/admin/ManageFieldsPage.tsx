@@ -109,7 +109,7 @@ export default function ManageFieldsPage() {
 
   return (
     <View style={[st.screen, { backgroundColor: colors.background }]}>
-      <DashboardHeader title="Kelola Lapangan" subtitle="Kelola semua data lapangan olahraga" />
+      <DashboardHeader title="Kelola Lapangan" subtitle="Kelola semua data lapangan olahraga" showBack={false} />
 
       <View style={st.tabRow}>
         {tabs.map((tab) => {
