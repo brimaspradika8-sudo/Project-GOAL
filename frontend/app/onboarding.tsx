@@ -27,6 +27,7 @@ import { useUsernameCheck } from '../hooks/useUsernameCheck';
 import * as SecureStore from '../lib/secureStorage';
 import { TOKEN_KEY } from '../lib/auth';
 import { COLORS, FONTS, SHADOWS } from '../components/goalTheme';
+import { mimeFromExt } from '../lib/fieldValidation';
 import AuthInput from '../components/AuthInput';
 import AlertBox from '../components/shared/AlertBox';
 import { useTheme } from '../lib/theme';
@@ -78,6 +79,7 @@ export default function OnboardingScreen() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const usernameStatus = useUsernameCheck(username);
   const [avatarUrl, setAvatarUrl] = useState(DEFAULT_AVATAR);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [selectedProvince, setSelectedProvince] = useState(PROVINCES[0]);
   const [region, setRegion] = useState(CITIES_BY_PROVINCE[PROVINCES[0]][0]);
   const [isProvinceModalOpen, setIsProvinceModalOpen] = useState(false);
@@ -196,6 +198,38 @@ export default function OnboardingScreen() {
     }
   }
 
+  const uploadAvatarImage = async (uri: string, token: string): Promise<{ url: string | null; error?: string }> => {
+    try {
+      const formData = new FormData();
+      const filename = uri.split('/').pop() || 'avatar.jpg';
+      const ext = filename.split('.').pop()?.toLowerCase() || 'jpg';
+
+      if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        formData.append('avatar', blob, filename);
+      } else {
+        formData.append('avatar', { uri, name: filename, type: mimeFromExt(ext) } as any);
+      }
+
+      const res = await fetch(`${API_BASE_URL}/me/avatar`, {
+        method: 'POST',
+        headers: {
+          ...DEFAULT_HEADERS,
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return { url: null, error: data.message || 'Gagal mengunggah foto profil. Silakan coba lagi.' };
+      }
+      return { url: data.avatar_url };
+    } catch {
+      return { url: null, error: 'Gagal terhubung ke server upload.' };
+    }
+  };
+
   const pickAvatarFromGallery = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -226,9 +260,21 @@ export default function OnboardingScreen() {
           Alert.alert('Ukuran Terlalu Besar', 'Ukuran foto maksimal 5MB.');
           return;
         }
+
         setAvatarUrl(uri);
+        setAvatarUploading(true);
+        const token = await SecureStore.getItemAsync(TOKEN_KEY);
+        const uploaded = await uploadAvatarImage(uri, token ?? '');
+        if (uploaded.url) {
+          setAvatarUrl(uploaded.url);
+        } else {
+          setAvatarUrl(DEFAULT_AVATAR);
+          Alert.alert('Upload Gagal', uploaded.error || 'Foto tidak dapat diunggah. Gunakan avatar default.');
+        }
+        setAvatarUploading(false);
       }
     } catch {
+      setAvatarUploading(false);
       Alert.alert('Kesalahan', 'Gagal membuka galeri. Silakan coba lagi.');
     }
   };
@@ -281,7 +327,11 @@ export default function OnboardingScreen() {
             <Image source={{ uri: avatarUrl }} style={styles.avatar} />
           </Animated.View>
           <View style={styles.cameraBadge}>
-            <MaterialIcons name="photo-camera" size={16} color="#ffffff" />
+            {avatarUploading ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <MaterialIcons name="photo-camera" size={16} color="#ffffff" />
+            )}
           </View>
         </TouchableOpacity>
         <View style={styles.avatarTextWrap}>
