@@ -6,9 +6,8 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as SecureStore from '../../lib/secureStorage';
-import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS, getAssetUrl } from '../../lib/api';
+import { getErrorMessage, getAssetUrl } from '../../lib/api';
+import { apiFetch } from '../../lib/apiClient';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
@@ -68,17 +67,8 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
 
   const fetchFields = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const params = new URLSearchParams();
-      if (debouncedSearch) params.set('search', debouncedSearch);
-      if (filterSport) params.set('sport', filterSport);
-      params.set('page', '1');
-
-      const res = await fetch(`${API_BASE_URL}/fields?${params.toString()}`, {
-        headers: {
-          ...DEFAULT_HEADERS,
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+      const res = await apiFetch('/fields', {
+        params: { search: debouncedSearch, sport: filterSport, page: '1' },
       });
       const data = await res.json().catch(() => ({}));
       setFields(data?.data ?? []);
@@ -166,7 +156,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
     }
   };
 
-  const uploadImage = async (uri: string, token: string, mime?: string): Promise<{ url: string | null; error?: string }> => {
+  const uploadImage = async (uri: string, mime?: string): Promise<{ url: string | null; error?: string }> => {
     try {
       const formData = new FormData();
       const filename = uri.split('/').pop() || 'photo.jpg';
@@ -179,11 +169,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
       } else {
         formData.append('image', { uri, name: filename, type: finalMime } as any);
       }
-      const res = await fetch(`${API_BASE_URL}/upload/image`, {
-        method: 'POST',
-        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
-        body: formData,
-      });
+      const res = await apiFetch('/upload/image', { method: 'POST', body: formData });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         console.error('[uploadImage] gagal:', res.status, data);
@@ -206,10 +192,9 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
     setEditLoading(true);
     setEditError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       let imageUrl = editForm.image_url;
       if (editForm.image_uri) {
-        const uploaded = await uploadImage(editForm.image_uri, token!, editForm.image_mime);
+        const uploaded = await uploadImage(editForm.image_uri, editForm.image_mime);
         if (!uploaded.url) { setEditError(uploaded.error || 'Gagal mengunggah foto. Coba lagi.'); return; }
         imageUrl = uploaded.url;
       }
@@ -222,11 +207,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
       if (editForm.price_per_hour.trim()) body.price_per_hour = parseInt(editForm.price_per_hour.replace(/\D/g, ''), 10);
       if (imageUrl) body.image_url = imageUrl;
 
-      const res = await fetch(`${API_BASE_URL}/fields/${editTarget.id}`, {
-        method: 'PUT',
-        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
-      });
+      const res = await apiFetch(`/fields/${editTarget.id}`, { method: 'PUT', body });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setEditError(getErrorMessage(data, 'Gagal menyimpan perubahan.'));
@@ -246,11 +227,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
     if (!deleteTarget) return;
     setDeleteLoading(true);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}`, {
-        method: 'DELETE',
-        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
-      });
+      const res = await apiFetch(`/fields/${deleteTarget.id}`, { method: 'DELETE' });
       if (res.ok) {
         useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Lapangan dihapus.' });
         setDeleteTarget(null);
@@ -289,11 +266,9 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
     setBulkDeleteLoading(true);
     setBulkDeleteError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/fields/bulk-delete`, {
+      const res = await apiFetch('/fields/bulk-delete', {
         method: 'POST',
-        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ids: Array.from(selected) }),
+        body: { ids: Array.from(selected) },
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -680,7 +655,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10,
     borderWidth: 1.5,
   },
-  searchInput: { flex: 1, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}) },
+  searchInput: { flex: 1, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}) },
 
   chipWrap: {
     flexDirection: 'row',
@@ -805,7 +780,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     borderRadius: 14, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1.5,
   },
-  fieldInput: { flex: 1, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}) },
+  fieldInput: { flex: 1, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}) },
 
   fieldErrorRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6, paddingHorizontal: 4 },
   fieldErrorText: { ...FONTS.bodySm, flex: 1 },

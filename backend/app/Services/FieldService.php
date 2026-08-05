@@ -132,7 +132,7 @@ class FieldService
 
     public function create(User $user, array $data): Field
     {
-        $isSuperAdmin = $user->profile?->role === 'super_admin';
+        $isSuperAdmin = $user->profile?->role === Profile::ROLE_SUPER_ADMIN;
 
         $field = Field::create([
             'owner_id' => $user->id,

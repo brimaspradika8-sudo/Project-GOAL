@@ -20,7 +20,8 @@ import { router } from 'expo-router';
 import { useProfileStore } from '../../store/profileStore';
 import * as SecureStore from '../../lib/secureStorage';
 import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
+import { getErrorMessage } from '../../lib/api';
+import { apiFetch } from '../../lib/apiClient';
 import * as ImagePicker from 'expo-image-picker';
 import { mimeFromExt } from '../../lib/fieldValidation';
 import { SIZES, FONTS, SHADOWS } from '../../components/goalTheme';
@@ -94,15 +95,7 @@ export default function ProfileScreen() {
 
   const fetchOwnerStatus = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      if (!token) return;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 20000);
-      const res = await fetch(`${API_BASE_URL}/me/owner-request`, {
-        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
+      const res = await apiFetch('/me/owner-request');
       if (!res.ok) return;
       const data = await res.json();
       if (data && data.status) {
@@ -162,12 +155,6 @@ export default function ProfileScreen() {
       }
 
       setAvatarUploading(true);
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      if (!token) {
-        setAvatarUploading(false);
-        Alert.alert('Gagal', 'Sesi berakhir. Silakan login ulang.');
-        return;
-      }
 
       const formData = new FormData();
       const filename = uri.split('/').pop() || 'avatar.jpg';
@@ -181,14 +168,7 @@ export default function ProfileScreen() {
       }
 
       try {
-        const res = await fetch(`${API_BASE_URL}/me/avatar`, {
-          method: 'POST',
-          headers: {
-            ...DEFAULT_HEADERS,
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        });
+        const res = await apiFetch('/me/avatar', { method: 'POST', body: formData });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
           throw new Error(data.message || 'Gagal mengunggah foto profil.');
@@ -241,16 +221,7 @@ export default function ProfileScreen() {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/me/owner-request`, {
-        method: 'POST',
-        headers: {
-          ...DEFAULT_HEADERS,
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(ownerForm),
-      });
+      const res = await apiFetch('/me/owner-request', { method: 'POST', body: ownerForm });
       const data = await res.json();
       if (!res.ok) {
         const msg = data.errors
@@ -277,13 +248,7 @@ export default function ProfileScreen() {
   const doActualLogout = async () => {
     setLogoutLoading(true);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      if (token) {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-          method: 'POST',
-          headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
-        }).catch(() => {});
-      }
+      await apiFetch('/auth/logout', { method: 'POST' }).catch(() => {});
       await SecureStore.deleteItemAsync(TOKEN_KEY);
       await clearProfile();
       clearNotifications();

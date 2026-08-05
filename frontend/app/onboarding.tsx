@@ -21,7 +21,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
+import { apiFetch } from '../lib/apiClient';
 import { useProfileStore } from '../store/profileStore';
 import { useUsernameCheck } from '../hooks/useUsernameCheck';
 import * as SecureStore from '../lib/secureStorage';
@@ -130,13 +130,7 @@ export default function OnboardingScreen() {
 
   async function handleSignOut() {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      if (token) {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-          method: 'POST',
-          headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
-        }).catch(() => {});
-      }
+      await apiFetch('/auth/logout', { method: 'POST' }).catch(() => {});
       await SecureStore.deleteItemAsync(TOKEN_KEY);
       useProfileStore.getState().clearProfile();
       router.replace('/login');
@@ -164,20 +158,15 @@ export default function OnboardingScreen() {
     if (!canSubmit) return;
     setIsSubmitting(true);
     setSubmitError(null);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
 
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const remoteAvatar = /^https?:\/\//i.test(avatarUrl) ? avatarUrl : null;
-      const res = await fetch(`${API_BASE_URL}/me/onboarding`, {
+      const res = await apiFetch('/me/onboarding', {
         method: 'POST',
-        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ username, sports: selectedSports, region, avatar_url: remoteAvatar }),
-        signal: controller.signal,
+        timeout: 8000,
+        body: { username, sports: selectedSports, region, avatar_url: remoteAvatar },
       });
 
-      clearTimeout(timeout);
       if (!res.ok) {
         const err = await res.json();
         const messages = err?.errors
@@ -193,12 +182,11 @@ export default function OnboardingScreen() {
     } catch {
       if (mountedRef.current) setSubmitError('Gagal terhubung ke server. Silakan coba lagi.');
     } finally {
-      clearTimeout(timeout);
       if (mountedRef.current) setIsSubmitting(false);
     }
   }
 
-  const uploadAvatarImage = async (uri: string, token: string): Promise<{ url: string | null; error?: string }> => {
+  const uploadAvatarImage = async (uri: string): Promise<{ url: string | null; error?: string }> => {
     try {
       const formData = new FormData();
       const filename = uri.split('/').pop() || 'avatar.jpg';
@@ -212,14 +200,7 @@ export default function OnboardingScreen() {
         formData.append('avatar', { uri, name: filename, type: mimeFromExt(ext) } as any);
       }
 
-      const res = await fetch(`${API_BASE_URL}/me/avatar`, {
-        method: 'POST',
-        headers: {
-          ...DEFAULT_HEADERS,
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
+      const res = await apiFetch('/me/avatar', { method: 'POST', body: formData });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         return { url: null, error: data.message || 'Gagal mengunggah foto profil. Silakan coba lagi.' };
@@ -263,8 +244,7 @@ export default function OnboardingScreen() {
 
         setAvatarUrl(uri);
         setAvatarUploading(true);
-        const token = await SecureStore.getItemAsync(TOKEN_KEY);
-        const uploaded = await uploadAvatarImage(uri, token ?? '');
+        const uploaded = await uploadAvatarImage(uri);
         if (uploaded.url) {
           setAvatarUrl(uploaded.url);
         } else {

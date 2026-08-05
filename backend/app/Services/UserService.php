@@ -104,11 +104,11 @@ class UserService
 
         $currentUserRole = $currentUser->profile?->role;
 
-        if (($user->profile?->role === 'super_admin' || $role === 'super_admin') && $currentUserRole !== 'super_admin') {
+        if (($user->profile?->role === Profile::ROLE_SUPER_ADMIN || $role === Profile::ROLE_SUPER_ADMIN) && $currentUserRole !== Profile::ROLE_SUPER_ADMIN) {
             throw new \RuntimeException('Hanya Super Admin yang dapat mengelola role Super Admin.');
         }
 
-        if ($user->profile?->role === 'super_admin' && $role !== 'super_admin' && $this->countSuperAdmins() <= 1) {
+        if ($user->profile?->role === Profile::ROLE_SUPER_ADMIN && $role !== Profile::ROLE_SUPER_ADMIN && $this->countSuperAdmins() <= 1) {
             throw new \RuntimeException('Tidak dapat mengubah role Super Admin terakhir.');
         }
 
@@ -131,8 +131,8 @@ class UserService
 
         $currentUserRole = $currentUser->profile?->role;
 
-        if ($user->profile && $user->profile->role === 'super_admin') {
-            if ($currentUserRole !== 'super_admin') {
+        if ($user->profile && $user->profile->role === Profile::ROLE_SUPER_ADMIN) {
+            if ($currentUserRole !== Profile::ROLE_SUPER_ADMIN) {
                 throw new \RuntimeException('Hanya Super Admin yang dapat menghapus akun Super Admin.');
             }
 
@@ -159,8 +159,8 @@ class UserService
                     return;
                 }
 
-                if ($user->profile && $user->profile->role === 'super_admin') {
-                    if ($currentUserRole !== 'super_admin') {
+                if ($user->profile && $user->profile->role === Profile::ROLE_SUPER_ADMIN) {
+                    if ($currentUserRole !== Profile::ROLE_SUPER_ADMIN) {
                         return;
                     }
 

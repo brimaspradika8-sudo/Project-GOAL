@@ -4,9 +4,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import * as SecureStore from '../../lib/secureStorage';
-import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
+import { apiFetch } from '../../lib/apiClient';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import DashboardHeader from '../shared/DashboardHeader';
 import { SkeletonCards } from '../Skeleton';
@@ -30,13 +28,7 @@ export default function OwnerBookingsPage() {
 
   const fetchBookings = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/owner/bookings`, {
-        headers: {
-          ...DEFAULT_HEADERS,
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await apiFetch('/owner/bookings');
       if (!res.ok) {
         setBookings([]);
         return;

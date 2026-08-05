@@ -13,9 +13,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { SIZES, FONTS, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
-import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
-import * as SecureStore from '../../lib/secureStorage';
-import { TOKEN_KEY } from '../../lib/auth';
+import { apiFetch } from '../../lib/apiClient';
 import { SafeImage } from '../../components/SafeImage';
 import type { Field } from '../../store/fieldStore';
 import { useTheme } from '../../lib/theme';
@@ -53,16 +51,7 @@ export default function MyFieldsScreen() {
 
   const fetchFields = useCallback(async (pageNum: number = 1, append = false) => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      if (!token) return;
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 20000);
-      const res = await fetch(`${API_BASE_URL}/fields/my/list?page=${pageNum}`, {
-        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
+      const res = await apiFetch('/fields/my/list', { params: { page: pageNum } });
       if (!res.ok) throw new Error('Gagal memuat data');
       const body = await res.json();
 
@@ -111,11 +100,7 @@ export default function MyFieldsScreen() {
     if (!deleteTarget) return;
     setDeleteLoading(true);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}`, {
-        method: 'DELETE',
-        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
-      });
+      const res = await apiFetch(`/fields/${deleteTarget.id}`, { method: 'DELETE' });
       if (res.ok) {
         setFields((prev) => prev.filter((f) => f.id !== deleteTarget.id));
         setDeleteTarget(null);

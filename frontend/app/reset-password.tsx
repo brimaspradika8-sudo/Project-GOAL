@@ -10,7 +10,8 @@ import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
 import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
-import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
+import { getErrorMessage } from '../lib/api';
+import { apiFetch } from '../lib/apiClient';
 import { fieldError } from '../lib/formValidation';
 
 function rpValidatePassword(v: string): string {
@@ -78,15 +79,15 @@ export default function ResetPasswordScreen() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      const res = await apiFetch('/auth/reset-password', {
         method: 'POST',
-        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        skipToken: true,
+        body: {
           email: params.email,
           token: params.token,
           password,
           password_confirmation: confirmPassword,
-        }),
+        },
       });
       const data = await res.json();
 

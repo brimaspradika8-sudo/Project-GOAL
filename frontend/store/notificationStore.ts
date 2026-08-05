@@ -1,7 +1,5 @@
 import { create } from 'zustand';
-import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
-import * as SecureStore from '../lib/secureStorage';
-import { TOKEN_KEY } from '../lib/auth';
+import { apiFetch } from '../lib/apiClient';
 
 export interface AppNotification {
   id: string;
@@ -64,20 +62,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({ loading: true });
 
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      if (!token) {
-        set({ items: [], hydrated: true, loading: false });
-        return;
-      }
-
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 20000);
-
-      const res = await fetch(`${API_BASE_URL}/notifications?page=1`, {
-        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
+      const res = await apiFetch('/notifications', { params: { page: '1' } });
 
       if (res.ok) {
         const data = await res.json();
@@ -102,12 +87,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     });
 
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      if (!token) return;
-      await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
-        method: 'POST',
-        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
-      });
+      await apiFetch(`/notifications/${id}/read`, { method: 'POST' });
     } catch {
       set({
         items: get().items.map((n) => (n.id === id ? { ...n, read: false } : n)),
@@ -119,29 +99,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     set({ items: get().items.map((n) => ({ ...n, read: true })) });
 
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      if (!token) return;
-      await fetch(`${API_BASE_URL}/notifications/read-all`, {
-        method: 'POST',
-        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
-      });
+      await apiFetch('/notifications/read-all', { method: 'POST' });
     } catch {
       await get().refresh();
     }
   },
 
   clearAll: async () => {
-    const token = await SecureStore.getItemAsync(TOKEN_KEY);
-    if (!token) {
-      set({ items: [] });
-      return 0;
-    }
-
     try {
-      const res = await fetch(`${API_BASE_URL}/notifications/clear-all`, {
-        method: 'POST',
-        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
-      });
+      const res = await apiFetch('/notifications/clear-all', { method: 'POST' });
       if (res.ok) {
         set({ items: [] });
         const data = await res.json().catch(() => ({}));

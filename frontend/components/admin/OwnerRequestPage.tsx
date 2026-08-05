@@ -6,9 +6,8 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import * as SecureStore from '../../lib/secureStorage';
-import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../../lib/api';
+import { getErrorMessage } from '../../lib/api';
+import { apiFetch } from '../../lib/apiClient';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
@@ -31,10 +30,7 @@ export default function OwnerRequestPage() {
 
   const fetchRequests = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/owner-requests/pending`, {
-        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
-      });
+      const res = await apiFetch('/owner-requests/pending');
       const data = await res.json();
       setRequests(data?.data ?? []);
     } catch {
@@ -49,11 +45,9 @@ export default function OwnerRequestPage() {
   const onRefresh = () => { setRefreshing(true); fetchRequests(); };
 
   const reviewRequest = async (id: number, status: 'approved' | 'rejected', reason?: string) => {
-    const token = await SecureStore.getItemAsync(TOKEN_KEY);
-    const res = await fetch(`${API_BASE_URL}/owner-requests/${id}/review`, {
+    const res = await apiFetch(`/owner-requests/${id}/review`, {
       method: 'POST',
-      headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status, ...(reason ? { reason } : {}) }),
+      body: { status, ...(reason ? { reason } : {}) },
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -333,7 +327,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'li
     color: colors.text, fontSize: 14, minHeight: 90,
     textAlignVertical: 'top', marginBottom: 16,
     borderWidth: 1, borderColor: colors.outline,
-    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}),
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
   },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
   cancelBtn: {

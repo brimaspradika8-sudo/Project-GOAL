@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { useTheme } from '../lib/theme';
 
 type LoadingScreenProps = {
   message?: string;
@@ -7,26 +8,27 @@ type LoadingScreenProps = {
 
 export default function LoadingScreen({ message = 'Menyiapkan arena' }: LoadingScreenProps) {
   const { width } = useWindowDimensions();
+  const { colors } = useTheme();
   const glowSize = Math.min(320, width * 0.85);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.glowTop, { width: glowSize, height: glowSize, borderRadius: glowSize / 2 }]} />
       <View style={[styles.glowBottom, { width: glowSize * 1.1, height: glowSize * 1.1, borderRadius: (glowSize * 1.1) / 2 }]} />
 
       <View style={styles.brandWrap}>
-        <Text style={styles.logo}>GOAL</Text>
+        <Text style={[styles.logo, { color: colors.primary }]}>GOAL</Text>
         <Text style={styles.logoSub}>Game Organizer & Arena League</Text>
       </View>
 
-      <View style={[styles.loaderCard, { maxWidth: Math.min(280, width * 0.75) }]}>
-        <View style={styles.ball}>
+      <View style={[styles.loaderCard, { borderColor: colors.borderSubtle, backgroundColor: colors.bgElevated }]}>
+        <View style={[styles.ball, { backgroundColor: colors.primary }]}>
           <Text style={styles.ballIcon}>⚽</Text>
         </View>
 
         <View style={styles.loadingRow}>
-          <Text style={styles.loadingText}>{message}</Text>
-          <ActivityIndicator size="small" color="#4be277" />
+          <Text style={[styles.loadingText, { color: colors.textPrimary }]}>{message}</Text>
+          <ActivityIndicator size="small" color={colors.primary} />
         </View>
       </View>
     </View>
@@ -38,7 +40,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#101310',
     paddingHorizontal: 28,
   },
   glowTop: {
@@ -60,7 +61,6 @@ const styles = StyleSheet.create({
     marginBottom: 34,
   },
   logo: {
-    color: '#4be277',
     fontSize: 52,
     fontStyle: 'italic',
     fontWeight: '900',
@@ -82,8 +82,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.09)',
-    backgroundColor: 'rgba(24,31,24,0.82)',
     overflow: 'hidden',
     paddingVertical: 28,
   },
@@ -93,7 +91,6 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4be277',
     boxShadow: '0px 8px 18px rgba(75,226,119,0.35)',
     elevation: 10,
   },
@@ -107,7 +104,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   loadingText: {
-    color: '#dfe8df',
     fontSize: 13,
     fontWeight: '800',
     letterSpacing: 1.2,

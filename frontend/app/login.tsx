@@ -10,7 +10,8 @@ import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
 import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
-import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
+import { getErrorMessage } from '../lib/api';
+import { apiFetch } from '../lib/apiClient';
 import * as SecureStore from '../lib/secureStorage';
 import { TOKEN_KEY } from '../lib/auth';
 import { useProfileStore } from '../store/profileStore';
@@ -120,10 +121,10 @@ export default function LoginScreen() {
     lastAttemptRef.current = Date.now();
 
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      const res = await apiFetch('/auth/login', {
         method: 'POST',
-        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
+        skipToken: true,
+        body: { email: email.trim(), password },
       });
       const data = await parseApiResponse(res);
 
@@ -136,9 +137,7 @@ export default function LoginScreen() {
         if (data?.token) {
           await SecureStore.setItemAsync(TOKEN_KEY, data.token);
 
-          const profileRes = await fetch(`${API_BASE_URL}/me`, {
-            headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${data.token}` },
-          });
+          const profileRes = await apiFetch('/me', { token: data.token, skipToken: true });
           const profileData = await parseApiResponse(profileRes);
 
           if (profileRes.ok && profileData) {

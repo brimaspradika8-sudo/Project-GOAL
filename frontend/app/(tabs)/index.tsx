@@ -22,7 +22,7 @@ import { CATEGORIES } from '../../data/venues';
 import { SafeImage } from '../../components/SafeImage';
 import { SkeletonVenueList, SkeletonHorizontalCards, SkeletonProfile } from '../../components/Skeleton';
 import { useDebounce } from '../../hooks/useDebounce';
-import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
+import { apiFetch } from '../../lib/apiClient';
 import { useTheme } from '../../lib/theme';
 import VenueCard from '../../components/VenueCard';
 import NotificationCenter from '../../components/shared/NotificationCenter';
@@ -66,10 +66,7 @@ export default function HomeScreen() {
 
   const fetchPopularFields = useCallback(async () => {
     try {
-      const params = new URLSearchParams({ page: '1' });
-      const res = await fetch(`${API_BASE_URL}/fields?${params.toString()}`, {
-        headers: { ...DEFAULT_HEADERS },
-      });
+      const res = await apiFetch('/fields', { params: { page: '1' }, skipToken: true });
       if (!res.ok) throw new Error('Gagal memuat venue populer');
       const body = await res.json();
       setPopularFields(body.data ?? []);
@@ -476,7 +473,7 @@ const makeStyles = (colors: any) => StyleSheet.create({
     fontSize: 14,
     fontFamily: FONT_FAMILY,
     color: colors.text,
-    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}),
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
   },
   section: {
     marginTop: 20,

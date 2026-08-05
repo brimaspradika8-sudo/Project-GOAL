@@ -7,10 +7,9 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useFieldStore } from '../../store/fieldStore';
-import * as SecureStore from '../../lib/secureStorage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../../lib/api';
+import { getErrorMessage } from '../../lib/api';
+import { apiFetch } from '../../lib/apiClient';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
@@ -77,13 +76,7 @@ export default function OwnerFieldsPage() {
 
   const fetchFields = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/fields/my/list`, {
-        headers: {
-          ...DEFAULT_HEADERS,
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await apiFetch('/fields/my/list');
       const data = await res.json().catch(() => ({}));
       setFields(data?.data ?? []);
     } catch {
@@ -275,11 +268,9 @@ export default function OwnerFieldsPage() {
     setCreateLoading(true);
     setCreateError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-
       let imageUrl = createForm.image_url;
       if (createForm.image_uri && !imageUrl) {
-        const uploadRes = await uploadImageDetailed(createForm.image_uri, token!, createForm.image_mime);
+        const uploadRes = await uploadImageDetailed(createForm.image_uri, createForm.image_mime);
         if (!uploadRes.url) {
           setCreateError(uploadRes.error || 'Gagal mengunggah foto. Coba lagi.');
           return;
@@ -296,15 +287,7 @@ export default function OwnerFieldsPage() {
       if (createForm.location.trim())       body.location       = createForm.location.trim();
       if (imageUrl)                          body.image_url      = imageUrl;
 
-      const res = await fetch(`${API_BASE_URL}/fields`, {
-        method: 'POST',
-        headers: {
-          ...DEFAULT_HEADERS,
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
+      const res = await apiFetch('/fields', { method: 'POST', body });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setCreateError(getErrorMessage(data, 'Gagal menambah lapangan.'));
@@ -350,11 +333,9 @@ export default function OwnerFieldsPage() {
     setEditLoading(true);
     setEditError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-
       let imageUrl = editForm.image_url;
       if (editForm.image_uri) {
-        const uploaded = await uploadImage(editForm.image_uri, token!, editForm.image_mime);
+        const uploaded = await uploadImage(editForm.image_uri, editForm.image_mime);
         if (!uploaded) { setEditError('Gagal mengunggah foto. Coba lagi.'); return; }
         imageUrl = uploaded;
       }
@@ -368,15 +349,7 @@ export default function OwnerFieldsPage() {
       if (editForm.price_per_hour.trim()) body.price_per_hour = parseInt(editForm.price_per_hour.replace(/\D/g, ''), 10);
       if (imageUrl) body.image_url = imageUrl;
 
-      const res = await fetch(`${API_BASE_URL}/fields/${editTarget.id}`, {
-        method: 'PUT',
-        headers: {
-          ...DEFAULT_HEADERS,
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
+      const res = await apiFetch(`/fields/${editTarget.id}`, { method: 'PUT', body });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setEditError(getErrorMessage(data, 'Gagal menyimpan perubahan.'));
@@ -393,7 +366,7 @@ export default function OwnerFieldsPage() {
     }
   };
 
-  const uploadImageDetailed = async (uri: string, token: string, mime?: string): Promise<{ url: string | null; error?: string }> => {
+  const uploadImageDetailed = async (uri: string, mime?: string): Promise<{ url: string | null; error?: string }> => {
     try {
       const formData = new FormData();
       const filename = uri.split('/').pop() || 'photo.jpg';
@@ -408,14 +381,7 @@ export default function OwnerFieldsPage() {
         formData.append('image', { uri, name: filename, type: finalMime } as any);
       }
 
-      const res = await fetch(`${API_BASE_URL}/upload/image`, {
-        method: 'POST',
-        headers: {
-          ...DEFAULT_HEADERS,
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
+      const res = await apiFetch('/upload/image', { method: 'POST', body: formData });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         return { url: null, error: data.message || 'Gagal mengunggah foto. Silakan coba lagi.' };
@@ -426,8 +392,8 @@ export default function OwnerFieldsPage() {
     }
   };
 
-  const uploadImage = async (uri: string, token: string, mime?: string): Promise<string | null> => {
-    const res = await uploadImageDetailed(uri, token, mime);
+  const uploadImage = async (uri: string, mime?: string): Promise<string | null> => {
+    const res = await uploadImageDetailed(uri, mime);
     return res.url;
   };
 
@@ -441,14 +407,7 @@ export default function OwnerFieldsPage() {
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleteLoading(true);
-    const token = await SecureStore.getItemAsync(TOKEN_KEY);
-    const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}`, {
-      method: 'DELETE',
-      headers: {
-        ...DEFAULT_HEADERS,
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const res = await apiFetch(`/fields/${deleteTarget.id}`, { method: 'DELETE' });
     if (res.ok) {
       useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Lapangan dihapus.' });
       setDeleteTarget(null);

@@ -2,9 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import * as SecureStore from '../../lib/secureStorage';
-import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
+import { apiFetch } from '../../lib/apiClient';
 import { FONTS, SIZES } from '../goalTheme';
 import DashboardHeader from '../shared/DashboardHeader';
 import ActiveFieldsPage from './ActiveFieldsPage';
@@ -36,14 +34,10 @@ export default function ManageFieldsPage() {
 
   const fetchCounts = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      if (!token) return;
-      const headers = { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` };
-
       const [activeRes, pendingRes, trashedRes] = await Promise.allSettled([
-        fetch(`${API_BASE_URL}/fields?page=1`, { headers }),
-        fetch(`${API_BASE_URL}/fields/pending/list?page=1`, { headers }),
-        fetch(`${API_BASE_URL}/fields/trashed/list?page=1`, { headers }),
+        apiFetch('/fields', { params: { page: '1' } }),
+        apiFetch('/fields/pending/list', { params: { page: '1' } }),
+        apiFetch('/fields/trashed/list', { params: { page: '1' } }),
       ]);
 
       if (activeRes.status === 'fulfilled' && activeRes.value.ok) {
@@ -66,27 +60,21 @@ export default function ManageFieldsPage() {
   const refreshCount = useCallback((tab: Tab) => {
     const fetchers: Record<Tab, () => Promise<void>> = {
       active: async () => {
-        const token = await SecureStore.getItemAsync(TOKEN_KEY);
-        if (!token) return;
-        const res = await fetch(`${API_BASE_URL}/fields?page=1`, { headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` } });
+        const res = await apiFetch('/fields', { params: { page: '1' } });
         if (res.ok) {
           const d = await res.json().catch(() => ({}));
           setActiveCount(d?.meta?.total ?? (d?.data ?? []).length);
         }
       },
       pending: async () => {
-        const token = await SecureStore.getItemAsync(TOKEN_KEY);
-        if (!token) return;
-        const res = await fetch(`${API_BASE_URL}/fields/pending/list?page=1`, { headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` } });
+        const res = await apiFetch('/fields/pending/list', { params: { page: '1' } });
         if (res.ok) {
           const d = await res.json().catch(() => ({}));
           setPendingCount(d?.meta?.total ?? (d?.data ?? []).length);
         }
       },
       trashed: async () => {
-        const token = await SecureStore.getItemAsync(TOKEN_KEY);
-        if (!token) return;
-        const res = await fetch(`${API_BASE_URL}/fields/trashed/list?page=1`, { headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` } });
+        const res = await apiFetch('/fields/trashed/list', { params: { page: '1' } });
         if (res.ok) {
           const d = await res.json().catch(() => ({}));
           setTrashedCount(d?.meta?.total ?? (d?.data ?? []).length);
