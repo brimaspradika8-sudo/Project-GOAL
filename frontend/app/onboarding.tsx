@@ -485,11 +485,11 @@ export default function OnboardingScreen() {
             activeOpacity={0.85}
           >
             {isSubmitting ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <>
-                <Text style={styles.ctaText}>{step === 1 ? 'Lanjutkan' : 'Simpan Profil'}</Text>
-                <MaterialIcons name={step === 1 ? 'arrow-forward' : 'check-circle'} size={20} color="#ffffff" />
+                <Text style={[styles.ctaText, (step === 1 ? !canGoNext : !canSubmit) && styles.ctaTextDisabled]}>{step === 1 ? 'Lanjutkan' : 'Simpan Profil'}</Text>
+                <MaterialIcons name={step === 1 ? 'arrow-forward' : 'check-circle'} size={20} color={(step === 1 ? !canGoNext : !canSubmit) ? (isDark ? '#69736F' : colors.textMuted) : colors.onPrimary} />
               </>
             )}
           </TouchableOpacity>
@@ -631,11 +631,11 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: colors.bgElevated,
+    backgroundColor: isDark ? '#181D1B' : colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: isDark ? '#303A36' : colors.borderSubtle,
     ...SHADOWS.sm,
   },
   iconButtonDisabled: {
@@ -669,7 +669,7 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     alignItems: 'stretch',
   },
   sidePanel: {
-    backgroundColor: colors.primaryContainer,
+    backgroundColor: isDark ? '#111C18' : colors.surfaceContainer,
     borderRadius: 24,
     padding: 22,
     marginBottom: 18,
@@ -709,7 +709,7 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     gap: 10,
     borderRadius: 14,
     padding: 12,
-    backgroundColor: colors.bgElevated,
+    backgroundColor: isDark ? '#181C1A' : colors.surface,
     borderWidth: 1,
     borderColor: 'transparent',
   },
@@ -731,7 +731,7 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderColor: isDark ? '#293746' : colors.borderSubtle,
     padding: 20,
     ...SHADOWS.md,
   },
@@ -974,7 +974,7 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: isDark ? 'rgba(12,18,25,0.96)' : 'rgba(243,247,244,0.96)',
+    backgroundColor: isDark ? 'rgba(11,17,24,0.96)' : 'rgba(243,247,244,0.96)',
     borderTopWidth: 1,
     borderTopColor: colors.borderSubtle,
     paddingHorizontal: 18,
@@ -996,7 +996,7 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     ...SHADOWS.primary,
   },
   ctaBtnDisabled: {
-    opacity: 0.5,
+    backgroundColor: isDark ? '#25312C' : '#E2E8F0',
     ...(Platform.OS === 'web'
       ? { boxShadow: 'none' }
       : { shadowOpacity: 0, elevation: 0 }
@@ -1004,7 +1004,10 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   ctaText: {
     ...FONTS.buttonLg,
-    color: '#ffffff',
+    color: colors.onPrimary,
+  },
+  ctaTextDisabled: {
+    color: isDark ? '#69736F' : colors.textMuted,
   },
   modalOverlay: {
     flex: 1,

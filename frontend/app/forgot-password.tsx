@@ -1,14 +1,15 @@
 import React, { useState, useRef } from 'react';
 import {
-  StyleSheet, View, Text, TouchableOpacity,
+  StyleSheet, View, Text, TouchableOpacity, Pressable,
   ActivityIndicator, Animated, Easing, KeyboardAvoidingView,
-  Platform, ScrollView, Keyboard
+  Platform, ScrollView, Keyboard, useWindowDimensions
 } from 'react-native';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
 import FloatingInput from '../components/FloatingInput';
-import { AUTH_DARK_COLORS } from '../lib/theme';
+import { useTheme } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { getErrorMessage } from '../lib/api';
 import { apiFetch } from '../lib/apiClient';
@@ -21,6 +22,10 @@ function fpValidateEmail(v: string): string {
 }
 
 export default function ForgotPasswordScreen() {
+  const { colors, resolved } = useTheme();
+  const isDark = resolved === 'dark';
+  const { width } = useWindowDimensions();
+  
   const [email, setEmail] = useState('');
   const [emailTouched, setEmailTouched] = useState(false);
   const [emailError, setEmailError] = useState('');
@@ -30,6 +35,8 @@ export default function ForgotPasswordScreen() {
 
   const { fadeAnim, slideAnim, pulseAnim, bgScaleAnim } = useAuthAnimations();
   const messageAnim = useRef(new Animated.Value(0)).current;
+  const buttonScale = useRef(new Animated.Value(1)).current;
+  const arrowTranslate = useRef(new Animated.Value(0)).current;
 
   const showMessage = (text: string, type: 'error' | 'success') => {
     setMessage({ text, type });
@@ -56,8 +63,8 @@ export default function ForgotPasswordScreen() {
 
     setMessage(null);
     Keyboard.dismiss();
-
     setLoading(true);
+    
     try {
       const res = await apiFetch('/auth/forgot-password', {
         method: 'POST',
@@ -80,70 +87,118 @@ export default function ForgotPasswordScreen() {
     }
   }
 
+  const renderBackground = () => (
+    <View style={StyleSheet.absoluteFill}>
+      {isDark ? (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: '#131313' }]} />
+      ) : (
+        <LinearGradient colors={['#F8FAFB', '#EDF1F3']} style={StyleSheet.absoluteFill} />
+      )}
+      
+      <Animated.Image
+        source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCNgBJlBY97_QaewYW2r-DjSlc7y1DcxBuTyd2FT01aWpOMDdC6E5Ojftib57g020fqnyp0_maN4R5MEHbvA5mKvbvL62-rTz8r9ur1HeYAdQRNcHj2N8UkRNLsr6n30pKT8wvR2ALUnlrVoH30n83mprQd7LqD0c88IYJTTyGNiDVyADu8naOoqsrI2DdszdWsC6qGeg9DMNEPKErslJTkraaMEw-PLU4zYb0RM7Qzcqh4FeFxhc1IHMBcbbO-zGz4b_LtpTKBW06d' }}
+        style={[styles.bgImage, { transform: [{ scale: bgScaleAnim }], opacity: isDark ? 0.3 : 0.05 }]}
+        resizeMode="cover"
+      />
+      <View style={[styles.overlay, { backgroundColor: isDark ? 'rgba(0,0,0,0.5)' : 'transparent' }]} />
+    </View>
+  );
+
+  const renderMessage = () => {
+    if (!message) return null;
+    return (
+      <Animated.View style={[
+        styles.messageBox,
+        message.type === 'error' 
+          ? [styles.messageError, { backgroundColor: isDark ? colors.errorContainer : '#FEE2E2', borderLeftColor: isDark ? colors.error : '#DC2626' }] 
+          : [styles.messageSuccess, { backgroundColor: isDark ? colors.successLight : '#D1FAE5', borderLeftColor: isDark ? colors.success : '#10B981' }],
+        { opacity: messageAnim, transform: [{ translateY: messageAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }
+      ]}>
+        <Text style={[styles.messageText, { color: message.type === 'error' && !isDark ? '#DC2626' : (message.type === 'success' && !isDark ? '#065F46' : colors.text) }]}>
+          {message.text}
+        </Text>
+      </Animated.View>
+    );
+  };
+
   if (emailSent) {
     return (
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <StatusBar style="light" />
-
-        <View style={StyleSheet.absoluteFill}>
-          <Animated.Image
-            source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCNgBJlBY97_QaewYW2r-DjSlc7y1DcxBuTyd2FT01aWpOMDdC6E5Ojftib57g020fqnyp0_maN4R5MEHbvA5mKvbvL62-rTz8r9ur1HeYAdQRNcHj2N8UkRNLsr6n30pKT8wvR2ALUnlrVoH30n83mprQd7LqD0c88IYJTTyGNiDVyADu8naOoqsrI2DdszdWsC6qGeg9DMNEPKErslJTkraaMEw-PLU4zYb0RM7Qzcqh4FeFxhc1IHMBcbbO-zGz4b_LtpTKBW06d' }}
-            style={[styles.bgImage, { transform: [{ scale: bgScaleAnim }] }]}
-            resizeMode="cover"
-          />
-          <View style={styles.overlay} />
-        </View>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        {renderBackground()}
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.responsiveWrapper}>
             <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-              <Animated.View style={[{ transform: [{ scale: pulseAnim }], marginBottom: 12 }, Platform.OS === 'web' ? { boxShadow: '0 0 20px rgba(75,226,119,0.6)' } : { shadowColor: '#4be277', shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }]}>
-                <MaterialIcons name="mark-email-read" size={56} color="#4be277" />
+              <Animated.View style={[{ transform: [{ scale: pulseAnim }], marginBottom: 16 }]}>
+                <View style={[styles.iconWrapper, { backgroundColor: isDark ? 'rgba(31, 203, 139, 0.15)' : 'rgba(31, 203, 139, 0.1)' }]}>
+                  <MaterialIcons name="mark-email-read" size={56} color={isDark ? colors.primary : '#1FCB8B'} />
+                </View>
               </Animated.View>
-              <Text style={styles.title}>TERKIRIM!</Text>
-              <Text style={styles.subtitle}>Tautan reset password telah dikirim ke</Text>
-              <Text style={styles.emailHighlight} numberOfLines={1} ellipsizeMode="tail">{email}</Text>
+              <Text style={[styles.title, { fontSize: Math.min(48, width * 0.13), color: isDark ? colors.primary : '#1FCB8B' }]}>TERKIRIM!</Text>
+              <Text style={[styles.subtitle, { color: isDark ? colors.textSecondary : '#4B5563' }]}>Tautan reset password telah dikirim ke</Text>
+              <Text style={[styles.emailHighlight, { color: isDark ? colors.primary : '#1FCB8B' }]} numberOfLines={1} ellipsizeMode="tail">{email}</Text>
             </Animated.View>
 
-            <Animated.View style={[styles.glassCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-              {message && (
-                <Animated.View style={[styles.messageBox, message.type === 'error' ? styles.messageError : styles.messageSuccess, { opacity: messageAnim, transform: [{ translateY: messageAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]}>
-                  <Text style={styles.messageText}>{message.text}</Text>
-                </Animated.View>
-              )}
+            <Animated.View style={[
+              styles.glassCard,
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+              isDark ? styles.glassCardDark : styles.glassCardLight
+            ]}>
+              {renderMessage()}
 
-              <View style={styles.sentIconWrap}>
-                <MaterialIcons name="email" size={40} color="#4be277" />
+              <View style={[styles.sentIconWrap, { backgroundColor: isDark ? colors.primaryContainer : '#ECFDF5', borderColor: isDark ? colors.primaryMuted : '#A7F3D0' }]}>
+                <MaterialIcons name="email" size={40} color={isDark ? colors.primary : '#10B981'} />
               </View>
 
-              <Text style={styles.sentDesc}>
+              <Text style={[styles.sentDesc, { color: isDark ? colors.textTertiary : '#6B7280' }]}>
                 Buka aplikasi email Anda dan cari tautan untuk mengatur ulang password. Jika tidak ada di inbox, cek folder spam atau junk.
               </Text>
 
-              <TouchableOpacity
-                style={styles.button}
+              <Pressable
+                onPressIn={() => Animated.spring(buttonScale, { toValue: 0.97, useNativeDriver: true }).start()}
+                onPressOut={() => Animated.spring(buttonScale, { toValue: 1, useNativeDriver: true }).start()}
+                onHoverIn={() => Animated.spring(arrowTranslate, { toValue: 5, useNativeDriver: true }).start()}
+                onHoverOut={() => Animated.spring(arrowTranslate, { toValue: 0, useNativeDriver: true }).start()}
                 onPress={handleSend}
                 disabled={loading}
-                activeOpacity={0.8}
+                style={{ marginTop: 8 }}
               >
-                {loading ? (
-                  <ActivityIndicator color="#0e2a14" />
-                ) : (
-                  <View style={styles.buttonContent}>
-                    <MaterialIcons name="refresh" size={20} color="#005321" style={{ marginRight: 8 }} />
-                    <Text style={styles.buttonText}>KIRIM ULANG</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+                <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScale }] }]}>
+                  {isDark ? (
+                     <View style={[styles.buttonInner, { backgroundColor: loading ? colors.primaryMuted : colors.primary }]}>
+                       {loading ? <ActivityIndicator color={colors.onPrimary} /> : (
+                         <View style={styles.buttonContent}>
+                           <MaterialIcons name="refresh" size={20} color={colors.onPrimary} style={{ marginRight: 8 }} />
+                           <Text style={[styles.buttonText, { color: colors.onPrimary }]}>KIRIM ULANG</Text>
+                         </View>
+                       )}
+                     </View>
+                  ) : (
+                     <LinearGradient
+                       colors={loading ? ['#A7F3D0', '#6EE7B7'] : ['#1FCB8B', '#00D9A0']}
+                       start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                       style={styles.buttonInner}
+                     >
+                       {loading ? <ActivityIndicator color="#FFFFFF" /> : (
+                         <View style={styles.buttonContent}>
+                           <MaterialIcons name="refresh" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                           <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>KIRIM ULANG</Text>
+                         </View>
+                       )}
+                     </LinearGradient>
+                  )}
+                </Animated.View>
+              </Pressable>
             </Animated.View>
 
             <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
               <TouchableOpacity onPress={() => router.push('/login')} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <MaterialIcons name="arrow-back" size={16} color="#4be277" style={{ marginRight: 4 }} />
-                <Text style={styles.footerLink}>Kembali ke Login</Text>
+                <MaterialIcons name="arrow-back" size={16} color={isDark ? colors.primary : '#1FCB8B'} style={{ marginRight: 4 }} />
+                <Text style={[styles.footerLink, { color: isDark ? colors.primary : '#1FCB8B' }]}>Kembali ke Login</Text>
               </TouchableOpacity>
             </Animated.View>
           </View>
@@ -157,33 +212,27 @@ export default function ForgotPasswordScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <StatusBar style="light" />
-
-      <View style={StyleSheet.absoluteFill}>
-        <Animated.Image
-          source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCNgBJlBY97_QaewYW2r-DjSlc7y1DcxBuTyd2FT01aWpOMDdC6E5Ojftib57g020fqnyp0_maN4R5MEHbvA5mKvbvL62-rTz8r9ur1HeYAdQRNcHj2N8UkRNLsr6n30pKT8wvR2ALUnlrVoH30n83mprQd7LqD0c88IYJTTyGNiDVyADu8naOoqsrI2DdszdWsC6qGeg9DMNEPKErslJTkraaMEw-PLU4zYb0RM7Qzcqh4FeFxhc1IHMBcbbO-zGz4b_LtpTKBW06d' }}
-          style={[styles.bgImage, { transform: [{ scale: bgScaleAnim }] }]}
-          resizeMode="cover"
-        />
-        <View style={styles.overlay} />
-      </View>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      {renderBackground()}
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.responsiveWrapper}>
           <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <Animated.View style={[{ transform: [{ scale: pulseAnim }], marginBottom: 12 }, Platform.OS === 'web' ? { boxShadow: '0 0 20px rgba(75,226,119,0.6)' } : { shadowColor: '#4be277', shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }]}>
-              <MaterialIcons name="lock-reset" size={56} color="#4be277" />
+            <Animated.View style={[{ transform: [{ scale: pulseAnim }], marginBottom: 16 }]}>
+              <View style={[styles.iconWrapper, { backgroundColor: isDark ? 'rgba(31, 203, 139, 0.15)' : 'rgba(31, 203, 139, 0.1)' }]}>
+                <MaterialIcons name="lock-reset" size={56} color={isDark ? colors.primary : '#1FCB8B'} />
+              </View>
             </Animated.View>
-            <Text style={styles.title}>RESET</Text>
-            <Text style={styles.subtitle}>Masukkan email Anda dan kami akan mengirimkan tautan untuk reset password.</Text>
+            <Text style={[styles.title, { fontSize: Math.min(48, width * 0.13), color: isDark ? colors.primary : '#1FCB8B' }]}>RESET</Text>
+            <Text style={[styles.subtitle, { color: isDark ? colors.textSecondary : '#4B5563' }]}>Masukkan email Anda dan kami akan mengirimkan tautan untuk reset password.</Text>
           </Animated.View>
 
-          <Animated.View style={[styles.glassCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            {message && (
-              <Animated.View style={[styles.messageBox, message.type === 'error' ? styles.messageError : styles.messageSuccess, { opacity: messageAnim, transform: [{ translateY: messageAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }]}>
-                <Text style={styles.messageText}>{message.text}</Text>
-              </Animated.View>
-            )}
+          <Animated.View style={[
+            styles.glassCard,
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+            isDark ? styles.glassCardDark : styles.glassCardLight
+          ]}>
+            {renderMessage()}
 
             <FloatingInput
               label="Email"
@@ -192,30 +241,50 @@ export default function ForgotPasswordScreen() {
               onBlur={onFpEmailBlur}
               keyboardType="email-address"
               error={emailError}
-              colors={AUTH_DARK_COLORS}
+              colors={colors}
             />
 
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+            <Pressable
+              onPressIn={() => Animated.spring(buttonScale, { toValue: 0.97, useNativeDriver: true }).start()}
+              onPressOut={() => Animated.spring(buttonScale, { toValue: 1, useNativeDriver: true }).start()}
+              onHoverIn={() => Animated.spring(arrowTranslate, { toValue: 5, useNativeDriver: true }).start()}
+              onHoverOut={() => Animated.spring(arrowTranslate, { toValue: 0, useNativeDriver: true }).start()}
               onPress={handleSend}
               disabled={loading}
-              activeOpacity={0.8}
+              style={{ marginTop: 8 }}
             >
-              {loading ? (
-                <ActivityIndicator color="#0e2a14" />
-              ) : (
-                <View style={styles.buttonContent}>
-                  <MaterialIcons name="send" size={20} color="#005321" style={{ marginRight: 8 }} />
-                  <Text style={styles.buttonText}>KIRIM LINK</Text>
-                </View>
-              )}
-            </TouchableOpacity>
+              <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScale }] }]}>
+                {isDark ? (
+                   <View style={[styles.buttonInner, { backgroundColor: loading ? colors.primaryMuted : colors.primary }]}>
+                     {loading ? <ActivityIndicator color={colors.onPrimary} /> : (
+                       <View style={styles.buttonContent}>
+                         <MaterialIcons name="send" size={20} color={colors.onPrimary} style={{ marginRight: 8 }} />
+                         <Text style={[styles.buttonText, { color: colors.onPrimary }]}>KIRIM LINK</Text>
+                       </View>
+                     )}
+                   </View>
+                ) : (
+                   <LinearGradient
+                     colors={loading ? ['#A7F3D0', '#6EE7B7'] : ['#1FCB8B', '#00D9A0']}
+                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                     style={styles.buttonInner}
+                   >
+                     {loading ? <ActivityIndicator color="#FFFFFF" /> : (
+                       <View style={styles.buttonContent}>
+                         <MaterialIcons name="send" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                         <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>KIRIM LINK</Text>
+                       </View>
+                     )}
+                   </LinearGradient>
+                )}
+              </Animated.View>
+            </Pressable>
           </Animated.View>
 
           <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
             <TouchableOpacity onPress={() => router.push('/login')} style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <MaterialIcons name="arrow-back" size={16} color="#4be277" style={{ marginRight: 4 }} />
-              <Text style={styles.footerLink}>Kembali ke Login</Text>
+              <MaterialIcons name="arrow-back" size={16} color={isDark ? colors.primary : '#1FCB8B'} style={{ marginRight: 4 }} />
+              <Text style={[styles.footerLink, { color: isDark ? colors.primary : '#1FCB8B' }]}>Kembali ke Login</Text>
             </TouchableOpacity>
           </Animated.View>
         </View>
@@ -227,16 +296,13 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#131313',
   },
   bgImage: {
     width: '100%',
     height: '100%',
-    opacity: 0.5,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.6)',
   },
   scrollContent: {
     flexGrow: 1,
@@ -253,21 +319,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
+  iconWrapper: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 8px 32px rgba(31, 203, 139, 0.2)' }
+      : { shadowColor: '#1FCB8B', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 32, elevation: 10 }
+    ),
+  },
   title: {
-    fontSize: 48,
     fontWeight: '900',
-    color: '#4be277',
     fontStyle: 'italic',
     textTransform: 'uppercase',
     letterSpacing: 2,
-    ...(Platform.OS === 'web'
-      ? { textShadow: '0px 2px 10px rgba(75,226,119,0.4)' }
-      : { textShadowColor: 'rgba(75, 226, 119, 0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10 }
-    ),
+    marginTop: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#bccbb9',
     marginTop: 8,
     fontWeight: '600',
     textAlign: 'center',
@@ -276,16 +347,25 @@ const styles = StyleSheet.create({
   },
   emailHighlight: {
     fontSize: 17,
-    color: '#4be277',
     marginTop: 8,
     fontWeight: '800',
     textAlign: 'center',
   },
   glassCard: {
-    backgroundColor: 'rgba(30,30,30,0.7)',
-    borderRadius: 20,
-    padding: 28,
+    borderRadius: 24,
+    padding: 32,
     borderWidth: 1,
+  },
+  glassCardLight: {
+    backgroundColor: '#FFFFFF',
+    borderColor: 'rgba(255,255,255,0.8)',
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 20px 40px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.02)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.06, shadowRadius: 40, elevation: 10 }
+    ),
+  },
+  glassCardDark: {
+    backgroundColor: 'rgba(30,30,30,0.7)',
     borderColor: 'rgba(255,255,255,0.15)',
     ...(Platform.OS === 'web'
       ? { boxShadow: '0 15px 25px rgba(0,0,0,0.5)' }
@@ -296,46 +376,37 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(75, 226, 119, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: 'rgba(75, 226, 119, 0.25)',
   },
   sentDesc: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
   },
-  button: {
-    backgroundColor: '#4be277',
+  buttonWrapper: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 8px 20px rgba(31, 203, 139, 0.25)' }
+      : { shadowColor: '#1FCB8B', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: 6 }
+    ),
+  },
+  buttonInner: {
     height: 60,
-    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0 6px 12px rgba(75,226,119,0.4)' }
-      : { shadowColor: '#4be277', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }
-    ),
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    backgroundColor: '#2a8b46',
-    ...(Platform.OS === 'web'
-      ? { boxShadow: 'none' }
-      : { shadowOpacity: 0, elevation: 0 }
-    ),
+    borderRadius: 14,
   },
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   buttonText: {
-    color: '#002109',
     fontSize: 18,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -347,27 +418,19 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   footerLink: {
-    color: '#4be277',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '800',
   },
   messageBox: {
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 20,
-  },
-  messageError: {
-    backgroundColor: '#3a0d10',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
     borderLeftWidth: 4,
-    borderLeftColor: '#ffb4ab',
   },
-  messageSuccess: {
-    backgroundColor: '#0a2614',
-    borderLeftWidth: 4,
-    borderLeftColor: '#4be277',
-  },
+  messageError: {},
+  messageSuccess: {},
   messageText: {
-    color: '#e5e2e1',
     fontSize: 15,
+    fontWeight: '500',
   },
 });
