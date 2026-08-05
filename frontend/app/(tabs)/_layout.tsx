@@ -1,5 +1,5 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
+import { Tabs, useRouter } from 'expo-router';
+import React, { useEffect } from 'react';
 import { StyleSheet, Platform, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../lib/theme';
 import { FONT_FAMILY } from '../../components/goalTheme';
 import TopNavbar from '../../components/web/TopNavbar';
+import { useProfileStore } from '../../store/profileStore';
 
 const isWeb = Platform.OS === 'web';
 
@@ -14,6 +15,16 @@ export default function TabLayout() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = makeStyles(colors, insets);
+  const profile = useProfileStore((s) => s.profile);
+  const profileLoading = useProfileStore((s) => s.loading);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (profileLoading) return;
+    if (!profile) {
+      router.replace('/login');
+    }
+  }, [profile, profileLoading, router]);
 
   return (
     <View style={isWeb ? styles.webContainer : undefined}>

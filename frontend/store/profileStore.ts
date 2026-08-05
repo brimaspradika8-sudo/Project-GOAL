@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
-import * as SecureStore from '../lib/secureStorage';
-import { TOKEN_KEY } from '../lib/auth';
+import { apiFetch } from '../lib/apiClient';
 
 export interface Profile {
   id: number;
@@ -28,17 +26,11 @@ interface ProfileState {
 
 const PROFILE_CACHE_KEY = 'cached_profile';
 
-let activeController: AbortController | null = null;
-let activeTimeout: ReturnType<typeof setTimeout> | null = null;
-
 export const useProfileStore = create<ProfileState>((set) => ({
   profile: null,
   loading: true,
 
   fetchProfile: async () => {
-    if (activeController) activeController.abort();
-    if (activeTimeout) clearTimeout(activeTimeout);
-
     const cached = await AsyncStorage.getItem(PROFILE_CACHE_KEY);
     if (cached) {
       try {
@@ -47,28 +39,7 @@ export const useProfileStore = create<ProfileState>((set) => ({
     }
 
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      if (!token) {
-        set({ profile: null, loading: false });
-        return;
-      }
-
-      const controller = new AbortController();
-      activeController = controller;
-      const timeout = setTimeout(() => controller.abort(), 20000);
-      activeTimeout = timeout;
-
-      const res = await fetch(`${API_BASE_URL}/me`, {
-        headers: {
-          ...DEFAULT_HEADERS,
-          Authorization: `Bearer ${token}`,
-        },
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-      activeTimeout = null;
-      activeController = null;
+      const res = await apiFetch('/me');
 
       if (res.ok) {
         const data = await res.json();
@@ -77,9 +48,7 @@ export const useProfileStore = create<ProfileState>((set) => ({
       } else {
         set({ profile: null, loading: false });
       }
-    } catch (e) {
-      activeTimeout = null;
-      activeController = null;
+    } catch {
       const cached = await AsyncStorage.getItem(PROFILE_CACHE_KEY);
       if (!cached) {
         set({ profile: null, loading: false });

@@ -16,7 +16,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../components/goalTheme';
 import { SafeImage } from '../components/SafeImage';
-import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
+import { apiFetch } from '../lib/apiClient';
 import { useFavoriteStore } from '../store/favoriteStore';
 
 import { useTheme } from '../lib/theme';
@@ -59,13 +59,7 @@ export default function VenueDetailScreen() {
 
   const fetchField = useCallback(async () => {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 20000);
-      const res = await fetch(`${API_BASE_URL}/fields/${id}`, {
-        headers: { ...DEFAULT_HEADERS },
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
+      const res = await apiFetch(`/fields/${id}`, { skipToken: true });
       if (!res.ok) throw new Error('Not found');
       const data = await res.json();
       setField(data);

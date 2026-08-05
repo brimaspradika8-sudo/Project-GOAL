@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
+import { apiFetch } from '../lib/apiClient';
 
 export interface Field {
   id: number;
@@ -40,17 +40,6 @@ interface FieldState {
 
 const FIELDS_CACHE_KEY = 'cached_fields_';
 
-async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = 20000): Promise<Response> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, { ...init, signal: controller.signal });
-    return res;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
 export const useFieldStore = create<FieldState>((set, get) => ({
   fields: [],
   meta: null,
@@ -75,13 +64,13 @@ export const useFieldStore = create<FieldState>((set, get) => ({
     }
 
     try {
-      const params = new URLSearchParams();
-      if (sport && sport !== 'Semua') params.set('sport', sport);
-      if (search) params.set('search', search);
-      params.set('page', '1');
-
-      const url = `${API_BASE_URL}/fields?${params.toString()}`;
-      const res = await fetchWithTimeout(url, { headers: { ...DEFAULT_HEADERS } });
+      const res = await apiFetch('/fields', {
+        params: {
+          ...(sport && sport !== 'Semua' ? { sport } : {}),
+          ...(search ? { search } : {}),
+          page: '1',
+        },
+      });
       if (!res.ok) throw new Error('Gagal memuat data lapangan');
       const body = await res.json();
 
@@ -114,13 +103,13 @@ export const useFieldStore = create<FieldState>((set, get) => ({
 
     set({ loadingMore: true });
     try {
-      const params = new URLSearchParams();
-      if (lastParams.sport && lastParams.sport !== 'Semua') params.set('sport', lastParams.sport);
-      if (lastParams.search) params.set('search', lastParams.search);
-      params.set('page', String(meta.current_page + 1));
-
-      const url = `${API_BASE_URL}/fields?${params.toString()}`;
-      const res = await fetchWithTimeout(url, { headers: { ...DEFAULT_HEADERS } });
+      const res = await apiFetch('/fields', {
+        params: {
+          ...(lastParams.sport && lastParams.sport !== 'Semua' ? { sport: lastParams.sport } : {}),
+          ...(lastParams.search ? { search: lastParams.search } : {}),
+          page: String(meta.current_page + 1),
+        },
+      });
       if (!res.ok) throw new Error('Gagal memuat data');
       const body = await res.json();
       set({

@@ -216,7 +216,7 @@ const makeStyles = (colors: any) => StyleSheet.create({
     flex: 1,
     ...FONTS.bodyMd,
     color: colors.text,
-    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}),
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
   },
   chipScrollWrapper: {
     marginBottom: 20,

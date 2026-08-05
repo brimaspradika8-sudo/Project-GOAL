@@ -4,9 +4,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import * as SecureStore from '../../lib/secureStorage';
-import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
+import { apiFetch } from '../../lib/apiClient';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import ConfirmDialog from '../shared/ConfirmDialog';
@@ -36,13 +34,7 @@ export default function TrashedFieldsPage() {
 
   const fetchFields = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/fields/trashed/list`, {
-        headers: {
-          ...DEFAULT_HEADERS,
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await apiFetch('/fields/trashed/list');
       const data = await res.json().catch(() => ({}));
       setFields(data?.data ?? []);
     } catch {
@@ -64,14 +56,7 @@ export default function TrashedFieldsPage() {
     if (!restoreTarget) return;
     setRestoreLoading(true);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/fields/${restoreTarget.id}/restore`, {
-        method: 'POST',
-        headers: {
-          ...DEFAULT_HEADERS,
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await apiFetch(`/fields/${restoreTarget.id}/restore`, { method: 'POST' });
       if (res.ok) {
         setRestoreTarget(null);
         useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Lapangan dipulihkan.' });
@@ -94,14 +79,7 @@ export default function TrashedFieldsPage() {
     if (!deleteTarget) return;
     setDeleteLoading(true);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/fields/${deleteTarget.id}/force`, {
-        method: 'DELETE',
-        headers: {
-          ...DEFAULT_HEADERS,
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await apiFetch(`/fields/${deleteTarget.id}/force`, { method: 'DELETE' });
       if (res.ok) {
         setDeleteTarget(null);
         useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Lapangan dihapus permanen.' });
@@ -139,12 +117,7 @@ export default function TrashedFieldsPage() {
     setBulkLoading(true);
     setBulkError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}${path}`, {
-        method: 'POST',
-        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ids: Array.from(selected) }),
-      });
+      const res = await apiFetch(path, { method: 'POST', body: { ids: Array.from(selected) } });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setBulkError(data.message || 'Tindakan gagal.');

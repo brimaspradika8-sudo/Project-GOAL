@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Profile;
 use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
@@ -32,7 +33,7 @@ class UserController extends Controller
         $currentUser = $request->user();
         $requestedRole = $data['role'] ?? 'player';
 
-        if ($requestedRole === 'super_admin' && $currentUser->profile?->role !== 'super_admin') {
+        if ($requestedRole === Profile::ROLE_SUPER_ADMIN && $currentUser->profile?->role !== Profile::ROLE_SUPER_ADMIN) {
             return response()->json(['message' => 'Hanya Super Admin yang dapat membuat akun Super Admin.'], 403);
         }
 

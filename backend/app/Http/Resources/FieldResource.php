@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Profile;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -13,7 +14,7 @@ class FieldResource extends JsonResource
         $showModeration = false;
         if ($user) {
             $isOwner = $this->owner_id === $user->id;
-            $isAdmin = $user->profile?->role === 'super_admin';
+            $isAdmin = $user->profile?->role === Profile::ROLE_SUPER_ADMIN;
             $showModeration = $isOwner || $isAdmin;
         }
 

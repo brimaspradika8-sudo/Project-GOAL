@@ -8,6 +8,7 @@ use App\Http\Requests\Field\UpdateFieldRequest;
 use App\Http\Requests\Field\ApproveFieldRequest;
 use App\Http\Resources\FieldResource;
 use App\Models\Field;
+use App\Models\Profile;
 use App\Services\FieldService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
@@ -56,7 +57,7 @@ class FieldController extends Controller
         $user = $request->user();
         if ($user) {
             $isOwner = $field->owner_id === $user->id;
-            $isAdmin = $user->profile?->role === 'super_admin';
+            $isAdmin = $user->profile?->role === Profile::ROLE_SUPER_ADMIN;
             if ($isOwner || $isAdmin) {
                 $field->makeVisible(['rejection_reason', 'approved_by']);
             }
@@ -86,7 +87,7 @@ class FieldController extends Controller
         }
 
         $user = $request->user();
-        $isAdmin = $user->profile?->role === 'super_admin';
+        $isAdmin = $user->profile?->role === Profile::ROLE_SUPER_ADMIN;
 
         if (!$isAdmin && $field->owner_id !== $user->id) {
             return response()->json(['message' => 'Anda bukan pemilik lapangan ini.'], 403);
@@ -109,7 +110,7 @@ class FieldController extends Controller
 
         $profile = $request->user()->profile;
         $isOwner = $field->owner_id === $request->user()->id;
-        $isAdmin = $profile && $profile->role === 'super_admin';
+        $isAdmin = $profile && $profile->role === Profile::ROLE_SUPER_ADMIN;
 
         if (!$isOwner && !$isAdmin) {
             return response()->json(['message' => 'Anda bukan pemilik lapangan ini.'], 403);

@@ -11,7 +11,7 @@ import LoadingScreen from '../components/LoadingScreen';
 import SplashScreen from '../components/SplashScreen';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 
-import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
+import { apiFetch } from '../lib/apiClient';
 import { useProfileStore } from '../store/profileStore';
 import { ToastProvider } from '../components/Toast';
 import { ThemeProvider, useTheme } from '../lib/theme';
@@ -35,16 +35,8 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 }
 
 async function fetchProfile(token: string): Promise<{ profile: any | null; unauthorized: boolean }> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
   try {
-    const res = await fetch(`${API_BASE_URL}/me`, {
-      headers: {
-        ...DEFAULT_HEADERS,
-        Authorization: `Bearer ${token}`,
-      },
-      signal: controller.signal,
-    });
+    const res = await apiFetch('/me', { token, skipToken: true, timeout: 20000 });
     if (res.status === 401 || res.status === 403) {
       return { profile: null, unauthorized: true };
     }
@@ -54,8 +46,6 @@ async function fetchProfile(token: string): Promise<{ profile: any | null; unaut
     return { profile: await res.json(), unauthorized: false };
   } catch {
     return { profile: null, unauthorized: false };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
@@ -77,7 +67,7 @@ export default function RootLayout() {
 }
 
 function RootLayoutInner() {
-  const { resolved, colors } = useTheme();
+  const { resolved, colors, ready: themeReady } = useTheme();
   const shouldBlockForFonts = Platform.OS !== 'web';
   const [fontsLoaded, fontError] = Font.useFonts({
     'Plus Jakarta Sans': require('../assets/fonts/PlusJakartaSans-Regular.ttf'),
@@ -96,58 +86,9 @@ function RootLayoutInner() {
     return () => clearTimeout(timer);
   }, [fontsLoaded, fontError]);
   const [showSplash, setShowSplash] = useState(Platform.OS !== 'web');
-  const [isReady, setIsReady] = useState(false);
+  const [booting, setBooting] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Memuat...');
-  const routingRef = useRef(false);
-
-  const routeToLogin = useCallback(() => {
-    routingRef.current = true;
-    setLoadingMessage('Mengarahkan ke halaman masuk');
-    router.replace('/login');
-    setTimeout(() => {
-      routingRef.current = false;
-      setLoadingMessage('Memuat...');
-    }, 250);
-  }, []);
-
-  const routeByProfile = useCallback(async (token: string) => {
-    if (routingRef.current) return;
-    routingRef.current = true;
-    setLoadingMessage('Memeriksa data profil');
-
-    let { profile, unauthorized } = await fetchProfile(token);
-
-    if (!profile && !unauthorized) {
-      setLoadingMessage('Koneksi terputus. Mencoba ulang...');
-      await new Promise((r) => setTimeout(r, 1500));
-      ({ profile, unauthorized } = await fetchProfile(token));
-    }
-
-    if (!profile) {
-      if (unauthorized) {
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
-        useProfileStore.getState().clearProfile();
-      }
-      routeToLogin();
-      return;
-    }
-
-    useProfileStore.setState({ profile, loading: false });
-
-    if (profile.onboarding_completed === false) {
-      router.replace('/onboarding');
-    } else if (profile.role === 'super_admin') {
-      router.replace('/(admin)/dashboard');
-    } else if (profile.role === 'owner') {
-      router.replace('/(owner)');
-    } else {
-      router.replace('/(tabs)');
-    }
-    setTimeout(() => {
-      routingRef.current = false;
-      setLoadingMessage('Memuat...');
-    }, 250);
-  }, [routeToLogin]);
+  const bootRef = useRef(false);
 
   const onSplashFinish = useCallback(() => {
     NativeSplash.hideAsync().catch(() => {});
@@ -155,23 +96,55 @@ function RootLayoutInner() {
   }, []);
 
   useEffect(() => {
-    if (showSplash) return;
+    if (showSplash || !themeReady || bootRef.current) return;
+    bootRef.current = true;
 
     const initialize = async () => {
       setLoadingMessage('Memeriksa sesi');
 
       const storedToken = await SecureStore.getItemAsync(TOKEN_KEY);
+
       if (storedToken) {
-        await routeByProfile(storedToken);
+        setLoadingMessage('Memeriksa data profil');
+
+        let { profile, unauthorized } = await fetchProfile(storedToken);
+
+        if (!profile && !unauthorized) {
+          setLoadingMessage('Koneksi terputus. Mencoba ulang...');
+          await new Promise((r) => setTimeout(r, 1500));
+          ({ profile, unauthorized } = await fetchProfile(storedToken));
+        }
+
+        if (profile) {
+          useProfileStore.setState({ profile, loading: false });
+
+          if (profile.onboarding_completed === false) {
+            router.replace('/onboarding');
+          } else if (profile.role === 'super_admin') {
+            router.replace('/(admin)/dashboard');
+          } else if (profile.role === 'owner') {
+            router.replace('/(owner)');
+          } else {
+            router.replace('/(tabs)');
+          }
+        } else {
+          if (unauthorized) {
+            await SecureStore.deleteItemAsync(TOKEN_KEY);
+            useProfileStore.getState().clearProfile();
+          }
+          router.replace('/login');
+        }
       } else {
-        routeToLogin();
+        router.replace('/login');
+        useProfileStore.getState().clearProfile();
       }
 
-      setIsReady(true);
+      setLoadingMessage('Memuat...');
+      setTimeout(() => setBooting(false), 150);
     };
 
     initialize();
-  }, [showSplash, routeByProfile, routeToLogin]);
+  }, [showSplash, themeReady]);
 
   if (shouldBlockForFonts && !fontsLoaded && !fontsFallback && !fontError) {
     return null;
@@ -181,35 +154,33 @@ function RootLayoutInner() {
     <NavThemeProvider value={resolved === 'dark' ? DarkTheme : DefaultTheme}>
       <ToastProvider />
       <AppToastWrapper />
-      {showSplash ? (
-        <SplashScreen onFinish={onSplashFinish} />
-      ) : (
-        <>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              animation: 'fade',
-              animationDuration: 250,
-              contentStyle: { backgroundColor: colors.background },
-            }}
-            initialRouteName="login"
-          >
-            <Stack.Screen name="login" />
-            <Stack.Screen name="register" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="forgot-password" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="reset-password" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="change-password" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="onboarding" options={{ gestureEnabled: false, animation: 'fade' }} />
-            <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-            <Stack.Screen name="venue-detail" options={{ animation: 'slide_from_right' }} />
-            <Stack.Screen name="e-ticket" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
-          </Stack>
-          {!isReady && Platform.OS !== 'web' && (
-            <View style={styles.loadingOverlay}>
-              <LoadingScreen message={loadingMessage} />
-            </View>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: 'fade',
+          animationDuration: 250,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+        initialRouteName="login"
+      >
+        <Stack.Screen name="login" />
+        <Stack.Screen name="register" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="forgot-password" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="reset-password" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="change-password" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="onboarding" options={{ gestureEnabled: false, animation: 'fade' }} />
+        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+        <Stack.Screen name="venue-detail" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="e-ticket" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
+      </Stack>
+      {(showSplash || booting) && (
+        <View style={styles.loadingOverlay}>
+          {showSplash ? (
+            <SplashScreen onFinish={onSplashFinish} />
+          ) : (
+            <LoadingScreen message={loadingMessage} />
           )}
-        </>
+        </View>
       )}
       <StatusBar style={resolved === 'dark' ? 'light' : 'dark'} />
     </NavThemeProvider>

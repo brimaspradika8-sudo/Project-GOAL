@@ -17,32 +17,23 @@ function getExpoHost(): string | null {
   return hostUri.split(':')[0];
 }
 
-function isLocalDevelopmentUrl(value: string): boolean {
-  return /^(http:\/\/)?(localhost|127\.0\.0\.1|0\.0\.0\.0|10\.0\.2\.2)(:\d+)?/i.test(value);
-}
-
-function extractHostFromUrl(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    return parsed.hostname;
-  } catch {
-    return null;
-  }
+function getWebHost(): string | null {
+  if (typeof window === 'undefined' || !window.location?.hostname) return null;
+  return window.location.hostname;
 }
 
 export function getApiBaseUrl() {
-  if (Platform.OS === 'web') {
-    return 'http://localhost:8000/api';
-  }
-
   const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
-
-  if (configuredUrl && !isLocalDevelopmentUrl(configuredUrl)) {
+  if (configuredUrl) {
     return trimTrailingSlash(configuredUrl);
   }
 
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:8000/api';
+  if (Platform.OS === 'web') {
+    const host = getWebHost();
+    if (host) {
+      return `http://${host}:8000/api`;
+    }
+    return 'http://localhost:8000/api';
   }
 
   const expoHost = getExpoHost();
@@ -50,7 +41,8 @@ export function getApiBaseUrl() {
     return `http://${expoHost}:8000/api`;
   }
 
-  return 'http://localhost:8000/api';
+  // Android emulator loopback to the host machine
+  return 'http://10.0.2.2:8000/api';
 }
 
 export const API_BASE_URL = getApiBaseUrl();
@@ -85,20 +77,24 @@ export function getAssetUrl(url: string | null | undefined): string | null {
   if (url.startsWith('file://') || url.startsWith('data:')) {
     return url;
   }
-  
-  if (Platform.OS !== 'web' && isLocalDevelopmentUrl(url)) {
-    const apiBase = getApiBaseUrl(); 
-    const apiHost = extractHostFromUrl(apiBase);
+
+  if (Platform.OS !== 'web' && /^(http:\/\/)?(localhost|127\.0\.0\.1|0\.0\.0\.0|10\.0\.2\.2)(:\d+)?/i.test(url)) {
+    const apiBase = getApiBaseUrl();
+    let apiHost: string | null = null;
+    try {
+      apiHost = new URL(apiBase).hostname;
+    } catch {
+      apiHost = null;
+    }
     if (apiHost) {
       try {
         const parsed = new URL(url);
         parsed.hostname = apiHost;
         return parsed.toString();
       } catch {
-        return url.replace(/localhost|127\.0\.0\.1|0\.0\.0\.0/g, apiHost);
+        return url.replace(/localhost|127\.0\.0\.1|0\.0\.0\.0|10\.0\.2\.2/g, apiHost);
       }
     }
   }
   return url;
 }
-

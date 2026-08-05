@@ -6,9 +6,8 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import * as SecureStore from '../../lib/secureStorage';
-import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../../lib/api';
+import { getErrorMessage } from '../../lib/api';
+import { apiFetch } from '../../lib/apiClient';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
 import DashboardHeader from '../shared/DashboardHeader';
@@ -38,13 +37,7 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
 
   const fetchFields = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/fields/pending/list`, {
-        headers: {
-          ...DEFAULT_HEADERS,
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await apiFetch('/fields/pending/list');
       const data = await res.json().catch(() => ({}));
       setFields(data?.data ?? []);
     } catch {
@@ -59,15 +52,9 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
   const onRefresh = () => { setRefreshing(true); fetchFields(); };
 
   const reviewField = async (id: number, status: 'approved' | 'rejected', reason?: string) => {
-    const token = await SecureStore.getItemAsync(TOKEN_KEY);
-    const res = await fetch(`${API_BASE_URL}/fields/${id}/approve`, {
+    const res = await apiFetch(`/fields/${id}/approve`, {
       method: 'POST',
-      headers: {
-        ...DEFAULT_HEADERS,
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ status, ...(reason ? { reason } : {}) }),
+      body: { status, ...(reason ? { reason } : {}) },
     });
     const data = await res.json().catch(() => ({}));
 
@@ -142,11 +129,9 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
     setBulkLoading(true);
     setBulkError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/fields/bulk-approve`, {
+      const res = await apiFetch('/fields/bulk-approve', {
         method: 'POST',
-        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ids: Array.from(selected), status: 'approved' }),
+        body: { ids: Array.from(selected), status: 'approved' },
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -174,11 +159,9 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
     setBulkLoading(true);
     setBulkError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/fields/bulk-approve`, {
+      const res = await apiFetch('/fields/bulk-approve', {
         method: 'POST',
-        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ids: Array.from(selected), status: 'rejected', reason }),
+        body: { ids: Array.from(selected), status: 'rejected', reason },
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -475,7 +458,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'li
     textAlignVertical: 'top',
     marginBottom: 16,
     borderWidth: 1,
-    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}),
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
   },
   rejectActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
   cancelBtn: {

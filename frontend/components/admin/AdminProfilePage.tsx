@@ -8,7 +8,7 @@ import { router } from 'expo-router';
 import { useProfileStore } from '../../store/profileStore';
 import * as SecureStore from '../../lib/secureStorage';
 import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
+import { apiFetch } from '../../lib/apiClient';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
@@ -31,13 +31,7 @@ export default function AdminProfilePage() {
   const doActualLogout = async () => {
     setLogoutLoading(true);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      if (token) {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-          method: 'POST',
-          headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
-        }).catch(() => {});
-      }
+      await apiFetch('/auth/logout', { method: 'POST' }).catch(() => {});
       await SecureStore.deleteItemAsync(TOKEN_KEY);
       await clearProfile();
       router.replace('/login');

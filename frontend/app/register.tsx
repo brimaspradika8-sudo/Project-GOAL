@@ -10,7 +10,8 @@ import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
 import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
-import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
+import { getErrorMessage } from '../lib/api';
+import { apiFetch } from '../lib/apiClient';
 import { fieldError } from '../lib/formValidation';
 
 function regValidateName(v: string): string {
@@ -99,15 +100,15 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/register`, {
+      const res = await apiFetch('/auth/register', {
         method: 'POST',
-        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        skipToken: true,
+        body: {
           name: name.trim(),
           email: email.trim(),
           password,
           password_confirmation: confirmPassword,
-        }),
+        },
       });
       const data = await res.json();
 

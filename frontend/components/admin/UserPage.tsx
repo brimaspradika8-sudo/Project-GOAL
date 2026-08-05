@@ -6,9 +6,8 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useProfileStore } from '../../store/profileStore';
-import * as SecureStore from '../../lib/secureStorage';
-import { TOKEN_KEY } from '../../lib/auth';
-import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../../lib/api';
+import { getErrorMessage } from '../../lib/api';
+import { apiFetch } from '../../lib/apiClient';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { useDebounce } from '../../hooks/useDebounce';
 import { SkeletonCards } from '../Skeleton';
@@ -86,11 +85,7 @@ export default function UserPage() {
 
   const fetchUsers = useCallback(async (q?: string) => {
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const params = q ? `?search=${encodeURIComponent(q)}` : '';
-      const res = await fetch(`${API_BASE_URL}/admin/users${params}`, {
-        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
-      });
+      const res = await apiFetch('/admin/users', { params: { search: q } });
       const data = await res.json();
       setUsers(data?.data ?? []);
     } catch {
@@ -110,12 +105,7 @@ export default function UserPage() {
   const onRefresh = () => { setRefreshing(true); fetchUsers(search); };
 
   const updateUserRole = async (userId: number, role: string) => {
-    const token = await SecureStore.getItemAsync(TOKEN_KEY);
-    const res = await fetch(`${API_BASE_URL}/admin/users/${userId}/role`, {
-      method: 'PUT',
-      headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ role }),
-    });
+    const res = await apiFetch(`/admin/users/${userId}/role`, { method: 'PUT', body: { role } });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || 'Gagal memperbarui role.');
     return data;
@@ -148,11 +138,9 @@ export default function UserPage() {
     setCreateLoading(true);
     setCreateError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/admin/users`, {
+      const res = await apiFetch('/admin/users', {
         method: 'POST',
-        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: createForm.name, email: createForm.email, password: createForm.password, role: createForm.role }),
+        body: { name: createForm.name, email: createForm.email, password: createForm.password, role: createForm.role },
       });
       const data = await res.json();
       if (!res.ok) {
@@ -194,14 +182,9 @@ export default function UserPage() {
     setEditLoading(true);
     setEditError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
       const body: any = { name: editForm.name, email: editForm.email };
       if (editForm.password.trim()) body.password = editForm.password;
-      const res = await fetch(`${API_BASE_URL}/admin/users/${editTarget.id}`, {
-        method: 'PUT',
-        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
-      });
+      const res = await apiFetch(`/admin/users/${editTarget.id}`, { method: 'PUT', body });
       const data = await res.json();
       if (!res.ok) {
         setEditError(getErrorMessage(data, 'Gagal menyimpan perubahan.'));
@@ -240,11 +223,7 @@ export default function UserPage() {
     setDeleteLoading(true);
     setDeleteError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/admin/users/${deleteTarget.id}`, {
-        method: 'DELETE',
-        headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${token}` },
-      });
+      const res = await apiFetch(`/admin/users/${deleteTarget.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setDeleteError(data.message || 'Gagal menghapus user.');
@@ -283,11 +262,9 @@ export default function UserPage() {
     setBulkDeleteLoading(true);
     setBulkDeleteError(null);
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const res = await fetch(`${API_BASE_URL}/admin/users/bulk-delete`, {
+      const res = await apiFetch('/admin/users/bulk-delete', {
         method: 'POST',
-        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ids: Array.from(selected) }),
+        body: { ids: Array.from(selected) },
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -729,7 +706,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.bgElevated,
   },
-  searchInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}) },
+  searchInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}) },
 
   tabRow: { flexDirection: 'row', gap: 10, marginHorizontal: SIZES.gutter, marginTop: 10, marginBottom: 4 },
   tab: {
@@ -827,7 +804,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 12,
     borderWidth: 1, borderColor: colors.outline,
   },
-  fieldInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as const } : {}) },
+  fieldInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}) },
   roleSelectWrap: { marginBottom: 14 },
   roleChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   roleChip: {

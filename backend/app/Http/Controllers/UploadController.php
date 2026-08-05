@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Profile;
 use App\Services\SupabaseStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class UploadController extends Controller
     {
         $profile = $request->user()->profile;
 
-        if (!$profile || !in_array($profile->role, ['owner', 'super_admin'], true)) {
+        if (!$profile || !in_array($profile->role, [Profile::ROLE_OWNER, Profile::ROLE_SUPER_ADMIN], true)) {
             return response()->json(['message' => 'Anda tidak memiliki akses untuk mengupload gambar.'], 403);
         }
 

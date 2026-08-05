@@ -1,7 +1,5 @@
 import { create } from 'zustand';
-import * as SecureStore from '../lib/secureStorage';
-import { TOKEN_KEY } from '../lib/auth';
-import { API_BASE_URL, DEFAULT_HEADERS } from '../lib/api';
+import { apiFetch } from '../lib/apiClient';
 
 type AdminBadgeState = {
   ownerRequestsCount: number | undefined;
@@ -24,22 +22,8 @@ export const useAdminBadgeStore = create<AdminBadgeState>((set) => ({
 
 export async function refreshAdminBadges({ isSuperAdmin = false }: { isSuperAdmin?: boolean } = {}) {
   try {
-    const token = await SecureStore.getItemAsync(TOKEN_KEY);
-    if (!token) {
-      useAdminBadgeStore.getState().setBadges({
-        ownerRequestsCount: undefined,
-        pendingFieldsCount: undefined,
-      });
-      return;
-    }
-
-    const headers = {
-      ...DEFAULT_HEADERS,
-      Authorization: `Bearer ${token}`,
-    } as const;
-
     let ownerRequestsCount: number | undefined = undefined;
-    const reqRes = await fetch(`${API_BASE_URL}/owner-requests/pending`, { headers });
+    const reqRes = await apiFetch('/owner-requests/pending');
     if (reqRes.ok) {
       const reqData = await reqRes.json().catch(() => ({}));
       const count = (reqData?.data ?? []).length;
@@ -48,7 +32,7 @@ export async function refreshAdminBadges({ isSuperAdmin = false }: { isSuperAdmi
 
     let pendingFieldsCount: number | undefined = undefined;
     if (isSuperAdmin) {
-      const fieldsRes = await fetch(`${API_BASE_URL}/fields/pending/list`, { headers });
+      const fieldsRes = await apiFetch('/fields/pending/list');
       if (fieldsRes.ok) {
         const fieldsData = await fieldsRes.json().catch(() => ({}));
         const count = (fieldsData?.data ?? []).length;

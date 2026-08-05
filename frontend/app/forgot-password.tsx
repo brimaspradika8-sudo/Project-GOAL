@@ -10,7 +10,8 @@ import { StatusBar } from 'expo-status-bar';
 import FloatingInput from '../components/FloatingInput';
 import { AUTH_DARK_COLORS } from '../lib/theme';
 import { useAuthAnimations } from '../hooks/useAuthAnimations';
-import { API_BASE_URL, getErrorMessage, DEFAULT_HEADERS } from '../lib/api';
+import { getErrorMessage } from '../lib/api';
+import { apiFetch } from '../lib/apiClient';
 import { fieldError } from '../lib/formValidation';
 
 function fpValidateEmail(v: string): string {
@@ -58,10 +59,10 @@ export default function ForgotPasswordScreen() {
 
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      const res = await apiFetch('/auth/forgot-password', {
         method: 'POST',
-        headers: { ...DEFAULT_HEADERS, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() }),
+        skipToken: true,
+        body: { email: email.trim() },
       });
       const data = await res.json();
 

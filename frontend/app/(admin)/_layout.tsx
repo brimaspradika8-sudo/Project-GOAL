@@ -4,10 +4,8 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useProfileStore } from '../../store/profileStore';
-import { API_BASE_URL, DEFAULT_HEADERS } from '../../lib/api';
 import { useTheme } from '../../lib/theme';
-import * as SecureStore from '../../lib/secureStorage';
-import { TOKEN_KEY } from '../../lib/auth';
+import { apiFetch } from '../../lib/apiClient';
 import { FONT_FAMILY } from '../../components/goalTheme';
 import Sidebar, { isSidebarRouteActive, SidebarItem } from '../../components/web/Sidebar';
 import MobileWebHeader from '../../components/web/MobileWebHeader';
@@ -41,14 +39,7 @@ export default function AdminTabLayout() {
   useEffect(() => {
     const fetchBadges = async () => {
       try {
-        const token = await SecureStore.getItemAsync(TOKEN_KEY);
-        if (!token) return;
-        const headers = {
-          ...DEFAULT_HEADERS,
-          Authorization: `Bearer ${token}`,
-        };
-
-        const reqRes = await fetch(`${API_BASE_URL}/owner-requests/pending`, { headers });
+        const reqRes = await apiFetch('/owner-requests/pending');
         if (reqRes.ok) {
           const reqData = await reqRes.json().catch(() => ({}));
           const count = (reqData?.data ?? []).length;
@@ -56,7 +47,7 @@ export default function AdminTabLayout() {
         }
 
         if (isSuperAdmin) {
-          const fieldsRes = await fetch(`${API_BASE_URL}/fields/pending/list`, { headers });
+          const fieldsRes = await apiFetch('/fields/pending/list');
           if (fieldsRes.ok) {
             const fieldsData = await fieldsRes.json().catch(() => ({}));
             const count = (fieldsData?.data ?? []).length;
