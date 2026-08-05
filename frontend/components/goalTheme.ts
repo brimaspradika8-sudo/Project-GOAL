@@ -82,7 +82,7 @@ const _nativeShadows = {
   md: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8, elevation: 4 },
   lg: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.09, shadowRadius: 14, elevation: 6 },
   xl: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.11, shadowRadius: 24, elevation: 8 },
-  primary: { shadowColor: '#007a4f', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+  primary: { shadowColor: '#34D981', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.22, shadowRadius: 8, elevation: 4 },
   authPrimary: { shadowColor: '#1a56db', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
 };
 const _webShadows = {
@@ -91,7 +91,7 @@ const _webShadows = {
   md: { boxShadow: '0px 2px 8px rgba(0,0,0,0.07)' },
   lg: { boxShadow: '0px 4px 14px rgba(0,0,0,0.09)' },
   xl: { boxShadow: '0px 8px 24px rgba(0,0,0,0.11)' },
-  primary: { boxShadow: '0px 3px 8px rgba(0,122,79,0.20)' },
+  primary: { boxShadow: '0px 3px 10px rgba(52,217,129,0.22)' },
   authPrimary: { boxShadow: '0px 3px 8px rgba(26,86,219,0.20)' },
 };
 export const SHADOWS = Platform.OS === 'web' ? _webShadows : _nativeShadows;
