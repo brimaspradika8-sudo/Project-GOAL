@@ -22,8 +22,10 @@ class UserService
         return User::with('profile')
             ->when($search, function ($query, $value) {
                 $escaped = str_replace(['%', '_'], ['\\%', '\\_'], $value);
-                $query->where('name', 'like', "%{$escaped}%")
-                    ->orWhere('email', 'like', "%{$escaped}%");
+                $query->where(function ($q) use ($escaped) {
+                    $q->where('name', 'like', "%{$escaped}%")
+                        ->orWhere('email', 'like', "%{$escaped}%");
+                });
             })
             ->when($role, function ($query, $value) {
                 $query->whereHas('profile', function ($profileQuery) use ($value) {

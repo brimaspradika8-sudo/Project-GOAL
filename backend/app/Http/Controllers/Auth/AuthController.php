@@ -26,8 +26,18 @@ class AuthController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
+                'errors' => $e->errors(),
             ], 422);
-            
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            if ((int) $e->errorInfo[0] === 23505) {
+                return response()->json([
+                    'message' => 'Email sudah terdaftar.',
+                    'errors' => ['email' => ['Email sudah terdaftar.']],
+                ], 422);
+            }
+
+            return response()->json(['message' => 'Registrasi gagal. Silakan coba lagi nanti.'], 500);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Registrasi gagal. Silakan coba lagi nanti.'], 500);
         }

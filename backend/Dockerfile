@@ -27,12 +27,17 @@ COPY . .
 
 RUN composer dump-autoload --optimize
 
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Pastikan folder storage & cache bisa ditulis
 RUN chmod -R 775 storage bootstrap/cache
 
 EXPOSE 8000
 
-# Jalankan Laravel dev server, bind ke semua interface (0.0.0.0) supaya
-# bisa diakses dari luar container (bukan cuma dari dalam container itu
-# sendiri, yang mana yang terjadi kalau bind ke 127.0.0.1 / localhost)
+# Gunakan entrypoint script yang menunggu PostgreSQL, migrate, lalu serve
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
+# Default: jalankan server. Service lain (queue-worker, scheduler) meng-override CMD ini.
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]

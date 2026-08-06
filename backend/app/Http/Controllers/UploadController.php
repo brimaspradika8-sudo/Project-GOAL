@@ -7,7 +7,6 @@ use App\Services\SupabaseStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-
 class UploadController extends Controller
 {
     public function __construct(
@@ -64,9 +63,12 @@ class UploadController extends Controller
                 'path' => $path,
             ]);
         } catch (\Exception $e) {
-            Log::error('Upload exception: ' . $e->getMessage());
+            Log::error('Upload exception: ' . $e->getMessage(), [
+                'exception' => get_class($e),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json([
-                'message' => $e->getMessage() ?: 'Gagal mengunggah foto. Silakan coba lagi.',
+                'message' => 'Gagal mengunggah foto. Silakan coba lagi.',
             ], 500);
         }
     }

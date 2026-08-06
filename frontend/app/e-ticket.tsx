@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -15,7 +15,10 @@ import { useTheme } from '../lib/theme';
 
 export default function ETicketScreen() {
   const { colors } = useTheme();
-  const ticketCode = 'GOAL-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+  const ticketCode = useMemo(
+    () => 'GOAL-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
+    []
+  );
   const st = makeStyles(colors);
 
   return (

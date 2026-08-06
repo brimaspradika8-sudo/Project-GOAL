@@ -44,9 +44,4 @@ class Notification extends Model
     {
         return $this->belongsTo(User::class);
     }
-
-    public function isRead(): bool
-    {
-        return $this->read_at !== null;
-    }
 }

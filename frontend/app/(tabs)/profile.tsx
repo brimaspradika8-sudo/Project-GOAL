@@ -18,8 +18,6 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useProfileStore } from '../../store/profileStore';
-import * as SecureStore from '../../lib/secureStorage';
-import { TOKEN_KEY } from '../../lib/auth';
 import { getErrorMessage } from '../../lib/api';
 import { apiFetch } from '../../lib/apiClient';
 import * as ImagePicker from 'expo-image-picker';
@@ -33,6 +31,7 @@ import NotificationCenter from '../../components/shared/NotificationCenter';
 import { useToastStore } from '../../store/toastStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { fieldError } from '../../lib/formValidation';
+import { logout } from '../../lib/session';
 
 const SPORT_ICONS: Record<string, string> = {
   futsal: 'sports-soccer',
@@ -64,7 +63,7 @@ export default function ProfileScreen() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const { refresh: refreshNotifications, clear: clearNotifications, unreadCount } = useNotificationStore();
+  const { refresh: refreshNotifications, unreadCount } = useNotificationStore();
 
   useEffect(() => {
     refreshNotifications().catch(() => {});
@@ -248,11 +247,7 @@ export default function ProfileScreen() {
   const doActualLogout = async () => {
     setLogoutLoading(true);
     try {
-      await apiFetch('/auth/logout', { method: 'POST' }).catch(() => {});
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-      await clearProfile();
-      clearNotifications();
-      router.replace('/login');
+      await logout();
     } catch {
       useToastStore.getState().show({ type: 'error', title: 'Gagal', description: 'Terjadi kesalahan saat keluar akun.' });
     } finally {

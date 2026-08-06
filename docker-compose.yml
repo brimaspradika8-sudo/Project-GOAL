@@ -1,23 +1,74 @@
 services:
   app:
+    image: goal-app
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: goal-backend
+    restart: unless-stopped
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/var/www
       - /var/www/vendor
+      - ./backend/.env.docker:/var/www/.env
     env_file:
-      - ./backend/.env
+      - ./backend/.env.docker
+    environment:
+      DB_HOST: database
+      DB_PORT: 5432
     depends_on:
-      - database
+      database:
+        condition: service_healthy
+    networks:
+      - goal-network
 
+  queue-worker:
+    image: goal-app
+    container_name: goal-queue-worker
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "--tries=3", "--timeout=90"]
+    environment:
+      RUN_MIGRATIONS: "false"
+      DB_HOST: database
+      DB_PORT: 5432
+    volumes:
+      - ./backend:/var/www
+      - /var/www/vendor
+      - ./backend/.env.docker:/var/www/.env
+    env_file:
+      - ./backend/.env.docker
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - goal-network
+
+  scheduler:
+    image: goal-app
+    container_name: goal-scheduler
+    restart: unless-stopped
+    command: ["php", "artisan", "schedule:work"]
+    environment:
+      RUN_MIGRATIONS: "false"
+      DB_HOST: database
+      DB_PORT: 5432
+    volumes:
+      - ./backend:/var/www
+      - /var/www/vendor
+      - ./backend/.env.docker:/var/www/.env
+    env_file:
+      - ./backend/.env.docker
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - goal-network
 
   database:
     image: postgres:16
     container_name: goal-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: project_goal
       POSTGRES_USER: postgres
@@ -26,7 +77,18 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d project_goal"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - goal-network
 
 volumes:
   postgres-data:
+
+networks:
+  goal-network:
+    driver: bridge

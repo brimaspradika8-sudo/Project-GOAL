@@ -79,8 +79,6 @@ class AuthService
             $token = $user->currentAccessToken();
             if ($token && method_exists($token, 'delete')) {
                 $token->delete();
-            } else {
-                $user->tokens()->delete();
             }
         } catch (\Exception $e) {
             Log::warning('Logout failed: ' . $e->getMessage());

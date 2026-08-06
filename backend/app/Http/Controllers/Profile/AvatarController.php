@@ -53,10 +53,13 @@ class AvatarController extends Controller
                 'profile'    => new ProfileResource($this->profile->getPayload($user)),
             ]);
         } catch (\Exception $e) {
-            Log::error('Avatar upload exception: ' . $e->getMessage());
+            Log::error('Avatar upload exception: ' . $e->getMessage(), [
+                'exception' => get_class($e),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             return response()->json([
-                'message' => $e->getMessage() ?: 'Gagal mengunggah foto profil. Silakan coba lagi.',
+                'message' => 'Gagal mengunggah foto profil. Silakan coba lagi.',
             ], 500);
         }
     }

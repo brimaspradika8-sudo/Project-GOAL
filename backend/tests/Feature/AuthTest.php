@@ -19,6 +19,8 @@ class AuthTest extends TestCase
         Schema::dropIfExists('personal_access_tokens');
         Schema::dropIfExists('profiles');
         Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('cache_locks');
+        Schema::dropIfExists('cache');
         Schema::dropIfExists('users');
 
         Schema::create('users', function (Blueprint $table) {
@@ -35,6 +37,18 @@ class AuthTest extends TestCase
             $table->string('email')->primary();
             $table->string('token');
             $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('cache', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->mediumText('value');
+            $table->integer('expiration')->index();
+        });
+
+        Schema::create('cache_locks', function (Blueprint $table) {
+            $table->string('key')->primary();
+            $table->string('owner');
+            $table->integer('expiration')->index();
         });
 
         Schema::create('profiles', function (Blueprint $table) {
@@ -76,7 +90,7 @@ class AuthTest extends TestCase
         $response = $this->postJson('/api/auth/register', $this->validRegisterData);
 
         $response->assertStatus(201)
-            ->assertJsonStructure(['message', 'token', 'user']);
+            ->assertJsonStructure(['message', 'user']);
 
         $this->assertDatabaseHas('users', ['email' => 'test@example.com']);
         $this->assertDatabaseHas('profiles', [
@@ -140,6 +154,6 @@ class AuthTest extends TestCase
         ]);
 
         $response->assertOk()
-            ->assertJson(['message' => 'Tautan reset password telah dikirim ke email Anda jika terdaftar.']);
+            ->assertJson(['message' => 'Jika email terdaftar, tautan reset password telah dikirim.']);
     }
 }

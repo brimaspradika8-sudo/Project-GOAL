@@ -27,8 +27,9 @@ export default function FloatingInput({
   onBlur,
   colors: colorsOverride,
 }: FloatingInputProps) {
-  const { colors: themeColors } = useTheme();
+  const { colors: themeColors, resolved } = useTheme();
   const colors = colorsOverride ?? themeColors;
+  const isDark = resolved === 'dark';
   const [isFocused, setIsFocused] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const animatedIsFocused = useRef(new Animated.Value(value === '' ? 0 : 1)).current;
@@ -56,11 +57,11 @@ export default function FloatingInput({
     }),
     color: animatedIsFocused.interpolate({
       inputRange: [0, 1],
-      outputRange: [colors.textSecondary, hasError ? colors.destructive : colors.primary],
+      outputRange: [colors.textSecondary, hasError ? '#DC2626' : '#1FCB8B'],
     }),
     backgroundColor: animatedIsFocused.interpolate({
       inputRange: [0, 0.5, 1],
-      outputRange: ['transparent', 'transparent', '#2D3748'],
+      outputRange: ['transparent', 'transparent', isDark ? '#1e1e1e' : '#FFFFFF'],
     }),
     paddingHorizontal: animatedIsFocused.interpolate({
       inputRange: [0, 1],
@@ -77,11 +78,11 @@ export default function FloatingInput({
         style={[
           styles.input,
           {
-            backgroundColor: isFocused ? colors.bgElevated : colors.surfaceContainerLow,
-            borderColor: hasError ? colors.destructive : (isFocused ? colors.primary : colors.borderSubtle),
-            color: colors.textPrimary,
+            backgroundColor: isDark ? 'rgba(40,40,40,0.8)' : '#FFFFFF',
+            borderColor: hasError ? '#DC2626' : (isFocused ? '#1FCB8B' : (isDark ? 'rgba(255,255,255,0.2)' : '#E5E7EB')),
+            color: isDark ? '#E5E7EB' : '#4B5563',
           },
-          isFocused && focusRing('#10B981'),
+          isFocused && focusRing('#1FCB8B'),
           Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {},
         ]}
         onFocus={() => setIsFocused(true)}
@@ -91,20 +92,22 @@ export default function FloatingInput({
         secureTextEntry={secureTextEntry && !isPasswordVisible}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
+        placeholderTextColor="#9CA3AF"
       />
       {secureTextEntry && (
         <TouchableOpacity
           style={styles.eyeIcon}
           onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+          activeOpacity={0.6}
         >
           <MaterialIcons
             name={isPasswordVisible ? 'visibility' : 'visibility-off'}
             size={22}
-            color={isFocused ? '#10B981' : '#6B7280'}
+            color={isFocused ? '#1FCB8B' : '#9CA3AF'}
           />
         </TouchableOpacity>
       )}
-      {hasError && <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>}
+      {hasError && <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>}
     </View>
   );
 }
@@ -116,7 +119,7 @@ const styles = StyleSheet.create({
     height: 60,
   },
   input: {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderRadius: 12,
     height: 60,
     paddingHorizontal: 16,
@@ -138,6 +141,6 @@ const styles = StyleSheet.create({
 
 function focusRing(color: string) {
   return Platform.OS === 'web'
-    ? ({ outlineStyle: 'none' } as any)
+    ? ({ boxShadow: `0 0 0 3px rgba(31, 203, 139, 0.2)`, outlineStyle: 'none' } as any)
     : { shadowColor: color, shadowOpacity: 0.25, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 0 };
 }

@@ -91,7 +91,7 @@ class UserController extends Controller
     public function bulkDestroy(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
+            'ids' => ['required', 'array', 'min:1', 'max:100'],
             'ids.*' => ['required', 'integer'],
         ]);
 
