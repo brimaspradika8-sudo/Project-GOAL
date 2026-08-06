@@ -28,6 +28,7 @@ import VenueCard from '../../components/VenueCard';
 import NotificationCenter from '../../components/shared/NotificationCenter';
 import { useNotificationStore } from '../../store/notificationStore';
 import { SPORT_MAP } from '../../lib/fieldValidation';
+import ThemeToggle from '../../components/ThemeToggle';
 
 const isWeb = Platform.OS === 'web';
 
@@ -149,6 +150,7 @@ export default function HomeScreen() {
             <Text style={styles.logoText}>GOAL</Text>
           </View>
           <View style={styles.topBarActions}>
+            <ThemeToggle />
             <TouchableOpacity style={styles.topBarBtn} activeOpacity={0.7} onPress={() => setNotifVisible(true)}>
               <MaterialIcons name="notifications-none" size={22} color={colors.onSurface} />
               {unreadCount() > 0 ? <View style={styles.topBarBadge} /> : null}
