@@ -117,9 +117,7 @@ export default function LoginScreen() {
       if (data?.token) {
         await SecureStore.setItemAsync(TOKEN_KEY, data.token);
 
-          const profileRes = await fetch(`${API_BASE_URL}/me`, {
-            headers: { ...DEFAULT_HEADERS, Authorization: `Bearer ${data.token}` },
-          });
+          const profileRes = await apiFetch('/me', { token: data.token });
           const profileData = await parseApiResponse(profileRes);
 
         if (profileRes.ok && profileData) {

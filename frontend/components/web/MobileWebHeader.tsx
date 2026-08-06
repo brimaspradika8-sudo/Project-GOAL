@@ -4,6 +4,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../../lib/theme';
 import { FONT_FAMILY } from '../goalTheme';
 import { isSidebarRouteActive, type SidebarItem } from './Sidebar';
+import ThemeToggle from '../ThemeToggle';
+
 
 interface MobileWebHeaderProps {
   title: string;
@@ -36,6 +38,7 @@ export default function MobileWebHeader({ title, accentColor, items, activeRoute
   const activeColor = accentColor;
   const inactiveColor = resolved === 'dark' ? '#94A3B8' : '#4B5563';
   const panelTitleColor = resolved === 'dark' ? '#CBD5E1' : colors.text;
+  const activeBg = resolved === 'dark' ? accentColor + '1A' : accentColor + '14';
 
   return (
     <>
@@ -78,7 +81,7 @@ export default function MobileWebHeader({ title, accentColor, items, activeRoute
             return (
               <Pressable
                 key={item.href}
-                style={[styles.drawerItem, active && styles.drawerItemActive]}
+                style={[styles.drawerItem, active && { backgroundColor: activeBg }]}
                 onPress={() => {
                   setDrawerOpen(false);
                   onNavigate(item.href);
@@ -103,6 +106,9 @@ export default function MobileWebHeader({ title, accentColor, items, activeRoute
               </Pressable>
             );
           })}
+        </View>
+        <View style={[styles.drawerFooter, { borderTopColor: colors.outline }]}>
+          <ThemeToggle size={28} />
         </View>
       </Animated.View>
     </>
@@ -185,9 +191,6 @@ const styles = StyleSheet.create({
     transitionProperty: 'background-color, color' as any,
     transitionTimingFunction: 'ease' as any,
   },
-  drawerItemActive: {
-    backgroundColor: '#EDE7FF',
-  },
   drawerLabel: {
     fontFamily: FONT_FAMILY,
     fontSize: 14,
@@ -196,5 +199,9 @@ const styles = StyleSheet.create({
     transitionDuration: '180ms' as any,
     transitionProperty: 'color, font-weight' as any,
     transitionTimingFunction: 'ease' as any,
+  },
+  drawerFooter: {
+    padding: 16,
+    borderTopWidth: 1,
   },
 });
