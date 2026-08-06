@@ -6,7 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../lib/theme';
 import { FONT_FAMILY } from '../../components/goalTheme';
-import Sidebar, { SidebarItem } from '../../components/web/Sidebar';
+import Sidebar, { SidebarItem, isSidebarRouteActive } from '../../components/web/Sidebar';
 import MobileWebHeader from '../../components/web/MobileWebHeader';
 import { useBreakpoint } from '../../lib/responsive';
 import { useProfileStore } from '../../store/profileStore';
@@ -39,8 +39,7 @@ export default function OwnerTabLayout() {
     { href: '/(owner)/profile', label: 'Profile', icon: 'person' },
   ];
 
-  const ownerRoutes = ['/(owner)/fields', '/(owner)/bookings', '/(owner)/revenue', '/(owner)/profile'];
-  const activeRoute = ownerRoutes.find(r => pathname.startsWith(r)) || '/(owner)/fields';
+  const activeRoute = sidebarItems.find((item) => isSidebarRouteActive(pathname, item.href))?.href || '/(owner)/fields';
 
   if (isWeb && breakpoint === 'mobile') {
     return (
