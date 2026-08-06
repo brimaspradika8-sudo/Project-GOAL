@@ -31,11 +31,6 @@ class Profile extends Model
         'onboarding_completed' => 'boolean',
     ];
 
-    public function hasRole(string ...$roles): bool
-    {
-        return in_array($this->role, $roles);
-    }
-
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

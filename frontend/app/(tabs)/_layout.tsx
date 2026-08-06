@@ -106,11 +106,6 @@ export default function TabLayout() {
           name="explore"
           options={{ href: null }}
         />
-
-        <Tabs.Screen
-          name="admin"
-          options={{ href: null }}
-        />
       </Tabs>
     </View>
   );

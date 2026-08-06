@@ -13,7 +13,6 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 
 import { apiFetch } from '../lib/apiClient';
 import { useProfileStore } from '../store/profileStore';
-import { ToastProvider } from '../components/Toast';
 import { ThemeProvider, useTheme } from '../lib/theme';
 import AppToast from '../components/shared/AppToast';
 import { useToastStore } from '../store/toastStore';
@@ -152,7 +151,6 @@ function RootLayoutInner() {
 
   return (
     <NavThemeProvider value={resolved === 'dark' ? DarkTheme : DefaultTheme}>
-      <ToastProvider />
       <AppToastWrapper />
       <Stack
         screenOptions={{

@@ -202,7 +202,7 @@ class FieldController extends Controller
     public function bulkApprove(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
+            'ids' => ['required', 'array', 'min:1', 'max:100'],
             'ids.*' => ['required', 'integer'],
             'status' => ['required', 'in:approved,rejected'],
             'reason' => ['nullable', 'string', 'max:500'],
@@ -220,7 +220,7 @@ class FieldController extends Controller
     public function bulkDestroy(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
+            'ids' => ['required', 'array', 'min:1', 'max:100'],
             'ids.*' => ['required', 'integer'],
         ]);
 
@@ -234,7 +234,7 @@ class FieldController extends Controller
     public function bulkRestore(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
+            'ids' => ['required', 'array', 'min:1', 'max:100'],
             'ids.*' => ['required', 'integer'],
         ]);
 
@@ -248,7 +248,7 @@ class FieldController extends Controller
     public function bulkForceDelete(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
+            'ids' => ['required', 'array', 'min:1', 'max:100'],
             'ids.*' => ['required', 'integer'],
         ]);
 

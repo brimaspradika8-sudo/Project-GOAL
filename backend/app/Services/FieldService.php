@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\SportType;
+use App\Jobs\SendFieldStatusNotification;
 use App\Models\Field;
 use App\Models\Notification;
 use App\Models\Profile;
@@ -45,6 +46,23 @@ class FieldService
         return [$sport];
     }
 
+    private static function normalizeSport(?string $sport): string
+    {
+        if (!$sport) {
+            return 'all';
+        }
+
+        $key = strtolower($sport);
+
+        foreach (self::SPORT_ALIASES as $canonical => $variants) {
+            if (in_array($key, $variants, true)) {
+                return $canonical;
+            }
+        }
+
+        return $key;
+    }
+
     private function applySportFilter($query, string $sport): void
     {
         $aliases = self::sportAliases($sport);
@@ -81,7 +99,7 @@ class FieldService
             return $this->listApproved($search, $sport, $page);
         }
 
-        $cacheKey = $this->cachePrefix . 'approved_' . strtolower($sport ?? 'all');
+        $cacheKey = $this->cachePrefix . 'approved_' . self::normalizeSport($sport);
 
         return Cache::remember($cacheKey, $this->cacheTtl, function () use ($sport) {
             $query = Field::approved()
@@ -169,9 +187,8 @@ class FieldService
             throw new \RuntimeException('Anda bukan pemilik lapangan ini.');
         }
 
-        $allowed = collect($data)->only([
-            'name', 'sport_type', 'location', 'description', 'price_per_hour', 'image_url',
-        ])->filter(fn ($v) => $v !== null)->toArray();
+        $allowedKeys = ['name', 'sport_type', 'location', 'description', 'price_per_hour', 'image_url'];
+        $allowed = array_intersect_key($data, array_flip($allowedKeys));
 
         $oldImageUrl = null;
         if (array_key_exists('image_url', $allowed) && $field->image_url && $allowed['image_url'] !== $field->image_url) {
@@ -345,21 +362,7 @@ class FieldService
             return;
         }
 
-        $approved = $status === 'approved';
-
-        $this->notifications->create(
-            $owner,
-            $approved ? Notification::TYPE_FIELD_APPROVED : Notification::TYPE_FIELD_REJECTED,
-            $approved ? 'Lapangan Disetujui' : 'Lapangan Ditolak',
-            $approved
-                ? "Lapangan {$field->name} sudah disetujui dan sekarang tampil untuk umum."
-                : "Lapangan {$field->name} ditolak." . ($reason ? " Alasan: {$reason}" : ''),
-            [
-                'field_id' => $field->id,
-                'field_name' => $field->name,
-                'status' => $status,
-            ]
-        );
+        SendFieldStatusNotification::dispatch($field->id, $owner->id, $status, $reason);
     }
 
     public function listTrashed(): LengthAwarePaginator

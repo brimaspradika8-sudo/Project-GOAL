@@ -6,14 +6,12 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useProfileStore } from '../../store/profileStore';
-import * as SecureStore from '../../lib/secureStorage';
-import { TOKEN_KEY } from '../../lib/auth';
-import { apiFetch } from '../../lib/apiClient';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme } from '../../lib/theme';
+import { logout } from '../../lib/session';
 
 const ROLE_LABEL: Record<string, string> = {
   super_admin: 'Super Admin',
@@ -31,10 +29,7 @@ export default function AdminProfilePage() {
   const doActualLogout = async () => {
     setLogoutLoading(true);
     try {
-      await apiFetch('/auth/logout', { method: 'POST' }).catch(() => {});
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-      await clearProfile();
-      router.replace('/login');
+      await logout();
     } catch {
       useToastStore.getState().show({ type: 'error', title: 'Gagal', description: 'Terjadi kesalahan saat keluar akun.' });
     } finally {

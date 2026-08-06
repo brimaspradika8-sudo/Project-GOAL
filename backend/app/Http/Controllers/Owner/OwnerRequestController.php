@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Owner;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Owner\StoreOwnerRequest;
 use App\Http\Resources\OwnerRequestResource;
+use App\Models\Profile;
 use App\Services\OwnerRequestService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,10 +41,14 @@ class OwnerRequestController extends Controller
             ], 422);
         }
 
-        $ownerRequest = $this->ownerRequestService->submit(
-            $user,
-            $request->validated()
-        );
+        try {
+            $ownerRequest = $this->ownerRequestService->submit(
+                $user,
+                $request->validated()
+            );
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json(new OwnerRequestResource($ownerRequest), 201);
     }

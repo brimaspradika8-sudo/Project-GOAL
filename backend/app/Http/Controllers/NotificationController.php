@@ -34,7 +34,13 @@ class NotificationController extends Controller
 
     public function markRead(Request $request, int $id): JsonResponse
     {
-        $this->notifications->markAsRead($request->user(), $id);
+        $marked = $this->notifications->markAsRead($request->user(), $id);
+
+        if (!$marked) {
+            return response()->json([
+                'message' => 'Notifikasi tidak ditemukan.',
+            ], 404);
+        }
 
         return response()->json([
             'message' => 'Notifikasi ditandai sudah dibaca.',
