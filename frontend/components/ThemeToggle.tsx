@@ -10,11 +10,12 @@ const TRACK_H = 34;
 const KNOB_SIZE = 28;
 const KNOB_MARGIN = 3;
 
-export default function ThemeToggle({ size }: { size?: number }) {
+export default function ThemeToggle({ size, variant }: { size?: number; variant?: 'switch' | 'button' }) {
   const { resolved, toggleTheme } = useTheme();
   const isDark = resolved === 'dark';
 
   const anim = useRef(new Animated.Value(isDark ? 1 : 0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.spring(anim, {
@@ -24,6 +25,10 @@ export default function ThemeToggle({ size }: { size?: number }) {
       friction: 10,
     }).start();
   }, [isDark, anim]);
+
+  if (variant === 'button') {
+    return <ThemeToggleButton />;
+  }
 
   const trackBg = anim.interpolate({
     inputRange: [0, 1],
@@ -44,8 +49,6 @@ export default function ThemeToggle({ size }: { size?: number }) {
     inputRange: [0, 0.5, 1],
     outputRange: [0, 0, 1],
   });
-
-  const scale = useRef(new Animated.Value(1)).current;
 
   const handlePress = () => {
     Animated.sequence([
@@ -134,5 +137,49 @@ const st = StyleSheet.create({
       : { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 3 }
     ),
     zIndex: 2,
+  },
+});
+
+function ThemeToggleButton() {
+  const { resolved, toggleTheme } = useTheme();
+  const isDark = resolved === 'dark';
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePress = () => {
+    Animated.sequence([
+      Animated.timing(scale, { toValue: 0.85, duration: 80, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, tension: 100, friction: 6, useNativeDriver: true }),
+    ]).start();
+    toggleTheme();
+  };
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={handlePress}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      style={[btnSt.button, { backgroundColor: isDark ? '#263040' : '#E2E9E4' }]}
+    >
+      <Animated.View style={{ transform: [{ scale }] }}>
+        {isDark ? (
+          <MaterialIcons name="nightlight-round" size={16} color="#C4B5FD" />
+        ) : (
+          <MaterialIcons name="wb-sunny" size={16} color="#F59E0B" />
+        )}
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
+const btnSt = StyleSheet.create({
+  button: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      web: { cursor: 'pointer' as any },
+    }),
   },
 });

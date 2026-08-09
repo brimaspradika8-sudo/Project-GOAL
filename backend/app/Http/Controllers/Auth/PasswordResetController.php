@@ -21,18 +21,22 @@ class PasswordResetController extends Controller
 
         $user = \App\Models\User::where('email', $email)->first();
 
-        if ($user) {
-            $token = Password::broker('users')->createToken($user);
+        if (!$user) {
+            return response()->json([
+                'message' => 'Email tidak terdaftar.',
+            ], 422);
+        }
 
-            try {
-                Mail::to($email)->queue(new ResetPasswordMail($token, $email));
-            } catch (\Exception $e) {
-                \Log::error('Mail queue fail: ' . $e->getMessage());
-            }
+        $token = Password::broker('users')->createToken($user);
+
+        try {
+            Mail::to($email)->queue(new ResetPasswordMail($token, $email));
+        } catch (\Exception $e) {
+            \Log::error('Mail queue fail: ' . $e->getMessage());
         }
 
         return response()->json([
-            'message' => 'Jika email terdaftar, tautan reset password telah dikirim.',
+            'message' => 'Tautan reset password telah dikirim ke email Anda.',
         ]);
     }
 

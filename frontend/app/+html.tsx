@@ -27,6 +27,11 @@ export default function Root({ children }: PropsWithChildren) {
           }}
         />
         <ScrollViewStyleReset />
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `input[type='password']::-ms-reveal,input[type='password']::-ms-clear{display:none}`,
+          }}
+        />
       </head>
       <body>{children}</body>
     </html>

@@ -31,9 +31,9 @@ export function getApiBaseUrl() {
   if (Platform.OS === 'web') {
     const host = getWebHost();
     if (host) {
-      return `http://${host}:8000/api`;
+      return `http://172.19.192.179:8000/api`;
     }
-    return 'http://localhost:8000/api';
+    return 'http://172.19.192.179:8000/api';
   }
 
   const expoHost = getExpoHost();
@@ -42,7 +42,7 @@ export function getApiBaseUrl() {
   }
 
   // Android emulator loopback to the host machine
-  return 'http://10.0.2.2:8000/api';
+  return 'http://172.19.192.179:8000/api';
 }
 
 export const API_BASE_URL = getApiBaseUrl();

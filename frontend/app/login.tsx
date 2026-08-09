@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, Pressable,
   ActivityIndicator, Animated, Easing, KeyboardAvoidingView,
-  Platform, ScrollView, Keyboard, useWindowDimensions
+  Platform, ScrollView, Keyboard, useWindowDimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -17,9 +17,14 @@ import * as SecureStore from '../lib/secureStorage';
 import { TOKEN_KEY } from '../lib/auth';
 import { useProfileStore } from '../store/profileStore';
 import { fieldError } from '../lib/formValidation';
+import { useBreakpoint } from '../lib/responsive';
+import AuthPromoPanel from '../components/AuthPromoPanel';
+import ThemeToggle from '../components/ThemeToggle';
+import { FONT_FAMILY } from '../components/goalTheme';
 
 const RATE_LIMIT_MS = 5000;
 const lastAttemptRef = { current: 0 };
+
 async function parseApiResponse(res: Response) {
   const text = await res.text();
   if (!text) return null;
@@ -27,27 +32,30 @@ async function parseApiResponse(res: Response) {
 }
 
 function getApiErrorMessage(data: any, status: number) {
-  if (status === 401) return 'Email atau password salah.';
-  if (status >= 500) return 'Server sedang tidak tersedia. Silakan coba lagi sebentar.';
-  return getErrorMessage(data, 'Terjadi kesalahan sistem. Silakan coba lagi.');
+  if (status === 401) return 'Invalid email or password.';
+  if (status >= 500) return 'Server is temporarily unavailable. Please try again in a moment.';
+  return getErrorMessage(data, 'Something went wrong. Please try again.');
 }
 
 function validateEmail(v: string): string {
-  if (!v.trim()) return 'Email wajib diisi.';
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) return 'Format email tidak valid.';
+  if (!v.trim()) return 'Email is required.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) return 'Invalid email format.';
   return '';
 }
 
 function validatePassword(v: string): string {
-  if (!v) return 'Password wajib diisi.';
+  if (!v) return 'Password is required.';
   return '';
 }
 
 export default function LoginScreen() {
   const { colors, resolved } = useTheme();
   const isDark = resolved === 'dark';
-  const { width } = useWindowDimensions();
-  
+  const { width, height } = useWindowDimensions();
+  const breakpoint = useBreakpoint();
+  const isDesktop = breakpoint === 'desktop';
+  const desktopScale = isDesktop ? Math.max(0.78, Math.min(1.08, Math.min(width / 1440, height / 900))) : 1;
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailTouched, setEmailTouched] = useState(false);
@@ -56,8 +64,8 @@ export default function LoginScreen() {
   const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
-  
-  const { fadeAnim, slideAnim, pulseAnim, bgScaleAnim } = useAuthAnimations();
+
+  const { headerFade, headerSlide, cardFade, cardSlide, buttonFade, buttonSlide, pulseAnim } = useAuthAnimations();
   const messageAnim = useRef(new Animated.Value(0)).current;
   const buttonScale = useRef(new Animated.Value(1)).current;
   const arrowTranslate = useRef(new Animated.Value(0)).current;
@@ -93,7 +101,7 @@ export default function LoginScreen() {
     const now = Date.now();
     if (now - lastAttemptRef.current < RATE_LIMIT_MS) {
       const waitSec = Math.ceil((RATE_LIMIT_MS - (now - lastAttemptRef.current)) / 1000);
-      showMessage(`Tunggu ${waitSec} detik sebelum mencoba lagi.`, 'error');
+      showMessage(`Please wait ${waitSec} seconds before trying again.`, 'error');
       return;
     }
 
@@ -123,26 +131,37 @@ export default function LoginScreen() {
         if (profileRes.ok && profileData) {
           useProfileStore.setState({ profile: profileData, loading: false });
 
-            if (profileData.onboarding_completed === false) {
-              router.replace('/onboarding');
-            } else if (profileData.role === 'super_admin') {
-              router.replace('/(admin)/dashboard');
-            } else {
-              router.replace('/(tabs)');
-            }
+          if (profileData.onboarding_completed === false) {
+            router.replace('/onboarding');
+          } else if (profileData.role === 'super_admin') {
+            router.replace('/(admin)/dashboard');
+          } else if (profileData.role === 'owner') {
+            router.replace('/(owner)');
           } else {
-            await SecureStore.deleteItemAsync(TOKEN_KEY);
-            showMessage('Gagal memuat profil. Silakan coba login lagi.', 'error');
+            router.replace('/(tabs)');
           }
         } else {
-        showMessage('Gagal login. Silakan coba lagi.', 'error');
+          await SecureStore.deleteItemAsync(TOKEN_KEY);
+          showMessage('Failed to load your profile. Please log in again.', 'error');
+        }
+      } else {
+        showMessage('Login failed. Please try again.', 'error');
       }
     } catch {
-      showMessage('Terjadi kesalahan sistem. Silakan coba lagi.', 'error');
+      showMessage('Something went wrong. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
   }
+
+  const renderBackground = () => (
+    <View style={StyleSheet.absoluteFill}>
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]} />
+      <View style={[styles.glowTopLeft, { backgroundColor: colors.primary, opacity: isDark ? 0.12 : 0.06 }]} />
+      <View style={[styles.glowBottomRight, { backgroundColor: colors.primary, opacity: isDark ? 0.10 : 0.05 }]} />
+      <View style={[styles.glowTopRight, { backgroundColor: colors.primary, opacity: isDark ? 0.08 : 0.04 }]} />
+    </View>
+  );
 
   return (
     <KeyboardAvoidingView
@@ -150,49 +169,47 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <StatusBar style={isDark ? 'light' : 'dark'} />
+      {renderBackground()}
 
-      <View style={StyleSheet.absoluteFill}>
-        {isDark ? (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: '#131313' }]} />
-        ) : (
-          <LinearGradient colors={['#F8FAFB', '#EDF1F3']} style={StyleSheet.absoluteFill} />
-        )}
-        
-        <Animated.Image
-          source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCNgBJlBY97_QaewYW2r-DjSlc7y1DcxBuTyd2FT01aWpOMDdC6E5Ojftib57g020fqnyp0_maN4R5MEHbvA5mKvbvL62-rTz8r9ur1HeYAdQRNcHj2N8UkRNLsr6n30pKT8wvR2ALUnlrVoH30n83mprQd7LqD0c88IYJTTyGNiDVyADu8naOoqsrI2DdszdWsC6qGeg9DMNEPKErslJTkraaMEw-PLU4zYb0RM7Qzcqh4FeFxhc1IHMBcbbO-zGz4b_LtpTKBW06d' }}
-          style={[styles.bgImage, { transform: [{ scale: bgScaleAnim }], opacity: isDark ? 0.3 : 0.05 }]}
-          resizeMode="cover"
-        />
-        <View style={[styles.overlay, { backgroundColor: isDark ? 'rgba(0,0,0,0.5)' : 'transparent' }]} />
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.responsiveWrapper}>
-
-          <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <Animated.View style={[{ transform: [{ scale: pulseAnim }], marginBottom: 16 }]}>
-              <View style={[styles.iconWrapper, { backgroundColor: isDark ? 'rgba(31, 203, 139, 0.15)' : 'rgba(31, 203, 139, 0.1)' }]}>
-                <MaterialIcons name="sports-soccer" size={64} color={isDark ? colors.primary : '#1FCB8B'} />
+      <ScrollView contentContainerStyle={[styles.scrollContent, isDesktop && styles.desktopScrollContent]} showsVerticalScrollIndicator={false}>
+          <View style={[styles.pageLayout, isDesktop && styles.desktopPageLayout]}>
+            {isDesktop && <AuthPromoPanel />}
+            <View style={isDesktop ? styles.desktopFormColumn : styles.responsiveWrapper}>
+          <Animated.View style={[styles.header, isDesktop && { marginBottom: 20 * desktopScale }, { opacity: headerFade, transform: [{ translateY: headerSlide }] }]}>
+            <Animated.View style={[{ transform: [{ scale: pulseAnim }], marginBottom: 12 * desktopScale }]}> 
+              <View style={[styles.iconWrapper, { width: 88 * desktopScale, height: 88 * desktopScale, borderRadius: 44 * desktopScale, backgroundColor: isDark ? 'rgba(31, 203, 139, 0.15)' : 'rgba(31, 203, 139, 0.1)' }]}> 
+                <MaterialIcons name="sports-soccer" size={56 * desktopScale} color={isDark ? colors.primary : '#1FCB8B'} />
               </View>
             </Animated.View>
-            <Text style={[styles.title, { color: isDark ? colors.primary : '#1FCB8B' }]}>GOAL</Text>
-            <Text style={[styles.subtitle, { color: isDark ? colors.textSecondary : '#4B5563' }]}>Game Arena & Arena League</Text>
+            <Text style={[styles.title, { fontSize: Math.min(48, width * 0.13) * desktopScale, color: isDark ? colors.primary : '#1FCB8B' }]}>G.O.A.L</Text>
+            <Text style={[styles.subtitle, { color: isDark ? colors.textSecondary : '#4B5563' }]}>Find, compare, and book your favorite sports venues.</Text>
           </Animated.View>
 
           <Animated.View style={[
-            styles.glassCard,
-            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-            isDark ? styles.glassCardDark : styles.glassCardLight
+            styles.authCard,
+            isDesktop && { padding: 28 * desktopScale, borderRadius: 32 * desktopScale, width: '100%', maxWidth: 440, alignSelf: 'center' },
+            isDark && {
+              backgroundColor: colors.surfaceWhite,
+              borderColor: colors.borderSubtle,
+              ...(Platform.OS === 'web'
+                ? { boxShadow: '0 20px 60px rgba(0, 0, 0, 0.45)' }
+                : { shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.4, shadowRadius: 30, elevation: 12 }
+              ),
+            },
+            { opacity: cardFade, transform: [{ translateY: cardSlide }] },
           ]}>
+            <Text style={[styles.cardTitle, isDesktop && { fontSize: 28 * desktopScale, marginBottom: 4 * desktopScale }, { color: isDark ? colors.text : '#111827' }]}>Sign In</Text>
+            <Text style={[styles.cardSubtitle, isDesktop && { fontSize: 15 * desktopScale, marginBottom: 12 * desktopScale, lineHeight: 22 * desktopScale }, { color: isDark ? colors.textSecondary : '#6B7280' }]}>Continue booking your favorite venues, anytime, anywhere.</Text>
+
             {message && (
               <Animated.View style={[
                 styles.messageBox,
-                message.type === 'error' 
-                  ? [styles.messageError, { backgroundColor: isDark ? colors.errorContainer : '#FEE2E2', borderLeftColor: isDark ? colors.error : '#DC2626' }] 
+                message.type === 'error'
+                  ? [styles.messageError, { backgroundColor: isDark ? colors.errorContainer : '#FEE2E2', borderLeftColor: isDark ? colors.error : '#DC2626' }]
                   : [styles.messageSuccess, { backgroundColor: isDark ? colors.successLight : '#D1FAE5', borderLeftColor: isDark ? colors.success : '#10B981' }],
-                { opacity: messageAnim, transform: [{ translateY: messageAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }
+                { opacity: messageAnim, transform: [{ translateY: messageAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] },
               ]}>
-                <Text style={[styles.messageText, { color: message.type === 'error' && !isDark ? '#DC2626' : (message.type === 'success' && !isDark ? '#065F46' : colors.text) }]}>
+                <Text style={[styles.messageText, { color: isDark ? (message.type === 'error' ? colors.error : colors.success) : (message.type === 'error' ? '#991B1B' : '#065F46') }]}>
                   {message.text}
                 </Text>
               </Animated.View>
@@ -204,8 +221,13 @@ export default function LoginScreen() {
               onChangeText={onEmailChange}
               onBlur={onEmailBlur}
               keyboardType="email-address"
+              autoComplete="email"
+              textContentType="emailAddress"
+              inputMode="email"
               error={emailError}
               colors={colors}
+              compact={isDesktop}
+              icon={<MaterialIcons name="mail-outline" size={20} color="#6B7280" />}
             />
 
             <FloatingInput
@@ -214,14 +236,17 @@ export default function LoginScreen() {
               onChangeText={onPasswordChange}
               onBlur={onPasswordBlur}
               secureTextEntry={true}
+              autoComplete="current-password"
+              textContentType="password"
               error={passwordError}
               colors={colors}
+              compact={isDesktop}
+              icon={<MaterialIcons name="lock-outline" size={20} color="#6B7280" />}
             />
 
-            <View style={styles.rowBetween}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }} />
+            <View style={[styles.rowBetween, isDesktop && { marginBottom: 14 * desktopScale }]}>
               <TouchableOpacity onPress={() => router.push('/forgot-password')}>
-                <Text style={[styles.forgotText, { color: isDark ? colors.primary : '#1FCB8B' }]}>Lupa Password?</Text>
+                <Text style={[styles.forgotText, { color: isDark ? colors.text : colors.textSecondary }]}>Forgot Password?</Text>
               </TouchableOpacity>
             </View>
 
@@ -232,36 +257,45 @@ export default function LoginScreen() {
               onHoverOut={() => Animated.spring(arrowTranslate, { toValue: 0, useNativeDriver: true }).start()}
               onPress={signInWithEmail}
               disabled={loading}
-              style={{ marginTop: 8 }}
+              style={{ marginTop: 6 }}
             >
-              <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScale }] }]}>
+              <Animated.View style={[styles.buttonWrapper, { opacity: buttonFade, transform: [{ scale: buttonScale }, { translateY: buttonSlide }] }]}>
                 {isDark ? (
-                   <View style={[styles.buttonInner, { backgroundColor: loading ? colors.primaryMuted : colors.primary }]}>
-                     {renderButtonContent()}
-                   </View>
+                  <View style={[styles.buttonInner, isDesktop && { height: 52 * desktopScale, borderRadius: 14 * desktopScale }, { backgroundColor: loading ? colors.primaryMuted : colors.primary }]}>
+                    {renderButtonContent()}
+                  </View>
                 ) : (
-                   <LinearGradient
-                     colors={loading ? ['#A7F3D0', '#6EE7B7'] : ['#1FCB8B', '#00D9A0']}
-                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                     style={styles.buttonInner}
-                   >
-                     {renderButtonContent()}
-                   </LinearGradient>
+                  <LinearGradient
+                    colors={loading ? ['#A7F3D0', '#6EE7B7'] : ['#1FCB8B', '#00D9A0']}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                    style={[styles.buttonInner, isDesktop && { height: 52 * desktopScale, borderRadius: 14 * desktopScale }]}
+                  >
+                    {renderButtonContent()}
+                  </LinearGradient>
                 )}
               </Animated.View>
             </Pressable>
 
-          </Animated.View>
+            <View style={[styles.dividerRow, isDesktop && { marginTop: 18 * desktopScale, marginBottom: 14 * desktopScale }]}>
+              <View style={[styles.dividerLine, { backgroundColor: isDark ? colors.divider : '#E5E7EB' }]} />
+              <Text style={[styles.dividerText, { color: isDark ? colors.textTertiary : '#9CA3AF' }]}>OR</Text>
+              <View style={[styles.dividerLine, { backgroundColor: isDark ? colors.divider : '#E5E7EB' }]} />
+            </View>
 
-          <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
-            <Text style={[styles.footerText, { color: isDark ? colors.textSecondary : '#4B5563' }]}>Belum punya akun? </Text>
-            <TouchableOpacity onPress={() => router.push('/register')}>
-              <Text style={[styles.footerLink, { color: isDark ? colors.primary : '#1FCB8B' }]}>Daftar Gratis</Text>
-            </TouchableOpacity>
+            <View style={styles.createAccountRow}>
+              <Text style={[styles.footerText, { color: isDark ? colors.textSecondary : '#4B5563' }]}>Don&apos;t have an account? </Text>
+              <TouchableOpacity onPress={() => router.push('/register')}>
+                <Text style={[styles.footerLink, { color: isDark ? colors.primary : '#10B981' }]}>Sign Up</Text>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
-
+          </View>
         </View>
       </ScrollView>
+
+      <View style={styles.themeToggleWrap}>
+        <ThemeToggle variant="button" />
+      </View>
     </KeyboardAvoidingView>
   );
 
@@ -282,19 +316,68 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    ...(Platform.OS === 'web' ? ({ minHeight: '100vh', width: '100%', overflow: 'hidden' } as any) : {}),
   },
   bgImage: {
     width: '100%',
     height: '100%',
   },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
+  glowTopLeft: {
+    position: 'absolute',
+    top: -160,
+    left: -140,
+    width: 420,
+    height: 420,
+    borderRadius: 210,
+  },
+  glowBottomRight: {
+    position: 'absolute',
+    bottom: -180,
+    right: -140,
+    width: 460,
+    height: 460,
+    borderRadius: 230,
+  },
+  glowTopRight: {
+    position: 'absolute',
+    top: -120,
+    right: -100,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     paddingVertical: 40,
     paddingHorizontal: 24,
+  },
+  themeToggleWrap: {
+    position: 'absolute',
+    top: 24,
+    right: 24,
+    zIndex: 50,
+  },
+  desktopScrollContent: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    ...(Platform.OS === 'web' ? ({ minHeight: '100vh' } as any) : {}),
+  },
+  pageLayout: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  desktopPageLayout: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    flex: 1,
+  },
+  desktopFormColumn: {
+    flex: 1,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   responsiveWrapper: {
     width: '100%',
@@ -317,47 +400,53 @@ const styles = StyleSheet.create({
     ),
   },
   title: {
-    fontSize: 52,
-    fontWeight: '900',
-    fontStyle: 'italic',
+    fontFamily: FONT_FAMILY,
+    fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 2,
     marginTop: 8,
   },
   subtitle: {
+    fontFamily: FONT_FAMILY,
     fontSize: 16,
     marginTop: 8,
-    fontWeight: '600',
+    fontWeight: '500',
     textAlign: 'center',
+    paddingHorizontal: 16,
+    lineHeight: 22,
   },
-  glassCard: {
-    borderRadius: 24,
+  authCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
     padding: 32,
     borderWidth: 1,
-  },
-  glassCardLight: {
-    backgroundColor: '#FFFFFF',
-    borderColor: 'rgba(255,255,255,0.8)',
+    borderColor: '#E5E7EB',
     ...(Platform.OS === 'web'
-      ? { boxShadow: '0 20px 40px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.02)' }
-      : { shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.06, shadowRadius: 40, elevation: 10 }
+      ? { boxShadow: '0 20px 60px rgba(15, 23, 42, 0.08)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.08, shadowRadius: 30, elevation: 8 }
     ),
   },
-  glassCardDark: {
-    backgroundColor: 'rgba(30,30,30,0.7)',
-    borderColor: 'rgba(255,255,255,0.15)',
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0 15px 25px rgba(0,0,0,0.5)' }
-      : { shadowColor: '#000', shadowOffset: { width: 0, height: 15 }, shadowOpacity: 0.5, shadowRadius: 25, elevation: 10 }
-    ),
+  cardTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  cardSubtitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 15,
+    marginBottom: 24,
+    lineHeight: 22,
+    color: '#6B7280',
   },
   rowBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   forgotText: {
+    fontFamily: FONT_FAMILY,
     fontSize: 13,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -371,7 +460,7 @@ const styles = StyleSheet.create({
     ),
   },
   buttonInner: {
-    height: 60,
+    height: 56,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 14,
@@ -381,23 +470,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: {
+    fontFamily: FONT_FAMILY,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 2,
   },
-  footer: {
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginTop: 20,
+    marginBottom: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+  createAccountRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 40,
+    alignItems: 'center',
+    paddingBottom: 2,
   },
   footerText: {
+    fontFamily: FONT_FAMILY,
     fontSize: 15,
     fontWeight: '500',
   },
   footerLink: {
+    fontFamily: FONT_FAMILY,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   messageBox: {
     borderRadius: 12,
@@ -408,7 +518,9 @@ const styles = StyleSheet.create({
   messageError: {},
   messageSuccess: {},
   messageText: {
+    fontFamily: FONT_FAMILY,
     fontSize: 15,
     fontWeight: '500',
   },
 });
+

@@ -166,7 +166,7 @@ Login user.
 ---
 
 #### `POST /auth/forgot-password`
-Kirim email reset password. Selalu return success meski email tidak terdaftar.
+Kirim email reset password. Hanya mengirim jika email terdaftar; jika tidak, return 422.
 
 **Request:**
 ```json
@@ -178,7 +178,14 @@ Kirim email reset password. Selalu return success meski email tidak terdaftar.
 **Response (200):**
 ```json
 {
-  "message": "Tautan reset password telah dikirim ke email Anda jika terdaftar."
+  "message": "Tautan reset password telah dikirim ke email Anda."
+}
+```
+
+**Response (422 - email tidak terdaftar):**
+```json
+{
+  "message": "Email tidak terdaftar."
 }
 ```
 

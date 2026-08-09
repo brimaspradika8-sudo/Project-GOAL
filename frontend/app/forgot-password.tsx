@@ -14,17 +14,24 @@ import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { getErrorMessage } from '../lib/api';
 import { apiFetch } from '../lib/apiClient';
 import { fieldError } from '../lib/formValidation';
+import { useBreakpoint } from '../lib/responsive';
+import AuthPromoPanel from '../components/AuthPromoPanel';
+import ThemeToggle from '../components/ThemeToggle';
+import { FONT_FAMILY } from '../components/goalTheme';
 
 function fpValidateEmail(v: string): string {
-  if (!v.trim()) return 'Email wajib diisi.';
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) return 'Format email tidak valid.';
+  if (!v.trim()) return 'Email is required.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) return 'Invalid email format.';
   return '';
 }
 
 export default function ForgotPasswordScreen() {
   const { colors, resolved } = useTheme();
   const isDark = resolved === 'dark';
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const breakpoint = useBreakpoint();
+  const isDesktop = breakpoint === 'desktop';
+  const desktopScale = isDesktop ? Math.max(0.78, Math.min(1.08, Math.min(width / 1440, height / 900))) : 1;
   
   const [email, setEmail] = useState('');
   const [emailTouched, setEmailTouched] = useState(false);
@@ -33,7 +40,7 @@ export default function ForgotPasswordScreen() {
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
   const [emailSent, setEmailSent] = useState(false);
 
-  const { fadeAnim, slideAnim, pulseAnim, bgScaleAnim } = useAuthAnimations();
+  const { headerFade, headerSlide, cardFade, cardSlide, buttonFade, buttonSlide, pulseAnim } = useAuthAnimations();
   const messageAnim = useRef(new Animated.Value(0)).current;
   const buttonScale = useRef(new Animated.Value(1)).current;
   const arrowTranslate = useRef(new Animated.Value(0)).current;
@@ -57,7 +64,7 @@ export default function ForgotPasswordScreen() {
     const eErr = fpValidateEmail(email);
     setEmailError(eErr);
     if (eErr) {
-      showMessage('Periksa kembali email Anda.', 'error');
+      showMessage('Please check your email.', 'error');
       return;
     }
 
@@ -74,14 +81,14 @@ export default function ForgotPasswordScreen() {
       const data = await res.json();
 
       if (!res.ok) {
-        showMessage(getErrorMessage(data, 'Gagal mengirim tautan reset.'), 'error');
+        showMessage(getErrorMessage(data, 'Failed to send reset link.'), 'error');
         setLoading(false);
         return;
       }
 
       setEmailSent(true);
     } catch {
-      showMessage('Terjadi kesalahan sistem. Silakan coba lagi.', 'error');
+      showMessage('Something went wrong. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -89,18 +96,10 @@ export default function ForgotPasswordScreen() {
 
   const renderBackground = () => (
     <View style={StyleSheet.absoluteFill}>
-      {isDark ? (
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: '#131313' }]} />
-      ) : (
-        <LinearGradient colors={['#F8FAFB', '#EDF1F3']} style={StyleSheet.absoluteFill} />
-      )}
-      
-      <Animated.Image
-        source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCNgBJlBY97_QaewYW2r-DjSlc7y1DcxBuTyd2FT01aWpOMDdC6E5Ojftib57g020fqnyp0_maN4R5MEHbvA5mKvbvL62-rTz8r9ur1HeYAdQRNcHj2N8UkRNLsr6n30pKT8wvR2ALUnlrVoH30n83mprQd7LqD0c88IYJTTyGNiDVyADu8naOoqsrI2DdszdWsC6qGeg9DMNEPKErslJTkraaMEw-PLU4zYb0RM7Qzcqh4FeFxhc1IHMBcbbO-zGz4b_LtpTKBW06d' }}
-        style={[styles.bgImage, { transform: [{ scale: bgScaleAnim }], opacity: isDark ? 0.3 : 0.05 }]}
-        resizeMode="cover"
-      />
-      <View style={[styles.overlay, { backgroundColor: isDark ? 'rgba(0,0,0,0.5)' : 'transparent' }]} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background }]} />
+      <View style={[styles.glowTopLeft, { backgroundColor: colors.primary, opacity: isDark ? 0.12 : 0.06 }]} />
+      <View style={[styles.glowBottomRight, { backgroundColor: colors.primary, opacity: isDark ? 0.10 : 0.05 }]} />
+      <View style={[styles.glowTopRight, { backgroundColor: colors.primary, opacity: isDark ? 0.08 : 0.04 }]} />
     </View>
   );
 
@@ -130,23 +129,44 @@ export default function ForgotPasswordScreen() {
         <StatusBar style={isDark ? 'light' : 'dark'} />
         {renderBackground()}
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.responsiveWrapper}>
-            <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-              <Animated.View style={[{ transform: [{ scale: pulseAnim }], marginBottom: 16 }]}>
-                <View style={[styles.iconWrapper, { backgroundColor: isDark ? 'rgba(31, 203, 139, 0.15)' : 'rgba(31, 203, 139, 0.1)' }]}>
-                  <MaterialIcons name="mark-email-read" size={56} color={isDark ? colors.primary : '#1FCB8B'} />
+        <ScrollView contentContainerStyle={[styles.scrollContent, isDesktop && styles.desktopScrollContent]} showsVerticalScrollIndicator={false}>
+          <View style={[styles.pageLayout, isDesktop && styles.desktopPageLayout]}>
+            {isDesktop && <AuthPromoPanel />}
+            <View style={isDesktop ? styles.desktopFormColumn : styles.responsiveWrapper}>
+            {isDesktop && (
+              <TouchableOpacity
+                onPress={() => router.push('/login')}
+                style={styles.desktopBackButton}
+                accessibilityRole="button"
+                accessibilityLabel="Back to Login"
+                accessibilityHint="Returns to the login screen"
+              >
+                <MaterialIcons name="arrow-back" size={22} color={isDark ? colors.primary : '#10B981'} />
+              </TouchableOpacity>
+            )}
+            <Animated.View style={[styles.header, isDesktop && { marginBottom: 20 * desktopScale }, { opacity: headerFade, transform: [{ translateY: headerSlide }] }]}>
+              <Animated.View style={[{ transform: [{ scale: pulseAnim }], marginBottom: 12 * desktopScale }]}>
+                <View style={[styles.iconWrapper, { width: 88 * desktopScale, height: 88 * desktopScale, borderRadius: 44 * desktopScale, backgroundColor: isDark ? 'rgba(31, 203, 139, 0.15)' : 'rgba(31, 203, 139, 0.1)' }]}>
+                  <MaterialIcons name="check-circle" size={56 * desktopScale} color={isDark ? colors.primary : '#1FCB8B'} />
                 </View>
               </Animated.View>
-              <Text style={[styles.title, { fontSize: Math.min(48, width * 0.13), color: isDark ? colors.primary : '#1FCB8B' }]}>TERKIRIM!</Text>
-              <Text style={[styles.subtitle, { color: isDark ? colors.textSecondary : '#4B5563' }]}>Tautan reset password telah dikirim ke</Text>
+              <Text style={[styles.title, { fontSize: Math.min(48, width * 0.13) * desktopScale, color: isDark ? colors.primary : '#1FCB8B' }]}>SENT!</Text>
+              <Text style={[styles.subtitle, { color: isDark ? colors.textSecondary : '#4B5563' }]}>Your password reset link has been sent to</Text>
               <Text style={[styles.emailHighlight, { color: isDark ? colors.primary : '#1FCB8B' }]} numberOfLines={1} ellipsizeMode="tail">{email}</Text>
             </Animated.View>
 
             <Animated.View style={[
-              styles.glassCard,
-              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-              isDark ? styles.glassCardDark : styles.glassCardLight
+            styles.authCard,
+            isDesktop && { padding: 28 * desktopScale, borderRadius: 32 * desktopScale, width: '100%', maxWidth: 440, alignSelf: 'center' },
+            isDark && {
+              backgroundColor: colors.surfaceWhite,
+              borderColor: colors.borderSubtle,
+              ...(Platform.OS === 'web'
+                ? { boxShadow: '0 20px 60px rgba(0, 0, 0, 0.45)' }
+                : { shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.4, shadowRadius: 30, elevation: 12 }
+              ),
+            },
+            { opacity: cardFade, transform: [{ translateY: cardSlide }] },
             ]}>
               {renderMessage()}
 
@@ -155,7 +175,7 @@ export default function ForgotPasswordScreen() {
               </View>
 
               <Text style={[styles.sentDesc, { color: isDark ? colors.textTertiary : '#6B7280' }]}>
-                Buka aplikasi email Anda dan cari tautan untuk mengatur ulang password. Jika tidak ada di inbox, cek folder spam atau junk.
+                Open your email app and look for the link to reset your password. If it is not in your inbox, check your spam or junk folder.
               </Text>
 
               <Pressable
@@ -165,15 +185,15 @@ export default function ForgotPasswordScreen() {
                 onHoverOut={() => Animated.spring(arrowTranslate, { toValue: 0, useNativeDriver: true }).start()}
                 onPress={handleSend}
                 disabled={loading}
-                style={{ marginTop: 8 }}
+                style={{ marginTop: 6 }}
               >
-                <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScale }] }]}>
+                <Animated.View style={[styles.buttonWrapper, { opacity: buttonFade, transform: [{ scale: buttonScale }, { translateY: buttonSlide }] }]}>
                   {isDark ? (
-                     <View style={[styles.buttonInner, { backgroundColor: loading ? colors.primaryMuted : colors.primary }]}>
+                     <View style={[styles.buttonInner, isDesktop && { height: 52 * desktopScale, borderRadius: 14 * desktopScale }, { backgroundColor: loading ? colors.primaryMuted : colors.primary }]}>
                        {loading ? <ActivityIndicator color={colors.onPrimary} /> : (
                          <View style={styles.buttonContent}>
                            <MaterialIcons name="refresh" size={20} color={colors.onPrimary} style={{ marginRight: 8 }} />
-                           <Text style={[styles.buttonText, { color: colors.onPrimary }]}>KIRIM ULANG</Text>
+                            <Text style={[styles.buttonText, { color: colors.onPrimary }]}>RESEND</Text>
                          </View>
                        )}
                      </View>
@@ -181,28 +201,39 @@ export default function ForgotPasswordScreen() {
                      <LinearGradient
                        colors={loading ? ['#A7F3D0', '#6EE7B7'] : ['#1FCB8B', '#00D9A0']}
                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                       style={styles.buttonInner}
+                       style={[styles.buttonInner, isDesktop && { height: 52 * desktopScale, borderRadius: 14 * desktopScale }]}
                      >
                        {loading ? <ActivityIndicator color="#FFFFFF" /> : (
                          <View style={styles.buttonContent}>
                            <MaterialIcons name="refresh" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                           <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>KIRIM ULANG</Text>
+                            <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>RESEND</Text>
                          </View>
                        )}
                      </LinearGradient>
                   )}
                 </Animated.View>
               </Pressable>
-            </Animated.View>
 
-            <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
-              <TouchableOpacity onPress={() => router.push('/login')} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <MaterialIcons name="arrow-back" size={16} color={isDark ? colors.primary : '#1FCB8B'} style={{ marginRight: 4 }} />
-                <Text style={[styles.footerLink, { color: isDark ? colors.primary : '#1FCB8B' }]}>Kembali ke Login</Text>
-              </TouchableOpacity>
+              <View style={[styles.dividerRow, isDesktop && { marginTop: 18 * desktopScale, marginBottom: 14 * desktopScale }]}>
+                <View style={[styles.dividerLine, { backgroundColor: isDark ? colors.divider : '#E5E7EB' }]} />
+                <Text style={[styles.dividerText, { color: isDark ? colors.textTertiary : '#9CA3AF' }]}>OR</Text>
+                <View style={[styles.dividerLine, { backgroundColor: isDark ? colors.divider : '#E5E7EB' }]} />
+              </View>
+
+              <View style={[styles.createAccountRow, isDesktop && styles.desktopOnlyHidden]}>
+                <TouchableOpacity onPress={() => router.push('/login')} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <MaterialIcons name="arrow-back" size={16} color={isDark ? colors.primary : '#10B981'} style={{ marginRight: 4 }} />
+                  <Text style={[styles.footerLink, { color: isDark ? colors.primary : '#10B981' }]}>Back to Login</Text>
+                </TouchableOpacity>
+              </View>
             </Animated.View>
+            </View>
           </View>
         </ScrollView>
+
+        <View style={styles.themeToggleWrap}>
+          <ThemeToggle variant="button" />
+        </View>
       </KeyboardAvoidingView>
     );
   }
@@ -215,23 +246,46 @@ export default function ForgotPasswordScreen() {
       <StatusBar style={isDark ? 'light' : 'dark'} />
       {renderBackground()}
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.responsiveWrapper}>
-          <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <Animated.View style={[{ transform: [{ scale: pulseAnim }], marginBottom: 16 }]}>
-              <View style={[styles.iconWrapper, { backgroundColor: isDark ? 'rgba(31, 203, 139, 0.15)' : 'rgba(31, 203, 139, 0.1)' }]}>
-                <MaterialIcons name="lock-reset" size={56} color={isDark ? colors.primary : '#1FCB8B'} />
+      <ScrollView contentContainerStyle={[styles.scrollContent, isDesktop && styles.desktopScrollContent]} showsVerticalScrollIndicator={false}>
+        <View style={[styles.pageLayout, isDesktop && styles.desktopPageLayout]}>
+          {isDesktop && <AuthPromoPanel />}
+          <View style={isDesktop ? styles.desktopFormColumn : styles.responsiveWrapper}>
+          {isDesktop && (
+            <TouchableOpacity
+              onPress={() => router.push('/login')}
+              style={styles.desktopBackButton}
+              accessibilityRole="button"
+              accessibilityLabel="Back to Login"
+              accessibilityHint="Returns to the login screen"
+            >
+              <MaterialIcons name="arrow-back" size={22} color={isDark ? colors.primary : '#10B981'} />
+            </TouchableOpacity>
+          )}
+          <Animated.View style={[styles.header, isDesktop && { marginBottom: 20 * desktopScale }, { opacity: headerFade, transform: [{ translateY: headerSlide }] }]}>
+            <Animated.View style={[{ transform: [{ scale: pulseAnim }], marginBottom: 12 * desktopScale }]}>
+              <View style={[styles.iconWrapper, { width: 88 * desktopScale, height: 88 * desktopScale, borderRadius: 44 * desktopScale, backgroundColor: isDark ? 'rgba(31, 203, 139, 0.15)' : 'rgba(31, 203, 139, 0.1)' }]}>
+                <MaterialIcons name="lock-reset" size={56 * desktopScale} color={isDark ? colors.primary : '#1FCB8B'} />
               </View>
             </Animated.View>
-            <Text style={[styles.title, { fontSize: Math.min(48, width * 0.13), color: isDark ? colors.primary : '#1FCB8B' }]}>RESET</Text>
-            <Text style={[styles.subtitle, { color: isDark ? colors.textSecondary : '#4B5563' }]}>Masukkan email Anda dan kami akan mengirimkan tautan untuk reset password.</Text>
+            <Text style={[styles.title, { fontSize: Math.min(48, width * 0.13) * desktopScale, color: isDark ? colors.primary : '#1FCB8B' }]}>G.O.A.L</Text>
+            <Text style={[styles.subtitle, { color: isDark ? colors.textSecondary : '#4B5563' }]}>We will email you a link to reset your password.</Text>
           </Animated.View>
 
           <Animated.View style={[
-            styles.glassCard,
-            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-            isDark ? styles.glassCardDark : styles.glassCardLight
+            styles.authCard,
+            isDesktop && { padding: 28 * desktopScale, borderRadius: 32 * desktopScale, width: '100%', maxWidth: 440, alignSelf: 'center' },
+            isDark && {
+              backgroundColor: colors.surfaceWhite,
+              borderColor: colors.borderSubtle,
+              ...(Platform.OS === 'web'
+                ? { boxShadow: '0 20px 60px rgba(0, 0, 0, 0.45)' }
+                : { shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.4, shadowRadius: 30, elevation: 12 }
+              ),
+            },
+            { opacity: cardFade, transform: [{ translateY: cardSlide }] },
           ]}>
+            <Text style={[styles.cardTitle, isDesktop && { fontSize: 28 * desktopScale, marginBottom: 4 * desktopScale }, { color: isDark ? colors.text : '#111827' }]}>Forgot Password</Text>
+            <Text style={[styles.cardSubtitle, isDesktop && { fontSize: 15 * desktopScale, marginBottom: 12 * desktopScale, lineHeight: 22 * desktopScale }, { color: isDark ? colors.textSecondary : '#6B7280' }]}>Enter your registered email, and we will send you a reset link.</Text>
             {renderMessage()}
 
             <FloatingInput
@@ -240,8 +294,13 @@ export default function ForgotPasswordScreen() {
               onChangeText={onFpEmailChange}
               onBlur={onFpEmailBlur}
               keyboardType="email-address"
+              autoComplete="email"
+              textContentType="emailAddress"
+              inputMode="email"
               error={emailError}
               colors={colors}
+              compact={isDesktop}
+              icon={<MaterialIcons name="mail-outline" size={20} color="#6B7280" />}
             />
 
             <Pressable
@@ -251,15 +310,15 @@ export default function ForgotPasswordScreen() {
               onHoverOut={() => Animated.spring(arrowTranslate, { toValue: 0, useNativeDriver: true }).start()}
               onPress={handleSend}
               disabled={loading}
-              style={{ marginTop: 8 }}
+              style={{ marginTop: 6 }}
             >
-              <Animated.View style={[styles.buttonWrapper, { transform: [{ scale: buttonScale }] }]}>
+              <Animated.View style={[styles.buttonWrapper, { opacity: buttonFade, transform: [{ scale: buttonScale }, { translateY: buttonSlide }] }]}>
                 {isDark ? (
-                   <View style={[styles.buttonInner, { backgroundColor: loading ? colors.primaryMuted : colors.primary }]}>
+                   <View style={[styles.buttonInner, isDesktop && { height: 52 * desktopScale, borderRadius: 14 * desktopScale }, { backgroundColor: loading ? colors.primaryMuted : colors.primary }]}>
                      {loading ? <ActivityIndicator color={colors.onPrimary} /> : (
                        <View style={styles.buttonContent}>
                          <MaterialIcons name="send" size={20} color={colors.onPrimary} style={{ marginRight: 8 }} />
-                         <Text style={[styles.buttonText, { color: colors.onPrimary }]}>KIRIM LINK</Text>
+                         <Text style={[styles.buttonText, { color: colors.onPrimary }]}>SEND LINK</Text>
                        </View>
                      )}
                    </View>
@@ -267,28 +326,39 @@ export default function ForgotPasswordScreen() {
                    <LinearGradient
                      colors={loading ? ['#A7F3D0', '#6EE7B7'] : ['#1FCB8B', '#00D9A0']}
                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                     style={styles.buttonInner}
+                     style={[styles.buttonInner, isDesktop && { height: 52 * desktopScale, borderRadius: 14 * desktopScale }]}
                    >
                      {loading ? <ActivityIndicator color="#FFFFFF" /> : (
                        <View style={styles.buttonContent}>
                          <MaterialIcons name="send" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                         <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>KIRIM LINK</Text>
+                          <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>SEND LINK</Text>
                        </View>
                      )}
                    </LinearGradient>
                 )}
               </Animated.View>
             </Pressable>
-          </Animated.View>
 
-          <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
-            <TouchableOpacity onPress={() => router.push('/login')} style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <MaterialIcons name="arrow-back" size={16} color={isDark ? colors.primary : '#1FCB8B'} style={{ marginRight: 4 }} />
-              <Text style={[styles.footerLink, { color: isDark ? colors.primary : '#1FCB8B' }]}>Kembali ke Login</Text>
-            </TouchableOpacity>
+            <View style={[styles.dividerRow, isDesktop && { marginTop: 18 * desktopScale, marginBottom: 14 * desktopScale }]}>
+              <View style={[styles.dividerLine, { backgroundColor: isDark ? colors.divider : '#E5E7EB' }]} />
+
+              <View style={[styles.dividerLine, { backgroundColor: isDark ? colors.divider : '#E5E7EB' }]} />
+            </View>
+
+            <View style={[styles.createAccountRow, isDesktop && styles.desktopOnlyHidden]}>
+              <TouchableOpacity onPress={() => router.push('/login')} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <MaterialIcons name="arrow-back" size={16} color={isDark ? colors.primary : '#10B981'} style={{ marginRight: 4 }} />
+                <Text style={[styles.footerLink, { color: isDark ? colors.primary : '#10B981' }]}>Back to Login</Text>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
+          </View>
         </View>
       </ScrollView>
+
+      <View style={styles.themeToggleWrap}>
+        <ThemeToggle variant="button" />
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -296,19 +366,82 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    ...(Platform.OS === 'web' ? ({ minHeight: '100vh', width: '100%', overflow: 'hidden' } as any) : {}),
   },
   bgImage: {
     width: '100%',
     height: '100%',
   },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
+  glowTopLeft: {
+    position: 'absolute',
+    top: -160,
+    left: -140,
+    width: 420,
+    height: 420,
+    borderRadius: 210,
+  },
+  glowBottomRight: {
+    position: 'absolute',
+    bottom: -180,
+    right: -140,
+    width: 460,
+    height: 460,
+    borderRadius: 230,
+  },
+  glowTopRight: {
+    position: 'absolute',
+    top: -120,
+    right: -100,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     paddingVertical: 40,
     paddingHorizontal: 24,
+  },
+  themeToggleWrap: {
+    position: 'absolute',
+    top: 24,
+    right: 24,
+    zIndex: 50,
+  },
+  desktopScrollContent: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    ...(Platform.OS === 'web' ? ({ minHeight: '100vh' } as any) : {}),
+  },
+  pageLayout: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  desktopPageLayout: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    flex: 1,
+  },
+  desktopFormColumn: {
+    flex: 1,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  desktopBackButton: {
+    position: 'absolute',
+    top: 24,
+    left: 24,
+    zIndex: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  desktopOnlyHidden: {
+    display: 'none',
   },
   responsiveWrapper: {
     width: '100%',
@@ -331,46 +464,51 @@ const styles = StyleSheet.create({
     ),
   },
   title: {
-    fontWeight: '900',
-    fontStyle: 'italic',
+    fontFamily: FONT_FAMILY,
+    fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 2,
     marginTop: 8,
   },
   subtitle: {
+    fontFamily: FONT_FAMILY,
     fontSize: 16,
     marginTop: 8,
-    fontWeight: '600',
+    fontWeight: '500',
     textAlign: 'center',
     paddingHorizontal: 20,
     lineHeight: 22,
   },
   emailHighlight: {
+    fontFamily: FONT_FAMILY,
     fontSize: 17,
     marginTop: 8,
-    fontWeight: '800',
+    fontWeight: '700',
     textAlign: 'center',
   },
-  glassCard: {
-    borderRadius: 24,
+  authCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
     padding: 32,
     borderWidth: 1,
-  },
-  glassCardLight: {
-    backgroundColor: '#FFFFFF',
-    borderColor: 'rgba(255,255,255,0.8)',
+    borderColor: '#E5E7EB',
     ...(Platform.OS === 'web'
-      ? { boxShadow: '0 20px 40px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.02)' }
-      : { shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.06, shadowRadius: 40, elevation: 10 }
+      ? { boxShadow: '0 20px 60px rgba(15, 23, 42, 0.08)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.08, shadowRadius: 30, elevation: 8 }
     ),
   },
-  glassCardDark: {
-    backgroundColor: 'rgba(30,30,30,0.7)',
-    borderColor: 'rgba(255,255,255,0.15)',
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0 15px 25px rgba(0,0,0,0.5)' }
-      : { shadowColor: '#000', shadowOffset: { width: 0, height: 15 }, shadowOpacity: 0.5, shadowRadius: 25, elevation: 10 }
-    ),
+  cardTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  cardSubtitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 15,
+    marginBottom: 24,
+    lineHeight: 22,
+    color: '#6B7280',
   },
   sentIconWrap: {
     width: 80,
@@ -383,6 +521,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   sentDesc: {
+    fontFamily: FONT_FAMILY,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
@@ -397,7 +536,7 @@ const styles = StyleSheet.create({
     ),
   },
   buttonInner: {
-    height: 60,
+    height: 56,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 14,
@@ -407,19 +546,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: {
+    fontFamily: FONT_FAMILY,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 2,
   },
-  footer: {
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginTop: 20,
+    marginBottom: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+  createAccountRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 40,
+    alignItems: 'center',
+    paddingBottom: 2,
   },
   footerLink: {
+    fontFamily: FONT_FAMILY,
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   messageBox: {
     borderRadius: 12,
@@ -430,7 +589,9 @@ const styles = StyleSheet.create({
   messageError: {},
   messageSuccess: {},
   messageText: {
+    fontFamily: FONT_FAMILY,
     fontSize: 15,
     fontWeight: '500',
   },
 });
+

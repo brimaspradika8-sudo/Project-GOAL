@@ -1,5 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
-import { Stack, router } from 'expo-router';
+import { Stack, router, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as NativeSplash from 'expo-splash-screen';
 import * as Font from 'expo-font';
@@ -67,6 +67,8 @@ export default function RootLayout() {
 
 function RootLayoutInner() {
   const { resolved, colors, ready: themeReady } = useTheme();
+  const pathname = usePathname();
+  const isAuthRoute = ['/login', '/register', '/forgot-password', '/reset-password'].includes(pathname);
   const shouldBlockForFonts = Platform.OS !== 'web';
   const [fontsLoaded, fontError] = Font.useFonts({
     'Plus Jakarta Sans': require('../assets/fonts/PlusJakartaSans-Regular.ttf'),
@@ -117,7 +119,9 @@ function RootLayoutInner() {
         if (profile) {
           useProfileStore.setState({ profile, loading: false });
 
-          if (profile.onboarding_completed === false) {
+          if (isAuthRoute) {
+            // Tetap di halaman auth (mis. tautan reset dari email) tanpa redirect.
+          } else if (profile.onboarding_completed === false) {
             router.replace('/onboarding');
           } else if (profile.role === 'super_admin') {
             router.replace('/(admin)/dashboard');
@@ -131,10 +135,14 @@ function RootLayoutInner() {
             await SecureStore.deleteItemAsync(TOKEN_KEY);
             useProfileStore.getState().clearProfile();
           }
-          router.replace('/login');
+          if (!isAuthRoute) {
+            router.replace('/login');
+          }
         }
       } else {
-        router.replace('/login');
+        if (!isAuthRoute) {
+          router.replace('/login');
+        }
         useProfileStore.getState().clearProfile();
       }
 
@@ -143,7 +151,7 @@ function RootLayoutInner() {
     };
 
     initialize();
-  }, [showSplash, themeReady]);
+  }, [showSplash, themeReady, isAuthRoute]);
 
   if (shouldBlockForFonts && !fontsLoaded && !fontsFallback && !fontError) {
     return null;

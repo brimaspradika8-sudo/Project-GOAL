@@ -13,22 +13,23 @@ import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { getErrorMessage } from '../lib/api';
 import { apiFetch } from '../lib/apiClient';
 import { fieldError } from '../lib/formValidation';
+import ThemeToggle from '../components/ThemeToggle';
 
 function cpValidateCurrent(v: string): string {
-  if (!v) return 'Password saat ini wajib diisi.';
+  if (!v) return 'Current password is required.';
   return '';
 }
 function cpValidatePassword(v: string): string {
-  if (!v) return 'Password baru wajib diisi.';
-  if (v.length < 8) return 'Password minimal 8 karakter.';
-  if (!/[a-z]/.test(v)) return 'Password harus mengandung huruf kecil.';
-  if (!/[A-Z]/.test(v)) return 'Password harus mengandung huruf besar.';
-  if (!/[0-9]/.test(v)) return 'Password harus mengandung angka.';
+  if (!v) return 'New password is required.';
+  if (v.length < 8) return 'Password must be at least 8 characters.';
+  if (!/[a-z]/.test(v)) return 'Password must contain a lowercase letter.';
+  if (!/[A-Z]/.test(v)) return 'Password must contain an uppercase letter.';
+  if (!/[0-9]/.test(v)) return 'Password must contain a number.';
   return '';
 }
 function cpValidateConfirm(v: string, password: string): string {
-  if (!v) return 'Verifikasi password wajib diisi.';
-  if (v !== password) return 'Password baru tidak cocok!';
+  if (!v) return 'Please confirm your password.';
+  if (v !== password) return 'New passwords do not match!';
   return '';
 }
 
@@ -73,11 +74,11 @@ export default function ChangePasswordScreen() {
     const cfErr = cpValidateConfirm(confirmPassword, password);
     setCurrentError(cErr); setPasswordError(pErr); setConfirmError(cfErr);
     if (cErr || pErr || cfErr) {
-      showMessage('Periksa kembali isian Anda.', 'error');
+      showMessage('Please check your entries.', 'error');
       return;
     }
     if (password === currentPassword) {
-      showMessage('Password baru harus berbeda dari password saat ini.', 'error');
+      showMessage('New password must be different from the current password.', 'error');
       return;
     }
 
@@ -93,13 +94,13 @@ export default function ChangePasswordScreen() {
       const data = await res.json();
 
       if (res.ok) {
-        showMessage('Password berhasil diperbarui!', 'success');
+        showMessage('Password updated successfully!', 'success');
         setTimeout(() => router.back(), 1500);
       } else {
-        showMessage(getErrorMessage(data, 'Gagal memperbarui password.'), 'error');
+        showMessage(getErrorMessage(data, 'Failed to update password.'), 'error');
       }
     } catch {
-      showMessage('Terjadi kesalahan sistem.', 'error');
+      showMessage('Something went wrong.', 'error');
     } finally {
       setLoading(false);
     }
@@ -121,7 +122,7 @@ export default function ChangePasswordScreen() {
             <Animated.View style={[{ transform: [{ scale: pulseAnim }], marginBottom: 12 }, Platform.OS === 'web' ? { boxShadow: '0 0 20px rgba(75,226,119,0.6)' } : { shadowColor: '#4be277', shadowOpacity: 0.6, shadowRadius: 20, elevation: 15 }]}>
               <MaterialIcons name="lock" size={56} color="#4be277" />
             </Animated.View>
-            <Text style={styles.title}>UBAH PASSWORD</Text>
+            <Text style={styles.title}>CHANGE PASSWORD</Text>
           </Animated.View>
           <Animated.View style={[styles.glassCard, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
             {message && (
@@ -129,13 +130,13 @@ export default function ChangePasswordScreen() {
                 <Text style={styles.messageText}>{message.text}</Text>
               </Animated.View>
             )}
-            <FloatingInput label="Password Saat Ini" value={currentPassword} onChangeText={onCpCurrentChange} onBlur={onCpCurrentBlur} secureTextEntry={true} error={currentError} colors={AUTH_DARK_COLORS} />
-            <FloatingInput label="Password Baru" value={password} onChangeText={onCpPasswordChange} onBlur={onCpPasswordBlur} secureTextEntry={true} error={passwordError} colors={AUTH_DARK_COLORS} />
-            <FloatingInput label="Ulangi Password Baru" value={confirmPassword} onChangeText={onCpConfirmChange} onBlur={onCpConfirmBlur} secureTextEntry={true} error={confirmError} colors={AUTH_DARK_COLORS} />
+            <FloatingInput label="Current Password" value={currentPassword} onChangeText={onCpCurrentChange} onBlur={onCpCurrentBlur} secureTextEntry={true} error={currentError} colors={AUTH_DARK_COLORS} />
+            <FloatingInput label="New Password" value={password} onChangeText={onCpPasswordChange} onBlur={onCpPasswordBlur} secureTextEntry={true} error={passwordError} colors={AUTH_DARK_COLORS} />
+            <FloatingInput label="Confirm New Password" value={confirmPassword} onChangeText={onCpConfirmChange} onBlur={onCpConfirmBlur} secureTextEntry={true} error={confirmError} colors={AUTH_DARK_COLORS} />
             <TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={handleChangePassword} disabled={loading} activeOpacity={0.8}>
               {loading ? <ActivityIndicator color="#0e2a14" /> : (
                 <View style={styles.buttonContent}>
-                  <Text style={styles.buttonText}>SIMPAN</Text>
+                  <Text style={styles.buttonText}>SAVE</Text>
                   <MaterialIcons name="save" size={20} color="#005321" style={{ marginLeft: 8 }} />
                 </View>
               )}
@@ -144,11 +145,15 @@ export default function ChangePasswordScreen() {
           <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
             <TouchableOpacity onPress={() => router.back()} style={{ flexDirection: 'row', alignItems: 'center' }}>
               <MaterialIcons name="arrow-back" size={16} color="#4be277" style={{ marginRight: 4 }} />
-              <Text style={styles.footerLink}>Kembali</Text>
+              <Text style={styles.footerLink}>Back</Text>
             </TouchableOpacity>
           </Animated.View>
         </View>
       </ScrollView>
+
+      <View style={styles.themeToggleWrap}>
+        <ThemeToggle variant="button" />
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -158,10 +163,11 @@ const styles = StyleSheet.create({
   bgImage: { width: '100%', height: '100%', opacity: 0.5 },
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)' },
   scrollContent: { flexGrow: 1, justifyContent: 'center', paddingVertical: 40, paddingHorizontal: 24 },
+  themeToggleWrap: { position: 'absolute', top: 24, right: 24, zIndex: 50 },
   responsiveWrapper: { width: '100%', maxWidth: 440, alignSelf: 'center' },
   header: { alignItems: 'center', marginBottom: 40 },
   title: { fontSize: 36, fontWeight: '900', color: '#4be277', fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: 2, ...(Platform.OS === 'web' ? { textShadow: '0px 2px 10px rgba(75,226,119,0.4)' } : { textShadowColor: 'rgba(75,226,119,0.4)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10 }), textAlign: 'center' },
-  glassCard: { backgroundColor: 'rgba(30,30,30,0.7)', borderRadius: 20, padding: 28, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', ...(Platform.OS === 'web' ? { boxShadow: '0 15px 25px rgba(0,0,0,0.5)' } : { shadowColor: '#000', shadowOffset: { width: 0, height: 15 }, shadowOpacity: 0.5, shadowRadius: 25, elevation: 10 }) },
+  glassCard: { backgroundColor: '#1C2635', borderRadius: 20, padding: 28, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', ...(Platform.OS === 'web' ? { boxShadow: '0 15px 25px rgba(0,0,0,0.5)' } : { shadowColor: '#000', shadowOffset: { width: 0, height: 15 }, shadowOpacity: 0.5, shadowRadius: 25, elevation: 10 }) },
   button: { backgroundColor: '#4be277', height: 60, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 8, ...(Platform.OS === 'web' ? { boxShadow: '0 6px 12px rgba(75,226,119,0.4)' } : { shadowColor: '#4be277', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 6 }) },
   buttonDisabled: { backgroundColor: '#2a8b46', ...(Platform.OS === 'web' ? { boxShadow: 'none' } : { shadowOpacity: 0, elevation: 0 }) },
   buttonContent: { flexDirection: 'row', alignItems: 'center' },
@@ -173,3 +179,4 @@ const styles = StyleSheet.create({
   messageSuccess: { backgroundColor: '#0a2614', borderLeftWidth: 4, borderLeftColor: '#4be277' },
   messageText: { color: '#e5e2e1', fontSize: 15 },
 });
+

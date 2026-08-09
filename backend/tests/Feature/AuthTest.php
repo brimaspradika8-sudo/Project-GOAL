@@ -147,13 +147,33 @@ class AuthTest extends TestCase
             ->assertJson(['message' => 'Email atau password salah.']);
     }
 
-    public function test_forgot_password_unregistered_email_returns_success(): void
+    public function test_forgot_password_unregistered_email_fails(): void
     {
         $response = $this->postJson('/api/auth/forgot-password', [
             'email' => 'notregistered@example.com',
         ]);
 
+        $response->assertStatus(422)
+            ->assertJson(['message' => 'Email tidak terdaftar.']);
+    }
+
+    public function test_forgot_password_registered_email_returns_success(): void
+    {
+        User::create([
+            'name' => 'Reset User',
+            'email' => 'reset@example.com',
+            'password' => bcrypt('Password123'),
+        ]);
+
+        \Illuminate\Support\Facades\Mail::fake();
+
+        $response = $this->postJson('/api/auth/forgot-password', [
+            'email' => 'reset@example.com',
+        ]);
+
         $response->assertOk()
-            ->assertJson(['message' => 'Jika email terdaftar, tautan reset password telah dikirim.']);
+            ->assertJson(['message' => 'Tautan reset password telah dikirim ke email Anda.']);
+
+        \Illuminate\Support\Facades\Mail::assertQueued(\App\Mail\ResetPasswordMail::class);
     }
 }
