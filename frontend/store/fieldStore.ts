@@ -24,17 +24,23 @@ interface PaginationMeta {
   total: number;
 }
 
+export interface FieldFilters {
+  minPrice?: string;
+  maxPrice?: string;
+  sort?: 'latest' | 'price_asc' | 'price_desc';
+}
+
 interface FieldState {
   fields: Field[];
   meta: PaginationMeta | null;
   loading: boolean;
   loadingMore: boolean;
   error: string | null;
-  fetchFields: (sport?: string, search?: string) => Promise<void>;
+  fetchFields: (sport?: string, search?: string, filters?: FieldFilters) => Promise<void>;
   fetchMore: () => Promise<void>;
   refreshFields: () => Promise<void>;
   clearCache: () => Promise<void>;
-  lastParams: { sport?: string; search?: string };
+  lastParams: { sport?: string; search?: string; filters?: FieldFilters };
   _fetchGen: number;
 }
 
@@ -49,9 +55,9 @@ export const useFieldStore = create<FieldState>((set, get) => ({
   lastParams: {},
   _fetchGen: 0,
 
-  fetchFields: async (sport?: string, search?: string) => {
+  fetchFields: async (sport?: string, search?: string, filters: FieldFilters = {}) => {
     const gen = Date.now();
-    const cacheKey = FIELDS_CACHE_KEY + (sport ?? 'all') + '_' + (search ?? '');
+    const cacheKey = FIELDS_CACHE_KEY + JSON.stringify({ sport: sport ?? 'all', search: search ?? '', filters });
 
     const cached = await AsyncStorage.getItem(cacheKey);
     if (cached) {
@@ -68,6 +74,9 @@ export const useFieldStore = create<FieldState>((set, get) => ({
         params: {
           ...(sport && sport !== 'Semua' ? { sport } : {}),
           ...(search ? { search } : {}),
+          ...(filters.minPrice ? { min_price: filters.minPrice } : {}),
+          ...(filters.maxPrice ? { max_price: filters.maxPrice } : {}),
+          ...(filters.sort && filters.sort !== 'latest' ? { sort: filters.sort } : {}),
           page: '1',
         },
       });
@@ -84,7 +93,7 @@ export const useFieldStore = create<FieldState>((set, get) => ({
         meta: body.meta,
         loading: false,
         _fetchGen: gen,
-        lastParams: { sport, search },
+        lastParams: { sport, search, filters },
       });
     } catch (e: any) {
       const state = get();
@@ -107,6 +116,9 @@ export const useFieldStore = create<FieldState>((set, get) => ({
         params: {
           ...(lastParams.sport && lastParams.sport !== 'Semua' ? { sport: lastParams.sport } : {}),
           ...(lastParams.search ? { search: lastParams.search } : {}),
+          ...(lastParams.filters?.minPrice ? { min_price: lastParams.filters.minPrice } : {}),
+          ...(lastParams.filters?.maxPrice ? { max_price: lastParams.filters.maxPrice } : {}),
+          ...(lastParams.filters?.sort && lastParams.filters.sort !== 'latest' ? { sort: lastParams.filters.sort } : {}),
           page: String(meta.current_page + 1),
         },
       });
@@ -124,9 +136,9 @@ export const useFieldStore = create<FieldState>((set, get) => ({
 
   refreshFields: async () => {
     const { lastParams } = get();
-    const cacheKey = FIELDS_CACHE_KEY + (lastParams.sport ?? 'all') + '_' + (lastParams.search ?? '');
+    const cacheKey = FIELDS_CACHE_KEY + JSON.stringify({ sport: lastParams.sport ?? 'all', search: lastParams.search ?? '', filters: lastParams.filters ?? {} });
     await AsyncStorage.removeItem(cacheKey);
-    await get().fetchFields(lastParams.sport, lastParams.search);
+    await get().fetchFields(lastParams.sport, lastParams.search, lastParams.filters);
   },
 
   clearCache: async () => {

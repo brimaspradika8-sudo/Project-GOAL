@@ -73,7 +73,7 @@ class FieldService
         });
     }
 
-    public function listApproved(?string $search = null, ?string $sport = null, int $page = 1): LengthAwarePaginator
+    public function listApproved(?string $search = null, ?string $sport = null, int $page = 1, mixed $minPrice = null, mixed $maxPrice = null, string $sort = 'latest'): LengthAwarePaginator
     {
         $query = Field::approved()->with('owner:id,name');
 
@@ -90,7 +90,21 @@ class FieldService
             $this->applySportFilter($query, $sport);
         }
 
-        return $query->latest()->paginate(15, ['*'], 'page', $page);
+        if (is_numeric($minPrice)) {
+            $query->where('price_per_hour', '>=', (int) $minPrice);
+        }
+
+        if (is_numeric($maxPrice)) {
+            $query->where('price_per_hour', '<=', (int) $maxPrice);
+        }
+
+        match ($sort) {
+            'price_asc' => $query->orderBy('price_per_hour')->orderByDesc('created_at'),
+            'price_desc' => $query->orderByDesc('price_per_hour')->orderByDesc('created_at'),
+            default => $query->latest(),
+        };
+
+        return $query->paginate(15, ['*'], 'page', $page);
     }
 
     public function listApprovedCached(?string $search = null, ?string $sport = null, int $page = 1): LengthAwarePaginator

@@ -14,7 +14,7 @@ import { useTheme } from '../../lib/theme';
 import { logout } from '../../lib/session';
 
 export default function OwnerProfilePage() {
-  const { profile, clearProfile } = useProfileStore();
+  const { profile } = useProfileStore();
   const { colors, resolved } = useTheme();
   const st = makeStyles(colors, resolved);
   const initials = (profile?.full_name || profile?.username || 'O').charAt(0).toUpperCase();

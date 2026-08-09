@@ -387,7 +387,7 @@ export default function OwnerFieldsPage() {
         return { url: null, error: data.message || 'Gagal mengunggah foto. Silakan coba lagi.' };
       }
       return { url: data.url };
-    } catch (err: any) {
+    } catch {
       return { url: null, error: 'Gagal terhubung ke server upload.' };
     }
   };

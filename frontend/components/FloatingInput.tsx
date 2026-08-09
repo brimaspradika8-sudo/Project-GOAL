@@ -67,11 +67,11 @@ export default function FloatingInput({
     }),
     color: animatedIsFocused.interpolate({
       inputRange: [0, 1],
-      outputRange: [colors.textSecondary, hasError ? '#DC2626' : '#1FCB8B'],
+      outputRange: [colors.textSecondary, hasError ? colors.error : colors.primary],
     }),
     backgroundColor: animatedIsFocused.interpolate({
       inputRange: [0, 0.5, 1],
-      outputRange: ['transparent', 'transparent', isDark ? '#1e1e1e' : '#FFFFFF'],
+      outputRange: ['transparent', 'transparent', isDark ? colors.surfaceWhite : '#FFFFFF'],
     }),
     paddingHorizontal: animatedIsFocused.interpolate({
       inputRange: [0, 1],
@@ -118,6 +118,10 @@ export default function FloatingInput({
             style={[styles.eyeIcon, compact && styles.compactEyeIcon]}
             onPress={() => setIsPasswordVisible((visible) => !visible)}
             activeOpacity={0.6}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={isPasswordVisible ? 'Hide password' : 'Show password'}
+            accessibilityState={{ checked: isPasswordVisible }}
           >
             <MaterialIcons
               name={isPasswordVisible ? 'visibility' : 'visibility-off'}
@@ -174,15 +178,20 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     position: 'absolute',
-    right: 16,
-    top: 19,
+    right: 8,
+    top: 8,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 3,
   },
   compactEyeIcon: {
-    top: 15,
+    top: 4,
   },
   errorText: {
     ...FONTS.bodySm,
+    color: '#DC2626',
     marginTop: 6,
     marginLeft: 4,
     marginBottom: 2,

@@ -72,6 +72,7 @@ use App\Http\Controllers\NotificationController;
         // Admin - manage users (super_admin only)
         Route::middleware('role:super_admin')->group(function () {
             Route::get('/admin/users',          [UserController::class, 'index']);
+            Route::get('/admin/audit-logs',     [UserController::class, 'auditLogs']);
             Route::post('/admin/users',         [UserController::class, 'store']);
             Route::post('/admin/users/bulk-delete', [UserController::class, 'bulkDestroy']);
             Route::put('/admin/users/{id}',     [UserController::class, 'update']);

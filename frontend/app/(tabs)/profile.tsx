@@ -18,7 +18,6 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useProfileStore } from '../../store/profileStore';
-import { getErrorMessage } from '../../lib/api';
 import { apiFetch } from '../../lib/apiClient';
 import * as ImagePicker from 'expo-image-picker';
 import { mimeFromExt } from '../../lib/fieldValidation';
@@ -48,7 +47,7 @@ type OwnerRequestStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
 export default function ProfileScreen() {
   const { width } = useWindowDimensions();
-  const { profile, clearProfile, fetchProfile } = useProfileStore();
+  const { profile, fetchProfile } = useProfileStore();
   const { colors, resolved } = useTheme();
   const isDark = resolved === 'dark';
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);

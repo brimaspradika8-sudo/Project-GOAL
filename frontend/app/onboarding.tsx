@@ -26,7 +26,7 @@ import { useProfileStore } from '../store/profileStore';
 import { useUsernameCheck } from '../hooks/useUsernameCheck';
 import * as SecureStore from '../lib/secureStorage';
 import { TOKEN_KEY } from '../lib/auth';
-import { COLORS, FONTS, SHADOWS } from '../components/goalTheme';
+import { FONTS, SHADOWS } from '../components/goalTheme';
 import { mimeFromExt } from '../lib/fieldValidation';
 import AuthInput from '../components/AuthInput';
 import AlertBox from '../components/shared/AlertBox';

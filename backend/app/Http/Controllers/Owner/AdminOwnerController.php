@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Owner;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Owner\ReviewOwnerRequest;
 use App\Http\Resources\OwnerRequestResource;
+use App\Models\AdminAuditLog;
 use App\Models\OwnerRequest;
 use App\Services\OwnerRequestService;
 use Illuminate\Http\JsonResponse;
@@ -32,6 +33,16 @@ class AdminOwnerController extends Controller
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+
+        AdminAuditLog::create([
+            'actor_id' => $request->user()->id,
+            'action' => 'owner_request.' . $request->status,
+            'target_type' => 'owner_request',
+            'target_id' => $result->id,
+            'metadata' => ['reason' => $request->reason],
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
 
         return response()->json(new OwnerRequestResource($result));
     }

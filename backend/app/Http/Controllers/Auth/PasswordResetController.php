@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\PasswordReset;
@@ -27,12 +28,14 @@ class PasswordResetController extends Controller
             ], 422);
         }
 
-        $token = Password::broker('users')->createToken($user);
+        /** @var \Illuminate\Auth\Passwords\PasswordBroker $broker */
+        $broker = Password::broker('users');
+        $token = $broker->createToken($user);
 
         try {
             Mail::to($email)->queue(new ResetPasswordMail($token, $email));
         } catch (\Exception $e) {
-            \Log::error('Mail queue fail: ' . $e->getMessage());
+            Log::error('Mail queue fail: ' . $e->getMessage());
         }
 
         return response()->json([

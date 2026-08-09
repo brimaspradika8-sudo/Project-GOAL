@@ -64,6 +64,7 @@ export default function AdminTabLayout() {
     { href: '/(admin)/owner-requests', label: 'Pengajuan Owner', icon: 'inventory' },
     ...(isSuperAdmin ? [
       { href: '/(admin)/manage-fields', label: 'Kelola Lapangan', icon: 'stadium' },
+      { href: '/(admin)/audit-logs', label: 'Audit Log', icon: 'history' },
     ] : []),
     { href: '/(admin)/profile', label: 'Profile', icon: 'person' },
   ];
@@ -123,6 +124,15 @@ export default function AdminTabLayout() {
                 href: isSuperAdmin ? undefined : null,
                 tabBarBadge: isSuperAdmin ? manageFieldsBadge : undefined,
                 tabBarBadgeStyle: isSuperAdmin && manageFieldsBadge ? styles.badge : undefined,
+              }}
+              listeners={{ tabPress: () => Haptics.selectionAsync() }}
+            />
+            <Tabs.Screen
+              name="audit-logs"
+              options={{
+                title: 'Audit Log',
+                tabBarIcon: ({ color }) => <MaterialIcons name="history" size={24} color={color} />,
+                href: isSuperAdmin ? undefined : null,
               }}
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
@@ -195,6 +205,15 @@ export default function AdminTabLayout() {
                 href: isSuperAdmin ? undefined : null,
                 tabBarBadge: isSuperAdmin ? manageFieldsBadge : undefined,
                 tabBarBadgeStyle: isSuperAdmin && manageFieldsBadge ? styles.badge : undefined,
+              }}
+              listeners={{ tabPress: () => Haptics.selectionAsync() }}
+            />
+            <Tabs.Screen
+              name="audit-logs"
+              options={{
+                title: 'Audit Log',
+                tabBarIcon: ({ color }) => <MaterialIcons name="history" size={24} color={color} />,
+                href: isSuperAdmin ? undefined : null,
               }}
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />

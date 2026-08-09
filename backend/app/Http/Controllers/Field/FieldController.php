@@ -8,6 +8,7 @@ use App\Http\Requests\Field\UpdateFieldRequest;
 use App\Http\Requests\Field\ApproveFieldRequest;
 use App\Http\Resources\FieldResource;
 use App\Models\Field;
+use App\Models\AdminAuditLog;
 use App\Models\Profile;
 use App\Services\FieldService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -37,10 +38,14 @@ class FieldController extends Controller
     {
         $search = $request->query('search');
         $sport = $request->query('sport');
+        $minPrice = $request->query('min_price');
+        $maxPrice = $request->query('max_price');
+        $sort = $request->query('sort', 'latest');
         $page = max(1, (int) $request->query('page', 1));
 
-        $fields = $search || $page > 1
-            ? $this->fieldService->listApproved($search, $sport, $page)
+        $hasPriceFilter = is_numeric($minPrice) || is_numeric($maxPrice);
+        $fields = $search || $hasPriceFilter || $sort !== 'latest' || $page > 1
+            ? $this->fieldService->listApproved($search, $sport, $page, $minPrice, $maxPrice, $sort)
             : $this->fieldService->listApprovedCached(null, $sport, $page);
 
         return $this->paginatedResponse($fields);
@@ -126,7 +131,9 @@ class FieldController extends Controller
     public function pending(): JsonResponse
     {
         $fields = $this->fieldService->listPending();
-        $fields->getCollection()->makeVisible(['rejection_reason', 'approved_by']);
+        foreach ($fields->items() as $field) {
+            $field->makeVisible(['rejection_reason', 'approved_by']);
+        }
 
         return $this->paginatedResponse($fields);
     }
@@ -134,7 +141,9 @@ class FieldController extends Controller
     public function myFields(Request $request): JsonResponse
     {
         $fields = $this->fieldService->listByOwner($request->user());
-        $fields->getCollection()->makeVisible(['rejection_reason', 'approved_by']);
+        foreach ($fields->items() as $field) {
+            $field->makeVisible(['rejection_reason', 'approved_by']);
+        }
 
         return $this->paginatedResponse($fields);
     }
@@ -160,6 +169,16 @@ class FieldController extends Controller
 
         $this->fieldService->invalidateCache();
 
+        AdminAuditLog::create([
+            'actor_id' => $request->user()->id,
+            'action' => 'field.' . $request->status,
+            'target_type' => 'field',
+            'target_id' => $field->id,
+            'metadata' => ['reason' => $request->reason],
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
         $field->makeVisible(['rejection_reason', 'approved_by']);
 
         return response()->json(new FieldResource($field));
@@ -168,7 +187,9 @@ class FieldController extends Controller
     public function trashed(): JsonResponse
     {
         $fields = $this->fieldService->listTrashed();
-        $fields->getCollection()->makeVisible(['rejection_reason', 'approved_by']);
+        foreach ($fields->items() as $field) {
+            $field->makeVisible(['rejection_reason', 'approved_by']);
+        }
 
         return $this->paginatedResponse($fields);
     }
@@ -183,6 +204,15 @@ class FieldController extends Controller
 
         $this->fieldService->invalidateCache();
 
+        AdminAuditLog::create([
+            'actor_id' => request()->user()->id,
+            'action' => 'field.restored',
+            'target_type' => 'field',
+            'target_id' => $id,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
+
         return response()->json(['message' => 'Lapangan berhasil dipulihkan.']);
     }
 
@@ -195,6 +225,15 @@ class FieldController extends Controller
         }
 
         $this->fieldService->invalidateCache();
+
+        AdminAuditLog::create([
+            'actor_id' => request()->user()->id,
+            'action' => 'field.force_deleted',
+            'target_type' => 'field',
+            'target_id' => $id,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
 
         return response()->json(['message' => 'Lapangan berhasil dihapus permanen.']);
     }
@@ -211,6 +250,14 @@ class FieldController extends Controller
         $count = $this->fieldService->approveBatch($data['ids'], $request->user(), $data['status'], $data['reason'] ?? null);
 
         $this->fieldService->invalidateCache();
+
+        AdminAuditLog::create([
+            'actor_id' => $request->user()->id,
+            'action' => 'field.bulk_' . $data['status'],
+            'metadata' => ['ids' => $data['ids'], 'processed' => $count],
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
 
         $verb = $data['status'] === 'approved' ? 'disetujui' : 'ditolak';
 

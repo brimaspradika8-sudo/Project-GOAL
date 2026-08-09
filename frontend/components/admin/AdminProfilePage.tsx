@@ -18,7 +18,7 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export default function AdminProfilePage() {
-  const { profile, clearProfile } = useProfileStore();
+  const { profile } = useProfileStore();
   const { colors, resolved } = useTheme();
   const st = makeStyles(colors, resolved);
   const role = profile?.role ?? 'super_admin';

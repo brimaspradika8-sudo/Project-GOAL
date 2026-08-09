@@ -15,7 +15,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { SIZES, FONTS, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
-import { useFieldStore } from '../../store/fieldStore';
+import { useFieldStore, type FieldFilters } from '../../store/fieldStore';
 import { SkeletonVenueList } from '../../components/Skeleton';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useTheme } from '../../lib/theme';
@@ -23,12 +23,22 @@ import VenueCard from '../../components/VenueCard';
 import { SPORT_OPTIONS, SPORT_MAP } from '../../lib/fieldValidation';
 
 const FILTERS = ['Semua', ...SPORT_OPTIONS];
+const SORT_OPTIONS: { key: NonNullable<FieldFilters['sort']>; label: string }[] = [
+  { key: 'latest', label: 'Terbaru' },
+  { key: 'price_asc', label: 'Termurah' },
+  { key: 'price_desc', label: 'Termahal' },
+];
 
 export default function FieldsScreen() {
   const { width } = useWindowDimensions();
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('Semua');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [sort, setSort] = useState<NonNullable<FieldFilters['sort']>>('latest');
   const debouncedSearch = useDebounce(search, 150);
+  const debouncedMinPrice = useDebounce(minPrice, 400);
+  const debouncedMaxPrice = useDebounce(maxPrice, 400);
   const { fields, loading, loadingMore, meta, fetchFields, fetchMore, refreshFields } = useFieldStore();
   const [refreshing, setRefreshing] = useState(false);
   const { colors } = useTheme();
@@ -42,15 +52,15 @@ export default function FieldsScreen() {
   useEffect(() => {
     lastFetchRef.current = debouncedSearch;
     const sport = activeFilter === 'Semua' ? undefined : SPORT_MAP[activeFilter] || activeFilter.toLowerCase();
-    fetchFields(sport, debouncedSearch || undefined);
-  }, [activeFilter, debouncedSearch, fetchFields]);
+    fetchFields(sport, debouncedSearch || undefined, { minPrice: debouncedMinPrice, maxPrice: debouncedMaxPrice, sort });
+  }, [activeFilter, debouncedSearch, debouncedMinPrice, debouncedMaxPrice, fetchFields, sort]);
 
   useFocusEffect(
     useCallback(() => {
       lastFetchRef.current = debouncedSearch;
       const sport = activeFilter === 'Semua' ? undefined : SPORT_MAP[activeFilter] || activeFilter.toLowerCase();
-      fetchFields(sport, debouncedSearch || undefined);
-    }, [activeFilter, debouncedSearch, fetchFields])
+      fetchFields(sport, debouncedSearch || undefined, { minPrice: debouncedMinPrice, maxPrice: debouncedMaxPrice, sort });
+    }, [activeFilter, debouncedSearch, debouncedMinPrice, debouncedMaxPrice, fetchFields, sort])
   );
 
   const onRefresh = useCallback(async () => {
@@ -83,6 +93,39 @@ export default function FieldsScreen() {
         {loading && fields.length > 0 && (
           <ActivityIndicator size="small" color={colors.primary} />
         )}
+      </View>
+
+      <View style={styles.priceRow}>
+        <Text style={styles.filterLabel}>Harga / jam</Text>
+        <TextInput
+          style={styles.priceInput}
+          placeholder="Minimum"
+          placeholderTextColor={colors.textTertiary}
+          keyboardType="numeric"
+          value={minPrice}
+          onChangeText={setMinPrice}
+        />
+        <Text style={styles.priceSeparator}>-</Text>
+        <TextInput
+          style={styles.priceInput}
+          placeholder="Maksimum"
+          placeholderTextColor={colors.textTertiary}
+          keyboardType="numeric"
+          value={maxPrice}
+          onChangeText={setMaxPrice}
+        />
+      </View>
+
+      <View style={styles.sortRow}>
+        <Text style={styles.filterLabel}>Urutkan</Text>
+        {SORT_OPTIONS.map((option) => {
+          const isActive = sort === option.key;
+          return (
+            <TouchableOpacity key={option.key} style={[styles.sortChip, isActive && styles.sortChipActive]} onPress={() => setSort(option.key)}>
+              <Text style={[styles.sortChipText, isActive && styles.sortChipTextActive]}>{option.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <FlatList
@@ -244,6 +287,58 @@ const makeStyles = (colors: any) => StyleSheet.create({
   },
   chipTextActive: {
     color: colors.onPrimary,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  filterLabel: {
+    ...FONTS.labelMd,
+    color: colors.textSecondary,
+    marginRight: 2,
+  },
+  priceInput: {
+    flex: 1,
+    minWidth: 80,
+    height: 42,
+    paddingHorizontal: 12,
+    borderRadius: SIZES.borderRadius,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    backgroundColor: colors.surface,
+    color: colors.text,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
+  },
+  priceSeparator: {
+    color: colors.textTertiary,
+  },
+  sortRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 18,
+    flexWrap: 'wrap',
+  },
+  sortChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: SIZES.borderRadiusFull,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.outline,
+  },
+  sortChipActive: {
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.primary,
+  },
+  sortChipText: {
+    ...FONTS.labelMd,
+    color: colors.textSecondary,
+  },
+  sortChipTextActive: {
+    color: colors.primary,
   },
   venueCard: {
     backgroundColor: colors.surface,

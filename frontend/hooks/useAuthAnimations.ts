@@ -23,14 +23,15 @@ export function useAuthAnimations() {
     }
 
     progress.setValue(0);
-    Animated.timing(progress, {
+    const progressAnimation = Animated.timing(progress, {
       toValue: 1,
       duration: 850,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
-    }).start();
+    });
+    progressAnimation.start();
 
-    Animated.loop(
+    const pulseAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.05,
@@ -45,11 +46,14 @@ export function useAuthAnimations() {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    pulseAnimation.start();
+
+    let backgroundAnimation: Animated.CompositeAnimation | undefined;
 
     if (!isWeb) {
       bgScaleAnim.setValue(1.1);
-      Animated.loop(
+      backgroundAnimation = Animated.loop(
         Animated.sequence([
           Animated.timing(bgScaleAnim, {
             toValue: 1.3,
@@ -64,10 +68,17 @@ export function useAuthAnimations() {
             useNativeDriver: true,
           }),
         ])
-      ).start();
+      );
+      backgroundAnimation.start();
     } else {
       bgScaleAnim.setValue(1);
     }
+
+    return () => {
+      progressAnimation.stop();
+      pulseAnimation.stop();
+      backgroundAnimation?.stop();
+    };
   }, [bgScaleAnim, isWeb, progress, pulseAnim]);
 
   const values = useMemo(() => {
