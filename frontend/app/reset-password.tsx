@@ -16,7 +16,7 @@ import { apiFetch } from '../lib/apiClient';
 import { fieldError } from '../lib/formValidation';
 import { useBreakpoint } from '../lib/responsive';
 import AuthPromoPanel from '../components/AuthPromoPanel';
-import ThemeToggle from '../components/ThemeToggle';
+
 import { FONT_FAMILY } from '../components/goalTheme';
 
 function rpValidatePassword(v: string): string {
@@ -179,9 +179,7 @@ export default function ResetPasswordScreen() {
           </View>
         </ScrollView>
 
-        <View style={styles.themeToggleWrap}>
-          <ThemeToggle variant="button" />
-        </View>
+
       </KeyboardAvoidingView>
     );
   }
@@ -283,21 +281,14 @@ export default function ResetPasswordScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.themeToggleWrap}>
-        <ThemeToggle variant="button" />
-      </View>
+
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, ...(Platform.OS === 'web' ? ({ minHeight: '100vh', width: '100%', overflow: 'hidden' } as any) : {}) },
-  themeToggleWrap: {
-    position: 'absolute',
-    top: 24,
-    right: 24,
-    zIndex: 50,
-  },
+
   glowTopLeft: {
     position: 'absolute',
     top: -160,

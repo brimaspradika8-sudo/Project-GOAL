@@ -16,7 +16,7 @@ import { apiFetch } from '../lib/apiClient';
 import { fieldError } from '../lib/formValidation';
 import { useBreakpoint } from '../lib/responsive';
 import AuthPromoPanel from '../components/AuthPromoPanel';
-import ThemeToggle from '../components/ThemeToggle';
+
 import { FONT_FAMILY } from '../components/goalTheme';
 
 function fpValidateEmail(v: string): string {
@@ -231,9 +231,7 @@ export default function ForgotPasswordScreen() {
           </View>
         </ScrollView>
 
-        <View style={styles.themeToggleWrap}>
-          <ThemeToggle variant="button" />
-        </View>
+
       </KeyboardAvoidingView>
     );
   }
@@ -356,9 +354,7 @@ export default function ForgotPasswordScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.themeToggleWrap}>
-        <ThemeToggle variant="button" />
-      </View>
+
     </KeyboardAvoidingView>
   );
 }
@@ -402,12 +398,7 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
     paddingHorizontal: 24,
   },
-  themeToggleWrap: {
-    position: 'absolute',
-    top: 24,
-    right: 24,
-    zIndex: 50,
-  },
+
   desktopScrollContent: {
     paddingHorizontal: 0,
     paddingVertical: 0,
