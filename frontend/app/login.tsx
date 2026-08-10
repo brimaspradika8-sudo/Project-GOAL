@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, Pressable,
   ActivityIndicator, Animated, Easing, KeyboardAvoidingView,
@@ -182,7 +182,7 @@ export default function LoginScreen() {
               </View>
             </Animated.View>
             <Text style={[styles.title, { fontSize: Math.min(48, width * 0.13) * desktopScale, color: isDark ? colors.primary : '#1FCB8B' }]}>G.O.A.L</Text>
-            <Text style={[styles.subtitle, { color: isDark ? colors.textSecondary : '#4B5563' }]}>Find, compare, and book your favorite sports venues.</Text>
+            <Text style={[styles.subtitle, { color: isDark ? colors.textSecondary : '#4B5563' }]}>Game Organizer & Arena League</Text>
           </Animated.View>
 
           <Animated.View style={[

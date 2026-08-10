@@ -2,7 +2,6 @@ import React from 'react';
 import { Image, Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useTheme } from '../lib/theme';
 
 const AUTH_BG_IMAGE = 'https://images.unsplash.com/photo-1595169043775-1612bf911b0f?w=1200&h=1400&fit=crop&auto=format';
 
@@ -14,15 +13,8 @@ const sports = [
   { icon: 'sports-volleyball' as const, label: 'Volleyball' },
 ];
 
-const venuePreviews = [
-  { name: 'Green Arena', type: 'Futsal', price: 'Rp120K/jam', image: 'https://images.unsplash.com/photo-1553778263-73a83BAB9B0c?w=600&h=360&fit=crop&auto=format' },
-  { name: 'City Court', type: 'Basketball', price: 'Rp150K/jam', image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=600&h=360&fit=crop&auto=format' },
-  { name: 'Smash Point', type: 'Badminton', price: 'Rp80K/jam', image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=600&h=360&fit=crop&auto=format' },
-];
-
 export default function AuthPromoPanel() {
   const { width, height } = useWindowDimensions();
-  const { colors } = useTheme();
   const scale = Math.max(0.78, Math.min(1.08, Math.min(width / 1440, height / 900)));
 
   return (
@@ -42,23 +34,6 @@ export default function AuthPromoPanel() {
               <View key={sport.label} style={[styles.chip, { gap: 5 * scale, borderRadius: 18 * scale, paddingHorizontal: 11 * scale, paddingVertical: 8 * scale }]}>
                 <MaterialIcons name={sport.icon} size={14 * scale} color="#D1FAE5" />
                 <Text style={[styles.chipText, { fontSize: 11 * scale }]}>{sport.label}</Text>
-              </View>
-            ))}
-          </View>
-          <View style={[styles.venuePreviewRow, { gap: 9 * scale, marginTop: 20 * scale }]}>
-            {venuePreviews.map((venue) => (
-              <View
-                key={venue.name}
-                style={[styles.venuePreview, { backgroundColor: colors.surfaceWhite, borderColor: colors.borderSubtle, borderRadius: 12 * scale }]}
-              >
-                <Image source={{ uri: venue.image }} style={[styles.venuePreviewImage, { height: 68 * scale }]} resizeMode="cover" />
-                <View
-                  style={[styles.venuePreviewInfo, { padding: 8 * scale }]}
-                >
-                  <Text style={[styles.venuePreviewName, { color: colors.text }]} numberOfLines={1}>{venue.name}</Text>
-                  <Text style={[styles.venuePreviewMeta, { color: colors.textSecondary }]} numberOfLines={1}>{venue.type}</Text>
-                  <Text style={[styles.venuePreviewPrice, { color: colors.primary }]}>{venue.price}</Text>
-                </View>
               </View>
             ))}
           </View>
@@ -95,13 +70,6 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 22 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(167, 243, 208, 0.35)', backgroundColor: 'rgba(6, 78, 59, 0.55)', paddingHorizontal: 11, paddingVertical: 8 },
   chipText: { color: '#ECFDF5', fontSize: 11, fontWeight: '700' },
-  venuePreviewRow: { flexDirection: 'row', width: '100%' },
-  venuePreview: { flex: 1, overflow: 'hidden', borderWidth: 1 },
-  venuePreviewImage: { width: '100%' },
-  venuePreviewInfo: { gap: 2 },
-  venuePreviewName: { fontSize: 11, fontWeight: '800' },
-  venuePreviewMeta: { fontSize: 9, fontWeight: '600' },
-  venuePreviewPrice: { fontSize: 10, fontWeight: '800', marginTop: 2 },
   stats: { flexDirection: 'row', gap: 34 },
   statValue: { color: '#10B981', fontSize: 18, fontWeight: '900' },
   statLabel: { color: '#A7F3D0', fontSize: 10, marginTop: 3 },
