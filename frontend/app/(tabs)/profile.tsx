@@ -276,8 +276,8 @@ export default function ProfileScreen() {
               <MaterialIcons name="hourglass-top" size={20} color={colors.warning} />
             </View>
             <View style={styles.ownerCardInfo}>
-              <Text style={styles.ownerCardTitle}>Pengajuan Owner</Text>
-              <Text style={styles.ownerCardDesc}>Menunggu persetujuan admin...</Text>
+              <Text style={styles.ownerCardTitle}>Pengajuan owner</Text>
+              <Text style={styles.ownerCardDesc}>Sedang menunggu persetujuan admin.</Text>
             </View>
           </View>
         </View>
@@ -324,8 +324,8 @@ export default function ProfileScreen() {
               <MaterialIcons name="store" size={20} color={colors.primary} />
             </View>
             <View style={styles.ownerCardInfo}>
-              <Text style={styles.ownerCardTitle}>Ajukan Jadi Owner</Text>
-              <Text style={styles.ownerCardDesc}>Kelola lapangan Anda sendiri.</Text>
+              <Text style={styles.ownerCardTitle}>Ajukan jadi owner</Text>
+              <Text style={styles.ownerCardDesc}>Kelola lapangan milik Anda sendiri.</Text>
             </View>
           </View>
           <MaterialIcons name="chevron-right" size={20} color={colors.textSecondary} />
@@ -349,7 +349,7 @@ export default function ProfileScreen() {
               <MaterialIcons name="stadium" size={20} color={colors.primary} />
             </View>
             <View style={styles.ownerCardInfo}>
-              <Text style={styles.ownerCardTitle}>Lapangan Saya</Text>
+              <Text style={styles.ownerCardTitle}>Lapangan saya</Text>
               <Text style={styles.ownerCardDesc}>Kelola lapangan yang Anda miliki.</Text>
             </View>
           </View>
@@ -374,8 +374,8 @@ export default function ProfileScreen() {
               <MaterialIcons name="admin-panel-settings" size={20} color={colors.primary} />
             </View>
             <View style={styles.ownerCardInfo}>
-              <Text style={styles.ownerCardTitle}>Panel Super Admin</Text>
-              <Text style={styles.ownerCardDesc}>Approve field dan owner request.</Text>
+              <Text style={styles.ownerCardTitle}>Panel super admin</Text>
+              <Text style={styles.ownerCardDesc}>Kelola lapangan dan pengajuan owner.</Text>
             </View>
           </View>
           <MaterialIcons name="chevron-right" size={20} color={colors.textSecondary} />
@@ -455,7 +455,7 @@ export default function ProfileScreen() {
                 </View>
               )}
 
-              <Text style={styles.sectionTitle}>OLAHRAGA</Text>
+              <Text style={styles.sectionTitle}>Olahraga</Text>
               <View style={styles.sportsCard}>
                 {profile?.sports?.length ? (
                   <View style={styles.tagsRow}>
@@ -477,13 +477,13 @@ export default function ProfileScreen() {
 
             {/* ===== KOLOM KANAN: Pengaturan ===== */}
             <View style={[styles.profileColumn, isDesktop && { flex: 1 }]}>
-              <Text style={styles.sectionTitle}>PENGATURAN</Text>
+              <Text style={styles.sectionTitle}>Pengaturan</Text>
               <View style={styles.settingsCard}>
                 <TouchableOpacity style={styles.settingRow} activeOpacity={0.8} onPress={() => router.push('/onboarding')}>
                   <View style={styles.settingIconBox}>
                     <MaterialIcons name="person-outline" size={20} color={colors.primary} />
                   </View>
-                  <Text style={styles.settingLabel}>Ubah Profil</Text>
+                  <Text style={styles.settingLabel}>Ubah profil</Text>
                   <MaterialIcons name="chevron-right" size={20} color={colors.outline} />
                 </TouchableOpacity>
                 <View style={styles.divider} />
@@ -515,19 +515,19 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   style={styles.settingRow}
                   activeOpacity={0.8}
-                  onPress={() => useToastStore.getState().show({ type: 'info', title: 'Segera Hadir', description: 'Pusat bantuan akan segera tersedia.' })}
+                  onPress={() => useToastStore.getState().show({ type: 'info', title: 'Sedang disiapkan', description: 'Pusat bantuan akan segera tersedia.' })}
                 >
                   <View style={styles.settingIconBox}>
                     <MaterialIcons name="help-outline" size={20} color={colors.primary} />
                   </View>
-                  <Text style={styles.settingLabel}>Pusat Bantuan</Text>
+                  <Text style={styles.settingLabel}>Pusat bantuan</Text>
                   <MaterialIcons name="chevron-right" size={20} color={colors.outline} />
                 </TouchableOpacity>
               </View>
 
               <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} activeOpacity={0.8}>
                 <MaterialIcons name="logout" size={20} color={colors.error} />
-                <Text style={styles.signOutText}>Keluar Akun</Text>
+                <Text style={styles.signOutText}>Keluar akun</Text>
               </TouchableOpacity>
 
               <Text style={styles.version}>GOAL v1.0.0</Text>
@@ -543,8 +543,8 @@ export default function ProfileScreen() {
           <View style={styles.modalSheet}>
             <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalTitle}>Ajukan Jadi Owner</Text>
-                <Text style={styles.modalSubtitle}>Isi data usaha Anda untuk menjadi owner lapangan.</Text>
+                <Text style={styles.modalTitle}>Ajukan jadi owner</Text>
+                <Text style={styles.modalSubtitle}>Isi data usaha untuk mengajukan peran owner.</Text>
               </View>
               <TouchableOpacity onPress={() => setShowOwnerModal(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ alignSelf: 'flex-start' }}>
                 <MaterialIcons name="close" size={24} color={colors.textSecondary} />
@@ -616,7 +616,7 @@ export default function ProfileScreen() {
                 disabled={submitting}
                 activeOpacity={0.8}
               >
-                {submitting ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.submitText}>Kirim Pengajuan</Text>}
+                {submitting ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.submitText}>Kirim pengajuan</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -625,7 +625,7 @@ export default function ProfileScreen() {
 
       <ConfirmDialog
         visible={showLogoutConfirm}
-        title="Keluar Akun"
+        title="Keluar akun"
         description="Yakin ingin keluar dari akun?"
         confirmLabel="Keluar"
         destructive

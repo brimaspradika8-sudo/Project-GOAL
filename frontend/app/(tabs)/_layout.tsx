@@ -67,11 +67,11 @@ export default function TabLayout() {
         />
 
         <Tabs.Screen
-          name="matches"
+          name="fields"
           options={{
-            title: 'Match',
+            title: 'Lapangan',
             tabBarIcon: ({ color }) => (
-              <MaterialIcons name="sports-soccer" size={24} color={color} />
+              <MaterialIcons name="stadium" size={24} color={color} />
             ),
           }}
           listeners={{
@@ -82,7 +82,7 @@ export default function TabLayout() {
         <Tabs.Screen
           name="profile"
           options={{
-            title: 'Profile',
+            title: 'Profil',
             tabBarIcon: ({ color }) => (
               <MaterialIcons name="person" size={24} color={color} />
             ),
@@ -93,17 +93,17 @@ export default function TabLayout() {
         />
 
         <Tabs.Screen
-          name="my-fields"
-          options={{ href: null }}
-        />
-
-        <Tabs.Screen
-          name="fields"
-          options={{ href: null }}
-        />
-
-        <Tabs.Screen
           name="explore"
+          options={{ href: null }}
+        />
+
+        <Tabs.Screen
+          name="matches"
+          options={{ href: null }}
+        />
+
+        <Tabs.Screen
+          name="my-fields"
           options={{ href: null }}
         />
       </Tabs>

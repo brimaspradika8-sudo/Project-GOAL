@@ -114,6 +114,7 @@ export default function HomeScreen() {
   const filteredVenues = useMemo(() => isFiltering ? fields : popularFields.slice(0, 5), [fields, popularFields, isFiltering]);
   // rekomendasi uses popularFields (approved-only) to avoid showing non-approved fields from cache
   const rekomendasi = useMemo(() => popularFields.slice(0, 4), [popularFields]);
+  const resultCount = isFiltering ? fields.length : popularFields.length;
 
   const styles = makeStyles(colors);
   const isDesktop = width >= 900;
@@ -172,8 +173,8 @@ export default function HomeScreen() {
         <View style={[styles.heroPanel, isDesktop && styles.heroPanelDesktop]}>
           <View style={styles.heroCopy}>
             <Text style={styles.greeting}>Halo, {userName}</Text>
-            <Text style={styles.heroTitle}>Temukan lapangan terbaik hari ini</Text>
-            <Text style={styles.heroText}>Cari venue, cek status, lalu lanjut booking dari satu tempat.</Text>
+            <Text style={styles.heroTitle}>Temukan lapangan yang pas hari ini</Text>
+            <Text style={styles.heroText}>Cari lapangan, cek ketersediaan, lalu lanjut booking dari satu tempat.</Text>
           </View>
         </View>
 
@@ -181,7 +182,7 @@ export default function HomeScreen() {
           <MaterialIcons name="search" size={22} color={colors.primary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Cari lapangan atau venue..."
+            placeholder="Cari nama lapangan..."
             placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -217,6 +218,27 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
+        {(activeCategory !== 'Semua' || searchQuery.length > 0) && (
+          <View style={styles.filterSummaryRow}>
+            <View style={styles.filterSummaryPill}>
+              <MaterialIcons name="filter-list" size={16} color={colors.primary} />
+              <Text style={styles.filterSummaryText}>
+                {resultCount} hasil ditemukan
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.filterResetButton}
+              activeOpacity={0.8}
+              onPress={() => {
+                setActiveCategory('Semua');
+                setSearchQuery('');
+              }}
+            >
+              <Text style={styles.filterResetText}>Reset filter</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
 
 
         <TouchableOpacity
@@ -226,25 +248,25 @@ export default function HomeScreen() {
         >
           <View style={styles.sparringContent}>
             <View style={styles.sparringBadge}>
-              <Text style={styles.sparringBadgeText}>HOT FEATURE ⚽</Text>
+              <Text style={styles.sparringBadgeText}>FITUR BARU ⚽</Text>
             </View>
-            <Text style={styles.sparringTitle}>Cari Lawan Sparring & Main Bareng</Text>
-            <Text style={styles.sparringDesc}>Kekurangan pemain? Gabung tim lain atau buat match baru!</Text>
+            <Text style={styles.sparringTitle}>Cari lawan sparring & main bareng</Text>
+            <Text style={styles.sparringDesc}>Kekurangan pemain? Gabung tim lain atau buat match baru.</Text>
           </View>
           <TouchableOpacity
             style={styles.sparringBtn}
             activeOpacity={0.8}
             onPress={() => router.push('/(tabs)/matches')}
           >
-            <Text style={styles.sparringBtnText}>Cari Lawan</Text>
+            <Text style={styles.sparringBtnText}>Lihat Match</Text>
           </TouchableOpacity>
         </TouchableOpacity>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{isFiltering ? 'Hasil Pencarian' : 'Lapangan Populer 🔥'}</Text>
+            <Text style={styles.sectionTitle}>{isFiltering ? 'Hasil pencarian' : 'Lapangan populer'}</Text>
             <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/(tabs)/fields')}>
-              <Text style={styles.sectionLink}>Lihat Semua</Text>
+              <Text style={styles.sectionLink}>Lihat semua</Text>
             </TouchableOpacity>
           </View>
 
@@ -256,7 +278,19 @@ export default function HomeScreen() {
           ) : filteredVenues.length === 0 ? (
             <View style={styles.emptyState}>
               <MaterialIcons name="search-off" size={40} color={colors.textTertiary} />
-              <Text style={styles.emptyText}>{isFiltering ? 'Tidak ada venue ditemukan' : 'Belum ada lapangan tersedia'}</Text>
+              <Text style={styles.emptyText}>{isFiltering ? 'Belum ada lapangan yang cocok' : 'Belum ada lapangan tersedia'}</Text>
+              {isFiltering ? (
+                <TouchableOpacity
+                  style={styles.emptyAction}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    setActiveCategory('Semua');
+                    setSearchQuery('');
+                  }}
+                >
+                  <Text style={styles.emptyActionText}>Reset filter</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           ) : (
             <View style={[styles.venueGrid, isDesktop && styles.venueGridDesktop]}>
@@ -272,7 +306,7 @@ export default function HomeScreen() {
         {!isFiltering && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Rekomendasi Terdekat</Text>
+            <Text style={styles.sectionTitle}>Rekomendasi terdekat</Text>
           </View>
           <View style={[styles.rekomGrid, isDesktop && styles.rekomGridDesktop]}>
             {rekomendasi.map((item) => {
@@ -303,7 +337,7 @@ export default function HomeScreen() {
         {sports.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Olahraga Favorit</Text>
+              <Text style={styles.sectionTitle}>Olahraga favorit</Text>
             </View>
             <View style={styles.sportChips}>
               {sports.map((sport) => (
@@ -501,6 +535,39 @@ const makeStyles = (colors: any) => StyleSheet.create({
   categoryScroll: {
     gap: 12,
     paddingVertical: 4,
+  },
+  filterSummaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 2,
+    marginBottom: 2,
+  },
+  filterSummaryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primaryContainer,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  filterSummaryText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  filterResetButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  filterResetText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textSecondary,
   },
   categoryItem: {
     alignItems: 'center',
@@ -784,6 +851,20 @@ const makeStyles = (colors: any) => StyleSheet.create({
   emptyText: {
     ...FONTS.bodyMd,
     color: colors.textTertiary,
+    textAlign: 'center',
+  },
+  emptyAction: {
+    marginTop: 4,
+    backgroundColor: colors.primaryContainer,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  emptyActionText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
   },
   sparringCard: {
     flexDirection: 'row',

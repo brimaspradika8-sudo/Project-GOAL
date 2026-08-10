@@ -18,11 +18,11 @@ export default function MatchesScreen() {
         <View style={styles.iconWrap}>
           <MaterialIcons name="sports-soccer" size={40} color={colors.primary} />
         </View>
-        <Text style={styles.title}>Pertandingan</Text>
-        <Text style={styles.badge}>Segera Hadir</Text>
+        <Text style={styles.title}>Match</Text>
+        <Text style={styles.badge}>Sedang Disiapkan</Text>
         <Text style={styles.desc}>
-          Fitur pencarian dan pengelolaan pertandingan{'\n'}
-          masih dalam pengembangan. Nantikan segera!
+          Fitur cari lawan dan atur pertandingan akan hadir di sini.{'\n'}
+          Sementara itu, kamu bisa eksplor lapangan dari beranda.
         </Text>
       </FadeInView>
     </View>

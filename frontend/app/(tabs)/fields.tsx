@@ -8,6 +8,8 @@ import {
   Platform,
   StatusBar,
   TouchableOpacity,
+  Animated,
+  Modal,
   RefreshControl,
   ActivityIndicator,
   useWindowDimensions,
@@ -36,6 +38,8 @@ export default function FieldsScreen() {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [sort, setSort] = useState<NonNullable<FieldFilters['sort']>>('latest');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isSortModalOpen, setIsSortModalOpen] = useState(false);
   const debouncedSearch = useDebounce(search, 150);
   const debouncedMinPrice = useDebounce(minPrice, 400);
   const debouncedMaxPrice = useDebounce(maxPrice, 400);
@@ -43,9 +47,20 @@ export default function FieldsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const { colors } = useTheme();
   const styles = makeStyles(colors);
+  const filterAnimation = useRef(new Animated.Value(0)).current;
 
   const isDesktop = width >= 900;
   const numColumns = isDesktop ? (width >= 1200 ? 3 : 2) : 1;
+  const hasActiveFilters = activeFilter !== 'Semua' || search.trim().length > 0 || minPrice.trim().length > 0 || maxPrice.trim().length > 0 || sort !== 'latest';
+  const hasAdvancedFilters = minPrice.trim().length > 0 || maxPrice.trim().length > 0 || sort !== 'latest';
+
+  useEffect(() => {
+    Animated.timing(filterAnimation, {
+      toValue: isFilterOpen ? 1 : 0,
+      duration: 220,
+      useNativeDriver: false,
+    }).start();
+  }, [filterAnimation, isFilterOpen]);
 
   const lastFetchRef = useRef(debouncedSearch);
 
@@ -74,59 +89,82 @@ export default function FieldsScreen() {
   const renderHeader = () => (
     <>
       <Text style={styles.title}>Lapangan</Text>
-      <Text style={styles.subtitle}>Temukan lapangan terdekat dan tersedia.</Text>
+      <Text style={styles.subtitle}>Cari lapangan yang cocok, lalu saring hasilnya dengan cepat.</Text>
 
-      <View style={styles.searchBar}>
-        <MaterialIcons name="search" size={20} color={colors.textTertiary} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Cari nama lapangan..."
-          placeholderTextColor={colors.textTertiary}
-          value={search}
-          onChangeText={setSearch}
-        />
-        {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <MaterialIcons name="close" size={18} color={colors.textTertiary} />
+      <View style={styles.resultRow}>
+        <Text style={styles.resultText}>
+          {loading && fields.length === 0 ? 'Memuat data...' : `${fields.length} lapangan ditemukan`}
+        </Text>
+        {hasActiveFilters ? (
+          <TouchableOpacity
+            onPress={() => {
+              setSearch('');
+              setActiveFilter('Semua');
+              setMinPrice('');
+              setMaxPrice('');
+              setSort('latest');
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.resetText}>Reset filter</Text>
           </TouchableOpacity>
-        )}
-        {loading && fields.length > 0 && (
-          <ActivityIndicator size="small" color={colors.primary} />
-        )}
+        ) : null}
       </View>
 
-      <View style={styles.priceRow}>
-        <Text style={styles.filterLabel}>Harga / jam</Text>
-        <TextInput
-          style={styles.priceInput}
-          placeholder="Minimum"
-          placeholderTextColor={colors.textTertiary}
-          keyboardType="numeric"
-          value={minPrice}
-          onChangeText={setMinPrice}
-        />
-        <Text style={styles.priceSeparator}>-</Text>
-        <TextInput
-          style={styles.priceInput}
-          placeholder="Maksimum"
-          placeholderTextColor={colors.textTertiary}
-          keyboardType="numeric"
-          value={maxPrice}
-          onChangeText={setMaxPrice}
-        />
-      </View>
-
-      <View style={styles.sortRow}>
-        <Text style={styles.filterLabel}>Urutkan</Text>
-        {SORT_OPTIONS.map((option) => {
-          const isActive = sort === option.key;
-          return (
-            <TouchableOpacity key={option.key} style={[styles.sortChip, isActive && styles.sortChipActive]} onPress={() => setSort(option.key)}>
-              <Text style={[styles.sortChipText, isActive && styles.sortChipTextActive]}>{option.label}</Text>
+      <View style={styles.searchActionsRow}>
+        <View style={[styles.searchBar, styles.searchBarInRow]}>
+          <MaterialIcons name="search" size={20} color={colors.textTertiary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Cari nama lapangan"
+            placeholderTextColor={colors.textTertiary}
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <MaterialIcons name="close" size={18} color={colors.textTertiary} />
             </TouchableOpacity>
-          );
-        })}
+          )}
+          {loading && fields.length > 0 && <ActivityIndicator size="small" color={colors.primary} />}
+        </View>
+        <TouchableOpacity
+          style={[styles.filterButton, isFilterOpen && styles.filterButtonActive]}
+          onPress={() => setIsFilterOpen((current) => !current)}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Buka filter harga dan urutan"
+        >
+          <MaterialIcons name="tune" size={19} color={isFilterOpen ? colors.primary : colors.textSecondary} />
+          <Text style={[styles.filterButtonText, isFilterOpen && styles.filterButtonTextActive]}>Filter</Text>
+          {hasAdvancedFilters && <View style={styles.filterBadge} />}
+        </TouchableOpacity>
       </View>
+
+      <Animated.View
+        style={[
+          styles.advancedFilterPanel,
+          {
+            maxHeight: filterAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, 150] }),
+            opacity: filterAnimation,
+            marginBottom: filterAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, 14] }),
+          },
+        ]}
+      >
+        <View style={styles.priceRow}>
+          <Text style={styles.filterLabel}>Harga per jam</Text>
+          <TextInput style={styles.priceInput} placeholder="Min" placeholderTextColor={colors.textTertiary} keyboardType="numeric" value={minPrice} onChangeText={setMinPrice} />
+          <Text style={styles.priceSeparator}>-</Text>
+          <TextInput style={styles.priceInput} placeholder="Maks" placeholderTextColor={colors.textTertiary} keyboardType="numeric" value={maxPrice} onChangeText={setMaxPrice} />
+        </View>
+        <TouchableOpacity style={styles.sortSelector} onPress={() => setIsSortModalOpen(true)} activeOpacity={0.8}>
+          <Text style={styles.filterLabel}>Urutkan</Text>
+          <View style={styles.sortSelectorValue}>
+            <Text style={styles.sortSelectorText}>{SORT_OPTIONS.find((option) => option.key === sort)?.label}</Text>
+            <MaterialIcons name="expand-more" size={20} color={colors.textSecondary} />
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
 
       <FlatList
         horizontal
@@ -166,8 +204,8 @@ export default function FieldsScreen() {
     return (
       <View style={styles.emptyState}>
         <MaterialIcons name="search-off" size={48} color={colors.textTertiary} />
-        <Text style={styles.emptyTitle}>Tidak ada lapangan ditemukan</Text>
-        <Text style={styles.emptyDesc}>Coba kata kunci atau filter yang berbeda.</Text>
+        <Text style={styles.emptyTitle}>Belum ada lapangan yang cocok</Text>
+        <Text style={styles.emptyDesc}>Coba ubah kata kunci atau longgarkan filter harga.</Text>
       </View>
     );
   };
@@ -204,6 +242,32 @@ export default function FieldsScreen() {
         }}
         onEndReachedThreshold={0.4}
       />
+      <Modal visible={isSortModalOpen} transparent animationType="slide" onRequestClose={() => setIsSortModalOpen(false)}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={() => setIsSortModalOpen(false)} />
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Urutkan lapangan</Text>
+            {SORT_OPTIONS.map((option) => {
+              const isActive = sort === option.key;
+              return (
+                <TouchableOpacity
+                  key={option.key}
+                  style={[styles.modalItem, isActive && styles.modalItemActive]}
+                  onPress={() => {
+                    setSort(option.key);
+                    setIsSortModalOpen(false);
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.modalItemText, isActive && styles.modalItemTextActive]}>{option.label}</Text>
+                  {isActive && <MaterialIcons name="check" size={18} color={colors.primary} />}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -242,6 +306,22 @@ const makeStyles = (colors: any) => StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: 20,
   },
+  resultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  resultText: {
+    ...FONTS.bodySm,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  resetText: {
+    ...FONTS.bodySm,
+    color: colors.primary,
+    fontWeight: '700',
+  },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -254,6 +334,57 @@ const makeStyles = (colors: any) => StyleSheet.create({
     marginBottom: 16,
     gap: 10,
     ...SHADOWS.sm,
+  },
+  searchActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 14,
+  },
+  searchBarInRow: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  filterButton: {
+    height: 52,
+    minWidth: 86,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    borderRadius: SIZES.borderRadiusLg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    position: 'relative',
+  },
+  filterButtonActive: {
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.primary,
+  },
+  filterButtonText: {
+    ...FONTS.labelMd,
+    color: colors.textSecondary,
+  },
+  filterButtonTextActive: {
+    color: colors.primary,
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
+  advancedFilterPanel: {
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: SIZES.borderRadius,
+    paddingHorizontal: 12,
+    marginBottom: 14,
   },
   searchInput: {
     flex: 1,
@@ -321,6 +452,29 @@ const makeStyles = (colors: any) => StyleSheet.create({
     marginBottom: 18,
     flexWrap: 'wrap',
   },
+  sortSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 46,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle,
+  },
+  sortSelectorValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: SIZES.borderRadius,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.outline,
+  },
+  sortSelectorText: {
+    ...FONTS.labelMd,
+    color: colors.text,
+  },
   sortChip: {
     paddingHorizontal: 12,
     paddingVertical: 7,
@@ -339,6 +493,51 @@ const makeStyles = (colors: any) => StyleSheet.create({
   },
   sortChipTextActive: {
     color: colors.primary,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: colors.shadowDark,
+  },
+  modalSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: SIZES.borderRadiusLg,
+    borderTopRightRadius: SIZES.borderRadiusLg,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 28,
+  },
+  modalHandle: {
+    alignSelf: 'center',
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.outline,
+    marginBottom: 18,
+  },
+  modalTitle: {
+    ...FONTS.headlineSm,
+    color: colors.text,
+    marginBottom: 10,
+  },
+  modalItem: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    borderRadius: SIZES.borderRadius,
+  },
+  modalItemActive: {
+    backgroundColor: colors.primaryContainer,
+  },
+  modalItemText: {
+    ...FONTS.bodyMd,
+    color: colors.textSecondary,
+  },
+  modalItemTextActive: {
+    color: colors.primary,
+    fontWeight: '700',
   },
   venueCard: {
     backgroundColor: colors.surface,
@@ -467,10 +666,12 @@ const makeStyles = (colors: any) => StyleSheet.create({
   emptyTitle: {
     ...FONTS.headlineSm,
     color: colors.text,
+    textAlign: 'center',
   },
   emptyDesc: {
     ...FONTS.bodySm,
     color: colors.textTertiary,
+    textAlign: 'center',
   },
   bottomSection: {
     paddingHorizontal: 20,

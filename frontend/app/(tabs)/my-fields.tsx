@@ -203,7 +203,7 @@ export default function MyFieldsScreen() {
         <TouchableOpacity style={st.backBtn} activeOpacity={0.8} onPress={() => router.push('/(tabs)')}>
           <MaterialIcons name="arrow-back" size={20} color={colors.text} />
         </TouchableOpacity>
-        <Text style={st.headerTitle}>Lapangan Saya</Text>
+        <Text style={st.headerTitle}>Lapangan saya</Text>
       </View>
 
       <FlatList

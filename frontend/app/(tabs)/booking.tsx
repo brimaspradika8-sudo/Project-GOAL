@@ -19,10 +19,10 @@ export default function BookingTabScreen() {
           <MaterialIcons name="confirmation-number" size={40} color={colors.primary} />
         </View>
         <Text style={[st.title, { color: colors.text }]}>Booking</Text>
-        <Text style={[st.badge, { color: colors.primary, backgroundColor: colors.primaryContainer }]}>Segera Hadir</Text>
+        <Text style={[st.badge, { color: colors.primary, backgroundColor: colors.primaryContainer }]}>Sedang Disiapkan</Text>
         <Text style={[st.desc, { color: colors.textSecondary }]}>
-          Fitur pemesanan lapangan sedang kami kembangkan.{'\n'}
-          Nantikan pembaruan berikutnya!
+          Fitur booking akan hadir di sini.{'\n'}
+          Untuk sekarang, lanjut pilih lapangan dari tab Lapangan.
         </Text>
       </FadeInView>
     </View>

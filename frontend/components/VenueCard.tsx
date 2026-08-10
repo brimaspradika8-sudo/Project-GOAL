@@ -149,7 +149,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     ...SHADOWS.sm,
   },
   imageWrap: {
-    height: 190,
+    height: 146,
     position: 'relative',
   },
   image: {
@@ -171,8 +171,8 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   },
   sportPill: {
     position: 'absolute',
-    top: 12,
-    left: 12,
+    top: 10,
+    left: 10,
     backgroundColor: colors.primary,
     borderRadius: 12,
     paddingHorizontal: 10,
@@ -186,21 +186,21 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   },
   favoriteBtn: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    top: 10,
+    right: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: 'rgba(255,255,255,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   info: {
-    padding: 14,
+    padding: 11,
   },
   name: {
     fontFamily: FONT_FAMILY,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: colors.text,
     marginBottom: 4,
@@ -219,7 +219,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   divider: {
     height: 1,
     backgroundColor: colors.divider,
-    marginVertical: 10,
+    marginVertical: 6,
   },
   priceRow: {
     flexDirection: 'row',
@@ -238,7 +238,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   },
   price: {
     fontFamily: FONT_FAMILY,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: colors.primary,
   },
@@ -250,8 +250,8 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   bookBtn: {
     backgroundColor: colors.primary,
     borderRadius: SIZES.borderRadius,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingHorizontal: 13,
+    paddingVertical: 5,
   },
   bookBtnDisabled: {
     backgroundColor: colors.surfaceStrong,
