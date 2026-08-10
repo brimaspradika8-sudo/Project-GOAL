@@ -3,6 +3,8 @@ import { Animated, StyleSheet, View, ViewStyle, FlatList } from 'react-native';
 import { SHADOWS } from './goalTheme';
 import { useTheme } from '../lib/theme';
 
+const GRID_LOADER_DELAYS = [200, 300, 400, 100, 200, 300, 0, 100, 200];
+
 interface SkeletonProps {
   width?: number | `${number}%`;
   height?: number;
@@ -42,15 +44,15 @@ export function SkeletonVenueCard() {
   const { colors } = useTheme();
   return (
     <View style={[st.card, { backgroundColor: colors.surfaceWhite, borderColor: colors.divider }]}>
-      <Skeleton height={180} borderRadius={0} />
+      <Skeleton height={176} borderRadius={0} />
       <View style={st.cardBody}>
         <Skeleton width="70%" height={18} borderRadius={6} />
-        <Skeleton width="50%" height={14} borderRadius={6} />
+        <Skeleton width="54%" height={14} borderRadius={6} />
         <View style={st.cardFooter}>
           <Skeleton width={80} height={16} borderRadius={6} />
           <View style={st.chips}>
-            <Skeleton width={50} height={24} borderRadius={6} />
-            <Skeleton width={60} height={24} borderRadius={6} />
+            <Skeleton width={52} height={24} borderRadius={12} />
+            <Skeleton width={64} height={24} borderRadius={12} />
           </View>
         </View>
       </View>
@@ -92,11 +94,79 @@ export function SkeletonHorizontalCards() {
 export function SkeletonProfile() {
   return (
     <View style={st.profile}>
-      <Skeleton width={64} height={64} borderRadius={20} />
+      <Skeleton width={68} height={68} borderRadius={20} />
       <View style={st.profileText}>
-        <Skeleton width={120} height={18} borderRadius={6} />
-        <Skeleton width={180} height={14} borderRadius={6} />
+        <Skeleton width={132} height={18} borderRadius={6} />
+        <Skeleton width={176} height={14} borderRadius={6} />
       </View>
+    </View>
+  );
+}
+
+export function SkeletonHero() {
+  return (
+    <View style={st.hero}>
+      <View style={st.heroTop}>
+        <Skeleton width={96} height={16} borderRadius={6} />
+        <Skeleton width={76} height={16} borderRadius={999} />
+      </View>
+      <Skeleton width="78%" height={24} borderRadius={8} />
+      <Skeleton width="90%" height={14} borderRadius={6} />
+      <Skeleton width="70%" height={14} borderRadius={6} />
+    </View>
+  );
+}
+
+export function SkeletonFilterBar() {
+  return (
+    <View style={st.filterRow}>
+      <Skeleton width="68%" height={52} borderRadius={16} />
+      <Skeleton width={92} height={52} borderRadius={16} />
+    </View>
+  );
+}
+
+export function GridLoader() {
+  const { colors } = useTheme();
+  const rotation = useRef(new Animated.Value(0)).current;
+  const scales = useRef(Array.from({ length: 9 }, () => new Animated.Value(1))).current;
+
+  useEffect(() => {
+    const rotationAnimation = Animated.loop(
+      Animated.timing(rotation, {
+        toValue: 1,
+        duration: 6000,
+        useNativeDriver: true,
+      })
+    );
+    const scaleAnimations = scales.map((scale, index) => Animated.loop(
+      Animated.sequence([
+        Animated.delay(GRID_LOADER_DELAYS[index]),
+        Animated.timing(scale, { toValue: 0.15, duration: 455, useNativeDriver: true }),
+        Animated.timing(scale, { toValue: 1, duration: 845, useNativeDriver: true }),
+      ])
+    ));
+
+    rotationAnimation.start();
+    scaleAnimations.forEach((animation) => animation.start());
+    return () => {
+      rotationAnimation.stop();
+      scaleAnimations.forEach((animation) => animation.stop());
+    };
+  }, [rotation, scales]);
+
+  const rotate = rotation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
+  return (
+    <View style={st.gridLoaderWrap}>
+      <Animated.View style={[st.gridLoader, { transform: [{ rotate }] }]}>
+        {scales.map((scale, index) => (
+          <Animated.View
+            key={index}
+            style={[st.gridLoaderCircle, { backgroundColor: colors.primary, transform: [{ scale }] }]}
+          />
+        ))}
+      </Animated.View>
     </View>
   );
 }
@@ -170,6 +240,46 @@ const st = StyleSheet.create({
   },
   profileText: {
     gap: 8,
+  },
+  hero: {
+    borderRadius: 18,
+    padding: 18,
+    gap: 12,
+    marginBottom: 14,
+  },
+  heroTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+  gridLoaderWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 36,
+  },
+  gridLoader: {
+    width: 80,
+    height: 80,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    overflow: 'hidden',
+    borderRadius: 40,
+  },
+  gridLoaderCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 11,
+    shadowColor: '#FFFFFF',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 3,
+    elevation: 2,
   },
   listItem: {
     flexDirection: 'row',

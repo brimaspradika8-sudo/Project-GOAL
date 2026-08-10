@@ -1,34 +1,65 @@
-import React from 'react';
-import { StyleSheet, Text, View, ActivityIndicator, useWindowDimensions } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, View, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useTheme } from '../lib/theme';
+import { GridLoader } from './Skeleton';
 
 type LoadingScreenProps = {
   message?: string;
 };
 
-export default function LoadingScreen({ message = 'Menyiapkan arena' }: LoadingScreenProps) {
+export default function LoadingScreen({ message = 'Memeriksa sesi' }: LoadingScreenProps) {
   const { width } = useWindowDimensions();
   const { colors } = useTheme();
   const glowSize = Math.min(320, width * 0.85);
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(progress, {
+          toValue: 1,
+          duration: 2400,
+          useNativeDriver: false,
+        }),
+        Animated.timing(progress, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: false,
+        }),
+      ])
+    );
+
+    animation.start();
+    return () => animation.stop();
+  }, [progress]);
+
+  const progressWidth = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.glowTop, { width: glowSize, height: glowSize, borderRadius: glowSize / 2 }]} />
-      <View style={[styles.glowBottom, { width: glowSize * 1.1, height: glowSize * 1.1, borderRadius: (glowSize * 1.1) / 2 }]} />
+      <View style={[styles.glowTop, { width: glowSize, height: glowSize, borderRadius: glowSize / 2, backgroundColor: colors.primary }]} />
+      <View style={[styles.glowBottom, { width: glowSize * 1.1, height: glowSize * 1.1, borderRadius: (glowSize * 1.1) / 2, backgroundColor: colors.info }]} />
 
       <View style={styles.brandWrap}>
-        <Text style={[styles.logo, { color: colors.primary }]}>GOAL</Text>
-        <Text style={styles.logoSub}>Game Organizer & Arena League</Text>
+        <Text style={[styles.logo, { color: colors.primary, textShadowColor: colors.primary }]}>GOAL</Text>
+        <Text style={[styles.logoSub, { color: colors.textTertiary }]}>Game Organizer & Arena League</Text>
       </View>
 
       <View style={[styles.loaderCard, { borderColor: colors.borderSubtle, backgroundColor: colors.bgElevated }]}>
-        <View style={[styles.ball, { backgroundColor: colors.primary }]}>
-          <Text style={styles.ballIcon}>⚽</Text>
+        <GridLoader />
+
+        <Text style={[styles.loadingText, { color: colors.textPrimary }]}>{message}</Text>
+
+        <View style={[styles.progressTrack, { backgroundColor: colors.primaryMuted }]}>
+          <Animated.View style={[styles.progressFill, { width: progressWidth, backgroundColor: colors.primary }]} />
         </View>
 
-        <View style={styles.loadingRow}>
-          <Text style={[styles.loadingText, { color: colors.textPrimary }]}>{message}</Text>
+        <View style={styles.loadingMeta}>
           <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={[styles.loadingHint, { color: colors.textSecondary }]}>Mohon tunggu sebentar</Text>
         </View>
       </View>
     </View>
@@ -46,67 +77,73 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -120,
     left: -90,
-    backgroundColor: '#4be277',
     opacity: 0.12,
   },
   glowBottom: {
     position: 'absolute',
     right: -110,
     bottom: -130,
-    backgroundColor: '#38bdf8',
     opacity: 0.09,
   },
   brandWrap: {
     alignItems: 'center',
-    marginBottom: 34,
+    marginBottom: 26,
   },
   logo: {
-    fontSize: 52,
+    fontSize: 44,
     fontStyle: 'italic',
     fontWeight: '900',
     letterSpacing: 2,
-    textShadow: '0px 0px 18px rgba(75,226,119,0.45)',
+    textShadowRadius: 18,
   },
   logoSub: {
-    color: '#9db7a0',
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1.8,
     marginTop: 2,
     textTransform: 'uppercase',
+    textAlign: 'center',
   },
   loaderCard: {
     width: '100%',
-    minHeight: 178,
+    maxWidth: 560,
+    minHeight: 210,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 18,
     borderWidth: 1,
     overflow: 'hidden',
-    paddingVertical: 28,
-  },
-  ball: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0px 8px 18px rgba(75,226,119,0.35)',
-    elevation: 10,
-  },
-  ballIcon: {
-    fontSize: 36,
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 22,
-    gap: 10,
+    paddingVertical: 30,
+    paddingHorizontal: 24,
   },
   loadingText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
-    letterSpacing: 1.2,
+    letterSpacing: 1.1,
     textTransform: 'uppercase',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  progressTrack: {
+    width: '100%',
+    height: 8,
+    borderRadius: 999,
+    overflow: 'hidden',
+    marginTop: 18,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 999,
+  },
+  loadingMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+  },
+  loadingHint: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.4,
   },
 });

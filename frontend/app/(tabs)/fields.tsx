@@ -18,7 +18,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { SIZES, FONTS, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
 import { useFieldStore, type FieldFilters } from '../../store/fieldStore';
-import { SkeletonVenueList } from '../../components/Skeleton';
+import { GridLoader } from '../../components/Skeleton';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useTheme } from '../../lib/theme';
 import VenueCard from '../../components/VenueCard';
@@ -200,7 +200,13 @@ export default function FieldsScreen() {
   };
 
   const renderEmpty = () => {
-    if (loading && !refreshing && fields.length === 0) return <SkeletonVenueList />;
+    if (loading && !refreshing && fields.length === 0) {
+      return (
+        <View style={styles.loadingWrap}>
+          <GridLoader />
+        </View>
+      );
+    }
     return (
       <View style={styles.emptyState}>
         <MaterialIcons name="search-off" size={48} color={colors.textTertiary} />
@@ -288,6 +294,9 @@ const makeStyles = (colors: any) => StyleSheet.create({
   scrollContentDesktop: {
     maxWidth: 1120,
     paddingHorizontal: 24,
+  },
+  loadingWrap: {
+    paddingTop: 8,
   },
   gridRow: {
     gap: 16,

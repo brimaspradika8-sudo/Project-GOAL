@@ -270,7 +270,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeContext.Provider value={value}>
-      {children}
+      {ready ? children : null}
     </ThemeContext.Provider>
   );
 }

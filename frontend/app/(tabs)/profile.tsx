@@ -402,6 +402,12 @@ export default function ProfileScreen() {
         }
       >
         <View style={styles.pageShell}>
+          {refreshing ? (
+            <View style={styles.refreshBanner}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.refreshBannerText}>Menyegarkan profil...</Text>
+            </View>
+          ) : null}
           <Text style={styles.pageTitle}>Profil</Text>
 
           <View style={[styles.profileGrid, isDesktop && styles.profileGridDesktop]}>
@@ -668,6 +674,24 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     fontSize: 28,
     color: colors.text,
     marginBottom: 18,
+  },
+  refreshBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.surface,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  refreshBannerText: {
+    ...FONTS.bodySm,
+    fontWeight: '700',
+    color: colors.textSecondary,
   },
   profileCard: {
     flexDirection: 'row',
