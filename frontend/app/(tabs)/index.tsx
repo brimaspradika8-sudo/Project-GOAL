@@ -20,7 +20,7 @@ import { Field, useFieldStore } from '../../store/fieldStore';
 import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
 import { CATEGORIES } from '../../data/venues';
 import { SafeImage } from '../../components/SafeImage';
-import { SkeletonVenueList, SkeletonHorizontalCards, SkeletonProfile } from '../../components/Skeleton';
+import { SkeletonVenueList, SkeletonHorizontalCards, SkeletonProfile, SkeletonHero } from '../../components/Skeleton';
 import { useDebounce } from '../../hooks/useDebounce';
 import { apiFetch } from '../../lib/apiClient';
 import { useTheme } from '../../lib/theme';
@@ -127,11 +127,15 @@ export default function HomeScreen() {
       <View style={styles.skeletonContainer}>
         <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <SkeletonProfile />
-          <View style={{ height: 16 }} />
-          <SkeletonHorizontalCards />
-          <View style={{ height: 16 }} />
-          <SkeletonVenueList />
+          <View style={styles.pageShell}>
+            <SkeletonProfile />
+            <View style={{ height: 16 }} />
+            <SkeletonHero />
+            <View style={{ height: 4 }} />
+            <SkeletonHorizontalCards />
+            <View style={{ height: 16 }} />
+            <SkeletonVenueList />
+          </View>
         </ScrollView>
       </View>
     );
@@ -170,6 +174,12 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.pageShell}>
+        {refreshing ? (
+          <View style={styles.refreshBanner}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={styles.refreshBannerText}>Menyegarkan data...</Text>
+          </View>
+        ) : null}
         <View style={[styles.heroPanel, isDesktop && styles.heroPanelDesktop]}>
           <View style={styles.heroCopy}>
             <Text style={styles.greeting}>Halo, {userName}</Text>
@@ -472,6 +482,26 @@ const makeStyles = (colors: any) => StyleSheet.create({
   },
   heroCopy: {
     flex: 1,
+  },
+  refreshBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.surfaceWhite,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.divider,
+  },
+  refreshBannerText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textSecondary,
   },
   greeting: {
     ...FONTS.labelMd,
