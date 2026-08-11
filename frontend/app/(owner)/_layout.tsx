@@ -35,6 +35,7 @@ export default function OwnerTabLayout() {
 
   const sidebarItems: SidebarItem[] = [
     { href: '/(owner)/fields', label: 'Kelola Lapangan', icon: 'stadium' },
+    { href: '/(owner)/booking-settings', label: 'Booking Settings', icon: 'event-available' },
     { href: '/(owner)/bookings', label: 'Kelola Booking', icon: 'receipt-long' },
     { href: '/(owner)/revenue', label: 'Kelola Pendapatan', icon: 'bar-chart' },
     { href: '/(owner)/profile', label: 'Profile', icon: 'person' },
@@ -69,6 +70,16 @@ export default function OwnerTabLayout() {
                 title: 'Lapangan',
                 tabBarIcon: ({ color }) => (
                   <MaterialIcons name="stadium" size={24} color={color} />
+                ),
+              }}
+              listeners={{ tabPress: () => Haptics.selectionAsync() }}
+            />
+            <Tabs.Screen
+              name="booking-settings"
+              options={{
+                title: 'Settings',
+                tabBarIcon: ({ color }) => (
+                  <MaterialIcons name="event-available" size={24} color={color} />
                 ),
               }}
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
@@ -140,6 +151,16 @@ export default function OwnerTabLayout() {
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
             <Tabs.Screen
+              name="booking-settings"
+              options={{
+                title: 'Settings',
+                tabBarIcon: ({ color }) => (
+                  <MaterialIcons name="event-available" size={24} color={color} />
+                ),
+              }}
+              listeners={{ tabPress: () => Haptics.selectionAsync() }}
+            />
+            <Tabs.Screen
               name="bookings"
               options={{
                 title: 'Booking',
@@ -193,6 +214,16 @@ export default function OwnerTabLayout() {
           title: 'Lapangan',
           tabBarIcon: ({ color }) => (
             <MaterialIcons name="stadium" size={24} color={color} />
+          ),
+        }}
+        listeners={{ tabPress: () => Haptics.selectionAsync() }}
+      />
+      <Tabs.Screen
+        name="booking-settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="event-available" size={24} color={color} />
           ),
         }}
         listeners={{ tabPress: () => Haptics.selectionAsync() }}

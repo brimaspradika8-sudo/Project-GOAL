@@ -7,6 +7,7 @@ use App\Http\Controllers\Profile\OnboardingController;
 use App\Http\Controllers\Profile\AvatarController;
 use App\Http\Controllers\Field\FieldController;
 use App\Http\Controllers\Owner\OwnerRequestController;
+use App\Http\Controllers\Owner\FieldBookingConfigurationController;
 use App\Http\Controllers\Owner\SuperAdminOwnerController;
 use App\Http\Controllers\SuperAdmin\UserController;
 use App\Http\Controllers\UploadController;
@@ -51,6 +52,10 @@ use App\Http\Controllers\NotificationController;
             Route::post('/fields',       [FieldController::class, 'store']);
             Route::put('/fields/{id}',   [FieldController::class, 'update']);
             Route::delete('/fields/{id}',[FieldController::class, 'destroy']);
+            Route::patch('/owner/fields/{id}/schedule', [FieldBookingConfigurationController::class, 'updateSchedule']);
+            Route::post('/owner/fields/{id}/prices', [FieldBookingConfigurationController::class, 'storePrice']);
+            Route::put('/owner/prices/{id}', [FieldBookingConfigurationController::class, 'updatePrice']);
+            Route::delete('/owner/prices/{id}', [FieldBookingConfigurationController::class, 'destroyPrice']);
         });
         // Fields - super admin only
         Route::middleware('role:super_admin')->group(function () {

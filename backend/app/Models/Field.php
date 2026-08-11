@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Field extends Model
@@ -18,6 +19,10 @@ class Field extends Model
         'location',
         'description',
         'price_per_hour',
+        'open_time',
+        'close_time',
+        'session_duration_minutes',
+        'buffer_duration_minutes',
         'image_url',
     ];
 
@@ -29,6 +34,8 @@ class Field extends Model
     protected $casts = [
         'price_per_hour' => 'integer',
         'approved_at'    => 'datetime',
+        'session_duration_minutes' => 'integer',
+        'buffer_duration_minutes' => 'integer',
     ];
 
     public function owner(): BelongsTo
@@ -39,6 +46,11 @@ class Field extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function prices(): HasMany
+    {
+        return $this->hasMany(FieldPrice::class)->orderBy('start_time');
     }
 
     public function scopeApproved($query)

@@ -15,11 +15,15 @@ services:
     env_file:
       - ./backend/.env.docker
     environment:
-      DB_HOST: database
+      DB_HOST: postgres
       DB_PORT: 5432
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: redis
     depends_on:
-      database:
+      postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - goal-network
 
@@ -30,8 +34,10 @@ services:
     command: ["php", "artisan", "queue:work", "--tries=3", "--timeout=90"]
     environment:
       RUN_MIGRATIONS: "false"
-      DB_HOST: database
+      DB_HOST: postgres
       DB_PORT: 5432
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: redis
     volumes:
       - ./backend:/var/www
       - /var/www/vendor
@@ -39,8 +45,10 @@ services:
     env_file:
       - ./backend/.env.docker
     depends_on:
-      database:
+      postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - goal-network
 
@@ -51,8 +59,10 @@ services:
     command: ["php", "artisan", "schedule:work"]
     environment:
       RUN_MIGRATIONS: "false"
-      DB_HOST: database
+      DB_HOST: postgres
       DB_PORT: 5432
+      QUEUE_CONNECTION: redis
+      REDIS_HOST: redis
     volumes:
       - ./backend:/var/www
       - /var/www/vendor
@@ -60,12 +70,14 @@ services:
     env_file:
       - ./backend/.env.docker
     depends_on:
-      database:
+      postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - goal-network
 
-  database:
+  postgres:
     image: postgres:16
     container_name: goal-postgres
     restart: unless-stopped
@@ -86,8 +98,25 @@ services:
     networks:
       - goal-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: goal-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - goal-network
+
 volumes:
   postgres-data:
+  redis-data:
 
 networks:
   goal-network:

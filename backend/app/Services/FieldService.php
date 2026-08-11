@@ -146,8 +146,14 @@ class FieldService
 
     public function listByOwner(User $user): LengthAwarePaginator
     {
-        return Field::where('owner_id', $user->id)
-            ->with(['owner:id,name', 'approver:id,name'])
+        $query = Field::query();
+
+        if ($user->profile?->role !== Profile::ROLE_SUPER_ADMIN) {
+            $query->where('owner_id', $user->id);
+        }
+
+        return $query
+            ->with(['owner:id,name', 'approver:id,name', 'prices'])
             ->latest()
             ->paginate(15);
     }
