@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\AdminAuditLog;
 use App\Models\Profile;
@@ -19,7 +20,7 @@ class UserController extends Controller
     {
         $users = $this->userService->listUsers($request->search, $request->role);
 
-        return response()->json($users);
+        return $this->successResponse('Daftar pengguna berhasil dimuat.', $users);
     }
 
     public function auditLogs(Request $request): JsonResponse
@@ -54,7 +55,7 @@ class UserController extends Controller
             ];
         });
 
-        return response()->json($logs);
+        return $this->successResponse('Audit log berhasil dimuat.', $logs);
     }
 
     public function store(Request $request): JsonResponse
@@ -63,11 +64,11 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => ['required', 'string', PasswordRule::min(8)->mixedCase()->numbers()],
-            'role' => 'nullable|in:owner,player,super_admin',
+            'role' => ['nullable', UserRole::validationRule()],
         ]);
 
         $currentUser = $request->user();
-        $requestedRole = $data['role'] ?? 'player';
+        $requestedRole = $data['role'] ?? UserRole::PLAYER->value;
 
         if ($requestedRole === Profile::ROLE_SUPER_ADMIN && $currentUser->profile?->role !== Profile::ROLE_SUPER_ADMIN) {
             return response()->json(['message' => 'Hanya Super Admin yang dapat membuat akun Super Admin.'], 403);
@@ -76,7 +77,7 @@ class UserController extends Controller
         $user = $this->userService->createUser($data);
         $this->recordAudit($request, 'user.created', $user, ['role' => $requestedRole]);
 
-        return response()->json($user, 201);
+        return $this->successResponse('User berhasil dibuat.', $user, 201);
     }
 
     public function update(Request $request, int $id): JsonResponse
@@ -91,28 +92,28 @@ class UserController extends Controller
         $updatedUser = $this->userService->updateUser($user, $data);
         $this->recordAudit($request, 'user.updated', $updatedUser, ['fields' => array_keys($data)]);
 
-        return response()->json($updatedUser);
+        return $this->successResponse('User berhasil diperbarui.', $updatedUser);
     }
 
     public function updateRole(Request $request, int $id): JsonResponse
     {
-        $request->validate(['role' => 'required|in:player,owner,super_admin']);
+        $request->validate(['role' => ['required', UserRole::validationRule()]]);
 
         $user = User::with('profile')->findOrFail($id);
 
         if (!$user->profile) {
-            return response()->json(['message' => 'Profil tidak ditemukan.'], 404);
+            return $this->errorResponse('Profil tidak ditemukan.', ['profile' => ['Profil tidak ditemukan.']], 404);
         }
 
         try {
             $this->userService->updateRole($user, $request->role, $request->user());
         } catch (\RuntimeException $e) {
-            return response()->json(['message' => $e->getMessage()], 403);
+            return $this->errorResponse($e->getMessage(), ['role' => [$e->getMessage()]], 403);
         }
 
         $this->recordAudit($request, 'user.role_updated', $user, ['role' => $request->role]);
 
-        return response()->json(['message' => 'Role berhasil diperbarui.', 'role' => $request->role]);
+        return $this->successResponse('Role berhasil diperbarui.', ['role' => $request->role]);
     }
 
     public function destroy(Request $request, int $id): JsonResponse

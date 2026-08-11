@@ -42,7 +42,7 @@ export default function AuditLogPage() {
         params: { ...(debouncedSearch ? { search: debouncedSearch } : {}), ...(action ? { action } : {}) },
       });
       const body = await response.json();
-      if (response.ok) setLogs(body?.data ?? []);
+      if (response.ok) setLogs(body?.data?.data ?? body?.data ?? []);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -56,7 +56,7 @@ export default function AuditLogPage() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <DashboardHeader title="Audit Log" subtitle="Riwayat perubahan yang dilakukan admin." showBack={false} />
+      <DashboardHeader title="Audit Log" subtitle="Riwayat perubahan yang dilakukan super admin." showBack={false} />
       <FlatList
         data={logs}
         keyExtractor={(item) => String(item.id)}
@@ -66,7 +66,7 @@ export default function AuditLogPage() {
           <>
             <View style={styles.searchBar}>
               <MaterialIcons name="search" size={20} color={colors.textTertiary} />
-              <TextInput value={search} onChangeText={setSearch} placeholder="Cari admin atau aksi..." placeholderTextColor={colors.textTertiary} style={styles.searchInput} />
+              <TextInput value={search} onChangeText={setSearch} placeholder="Cari super admin atau aksi..." placeholderTextColor={colors.textTertiary} style={styles.searchInput} />
             </View>
             <FlatList
               horizontal
@@ -80,7 +80,7 @@ export default function AuditLogPage() {
             />
           </>
         )}
-        ListEmptyComponent={loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : <Text style={styles.empty}>Belum ada aktivitas admin.</Text>}
+        ListEmptyComponent={loading ? <ActivityIndicator color={colors.primary} style={styles.loader} /> : <Text style={styles.empty}>Belum ada aktivitas super admin.</Text>}
         renderItem={({ item }) => (
           <View style={styles.logCard}>
             <View style={styles.logIcon}><MaterialIcons name="history" size={20} color={colors.primary} /></View>

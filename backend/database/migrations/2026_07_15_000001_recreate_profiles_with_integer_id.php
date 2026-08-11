@@ -9,8 +9,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement('DROP TABLE IF EXISTS user_sport_preferences CASCADE');
-        DB::statement('DROP TABLE IF EXISTS profiles CASCADE');
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            Schema::dropIfExists('user_sport_preferences');
+            Schema::dropIfExists('profiles');
+        } else {
+            DB::statement('DROP TABLE IF EXISTS user_sport_preferences CASCADE');
+            DB::statement('DROP TABLE IF EXISTS profiles CASCADE');
+        }
 
         Schema::create('profiles', function (Blueprint $table) {
             $table->id();
@@ -26,6 +31,10 @@ return new class extends Migration
             $table->boolean('is_owner_verified')->default(false);
             $table->timestamps();
         });
+
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            DB::statement("ALTER TABLE profiles ADD CONSTRAINT profiles_role_check CHECK (role in ('player', 'owner', 'super_admin'))");
+        }
 
         Schema::create('user_sport_preferences', function (Blueprint $table) {
             $table->id();

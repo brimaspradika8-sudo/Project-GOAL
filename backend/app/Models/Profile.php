@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Profile extends Model
 {
-    const ROLE_PLAYER      = 'player';
-    const ROLE_OWNER       = 'owner';
-    const ROLE_SUPER_ADMIN = 'super_admin';
+    const ROLE_PLAYER      = UserRole::PLAYER->value;
+    const ROLE_OWNER       = UserRole::OWNER->value;
+    const ROLE_SUPER_ADMIN = UserRole::SUPER_ADMIN->value;
 
     protected $table = 'profiles';
 

@@ -10,6 +10,7 @@ import Sidebar, { SidebarItem, isSidebarRouteActive } from '../../components/web
 import MobileWebHeader from '../../components/web/MobileWebHeader';
 import { useBreakpoint } from '../../lib/responsive';
 import { useProfileStore } from '../../store/profileStore';
+import { USER_ROLES } from '../../types/roles';
 
 export default function OwnerTabLayout() {
   const profile = useProfileStore((s) => s.profile);
@@ -27,8 +28,8 @@ export default function OwnerTabLayout() {
       router.replace('/login');
       return;
     }
-    if (profile.role !== 'owner') {
-      router.replace(profile.role === 'super_admin' ? '/(admin)/dashboard' : '/(tabs)');
+    if (profile.role !== USER_ROLES.OWNER) {
+      router.replace(profile.role === USER_ROLES.SUPER_ADMIN ? '/(admin)/dashboard' : '/(tabs)');
     }
   }, [profile, profileLoading, router]);
 

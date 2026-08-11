@@ -234,7 +234,7 @@ class FieldService
                     $owner,
                     Notification::TYPE_FIELD_UPDATED,
                     'Lapangan Diperbarui',
-                    "Lapangan \"{$field->name}\" Anda diperbarui oleh admin.",
+                    "Lapangan \"{$field->name}\" Anda diperbarui oleh super admin.",
                     ['field_id' => $field->id, 'field_name' => $field->name]
                 );
             }
@@ -269,7 +269,7 @@ class FieldService
                     $owner,
                     Notification::TYPE_FIELD_DELETED,
                     'Lapangan Dihapus',
-                    "Lapangan \"{$field->name}\" Anda telah dihapus oleh admin.",
+                    "Lapangan \"{$field->name}\" Anda telah dihapus oleh super admin.",
                     ['field_id' => $field->id, 'field_name' => $field->name]
                 );
             }

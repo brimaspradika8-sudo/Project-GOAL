@@ -4,6 +4,7 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useProfileStore } from '../../store/profileStore';
+import { USER_ROLES } from '../../types/roles';
 import { useTheme } from '../../lib/theme';
 import { apiFetch } from '../../lib/apiClient';
 import { FONT_FAMILY } from '../../components/goalTheme';
@@ -16,7 +17,7 @@ export default function AdminTabLayout() {
   const profileLoading = useProfileStore((s) => s.loading);
   const { colors } = useTheme();
   const role = profile?.role || '';
-  const isSuperAdmin = role === 'super_admin';
+  const isSuperAdmin = role === USER_ROLES.SUPER_ADMIN;
   const isWeb = Platform.OS === 'web';
   const breakpoint = useBreakpoint();
   const pathname = usePathname();
@@ -28,8 +29,8 @@ export default function AdminTabLayout() {
       router.replace('/login');
       return;
     }
-    if (profile.role !== 'super_admin') {
-      router.replace(profile.role === 'owner' ? '/(owner)' : '/(tabs)');
+    if (profile.role !== USER_ROLES.SUPER_ADMIN) {
+      router.replace(profile.role === USER_ROLES.OWNER ? '/(owner)' : '/(tabs)');
     }
   }, [profile, profileLoading, router]);
 

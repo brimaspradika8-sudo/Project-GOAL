@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\UserRole;
 use App\Models\Profile;
 use App\Models\User;
 use App\Models\UserSportPreference;
@@ -17,7 +18,7 @@ class ProfileService
         if (!$profile) {
             return [
                 'onboarding_completed' => false,
-                'role'                 => Profile::ROLE_PLAYER,
+                'role'                 => UserRole::PLAYER->value,
                 'is_owner_verified'    => false,
                 'username'             => null,
                 'region'               => null,

@@ -120,7 +120,7 @@ export default function VenueCard({ field, onFavoriteToggle, isFavorite = false 
                 useToastStore.getState().show({
                   type: 'info',
                   title: 'Belum Tersedia',
-                  description: 'Lapangan ini masih menunggu persetujuan admin.',
+                  description: 'Lapangan ini masih menunggu persetujuan super admin.',
                   durationMs: 3000,
                 });
                 return;

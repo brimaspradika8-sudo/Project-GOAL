@@ -121,7 +121,7 @@ Cek token di AsyncStorage
     ├── Token valid → GET /me
     │       │
     │       ├── onboarding_completed = false → /onboarding
-    │       ├── role = admin/super_admin → /admin/users
+    │       ├── role = super_admin → /admin/users
     │       └── role = player/owner → /(tabs)/index
     │
     └── Token tidak ada → /login
@@ -167,7 +167,7 @@ interface Profile {
   sports: string[];
   region: string | null;
   onboarding_completed: boolean;
-  role: 'player' | 'owner' | 'admin' | 'super_admin';
+  role: 'player' | 'owner' | 'super_admin';
   is_owner_verified: boolean;
   age: number | null;
 }

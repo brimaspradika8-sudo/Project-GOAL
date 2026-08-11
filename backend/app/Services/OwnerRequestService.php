@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\UserRole;
 use App\Models\Notification;
 use App\Models\OwnerRequest;
 use App\Models\Profile;
@@ -87,7 +88,7 @@ class OwnerRequestService
                 $profile = Profile::where('user_id', $request->user_id)->first();
 
                 if ($profile) {
-                    $profile->forceFill(['role' => 'owner', 'is_owner_verified' => true])->save();
+                    $profile->forceFill(['role' => UserRole::OWNER->value, 'is_owner_verified' => true])->save();
                 } else {
                     $username = 'user_' . $request->user_id . '_' . strtolower(substr(uniqid(), -4));
 
@@ -96,7 +97,7 @@ class OwnerRequestService
                         'username'            => $username,
                         'full_name'           => $user->name ?? null,
                         'email'               => $user->email ?? null,
-                        'role'                => 'owner',
+                        'role'                => UserRole::OWNER->value,
                         'is_owner_verified'   => true,
                         'onboarding_completed' => true,
                     ]);

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiFetch } from '../lib/apiClient';
+import { profileFromApi, type UserRole } from '../types/roles';
 
 export interface Profile {
   id: number;
@@ -12,7 +13,7 @@ export interface Profile {
   sports: string[];
   region: string;
   onboarding_completed: boolean;
-  role: 'player' | 'owner' | 'super_admin';
+  role: UserRole;
   is_owner_verified: boolean;
   age?: number | null;
 }
@@ -42,7 +43,7 @@ export const useProfileStore = create<ProfileState>((set) => ({
       const res = await apiFetch('/me');
 
       if (res.ok) {
-        const data = await res.json();
+        const data = profileFromApi<Profile>(await res.json());
         await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(data));
         set({ profile: data, loading: false });
       } else {

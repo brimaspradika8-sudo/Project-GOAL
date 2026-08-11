@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\UserRole;
 use App\Models\Field;
 use App\Models\Notification;
 use App\Models\Profile;
@@ -49,7 +50,7 @@ class UserService
                 'user_id' => $user->id,
                 'email' => $data['email'],
                 'full_name' => $data['name'],
-                'role' => $data['role'] ?? 'player',
+                'role' => $data['role'] ?? UserRole::PLAYER->value,
                 'username' => 'user_' . $user->id,
             ]);
 
@@ -94,9 +95,9 @@ class UserService
 
     public function updateRole(User $user, string $role, User $currentUser): void
     {
-        $validRoles = [Profile::ROLE_PLAYER, Profile::ROLE_OWNER, Profile::ROLE_SUPER_ADMIN];
+        $validRoles = UserRole::values();
 
-        if (!in_array($role, $validRoles)) {
+        if (!in_array($role, $validRoles, true)) {
             throw new \RuntimeException('Role tidak valid.');
         }
 

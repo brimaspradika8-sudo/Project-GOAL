@@ -454,7 +454,7 @@ Daftar lapangan milik owner yang sedang login.
 ---
 
 #### `POST /fields`
-Buat lapangan baru. **Role:** owner, admin, super_admin
+Buat lapangan baru. **Role:** owner, super_admin
 
 **Request:**
 ```json
@@ -473,14 +473,14 @@ Buat lapangan baru. **Role:** owner, admin, super_admin
 ---
 
 #### `PUT /fields/{id}`
-Update lapangan. **Role:** owner (lapangan sendiri), admin, super_admin
+Update lapangan. **Role:** owner (lapangan sendiri), super_admin
 
 **Catatan:** Update oleh owner akan mereset status ke `"pending"` (perlu review ulang).
 
 ---
 
 #### `DELETE /fields/{id}`
-Hapus lapangan (soft delete). **Role:** owner (lapangan sendiri), admin, super_admin
+Hapus lapangan (soft delete). **Role:** owner (lapangan sendiri), super_admin
 
 ---
 
@@ -519,7 +519,7 @@ Force delete (permanen).
 ### 3.8 Admin — Owner Requests
 
 #### `GET /owner-requests/pending`
-Daftar request owner yang pending. **Role:** admin, super_admin
+Daftar request owner yang pending. **Role:** super_admin
 
 #### `POST /owner-requests/{id}/review`
 Approve atau reject request owner.
@@ -545,7 +545,7 @@ Approve atau reject request owner.
 ### 3.9 Admin — User Management
 
 #### `GET /admin/users`
-Daftar semua user (paginated, 20/halaman). **Role:** admin, super_admin
+Daftar semua user (paginated, 20/halaman). **Role:** super_admin
 
 **Query params:**
 | Param | Tipe | Keterangan |
@@ -556,7 +556,7 @@ Daftar semua user (paginated, 20/halaman). **Role:** admin, super_admin
 ---
 
 #### `POST /admin/users`
-Buat user baru. **Role:** admin, super_admin
+Buat user baru. **Role:** super_admin
 
 **Request:**
 ```json
@@ -569,18 +569,18 @@ Buat user baru. **Role:** admin, super_admin
 ```
 
 **Catatan:**
-- Hanya super_admin yang bisa buat akun admin/super_admin
+- Hanya super_admin yang bisa buat akun super_admin
 - Default role: `'player'` (jika tidak diisi)
 
 ---
 
 #### `PUT /admin/users/{id}`
-Update user. **Role:** admin, super_admin
+Update user. **Role:** super_admin
 
 ---
 
 #### `PUT /admin/users/{id}/role`
-Ganti role user. **Role:** admin, super_admin
+Ganti role user. **Role:** super_admin
 
 **Request:**
 ```json
@@ -592,7 +592,7 @@ Ganti role user. **Role:** admin, super_admin
 ---
 
 #### `DELETE /admin/users/{id}`
-Hapus user. **Role:** admin, super_admin
+Hapus user. **Role:** super_admin
 
 **Catatan:**
 - Tidak bisa hapus akun sendiri
@@ -606,8 +606,7 @@ Hapus user. **Role:** admin, super_admin
 
 ```
 role:player          → hanya player
-role:owner,admin     → owner ATAU admin
-role:admin,super_admin → admin ATAU super_admin
+role:owner,super_admin → owner ATAU super_admin
 role:super_admin     → hanya super_admin
 ```
 
@@ -656,7 +655,7 @@ getField(id) → field
 createField(user, data) → field
 updateField(field, data, user) → field (resets status if owner)
 deleteField(field, user) → void
-approveField(field, status, reason, admin) → void
+approveField(field, status, reason, superAdmin) → void
 restoreField(field) → void
 forceDeleteField(field) → void
 invalidateCache() → void
@@ -727,7 +726,7 @@ users ──1:1──▶ profiles
 
 **Field status:** `pending`, `approved`, `rejected`
 **Owner request status:** `pending`, `approved`, `rejected`
-**User role:** `player`, `owner`, `admin`, `super_admin`
+**User role:** `player`, `owner`, `super_admin`
 **Sport types:** futsal, badminton, basketball, basket, mini_soccer, tennis, tenis, volleyball, voli, other, lainnya + title case variants
 
 ---

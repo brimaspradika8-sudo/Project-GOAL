@@ -19,6 +19,7 @@ import { useToastStore } from '../store/toastStore';
 
 import * as SecureStore from '../lib/secureStorage';
 import { TOKEN_KEY } from '../lib/auth';
+import { isUserRole, profileFromApi, routeForRole, type UserRole } from '../types/roles';
 
 NativeSplash.preventAutoHideAsync();
 
@@ -33,7 +34,12 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
   }
 }
 
-async function fetchProfile(token: string): Promise<{ profile: any | null; unauthorized: boolean }> {
+type BootProfile = {
+  onboarding_completed: boolean;
+  role: UserRole;
+};
+
+async function fetchProfile(token: string): Promise<{ profile: BootProfile | null; unauthorized: boolean }> {
   try {
     const res = await apiFetch('/me', { token, skipToken: true, timeout: 20000 });
     if (res.status === 401 || res.status === 403) {
@@ -42,7 +48,11 @@ async function fetchProfile(token: string): Promise<{ profile: any | null; unaut
     if (!res.ok) {
       return { profile: null, unauthorized: false };
     }
-    return { profile: await res.json(), unauthorized: false };
+    const profile = profileFromApi<BootProfile>(await res.json());
+    if (!isUserRole(profile?.role)) {
+      return { profile: null, unauthorized: true };
+    }
+    return { profile, unauthorized: false };
   } catch {
     return { profile: null, unauthorized: false };
   }
@@ -120,15 +130,10 @@ function RootLayoutInner() {
           useProfileStore.setState({ profile, loading: false });
 
           if (isAuthRoute) {
-            // Tetap di halaman auth (mis. tautan reset dari email) tanpa redirect.
           } else if (profile.onboarding_completed === false) {
             router.replace('/onboarding');
-          } else if (profile.role === 'super_admin') {
-            router.replace('/(admin)/dashboard');
-          } else if (profile.role === 'owner') {
-            router.replace('/(owner)');
           } else {
-            router.replace('/(tabs)');
+            router.replace(routeForRole(profile.role));
           }
         } else {
           if (unauthorized) {

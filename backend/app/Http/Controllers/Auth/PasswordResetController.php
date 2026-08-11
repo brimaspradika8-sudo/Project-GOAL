@@ -33,9 +33,16 @@ class PasswordResetController extends Controller
         $token = $broker->createToken($user);
 
         try {
-            Mail::to($email)->queue(new ResetPasswordMail($token, $email));
+            Mail::to($email)->send(new ResetPasswordMail($token, $email));
         } catch (\Exception $e) {
-            Log::error('Mail queue fail: ' . $e->getMessage());
+            Log::error('Password reset mail failed.', [
+                'email' => $email,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Email reset password gagal dikirim. Silakan coba lagi.',
+            ], 503);
         }
 
         return response()->json([

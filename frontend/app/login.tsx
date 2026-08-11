@@ -20,6 +20,7 @@ import { fieldError } from '../lib/formValidation';
 import { useBreakpoint } from '../lib/responsive';
 import AuthPromoPanel from '../components/AuthPromoPanel';
 import { FONT_FAMILY } from '../components/goalTheme';
+import { isUserRole, profileFromApi, routeForRole } from '../types/roles';
 
 const RATE_LIMIT_MS = 5000;
 const lastAttemptRef = { current: 0 };
@@ -125,19 +126,15 @@ export default function LoginScreen() {
         await SecureStore.setItemAsync(TOKEN_KEY, data.token);
 
         const profileRes = await apiFetch('/me', { token: data.token });
-        const profileData = await parseApiResponse(profileRes);
+        const profileData = profileFromApi<any>(await parseApiResponse(profileRes));
 
-        if (profileRes.ok && profileData) {
+        if (profileRes.ok && profileData && isUserRole(profileData.role)) {
           useProfileStore.setState({ profile: profileData, loading: false });
 
           if (profileData.onboarding_completed === false) {
             router.replace('/onboarding');
-          } else if (profileData.role === 'super_admin') {
-            router.replace('/(admin)/dashboard');
-          } else if (profileData.role === 'owner') {
-            router.replace('/(owner)');
           } else {
-            router.replace('/(tabs)');
+            router.replace(routeForRole(profileData.role));
           }
         } else {
           await SecureStore.deleteItemAsync(TOKEN_KEY);

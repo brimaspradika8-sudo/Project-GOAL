@@ -231,7 +231,7 @@ export default function ProfileScreen() {
       setShowOwnerModal(false);
       setOwnerStatus('pending');
       setOwnerRequestData(data);
-      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Pengajuan owner berhasil dikirim. Menunggu persetujuan admin.' });
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Pengajuan owner berhasil dikirim. Menunggu persetujuan super admin.' });
     } catch {
       setSubmitError('Gagal terhubung ke server.');
     } finally {
@@ -277,7 +277,7 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.ownerCardInfo}>
               <Text style={styles.ownerCardTitle}>Pengajuan owner</Text>
-              <Text style={styles.ownerCardDesc}>Sedang menunggu persetujuan admin.</Text>
+              <Text style={styles.ownerCardDesc}>Sedang menunggu persetujuan super admin.</Text>
             </View>
           </View>
         </View>

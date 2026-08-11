@@ -20,6 +20,7 @@ import BulkActionBar from '../shared/BulkActionBar';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { fieldError } from '../../lib/formValidation';
+import { USER_ROLES, type UserRole } from '../../types/roles';
 
 const getRoleConfig = (colors: ThemeColors): Record<string, { label: string; color: string; bg: string }> => ({
   player:      { label: 'Pemain',      color: colors.textSecondary, bg: colors.surfaceContainerHigh },
@@ -29,7 +30,12 @@ const getRoleConfig = (colors: ThemeColors): Record<string, { label: string; col
 
 type Tab = 'user' | 'owner';
 
-const EMPTY_CREATE = { name: '', email: '', password: '', role: 'player' };
+const EMPTY_CREATE: { name: string; email: string; password: string; role: UserRole } = {
+  name: '',
+  email: '',
+  password: '',
+  role: USER_ROLES.PLAYER,
+};
 const EMPTY_EDIT   = { name: '', email: '', password: '' };
 
 export default function UserPage() {
@@ -81,13 +87,13 @@ export default function UserPage() {
 
   const loggedInUserRole = useProfileStore((state) => state.profile?.role);
   const loggedInUserId = useProfileStore((state) => state.profile?.user_id);
-  const isSuperAdmin = loggedInUserRole === 'super_admin';
+  const isSuperAdmin = loggedInUserRole === USER_ROLES.SUPER_ADMIN;
 
   const fetchUsers = useCallback(async (q?: string) => {
     try {
       const res = await apiFetch('/admin/users', { params: { search: q } });
       const data = await res.json();
-      setUsers(data?.data ?? []);
+      setUsers(data?.data?.data ?? data?.data ?? []);
     } catch {
       useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Gagal memuat data pengguna.' });
     } finally {
@@ -104,7 +110,7 @@ export default function UserPage() {
 
   const onRefresh = () => { setRefreshing(true); fetchUsers(search); };
 
-  const updateUserRole = async (userId: number, role: string) => {
+  const updateUserRole = async (userId: number, role: UserRole) => {
     const res = await apiFetch(`/admin/users/${userId}/role`, { method: 'PUT', body: { role } });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || 'Gagal memperbarui role.');
@@ -201,7 +207,7 @@ export default function UserPage() {
   };
 
   // ── UPGRADE (oranye) ────────────────────────────────────
-  const handleUpgrade = async (newRole: string) => {
+  const handleUpgrade = async (newRole: UserRole) => {
     if (!upgradeTarget) return;
     setUpgradeLoading(true);
     setUpgradeError(null);
@@ -284,14 +290,13 @@ export default function UserPage() {
 
   // ── Filter ──────────────────────────────────────────────
   const filteredUsers = users.filter(u => {
-    const role = u.profile?.role || 'player';
-    if (activeTab === 'owner') return role === 'owner';
-    // TODO: Pisahkan role admin dari tab Pengguna jika nanti ada tab/filter khusus admin.
-    return role !== 'owner';
+    const role = u.profile?.role || USER_ROLES.PLAYER;
+    if (activeTab === 'owner') return role === USER_ROLES.OWNER;
+    return role !== USER_ROLES.OWNER;
   });
 
-  const ownerCount = users.filter(u => (u.profile?.role || 'player') === 'owner').length;
-  const userCount  = users.filter(u => (u.profile?.role || 'player') !== 'owner').length;
+  const ownerCount = users.filter(u => (u.profile?.role || USER_ROLES.PLAYER) === USER_ROLES.OWNER).length;
+  const userCount  = users.filter(u => (u.profile?.role || USER_ROLES.PLAYER) !== USER_ROLES.OWNER).length;
 
   if (loading) {
     return (
@@ -388,7 +393,7 @@ export default function UserPage() {
             </View>
           ) : (
             filteredUsers.map((u: any) => {
-              const roleKey = u.profile?.role || 'player';
+              const roleKey = u.profile?.role || USER_ROLES.PLAYER;
               const rc = ROLE_CONFIG[roleKey] ?? ROLE_CONFIG.player;
               const isOwnRow = u.id === loggedInUserId;
 
@@ -428,7 +433,7 @@ export default function UserPage() {
                     </TouchableOpacity>
 
                     {/* Hijau — Upgrade Role (super_admin only, bukan baris super_admin) */}
-                    {isSuperAdmin && roleKey !== 'super_admin' && (
+                    {isSuperAdmin && roleKey !== USER_ROLES.SUPER_ADMIN && (
                       <TouchableOpacity
                         style={[st.actionBtn, { backgroundColor: '#10B981', borderColor: '#10B981' }]}
                         onPress={() => {
@@ -506,7 +511,7 @@ export default function UserPage() {
             <View style={st.roleSelectWrap}>
               <Text style={st.fieldLabel}>Role</Text>
               <View style={st.roleChipRow}>
-                {['player', 'owner', 'super_admin'].map(r => {
+                {Object.values(USER_ROLES).map(r => {
                   const rc = ROLE_CONFIG[r];
                   const active = createForm.role === r;
                   return (
@@ -601,25 +606,25 @@ export default function UserPage() {
         error={upgradeError}
         onCancel={() => setUpgradeTarget(null)}
         options={[
-          ...(upgradeTarget?.currentRole !== 'player'
+          ...(upgradeTarget?.currentRole !== USER_ROLES.PLAYER
             ? [{
                 label: 'Jadikan Pemain',
                 icon: 'person',
-                onPress: () => handleUpgrade('player'),
+                onPress: () => handleUpgrade(USER_ROLES.PLAYER),
               }]
             : []),
-          ...(upgradeTarget?.currentRole !== 'owner'
+          ...(upgradeTarget?.currentRole !== USER_ROLES.OWNER
             ? [{
                 label: 'Jadikan Owner',
                 icon: 'store',
-                onPress: () => handleUpgrade('owner'),
+                onPress: () => handleUpgrade(USER_ROLES.OWNER),
               }]
             : []),
-          ...(isSuperAdmin && upgradeTarget?.currentRole !== 'super_admin'
+          ...(isSuperAdmin && upgradeTarget?.currentRole !== USER_ROLES.SUPER_ADMIN
             ? [{
                 label: 'Jadikan Super Admin',
                 icon: 'shield',
-                onPress: () => handleUpgrade('super_admin'),
+                onPress: () => handleUpgrade(USER_ROLES.SUPER_ADMIN),
               }]
             : []),
         ]}

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\UserRole;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -24,9 +25,19 @@ class RoleMiddleware
             ], 403);
         }
 
-        if (!in_array($profile->role, $roles)) {
+        $allowedRoles = array_intersect($roles, UserRole::values());
+
+        if (count($allowedRoles) !== count($roles)) {
+            return response()->json([
+                'message' => 'Konfigurasi role tidak valid.',
+                'errors' => ['role' => ['Role route tidak dikenali.']],
+            ], 500);
+        }
+
+        if (!in_array($profile->role, $allowedRoles, true)) {
             return response()->json([
                 'message' => 'Anda tidak memiliki akses untuk melakukan ini.',
+                'errors' => ['role' => ['Role Anda tidak memiliki izin untuk route ini.']],
             ], 403);
         }
 
