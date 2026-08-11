@@ -3,8 +3,11 @@ set -e
 
 echo "==> [GOAL] Menunggu PostgreSQL siap..."
 
-# Tunggu sampai PostgreSQL benar-benar menerima koneksi
-until php artisan db:monitor --databases=pgsql 2>/dev/null | grep -q "OK"; do
+# Pastikan konfigurasi memakai environment container, bukan cache dari host.
+php artisan config:clear >/dev/null
+
+# Tunggu sampai Laravel dapat membaca status migration dari PostgreSQL.
+until php artisan migrate:status >/dev/null 2>&1; do
     echo "    PostgreSQL belum siap, menunggu 2 detik..."
     sleep 2
 done

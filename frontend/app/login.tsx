@@ -19,7 +19,6 @@ import { useProfileStore } from '../store/profileStore';
 import { fieldError } from '../lib/formValidation';
 import { useBreakpoint } from '../lib/responsive';
 import AuthPromoPanel from '../components/AuthPromoPanel';
-import ThemeToggle from '../components/ThemeToggle';
 import { FONT_FAMILY } from '../components/goalTheme';
 
 const RATE_LIMIT_MS = 5000;
@@ -293,9 +292,6 @@ export default function LoginScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.themeToggleWrap}>
-        <ThemeToggle variant="button" />
-      </View>
     </KeyboardAvoidingView>
   );
 
@@ -351,12 +347,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 40,
     paddingHorizontal: 24,
-  },
-  themeToggleWrap: {
-    position: 'absolute',
-    top: 24,
-    right: 24,
-    zIndex: 50,
   },
   desktopScrollContent: {
     paddingHorizontal: 0,

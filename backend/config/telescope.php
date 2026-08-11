@@ -59,21 +59,10 @@ return [
 
     'storage' => [
         'database' => [
-            'connection' => env('DB_CONNECTION', 'mysql'),
+            'connection' => env('DB_CONNECTION', 'pgsql'),
             'chunk' => 1000,
         ],
     ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Telescope Queue
-    |--------------------------------------------------------------------------
-    |
-    | This configuration options determines the queue connection and queue
-    | which will be used to process ProcessPendingUpdate jobs. This can
-    | be changed if you would prefer to use a non-default connection.
-    |
-    */
 
     'queue' => [
         'connection' => env('TELESCOPE_QUEUE_CONNECTION'),

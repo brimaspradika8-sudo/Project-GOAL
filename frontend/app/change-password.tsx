@@ -13,7 +13,6 @@ import { useAuthAnimations } from '../hooks/useAuthAnimations';
 import { getErrorMessage } from '../lib/api';
 import { apiFetch } from '../lib/apiClient';
 import { fieldError } from '../lib/formValidation';
-import ThemeToggle from '../components/ThemeToggle';
 
 function cpValidateCurrent(v: string): string {
   if (!v) return 'Current password is required.';
@@ -154,9 +153,6 @@ export default function ChangePasswordScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.themeToggleWrap}>
-        <ThemeToggle variant="button" />
-      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -166,7 +162,6 @@ const styles = StyleSheet.create({
   glowTopLeft: { position: 'absolute', top: -160, left: -140, width: 420, height: 420, borderRadius: 210 },
   glowBottomRight: { position: 'absolute', bottom: -180, right: -140, width: 460, height: 460, borderRadius: 230 },
   scrollContent: { flexGrow: 1, justifyContent: 'center', paddingVertical: 40, paddingHorizontal: 24 },
-  themeToggleWrap: { position: 'absolute', top: 24, right: 24, zIndex: 50 },
   responsiveWrapper: { width: '100%', maxWidth: 440, alignSelf: 'center' },
   header: { alignItems: 'center', marginBottom: 40 },
   iconWrapper: { width: 88, height: 88, borderRadius: 44, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },

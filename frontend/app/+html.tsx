@@ -22,7 +22,7 @@ export default function Root({ children }: PropsWithChildren) {
             )});var dark=t==='dark'||((t!=='light'&&t!=='auto')&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.style.backgroundColor=dark?${JSON.stringify(
               DARK_BG,
             )}:${JSON.stringify(LIGHT_BG)};document.documentElement.style.colorScheme=dark?'dark':'light';}catch(e){document.documentElement.style.backgroundColor=${JSON.stringify(
-              DARK_BG,
+              LIGHT_BG,
             )};}})();`,
           }}
         />
