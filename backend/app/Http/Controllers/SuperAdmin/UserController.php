@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\SuperAdmin;
 
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
@@ -71,7 +71,7 @@ class UserController extends Controller
         $requestedRole = $data['role'] ?? UserRole::PLAYER->value;
 
         if ($requestedRole === Profile::ROLE_SUPER_ADMIN && $currentUser->profile?->role !== Profile::ROLE_SUPER_ADMIN) {
-            return response()->json(['message' => 'Hanya Super Admin yang dapat membuat akun Super Admin.'], 403);
+            return $this->errorResponse('Hanya Super Admin yang dapat membuat akun Super Admin.', [], 403);
         }
 
         $user = $this->userService->createUser($data);
@@ -97,7 +97,7 @@ class UserController extends Controller
 
     public function updateRole(Request $request, int $id): JsonResponse
     {
-        $request->validate(['role' => ['required', UserRole::validationRule()]]);
+        $data = $request->validate(['role' => ['required', UserRole::validationRule()]]);
 
         $user = User::with('profile')->findOrFail($id);
 
@@ -106,7 +106,7 @@ class UserController extends Controller
         }
 
         try {
-            $this->userService->updateRole($user, $request->role, $request->user());
+            $this->userService->updateRole($user, $data['role'], $request->user());
         } catch (\RuntimeException $e) {
             return $this->errorResponse($e->getMessage(), ['role' => [$e->getMessage()]], 403);
         }
@@ -123,12 +123,12 @@ class UserController extends Controller
         try {
             $this->userService->deleteUser($user, $request->user());
         } catch (\RuntimeException $e) {
-            return response()->json(['message' => $e->getMessage()], 403);
+            return $this->errorResponse($e->getMessage(), [], 403);
         }
 
         $this->recordAudit($request, 'user.deleted', $user);
 
-        return response()->json(['message' => 'User berhasil dihapus.']);
+        return $this->successResponse('User berhasil dihapus.');
     }
 
     public function bulkDestroy(Request $request): JsonResponse
@@ -141,12 +141,12 @@ class UserController extends Controller
         try {
             $count = $this->userService->deleteUsers($data['ids'], $request->user());
         } catch (\RuntimeException $e) {
-            return response()->json(['message' => $e->getMessage()], 403);
+            return $this->errorResponse($e->getMessage(), [], 403);
         }
 
         $this->recordAudit($request, 'user.bulk_deleted', null, ['ids' => $data['ids'], 'deleted' => $count]);
 
-        return response()->json(['message' => "{$count} user berhasil dihapus.", 'deleted' => $count]);
+        return $this->successResponse("{$count} user berhasil dihapus.", ['deleted' => $count]);
     }
 
     private function recordAudit(Request $request, string $action, ?User $target = null, array $metadata = []): void

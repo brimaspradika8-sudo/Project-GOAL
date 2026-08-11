@@ -56,7 +56,7 @@ class FieldController extends Controller
         $field = $this->fieldService->findApproved($id);
 
         if (!$field) {
-            return response()->json(['message' => 'Lapangan tidak ditemukan.'], 404);
+            return $this->errorResponse('Lapangan tidak ditemukan.', [], 404);
         }
 
         $user = $request->user();
@@ -68,7 +68,7 @@ class FieldController extends Controller
             }
         }
 
-        return response()->json(new FieldResource($field));
+        return $this->resourceResponse('Lapangan berhasil dimuat.', new FieldResource($field));
     }
 
     public function store(StoreFieldRequest $request): JsonResponse
@@ -80,7 +80,7 @@ class FieldController extends Controller
 
         $this->fieldService->invalidateCache();
 
-        return response()->json(new FieldResource($field->load('owner:id,name')), 201);
+        return $this->resourceResponse('Lapangan berhasil dibuat.', new FieldResource($field->load('owner:id,name')), 201);
     }
 
     public function update(UpdateFieldRequest $request, int $id): JsonResponse
@@ -88,21 +88,21 @@ class FieldController extends Controller
         $field = $this->fieldService->find($id);
 
         if (!$field) {
-            return response()->json(['message' => 'Lapangan tidak ditemukan.'], 404);
+            return $this->errorResponse('Lapangan tidak ditemukan.', [], 404);
         }
 
         $user = $request->user();
         $isAdmin = $user->profile?->role === Profile::ROLE_SUPER_ADMIN;
 
         if (!$isAdmin && $field->owner_id !== $user->id) {
-            return response()->json(['message' => 'Anda bukan pemilik lapangan ini.'], 403);
+            return $this->errorResponse('Anda bukan pemilik lapangan ini.', [], 403);
         }
 
         $field = $this->fieldService->update($field, $request->validated(), $user, $isAdmin);
 
         $this->fieldService->invalidateCache();
 
-        return response()->json(new FieldResource($field));
+        return $this->resourceResponse('Lapangan berhasil diperbarui.', new FieldResource($field));
     }
 
     public function destroy(Request $request, int $id): JsonResponse
@@ -110,7 +110,7 @@ class FieldController extends Controller
         $field = $this->fieldService->find($id);
 
         if (!$field) {
-            return response()->json(['message' => 'Lapangan tidak ditemukan.'], 404);
+            return $this->errorResponse('Lapangan tidak ditemukan.', [], 404);
         }
 
         $profile = $request->user()->profile;
@@ -118,14 +118,14 @@ class FieldController extends Controller
         $isAdmin = $profile && $profile->role === Profile::ROLE_SUPER_ADMIN;
 
         if (!$isOwner && !$isAdmin) {
-            return response()->json(['message' => 'Anda bukan pemilik lapangan ini.'], 403);
+            return $this->errorResponse('Anda bukan pemilik lapangan ini.', [], 403);
         }
 
         $this->fieldService->delete($field, $request->user());
 
         $this->fieldService->invalidateCache();
 
-        return response()->json(['message' => 'Lapangan berhasil dihapus.']);
+        return $this->successResponse('Lapangan berhasil dihapus.');
     }
 
     public function pending(): JsonResponse
@@ -153,7 +153,7 @@ class FieldController extends Controller
         $field = $this->fieldService->find($id);
 
         if (!$field) {
-            return response()->json(['message' => 'Lapangan tidak ditemukan.'], 404);
+            return $this->errorResponse('Lapangan tidak ditemukan.', [], 404);
         }
 
         try {
@@ -164,7 +164,7 @@ class FieldController extends Controller
                 $request->reason
             );
         } catch (\RuntimeException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+            return $this->errorResponse($e->getMessage(), [], 422);
         }
 
         $this->fieldService->invalidateCache();
@@ -181,7 +181,7 @@ class FieldController extends Controller
 
         $field->makeVisible(['rejection_reason', 'approved_by']);
 
-        return response()->json(new FieldResource($field));
+        return $this->resourceResponse('Status lapangan berhasil diperbarui.', new FieldResource($field));
     }
 
     public function trashed(): JsonResponse
@@ -199,7 +199,7 @@ class FieldController extends Controller
         $success = $this->fieldService->restore($id);
 
         if (!$success) {
-            return response()->json(['message' => 'Lapangan tidak ditemukan di tempat sampah.'], 404);
+            return $this->errorResponse('Lapangan tidak ditemukan di tempat sampah.', [], 404);
         }
 
         $this->fieldService->invalidateCache();
@@ -213,7 +213,7 @@ class FieldController extends Controller
             'user_agent' => request()->userAgent(),
         ]);
 
-        return response()->json(['message' => 'Lapangan berhasil dipulihkan.']);
+        return $this->successResponse('Lapangan berhasil dipulihkan.');
     }
 
     public function forceDelete(int $id): JsonResponse
@@ -221,7 +221,7 @@ class FieldController extends Controller
         $success = $this->fieldService->forceDelete($id);
 
         if (!$success) {
-            return response()->json(['message' => 'Lapangan tidak ditemukan di tempat sampah.'], 404);
+            return $this->errorResponse('Lapangan tidak ditemukan di tempat sampah.', [], 404);
         }
 
         $this->fieldService->invalidateCache();
@@ -235,7 +235,7 @@ class FieldController extends Controller
             'user_agent' => request()->userAgent(),
         ]);
 
-        return response()->json(['message' => 'Lapangan berhasil dihapus permanen.']);
+        return $this->successResponse('Lapangan berhasil dihapus permanen.');
     }
 
     public function bulkApprove(Request $request): JsonResponse
@@ -261,7 +261,7 @@ class FieldController extends Controller
 
         $verb = $data['status'] === 'approved' ? 'disetujui' : 'ditolak';
 
-        return response()->json(['message' => "{$count} lapangan berhasil {$verb}.", 'processed' => $count]);
+        return $this->successResponse("{$count} lapangan berhasil {$verb}.", ['processed' => $count]);
     }
 
     public function bulkDestroy(Request $request): JsonResponse
@@ -275,7 +275,7 @@ class FieldController extends Controller
 
         $this->fieldService->invalidateCache();
 
-        return response()->json(['message' => "{$count} lapangan berhasil dihapus.", 'deleted' => $count]);
+        return $this->successResponse("{$count} lapangan berhasil dihapus.", ['deleted' => $count]);
     }
 
     public function bulkRestore(Request $request): JsonResponse
@@ -289,7 +289,7 @@ class FieldController extends Controller
 
         $this->fieldService->invalidateCache();
 
-        return response()->json(['message' => "{$count} lapangan berhasil dipulihkan.", 'restored' => $count]);
+        return $this->successResponse("{$count} lapangan berhasil dipulihkan.", ['restored' => $count]);
     }
 
     public function bulkForceDelete(Request $request): JsonResponse
@@ -303,6 +303,6 @@ class FieldController extends Controller
 
         $this->fieldService->invalidateCache();
 
-        return response()->json(['message' => "{$count} lapangan berhasil dihapus permanen.", 'deleted' => $count]);
+        return $this->successResponse("{$count} lapangan berhasil dihapus permanen.", ['deleted' => $count]);
     }
 }

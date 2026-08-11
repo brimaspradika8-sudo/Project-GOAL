@@ -23,9 +23,7 @@ class PasswordResetController extends Controller
         $user = \App\Models\User::where('email', $email)->first();
 
         if (!$user) {
-            return response()->json([
-                'message' => 'Email tidak terdaftar.',
-            ], 422);
+            return $this->errorResponse('Email tidak terdaftar.', ['email' => ['Email tidak terdaftar.']], 422);
         }
 
         /** @var \Illuminate\Auth\Passwords\PasswordBroker $broker */
@@ -40,14 +38,10 @@ class PasswordResetController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return response()->json([
-                'message' => 'Email reset password gagal dikirim. Silakan coba lagi.',
-            ], 503);
+            return $this->errorResponse('Email reset password gagal dikirim. Silakan coba lagi.', [], 503);
         }
 
-        return response()->json([
-            'message' => 'Tautan reset password telah dikirim ke email Anda.',
-        ]);
+        return $this->successResponse('Tautan reset password telah dikirim ke email Anda.');
     }
 
     public function token(VerifyTokenRequest $request): JsonResponse
@@ -55,7 +49,7 @@ class PasswordResetController extends Controller
         $user = \App\Models\User::where('email', strtolower(trim($request->email)))->first();
 
         if (!$user) {
-            return response()->json(['valid' => false, 'message' => 'Token tidak valid.'], 422);
+            return $this->errorResponse('Token tidak valid.', ['token' => ['Token tidak valid.']], 422);
         }
 
         $tokenRecord = DB::table('password_reset_tokens')
@@ -63,7 +57,7 @@ class PasswordResetController extends Controller
             ->first();
 
         if (!$tokenRecord) {
-            return response()->json(['valid' => false, 'message' => 'Token tidak valid atau sudah kedaluwarsa.'], 422);
+            return $this->errorResponse('Token tidak valid atau sudah kedaluwarsa.', ['token' => ['Token tidak valid atau sudah kedaluwarsa.']], 422);
         }
 
         $createdAt = \Carbon\Carbon::parse($tokenRecord->created_at);
@@ -73,10 +67,10 @@ class PasswordResetController extends Controller
             && !$createdAt->copy()->addMinutes($expire)->isPast();
 
         if (!$isValid) {
-            return response()->json(['valid' => false, 'message' => 'Token tidak valid atau sudah kedaluwarsa.'], 422);
+            return $this->errorResponse('Token tidak valid atau sudah kedaluwarsa.', ['token' => ['Token tidak valid atau sudah kedaluwarsa.']], 422);
         }
 
-        return response()->json(['valid' => true]);
+        return $this->successResponse('Token valid.', ['valid' => true]);
     }
 
     public function reset(ResetPasswordRequest $request): JsonResponse
@@ -105,13 +99,9 @@ class PasswordResetController extends Controller
         );
 
         if ($status === Password::PASSWORD_RESET) {
-            return response()->json([
-                'message' => 'Password berhasil direset. Silakan login.',
-            ]);
+            return $this->successResponse('Password berhasil direset. Silakan login.');
         }
 
-        return response()->json([
-            'message' => 'Token tidak valid atau sudah kedaluwarsa.',
-        ], 422);
+        return $this->errorResponse('Token tidak valid atau sudah kedaluwarsa.', ['token' => ['Token tidak valid atau sudah kedaluwarsa.']], 422);
     }
 }

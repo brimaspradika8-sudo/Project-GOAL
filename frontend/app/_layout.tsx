@@ -19,7 +19,8 @@ import { useToastStore } from '../store/toastStore';
 
 import * as SecureStore from '../lib/secureStorage';
 import { TOKEN_KEY } from '../lib/auth';
-import { isUserRole, profileFromApi, routeForRole, type UserRole } from '../types/roles';
+import { isUserRole, profileFromApi, routeForRole } from '../types/roles';
+import type { Profile } from '../store/profileStore';
 
 NativeSplash.preventAutoHideAsync();
 
@@ -34,10 +35,7 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
   }
 }
 
-type BootProfile = {
-  onboarding_completed: boolean;
-  role: UserRole;
-};
+type BootProfile = Profile;
 
 async function fetchProfile(token: string): Promise<{ profile: BootProfile | null; unauthorized: boolean }> {
   try {

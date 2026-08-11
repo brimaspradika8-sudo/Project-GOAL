@@ -19,27 +19,19 @@ class AuthController extends Controller
         try {
             $result = $this->auth->register($request->validated());
 
-            return response()->json([
-                'message' => 'Registrasi berhasil.',
-                ...$result,
-            ], 201);
+            return $this->successResponse('Registrasi berhasil.', $result, 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'message' => $e->getMessage(),
-                'errors' => $e->errors(),
-            ], 422);
+            return $this->errorResponse('Validasi gagal.', $e->errors(), 422);
 
         } catch (\Illuminate\Database\QueryException $e) {
             if ((int) $e->errorInfo[0] === 23505) {
-                return response()->json([
-                    'message' => 'Email sudah terdaftar.',
-                    'errors' => ['email' => ['Email sudah terdaftar.']],
-                ], 422);
+                return $this->errorResponse('Email sudah terdaftar.', ['email' => ['Email sudah terdaftar.']], 422);
             }
 
-            return response()->json(['message' => 'Registrasi gagal. Silakan coba lagi nanti.'], 500);
+            return $this->errorResponse('Registrasi gagal. Silakan coba lagi nanti.', [], 500);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Registrasi gagal. Silakan coba lagi nanti.'], 500);
+            report($e);
+            return $this->errorResponse('Registrasi gagal. Silakan coba lagi nanti.', [], 500);
         }
     }
     
@@ -51,19 +43,13 @@ class AuthController extends Controller
                 $request->password
             );
 
-            return response()->json([
-                'message' => 'Login berhasil.',
-                ...$result,
-            ]);
+            return $this->successResponse('Login berhasil.', $result);
         } catch (\Illuminate\Validation\ValidationException $e) {
             $firstError = collect($e->errors())->flatten()->first() ?? 'Email atau password salah.';
-            return response()->json([
-                'message' => $firstError,
-            ], 401);
+            return $this->errorResponse($firstError, [], 401);
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Login gagal. Silakan coba lagi nanti.',
-            ], 500);
+            report($e);
+            return $this->errorResponse('Login gagal. Silakan coba lagi nanti.', [], 500);
         }
     }
 
@@ -71,8 +57,6 @@ class AuthController extends Controller
     {
         $this->auth->logout($request->user());
 
-        return response()->json([
-            'message' => 'Logout berhasil.',
-        ]);
+        return $this->successResponse('Logout berhasil.');
     }
 }

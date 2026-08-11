@@ -39,8 +39,8 @@ class AvatarController extends Controller
                 return response()->json(['message' => 'File tidak valid.'], 400);
             }
 
-            $ext = strtolower($file->getClientOriginalExtension()) ?: 'jpg';
-            $filename = time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+            $extension = strtolower($file->extension());
+            $filename = bin2hex(random_bytes(16)) . '.' . $extension;
             $path = 'avatars/' . $filename;
 
             $mime = $file->getMimeType() ?: 'image/jpeg';
@@ -48,7 +48,7 @@ class AvatarController extends Controller
 
             $profile->update(['avatar_url' => $publicUrl]);
 
-            return response()->json([
+            return $this->successResponse('Foto profil berhasil diunggah.', [
                 'avatar_url' => $publicUrl,
                 'profile'    => new ProfileResource($this->profile->getPayload($user)),
             ]);
@@ -58,9 +58,7 @@ class AvatarController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return response()->json([
-                'message' => 'Gagal mengunggah foto profil. Silakan coba lagi.',
-            ], 500);
+            return $this->errorResponse('Gagal mengunggah foto profil. Silakan coba lagi.', [], 500);
         }
     }
 }

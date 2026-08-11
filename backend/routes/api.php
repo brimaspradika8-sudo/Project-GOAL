@@ -8,7 +8,7 @@ use App\Http\Controllers\Profile\AvatarController;
 use App\Http\Controllers\Field\FieldController;
 use App\Http\Controllers\Owner\OwnerRequestController;
 use App\Http\Controllers\Owner\AdminOwnerController;
-use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\SuperAdmin\UserController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\NotificationController;
     Route::middleware('throttle:10,1')->group(function () {

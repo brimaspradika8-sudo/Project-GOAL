@@ -14,7 +14,7 @@ class RoleMiddleware
         $user = $request->user();
 
         if (!$user) {
-            return response()->json(['message' => 'Unauthorized.'], 401);
+            return response()->json(['message' => 'Unauthorized.', 'errors' => []], 401);
         }
 
         $profile = $user->profile;
@@ -22,6 +22,7 @@ class RoleMiddleware
         if (!$profile) {
             return response()->json([
                 'message' => 'Profil tidak ditemukan. Silakan lengkapi profil terlebih dahulu.',
+                'errors' => [],
             ], 403);
         }
 

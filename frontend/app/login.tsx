@@ -114,10 +114,11 @@ export default function LoginScreen() {
         skipToken: true,
         body: { email: email.trim(), password },
       });
-      const data = await parseApiResponse(res);
+      const payload = await parseApiResponse(res);
+      const data = payload?.data ?? payload;
 
       if (!res.ok) {
-        showMessage(getApiErrorMessage(data, res.status), 'error');
+        showMessage(getApiErrorMessage(payload, res.status), 'error');
         setLoading(false);
         return;
       }

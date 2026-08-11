@@ -4,12 +4,27 @@ namespace App\Http\Controllers;
 
 abstract class Controller
 {
-    protected function successResponse(string $message, mixed $data = null, int $status = 200)
+    protected function resourceResponse(string $message, mixed $resource, int $status = 200)
     {
-        return response()->json([
+        $data = method_exists($resource, 'resolve')
+            ? $resource->resolve(request())
+            : $resource;
+
+        return $this->successResponse($message, $data, $status);
+    }
+
+    protected function successResponse(string $message, mixed $data = null, int $status = 200, array $meta = [])
+    {
+        $payload = [
             'message' => $message,
             'data' => $data,
-        ], $status);
+        ];
+
+        if ($meta !== []) {
+            $payload['meta'] = $meta;
+        }
+
+        return response()->json($payload, $status);
     }
 
     protected function errorResponse(string $message, array $errors = [], int $status = 400)

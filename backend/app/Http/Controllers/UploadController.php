@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Profile;
+use App\Enums\UserRole;
 use App\Services\SupabaseStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,16 +17,12 @@ class UploadController extends Controller
     {
         $profile = $request->user()->profile;
 
-        if (!$profile || !in_array($profile->role, [Profile::ROLE_OWNER, Profile::ROLE_SUPER_ADMIN], true)) {
-            return response()->json(['message' => 'Anda tidak memiliki akses untuk mengupload gambar.'], 403);
+        if (!$profile || !in_array($profile->role, [UserRole::OWNER->value, UserRole::SUPER_ADMIN->value], true)) {
+            return $this->errorResponse('Anda tidak memiliki akses untuk mengupload gambar.', [], 403);
         }
 
-        // PENTING: validasi ini SENGAJA dibatasi 2MB & JPG-only (keputusan
-        // produk). JANGAN diubah/dilonggarkan tanpa konfirmasi eksplisit —
-        // pernah tidak sengaja mundur ke versi lama (5MB, terima PNG/WebP)
-        // saat proses git merge, jangan sampai terulang.
         $request->validate([
-            'image' => 'required|file|image|mimes:jpg,jpeg|max:2048',
+            'image' => 'required|file|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         try {
@@ -34,11 +30,11 @@ class UploadController extends Controller
 
             if (!$file || !$file->isValid()) {
                 Log::error('Upload failed: invalid file', ['hasFile' => (bool) $file]);
-                return response()->json(['message' => 'File tidak valid.'], 400);
+                return $this->errorResponse('File tidak valid.', [], 400);
             }
 
-            $ext = strtolower($file->getClientOriginalExtension()) ?: 'jpg';
-            $filename = time() . '_' . bin2hex(random_bytes(8)) . '.' . $ext;
+            $extension = strtolower($file->extension());
+            $filename = bin2hex(random_bytes(16)) . '.' . $extension;
             $path = 'fields/' . $filename;
 
             $supabaseUrl = config('services.supabase.url');
@@ -47,7 +43,7 @@ class UploadController extends Controller
 
             if (!$supabaseUrl || !$supabaseKey || !$bucket) {
                 Log::error('Upload failed: Supabase credentials not configured');
-                return response()->json(['message' => 'Konfigurasi penyimpanan Supabase belum lengkap.'], 500);
+                return $this->errorResponse('Konfigurasi penyimpanan Supabase belum lengkap.', [], 500);
             }
 
             $mime = $file->getMimeType() ?: 'image/jpeg';
@@ -58,7 +54,7 @@ class UploadController extends Controller
                 'filename' => $filename,
             ]);
 
-            return response()->json([
+            return $this->successResponse('Gambar berhasil diunggah.', [
                 'url' => $publicUrl,
                 'path' => $path,
             ]);
@@ -67,9 +63,7 @@ class UploadController extends Controller
                 'exception' => get_class($e),
                 'trace' => $e->getTraceAsString(),
             ]);
-            return response()->json([
-                'message' => 'Gagal mengunggah foto. Silakan coba lagi.',
-            ], 500);
+            return $this->errorResponse('Gagal mengunggah foto. Silakan coba lagi.', [], 500);
         }
     }
 }
