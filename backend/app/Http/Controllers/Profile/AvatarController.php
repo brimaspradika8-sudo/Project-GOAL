@@ -27,16 +27,14 @@ class AvatarController extends Controller
         $profile = $user->profile;
 
         if (!$profile) {
-            return response()->json([
-                'message' => 'Profil belum dibuat. Silakan lengkapi onboarding terlebih dahulu.',
-            ], 422);
+            return $this->errorResponse('Profil belum dibuat. Silakan lengkapi onboarding terlebih dahulu.', [], 422);
         }
 
         try {
             $file = $request->file('avatar');
 
             if (!$file || !$file->isValid()) {
-                return response()->json(['message' => 'File tidak valid.'], 400);
+                return $this->errorResponse('File tidak valid.', [], 400);
             }
 
             $extension = strtolower($file->extension());

@@ -17,7 +17,7 @@ const ROLE_LABEL: Record<string, string> = {
   super_admin: 'Super Admin',
 };
 
-export default function AdminProfilePage() {
+export default function SuperAdminProfilePage() {
   const { profile } = useProfileStore();
   const { colors, resolved } = useTheme();
   const st = makeStyles(colors, resolved);
@@ -75,7 +75,7 @@ export default function AdminProfilePage() {
             </Text>
             <View style={st.rolePill}>
               <MaterialIcons
-                name={role === 'super_admin' ? 'shield' : 'admin-panel-settings'}
+                name="shield"
                 size={12}
                 color={colors.primary}
               />

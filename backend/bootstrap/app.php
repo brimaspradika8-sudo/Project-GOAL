@@ -36,7 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             if ($e instanceof AuthenticationException) {
-                return response()->json(['message' => 'Unauthorized.'], 401);
+                return response()->json(['message' => 'Unauthorized.', 'errors' => []], 401);
             }
 
             if ($e instanceof ValidationException) {
@@ -47,19 +47,19 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             if ($e instanceof NotFoundHttpException) {
-                return response()->json(['message' => 'Endpoint tidak ditemukan.'], 404);
+                return response()->json(['message' => 'Endpoint tidak ditemukan.', 'errors' => []], 404);
             }
 
             if ($e instanceof MethodNotAllowedHttpException) {
-                return response()->json(['message' => 'Method tidak diizinkan.'], 405);
+                return response()->json(['message' => 'Method tidak diizinkan.', 'errors' => []], 405);
             }
 
             if ($e instanceof AccessDeniedHttpException) {
-                return response()->json(['message' => 'Akses ditolak.'], 403);
+                return response()->json(['message' => 'Akses ditolak.', 'errors' => []], 403);
             }
 
             if ($e instanceof TooManyRequestsHttpException) {
-                return response()->json(['message' => 'Terlalu banyak permintaan. Coba lagi nanti.'], 429);
+                return response()->json(['message' => 'Terlalu banyak permintaan. Coba lagi nanti.', 'errors' => []], 429);
             }
 
             $status = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;

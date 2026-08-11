@@ -10,8 +10,8 @@ export function isUserRole(value: unknown): value is UserRole {
   return value === USER_ROLES.PLAYER || value === USER_ROLES.OWNER || value === USER_ROLES.SUPER_ADMIN;
 }
 
-export function routeForRole(role: UserRole): '/(tabs)' | '/(owner)' | '/(admin)/dashboard' {
-  if (role === USER_ROLES.SUPER_ADMIN) return '/(admin)/dashboard';
+export function routeForRole(role: UserRole): '/(tabs)' | '/(owner)' | '/(super-admin)/dashboard' {
+  if (role === USER_ROLES.SUPER_ADMIN) return '/(super-admin)/dashboard';
   if (role === USER_ROLES.OWNER) return '/(owner)';
   return '/(tabs)';
 }

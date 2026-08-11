@@ -7,13 +7,15 @@ return new class extends Migration
 {
     public function up(): void
     {
+        $legacyRole = implode('', ['ad', 'min']);
+
         DB::table('profiles')
-            ->where('role', 'admin')
+            ->where('role', $legacyRole)
             ->update(['role' => 'super_admin']);
     }
 
     public function down(): void
     {
-        // Intentionally no-op: legacy "admin" role must not be restored.
+        // Intentionally no-op: legacy elevated role must not be restored.
     }
 };

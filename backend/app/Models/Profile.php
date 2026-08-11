@@ -24,6 +24,7 @@ class Profile extends Model
         'avatar_url',
         'age',
         'role',
+        'is_owner_verified',
         'onboarding_completed',
     ];
 

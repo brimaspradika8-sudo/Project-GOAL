@@ -144,8 +144,12 @@ export default function LoginScreen() {
       } else {
         showMessage('Login failed. Please try again.', 'error');
       }
-    } catch {
-      showMessage('Something went wrong. Please try again.', 'error');
+    } catch (error) {
+      if (error instanceof TypeError || (error as { name?: string })?.name === 'AbortError') {
+        showMessage('Cannot reach the server. Check that the backend is running and try again.', 'error');
+      } else {
+        showMessage('Something went wrong. Please try again.', 'error');
+      }
     } finally {
       setLoading(false);
     }

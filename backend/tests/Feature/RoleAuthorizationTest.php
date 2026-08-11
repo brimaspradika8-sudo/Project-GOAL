@@ -28,7 +28,7 @@ class RoleAuthorizationTest extends TestCase
         $this->getJson('/api/fields/pending/list')
             ->assertForbidden();
 
-        $this->getJson('/api/admin/users')
+        $this->getJson('/api/super-admin/users')
             ->assertForbidden();
     }
 
@@ -117,6 +117,15 @@ class RoleAuthorizationTest extends TestCase
             'status' => 'approved',
             'approved_by' => $superAdmin->id,
         ]);
+    }
+
+    public function test_super_admin_can_manage_users(): void
+    {
+        $superAdmin = $this->userWithRole(UserRole::SUPER_ADMIN);
+
+        $this->authAs($superAdmin)
+            ->getJson('/api/super-admin/users')
+            ->assertOk();
     }
 
     private function userWithRole(UserRole $role, bool $verifiedOwner = false): User

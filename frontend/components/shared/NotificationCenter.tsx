@@ -57,11 +57,11 @@ interface NavTarget {
 function resolveTarget(item: AppNotification, role?: string): NavTarget | null {
   const roleMap: Record<string, Record<string, NavTarget>> = {
     super_admin: {
-      field_submitted: { label: 'Kelola Lapangan (Pending)', href: '/(admin)/manage-fields?tab=pending' },
-      field_updated: { label: 'Kelola Lapangan', href: '/(admin)/manage-fields' },
-      field_deleted: { label: 'Sampah Lapangan', href: '/(admin)/manage-fields?tab=trashed' },
-      owner_request_submitted: { label: 'Pengajuan Owner', href: '/(admin)/owner-requests' },
-      role_changed: { label: 'Profil Saya', href: '/(admin)/profile' },
+      field_submitted: { label: 'Kelola Lapangan (Pending)', href: '/(super-admin)/manage-fields?tab=pending' },
+      field_updated: { label: 'Kelola Lapangan', href: '/(super-admin)/manage-fields' },
+      field_deleted: { label: 'Sampah Lapangan', href: '/(super-admin)/manage-fields?tab=trashed' },
+      owner_request_submitted: { label: 'Pengajuan Owner', href: '/(super-admin)/owner-requests' },
+      role_changed: { label: 'Profil Saya', href: '/(super-admin)/profile' },
     },
     owner: {
       field_approved: { label: 'Lapangan Saya', href: '/(owner)/fields' },

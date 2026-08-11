@@ -4,7 +4,7 @@ namespace App\Http\Controllers\SuperAdmin;
 
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
-use App\Models\AdminAuditLog;
+use App\Models\SuperAdminAuditLog;
 use App\Models\Profile;
 use App\Models\User;
 use App\Services\UserService;
@@ -25,7 +25,7 @@ class UserController extends Controller
 
     public function auditLogs(Request $request): JsonResponse
     {
-        $logs = AdminAuditLog::with('actor:id,name,email')
+        $logs = SuperAdminAuditLog::with('actor:id,name,email')
             ->when($request->filled('action'), fn ($query) => $query->where('action', $request->string('action')))
             ->when($request->filled('search'), function ($query) use ($request) {
                 $search = '%' . addcslashes($request->string('search'), '%_') . '%';
@@ -38,7 +38,7 @@ class UserController extends Controller
             ->latest()
             ->paginate(30);
 
-        $logs->getCollection()->transform(function (AdminAuditLog $log) {
+        $logs->getCollection()->transform(function (SuperAdminAuditLog $log) {
             return [
                 'id' => $log->id,
                 'action' => $log->action,
@@ -151,7 +151,7 @@ class UserController extends Controller
 
     private function recordAudit(Request $request, string $action, ?User $target = null, array $metadata = []): void
     {
-        AdminAuditLog::create([
+        SuperAdminAuditLog::create([
             'actor_id' => $request->user()?->id,
             'action' => $action,
             'target_type' => $target ? 'user' : null,

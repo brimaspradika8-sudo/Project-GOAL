@@ -20,7 +20,7 @@ class ProfileController extends Controller
     {
         $data = $this->profile->getPayload($request->user());
 
-        return response()->json(new ProfileResource($data));
+        return $this->resourceResponse('Profil berhasil dimuat.', new ProfileResource($data));
     }
 
     public function update(Request $request): JsonResponse
@@ -41,9 +41,7 @@ class ProfileController extends Controller
         $profile = $user->profile;
 
         if (!$profile) {
-            return response()->json([
-                'message' => 'Profil belum dibuat. Silakan lengkapi onboarding terlebih dahulu.',
-            ], 422);
+            return $this->errorResponse('Profil belum dibuat. Silakan lengkapi onboarding terlebih dahulu.', [], 422);
         }
 
         $profile->update(collect($validated)->only([
@@ -52,7 +50,7 @@ class ProfileController extends Controller
 
         $data = $this->profile->getPayload($user);
 
-        return response()->json(new ProfileResource($data));
+        return $this->resourceResponse('Profil berhasil diperbarui.', new ProfileResource($data));
     }
 
     public function updatePassword(Request $request): JsonResponse
@@ -65,9 +63,7 @@ class ProfileController extends Controller
         $user = $request->user();
 
         if (!Hash::check($request->current_password, $user->password)) {
-            return response()->json([
-                'message' => 'Password saat ini tidak sesuai.',
-            ], 422);
+            return $this->errorResponse('Password saat ini tidak sesuai.', [], 422);
         }
 
         $user->update([
@@ -80,8 +76,6 @@ class ProfileController extends Controller
             ->when($currentToken, fn ($query) => $query->where('id', '!=', $currentToken->id))
             ->delete();
 
-        return response()->json([
-            'message' => 'Password berhasil diperbarui.',
-        ]);
+        return $this->successResponse('Password berhasil diperbarui.');
     }
 }

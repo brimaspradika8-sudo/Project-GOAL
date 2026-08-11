@@ -7,7 +7,7 @@ use App\Http\Controllers\Profile\OnboardingController;
 use App\Http\Controllers\Profile\AvatarController;
 use App\Http\Controllers\Field\FieldController;
 use App\Http\Controllers\Owner\OwnerRequestController;
-use App\Http\Controllers\Owner\AdminOwnerController;
+use App\Http\Controllers\Owner\SuperAdminOwnerController;
 use App\Http\Controllers\SuperAdmin\UserController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\NotificationController;
@@ -66,17 +66,17 @@ use App\Http\Controllers\NotificationController;
         });
         // Owner requests - super_admin only
         Route::middleware('role:super_admin')->group(function () {
-            Route::get('/owner-requests/pending',      [AdminOwnerController::class, 'pending']);
-            Route::post('/owner-requests/{id}/review', [AdminOwnerController::class, 'review']);
+            Route::get('/owner-requests/pending',      [SuperAdminOwnerController::class, 'pending']);
+            Route::post('/owner-requests/{id}/review', [SuperAdminOwnerController::class, 'review']);
         });
-        // Admin - manage users (super_admin only)
+        // Super admin - manage users
         Route::middleware('role:super_admin')->group(function () {
-            Route::get('/admin/users',          [UserController::class, 'index']);
-            Route::get('/admin/audit-logs',     [UserController::class, 'auditLogs']);
-            Route::post('/admin/users',         [UserController::class, 'store']);
-            Route::post('/admin/users/bulk-delete', [UserController::class, 'bulkDestroy']);
-            Route::put('/admin/users/{id}',     [UserController::class, 'update']);
-            Route::put('/admin/users/{id}/role',[UserController::class, 'updateRole']);
-            Route::delete('/admin/users/{id}',  [UserController::class, 'destroy']);
+            Route::get('/super-admin/users',          [UserController::class, 'index']);
+            Route::get('/super-admin/audit-logs',     [UserController::class, 'auditLogs']);
+            Route::post('/super-admin/users',         [UserController::class, 'store']);
+            Route::post('/super-admin/users/bulk-delete', [UserController::class, 'bulkDestroy']);
+            Route::put('/super-admin/users/{id}',     [UserController::class, 'update']);
+            Route::put('/super-admin/users/{id}/role',[UserController::class, 'updateRole']);
+            Route::delete('/super-admin/users/{id}',  [UserController::class, 'destroy']);
         });
 });

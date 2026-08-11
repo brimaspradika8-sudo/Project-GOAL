@@ -29,7 +29,7 @@ export default function OwnerTabLayout() {
       return;
     }
     if (profile.role !== USER_ROLES.OWNER) {
-      router.replace(profile.role === USER_ROLES.SUPER_ADMIN ? '/(admin)/dashboard' : '/(tabs)');
+      router.replace(profile.role === USER_ROLES.SUPER_ADMIN ? '/(super-admin)/dashboard' : '/(tabs)');
     }
   }, [profile, profileLoading, router]);
 

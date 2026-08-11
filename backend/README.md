@@ -38,7 +38,7 @@ backend/
 │   │   │   │   ├── OwnerRequestController.php # Submit owner request
 │   │   │   │   └── AdminOwnerController.php   # Review owner request
 │   │   │   ├── Admin/
-│   │   │   │   └── UserController.php         # CRUD users (admin panel)
+│   │   │   │   └── UserController.php         # CRUD users (super admin panel)
 │   │   │   └── UploadController.php           # Image upload
 │   │   ├── Middleware/
 │   │   │   ├── RoleMiddleware.php      # Cek role user
@@ -544,7 +544,7 @@ Approve atau reject request owner.
 
 ### 3.9 Admin — User Management
 
-#### `GET /admin/users`
+#### `GET /super-admin/users`
 Daftar semua user (paginated, 20/halaman). **Role:** super_admin
 
 **Query params:**
@@ -555,7 +555,7 @@ Daftar semua user (paginated, 20/halaman). **Role:** super_admin
 
 ---
 
-#### `POST /admin/users`
+#### `POST /super-admin/users`
 Buat user baru. **Role:** super_admin
 
 **Request:**
@@ -574,12 +574,12 @@ Buat user baru. **Role:** super_admin
 
 ---
 
-#### `PUT /admin/users/{id}`
+#### `PUT /super-admin/users/{id}`
 Update user. **Role:** super_admin
 
 ---
 
-#### `PUT /admin/users/{id}/role`
+#### `PUT /super-admin/users/{id}/role`
 Ganti role user. **Role:** super_admin
 
 **Request:**
@@ -591,7 +591,7 @@ Ganti role user. **Role:** super_admin
 
 ---
 
-#### `DELETE /admin/users/{id}`
+#### `DELETE /super-admin/users/{id}`
 Hapus user. **Role:** super_admin
 
 **Catatan:**

@@ -8,7 +8,7 @@ use App\Http\Requests\Field\UpdateFieldRequest;
 use App\Http\Requests\Field\ApproveFieldRequest;
 use App\Http\Resources\FieldResource;
 use App\Models\Field;
-use App\Models\AdminAuditLog;
+use App\Models\SuperAdminAuditLog;
 use App\Models\Profile;
 use App\Services\FieldService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -23,14 +23,11 @@ class FieldController extends Controller
 
     private function paginatedResponse(LengthAwarePaginator $paginator): JsonResponse
     {
-        return response()->json([
-            'data' => FieldResource::collection($paginator->items()),
-            'meta' => [
+        return $this->successResponse('Daftar lapangan berhasil dimuat.', FieldResource::collection($paginator->items()), 200, [
                 'current_page' => $paginator->currentPage(),
                 'last_page'    => $paginator->lastPage(),
                 'per_page'     => $paginator->perPage(),
                 'total'        => $paginator->total(),
-            ],
         ]);
     }
 
@@ -169,7 +166,7 @@ class FieldController extends Controller
 
         $this->fieldService->invalidateCache();
 
-        AdminAuditLog::create([
+        SuperAdminAuditLog::create([
             'actor_id' => $request->user()->id,
             'action' => 'field.' . $request->status,
             'target_type' => 'field',
@@ -204,7 +201,7 @@ class FieldController extends Controller
 
         $this->fieldService->invalidateCache();
 
-        AdminAuditLog::create([
+        SuperAdminAuditLog::create([
             'actor_id' => request()->user()->id,
             'action' => 'field.restored',
             'target_type' => 'field',
@@ -226,7 +223,7 @@ class FieldController extends Controller
 
         $this->fieldService->invalidateCache();
 
-        AdminAuditLog::create([
+        SuperAdminAuditLog::create([
             'actor_id' => request()->user()->id,
             'action' => 'field.force_deleted',
             'target_type' => 'field',
@@ -251,7 +248,7 @@ class FieldController extends Controller
 
         $this->fieldService->invalidateCache();
 
-        AdminAuditLog::create([
+        SuperAdminAuditLog::create([
             'actor_id' => $request->user()->id,
             'action' => 'field.bulk_' . $data['status'],
             'metadata' => ['ids' => $data['ids'], 'processed' => $count],

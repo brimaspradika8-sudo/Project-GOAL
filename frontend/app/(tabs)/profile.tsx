@@ -367,11 +367,11 @@ export default function ProfileScreen() {
             borderColor: colors.outline,
           }]}
           activeOpacity={0.8}
-          onPress={() => router.push('/(admin)/dashboard')}
+          onPress={() => router.push('/(super-admin)/dashboard')}
         >
           <View style={styles.ownerCardLeft}>
             <View style={[styles.ownerIconBox, { backgroundColor: colors.primaryContainer }]}>
-              <MaterialIcons name="admin-panel-settings" size={20} color={colors.primary} />
+              <MaterialIcons name="shield" size={20} color={colors.primary} />
             </View>
             <View style={styles.ownerCardInfo}>
               <Text style={styles.ownerCardTitle}>Panel super admin</Text>

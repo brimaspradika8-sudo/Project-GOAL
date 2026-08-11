@@ -51,14 +51,14 @@ frontend/
 │   │   ├── my-fields.tsx       # Lapangan saya (hidden tab)
 │   │   ├── fields.tsx          # Browse lapangan (hidden tab)
 │   │   ├── explore.tsx         # Explore (hidden tab)
-│   │   └── admin.tsx           # Legacy redirect (hidden tab)
+│   │   └── super-admin.tsx     # Super admin route group
 │   │
-│   ├── (admin)/                # Panel admin
+│   ├── (super-admin)/                # Panel super admin
 │   │   ├── _layout.tsx         # Sidebar (web) / Tabs (mobile)
 │   │   ├── users.tsx           # Kelola user
 │   │   ├── owner-requests.tsx  # Review request owner
 │   │   ├── manage-fields.tsx   # Kelola lapangan (super_admin)
-│   │   └── profile.tsx         # Profile admin
+│   │   └── profile.tsx         # Profile super admin
 │   │
 │   └── (owner)/                # Panel owner
 │       ├── _layout.tsx         # Sidebar (web) / Tabs (mobile)
@@ -72,9 +72,9 @@ frontend/
 │   │   ├── TopNavbar.tsx       # Navbar sticky (web only)
 │   │   └── Sidebar.tsx         # Sidebar (admin & owner, web only)
 │   ├── shared/
-│   │   ├── DashboardHeader.tsx # Header halaman admin/owner
+│   │   ├── DashboardHeader.tsx # Header halaman super admin/owner
 │   │   └── ConfirmDialog.tsx   # Dialog konfirmasi
-│   ├── admin/                  # Komponen halaman admin
+│   ├── super-admin/            # Komponen halaman super admin
 │   ├── owner/                  # Komponen halaman owner
 │   ├── goalTheme.ts            # Warna, font, shadow, ukuran
 │   ├── SplashScreen.tsx        # Splash screen
@@ -121,7 +121,7 @@ Cek token di AsyncStorage
     ├── Token valid → GET /me
     │       │
     │       ├── onboarding_completed = false → /onboarding
-    │       ├── role = super_admin → /admin/users
+    │       ├── role = super_admin → /super-admin/users
     │       └── role = player/owner → /(tabs)/index
     │
     └── Token tidak ada → /login
@@ -140,7 +140,7 @@ Cek token di AsyncStorage
 | Lapangan Saya | `/(tabs)/my-fields` | — | ❌ (hidden) |
 | Browse Lapangan | `/(tabs)/fields` | — | ❌ (hidden) |
 | Explore | `/(tabs)/explore` | — | ❌ (hidden) |
-| Admin | `/(tabs)/admin` | — | ❌ (hidden) |
+| Super Admin | `/(super-admin)` | `super_admin` | ✅ |
 
 **Web:** Tab bar disembunyikan, digantikan `TopNavbar` sticky.
 **Mobile:** Bottom tab bar ditampilkan.
@@ -275,7 +275,7 @@ Sticky navbar untuk web. Menampilkan:
 
 ### 6.2 Sidebar (`components/web/Sidebar.tsx`)
 
-Sidebar 256px untuk admin & owner panel di web. Props:
+Sidebar 256px untuk super admin & owner panel di web. Props:
 ```typescript
 interface SidebarProps {
   title: string;           // Judul section

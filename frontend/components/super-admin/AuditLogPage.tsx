@@ -38,7 +38,7 @@ export default function AuditLogPage() {
 
   const fetchLogs = useCallback(async () => {
     try {
-      const response = await apiFetch('/admin/audit-logs', {
+      const response = await apiFetch('/super-admin/audit-logs', {
         params: { ...(debouncedSearch ? { search: debouncedSearch } : {}), ...(action ? { action } : {}) },
       });
       const body = await response.json();

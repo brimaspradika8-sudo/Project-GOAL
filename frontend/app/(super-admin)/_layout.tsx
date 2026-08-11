@@ -61,22 +61,22 @@ export default function AdminTabLayout() {
   }, [isSuperAdmin]);
 
   const sidebarItems: SidebarItem[] = [
-    { href: '/(admin)/users', label: 'Kelola Pengguna', icon: 'people-alt' },
-    { href: '/(admin)/owner-requests', label: 'Pengajuan Owner', icon: 'inventory' },
+    { href: '/(super-admin)/users', label: 'Kelola Pengguna', icon: 'people-alt' },
+    { href: '/(super-admin)/owner-requests', label: 'Pengajuan Owner', icon: 'inventory' },
     ...(isSuperAdmin ? [
-      { href: '/(admin)/manage-fields', label: 'Kelola Lapangan', icon: 'stadium' },
-      { href: '/(admin)/audit-logs', label: 'Audit Log', icon: 'history' },
+      { href: '/(super-admin)/manage-fields', label: 'Kelola Lapangan', icon: 'stadium' },
+      { href: '/(super-admin)/audit-logs', label: 'Audit Log', icon: 'history' },
     ] : []),
-    { href: '/(admin)/profile', label: 'Profile', icon: 'person' },
+    { href: '/(super-admin)/profile', label: 'Profile', icon: 'person' },
   ];
 
-  const activeRoute = sidebarItems.find((item) => isSidebarRouteActive(pathname, item.href))?.href || '/(admin)/users';
+  const activeRoute = sidebarItems.find((item) => isSidebarRouteActive(pathname, item.href))?.href || '/(super-admin)/users';
 
   if (isWeb && breakpoint === 'mobile') {
     return (
       <View style={[styles.webRootMobile, { backgroundColor: colors.background }]}>
         <MobileWebHeader
-          title="Admin Panel"
+          title="Super admin panel"
           accentColor={colors.primary}
           items={sidebarItems}
           activeRoute={activeRoute}
@@ -159,7 +159,7 @@ export default function AdminTabLayout() {
     return (
       <View style={[styles.webRoot, { backgroundColor: colors.background }]}>
         <Sidebar
-          title="Admin Panel"
+          title="Super admin panel"
           accentColor={colors.primary}
           items={sidebarItems}
         />

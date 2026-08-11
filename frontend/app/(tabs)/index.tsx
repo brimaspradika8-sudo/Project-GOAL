@@ -120,7 +120,7 @@ export default function HomeScreen() {
   const isDesktop = width >= 900;
   const sports = profile?.sports ?? [];
   const userName = profile?.full_name || profile?.username || 'Pengguna';
-  const isOwnerOrAdmin = profile?.role === 'owner' || profile?.role === 'super_admin';
+  const isOwnerOrSuperAdmin = profile?.role === 'owner' || profile?.role === 'super_admin';
 
   if (profileLoading && !refreshing) {
     return (
@@ -368,14 +368,14 @@ export default function HomeScreen() {
         activeOpacity={0.85}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          if (isOwnerOrAdmin) {
+          if (isOwnerOrSuperAdmin) {
             router.push('/(owner)/fields');
           } else {
             router.push('/(tabs)/fields');
           }
         }}
       >
-        <MaterialIcons name={isOwnerOrAdmin ? 'add-business' : 'search'} size={26} color="#ffffff" />
+        <MaterialIcons name={isOwnerOrSuperAdmin ? 'add-business' : 'search'} size={26} color="#ffffff" />
       </TouchableOpacity>
       <NotificationCenter visible={notifVisible} onClose={() => setNotifVisible(false)} />
     </View>

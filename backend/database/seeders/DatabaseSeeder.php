@@ -16,9 +16,9 @@ class DatabaseSeeder extends Seeder
     use WithoutModelEvents;
     public function run(): void
     {
-        $superAdmin = $this->user('Super Admin', 'superadmin@example.com', UserRole::SUPER_ADMIN);
-        $owner = $this->user('Goal Owner', 'owner@example.com', UserRole::OWNER, true);
-        $player = $this->user('Goal Player', 'player@example.com', UserRole::PLAYER);
+        $superAdmin = $this->user('Super Admin', 'superadmin@goal.test', UserRole::SUPER_ADMIN);
+        $owner = $this->user('Goal Owner', 'owner@goal.test', UserRole::OWNER, true);
+        $player = $this->user('Goal Player', 'player@goal.test', UserRole::PLAYER);
 
         $field = Field::updateOrCreate(
             ['owner_id' => $owner->id, 'name' => 'Goal Arena Futsal'],

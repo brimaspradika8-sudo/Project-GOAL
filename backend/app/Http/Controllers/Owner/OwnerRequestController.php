@@ -22,23 +22,17 @@ class OwnerRequestController extends Controller
         $profile = $user->profile;
 
         if ($profile && in_array($profile->role, [Profile::ROLE_OWNER, Profile::ROLE_SUPER_ADMIN])) {
-            return response()->json([
-                'message' => 'Anda sudah memiliki peran yang memadai.',
-            ], 422);
+            return $this->errorResponse('Anda sudah memiliki peran yang memadai.', [], 422);
         }
 
         if ($profile && $profile->is_owner_verified) {
-            return response()->json([
-                'message' => 'Anda sudah terverifikasi sebagai pemilik.',
-            ], 422);
+            return $this->errorResponse('Anda sudah terverifikasi sebagai pemilik.', [], 422);
         }
 
         $pending = $this->ownerRequestService->getPendingRequest($user);
 
         if ($pending) {
-            return response()->json([
-                'message' => 'Anda sudah memiliki pengajuan yang sedang diproses.',
-            ], 422);
+            return $this->errorResponse('Anda sudah memiliki pengajuan yang sedang diproses.', [], 422);
         }
 
         try {
@@ -47,16 +41,16 @@ class OwnerRequestController extends Controller
                 $request->validated()
             );
         } catch (\RuntimeException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+            return $this->errorResponse($e->getMessage(), [], 422);
         }
 
-        return response()->json(new OwnerRequestResource($ownerRequest), 201);
+        return $this->resourceResponse('Pengajuan owner berhasil dikirim.', new OwnerRequestResource($ownerRequest), 201);
     }
 
     public function status(Request $request): JsonResponse
     {
         $ownerRequest = $this->ownerRequestService->listByUser($request->user());
 
-        return response()->json($ownerRequest ? new OwnerRequestResource($ownerRequest) : null);
+        return $this->resourceResponse('Status pengajuan owner berhasil dimuat.', $ownerRequest ? new OwnerRequestResource($ownerRequest) : null);
     }
 }

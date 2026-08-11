@@ -171,7 +171,7 @@ export function GridLoader() {
   );
 }
 
-/** Satu baris item list (untuk halaman admin/owner) */
+/** Satu baris item list (untuk halaman super admin/owner) */
 export function SkeletonListItem() {
   const { colors } = useTheme();
   return (

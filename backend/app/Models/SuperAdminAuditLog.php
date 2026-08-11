@@ -5,8 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Model;
 
-class AdminAuditLog extends Model
+class SuperAdminAuditLog extends Model
 {
+    protected $table = 'super_admin_audit_logs';
+
     protected $fillable = [
         'actor_id',
         'action',

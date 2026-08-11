@@ -91,7 +91,7 @@ export default function UserPage() {
 
   const fetchUsers = useCallback(async (q?: string) => {
     try {
-      const res = await apiFetch('/admin/users', { params: { search: q } });
+      const res = await apiFetch('/super-admin/users', { params: { search: q } });
       const data = await res.json();
       setUsers(data?.data?.data ?? data?.data ?? []);
     } catch {
@@ -111,7 +111,7 @@ export default function UserPage() {
   const onRefresh = () => { setRefreshing(true); fetchUsers(search); };
 
   const updateUserRole = async (userId: number, role: UserRole) => {
-    const res = await apiFetch(`/admin/users/${userId}/role`, { method: 'PUT', body: { role } });
+    const res = await apiFetch(`/super-admin/users/${userId}/role`, { method: 'PUT', body: { role } });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || 'Gagal memperbarui role.');
     return data;
@@ -144,7 +144,7 @@ export default function UserPage() {
     setCreateLoading(true);
     setCreateError(null);
     try {
-      const res = await apiFetch('/admin/users', {
+      const res = await apiFetch('/super-admin/users', {
         method: 'POST',
         body: { name: createForm.name, email: createForm.email, password: createForm.password, role: createForm.role },
       });
@@ -190,7 +190,7 @@ export default function UserPage() {
     try {
       const body: any = { name: editForm.name, email: editForm.email };
       if (editForm.password.trim()) body.password = editForm.password;
-      const res = await apiFetch(`/admin/users/${editTarget.id}`, { method: 'PUT', body });
+      const res = await apiFetch(`/super-admin/users/${editTarget.id}`, { method: 'PUT', body });
       const data = await res.json();
       if (!res.ok) {
         setEditError(getErrorMessage(data, 'Gagal menyimpan perubahan.'));
@@ -229,7 +229,7 @@ export default function UserPage() {
     setDeleteLoading(true);
     setDeleteError(null);
     try {
-      const res = await apiFetch(`/admin/users/${deleteTarget.id}`, { method: 'DELETE' });
+      const res = await apiFetch(`/super-admin/users/${deleteTarget.id}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setDeleteError(data.message || 'Gagal menghapus user.');
@@ -268,7 +268,7 @@ export default function UserPage() {
     setBulkDeleteLoading(true);
     setBulkDeleteError(null);
     try {
-      const res = await apiFetch('/admin/users/bulk-delete', {
+      const res = await apiFetch('/super-admin/users/bulk-delete', {
         method: 'POST',
         body: { ids: Array.from(selected) },
       });
@@ -442,7 +442,7 @@ export default function UserPage() {
                         }}
                         hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                       >
-                        <MaterialIcons name="admin-panel-settings" size={16} color="#FFFFFF" />
+                        <MaterialIcons name="shield" size={16} color="#FFFFFF" />
                       </TouchableOpacity>
                     )}
 
@@ -599,7 +599,7 @@ export default function UserPage() {
         visible={!!upgradeTarget}
         title={`Ubah Role — ${upgradeTarget?.name ?? ''}`}
         description="Pilih role baru untuk user ini."
-        icon="admin-panel-settings"
+        icon="shield"
         iconColor={colors.primary}
         iconBg={colors.primaryContainer}
         loading={upgradeLoading}
