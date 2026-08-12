@@ -112,10 +112,8 @@ class BookingService
             'cancel_reason' => $reason,
         ]);
 
-        Log::info('Booking cancelled', [
-            'booking_id' => $booking->id,
-            'user_id'    => $user->id,
-            'reason'     => $reason,
+        $this->logSecurityAction($user, 'booking.cancelled', $booking->id, [
+            'reason' => $reason,
         ]);
 
         return $booking->load(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name']);
@@ -158,14 +156,22 @@ class BookingService
         $isAdmin = $owner->profile?->role === Profile::ROLE_SUPER_ADMIN;
 
         if (!$isAdmin) {
+            if (!empty($filters['field_id']) && !$this->ownerOwnsField($owner, (int) $filters['field_id'])) {
+                $this->logSecurityAction($owner, 'unauthorized_attempt', (int) $filters['field_id'], [
+                    'resource_type' => 'field',
+                    'attempted_action' => 'owner.bookings.filter',
+                ]);
+
+                throw new AuthorizationException('You do not have permission');
+            }
+
             $query->whereHas('field', fn ($q) => $q->where('owner_id', $owner->id));
         }
 
         $query->applyFilters($filters)
             ->latest();
 
-        Log::info('Owner accessed bookings', [
-            'user_id' => $owner->id,
+        $this->logSecurityAction($owner, 'owner.bookings.accessed', null, [
             'is_admin' => $isAdmin,
             'filters' => $filters,
         ]);
@@ -222,6 +228,10 @@ class BookingService
     public function approveBooking(User $owner, Booking $booking): Booking
     {
         if ($booking->field?->owner_id !== $owner->id && $owner->profile?->role !== Profile::ROLE_SUPER_ADMIN) {
+            $this->logSecurityAction($owner, 'unauthorized_attempt', $booking->id, [
+                'attempted_action' => 'booking.approve',
+            ]);
+
             throw new \Illuminate\Auth\Access\AuthorizationException('You do not have permission');
         }
 
@@ -243,12 +253,18 @@ class BookingService
             throw new BookingAlreadyProcessedException('Booking already processed', 0, $e);
         }
 
+        $this->logSecurityAction($owner, 'booking.approved', $booking->id);
+
         return $booking;
     }
 
     public function rejectBooking(User $owner, Booking $booking, ?string $reason = null): Booking
     {
         if ($booking->field?->owner_id !== $owner->id && $owner->profile?->role !== Profile::ROLE_SUPER_ADMIN) {
+            $this->logSecurityAction($owner, 'unauthorized_attempt', $booking->id, [
+                'attempted_action' => 'booking.reject',
+            ]);
+
             throw new \Illuminate\Auth\Access\AuthorizationException('You do not have permission');
         }
 
@@ -269,12 +285,18 @@ class BookingService
             throw new BookingAlreadyProcessedException('Booking already processed', 0, $e);
         }
 
+        $this->logSecurityAction($owner, 'booking.rejected', $booking->id);
+
         return $booking;
     }
 
     public function confirmBooking(User $owner, Booking $booking): Booking
     {
         if ($booking->field?->owner_id !== $owner->id && $owner->profile?->role !== Profile::ROLE_SUPER_ADMIN) {
+            $this->logSecurityAction($owner, 'unauthorized_attempt', $booking->id, [
+                'attempted_action' => 'booking.confirm',
+            ]);
+
             throw new UnauthorizedBookingActionException('You do not have permission');
         }
 
@@ -283,10 +305,14 @@ class BookingService
         }
 
         try {
-            return $this->statusService->transition($booking, BookingStatus::CONFIRMED, [
+            $booking = $this->statusService->transition($booking, BookingStatus::CONFIRMED, [
                 'confirmed_at' => now(),
                 'confirmed_by' => $owner->id,
             ]);
+
+            $this->logSecurityAction($owner, 'booking.confirmed', $booking->id);
+
+            return $booking;
         } catch (InvalidBookingStatusTransitionException $e) {
             throw new InvalidBookingStatusException('Booking must be approved before confirmation', 0, $e);
         }
@@ -437,5 +463,22 @@ class BookingService
         unset($filters['tanggal'], $filters['field']);
 
         return $filters;
+    }
+
+    private function ownerOwnsField(User $owner, int $fieldId): bool
+    {
+        return Field::whereKey($fieldId)
+            ->where('owner_id', $owner->id)
+            ->exists();
+    }
+
+    private function logSecurityAction(User $user, string $action, ?int $resourceId, array $context = []): void
+    {
+        Log::info('Security action', array_merge([
+            'user_id' => $user->id,
+            'action' => $action,
+            'resource_id' => $resourceId,
+            'timestamp' => now()->toISOString(),
+        ], $context));
     }
 }

@@ -14,7 +14,7 @@ use App\Http\Controllers\Booking\BookingController;
 use App\Http\Controllers\SuperAdmin\UserController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\NotificationController;
-    Route::middleware('throttle:10,1')->group(function () {
+    Route::middleware('throttle:auth-sensitive')->group(function () {
     Route::post('/auth/register',    [AuthController::class, 'register']);
     Route::post('/auth/login',       [AuthController::class, 'login']);
     Route::post('/auth/verify-token',[PasswordResetController::class, 'token']);
@@ -90,19 +90,19 @@ use App\Http\Controllers\NotificationController;
         });
         // Bookings (Sprint 3) - player
         Route::middleware('role:player')->group(function () {
-            Route::post('/bookings',              [BookingController::class, 'store']);
+            Route::post('/bookings',              [BookingController::class, 'store'])->middleware('throttle:booking-sensitive');
             Route::get('/bookings/my',            [BookingController::class, 'myBookings']);
             Route::get('/bookings/history',       [BookingController::class, 'history']);
-            Route::patch('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
+            Route::patch('/bookings/{id}/cancel', [BookingController::class, 'cancel'])->middleware('throttle:booking-sensitive');
         });
         Route::get('/bookings/{id}', [BookingController::class, 'show']);
         // Bookings - owner / super admin
         Route::middleware('role:owner,super_admin')->group(function () {
             Route::get('/owner/bookings',                [BookingController::class, 'ownerIndex']);
             Route::get('/owner/fields/{id}/bookings',    [BookingController::class, 'ownerFieldBookings']);
-            Route::patch('/owner/bookings/{id}/approve', [BookingController::class, 'approve']);
-            Route::patch('/owner/bookings/{id}/reject',  [BookingController::class, 'reject']);
-            Route::patch('/bookings/{id}/confirm',       [BookingController::class, 'confirm']);
+            Route::patch('/owner/bookings/{id}/approve', [BookingController::class, 'approve'])->middleware('throttle:booking-sensitive');
+            Route::patch('/owner/bookings/{id}/reject',  [BookingController::class, 'reject'])->middleware('throttle:booking-sensitive');
+            Route::patch('/bookings/{id}/confirm',       [BookingController::class, 'confirm'])->middleware('throttle:booking-sensitive');
         });
         // Bookings - super admin monitoring
         Route::middleware('role:super_admin')->group(function () {

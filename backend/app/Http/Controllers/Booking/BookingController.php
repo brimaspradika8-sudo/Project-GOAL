@@ -13,6 +13,7 @@ use App\Http\Requests\Booking\CancelBookingRequest;
 use App\Http\Requests\Booking\StoreBookingRequest;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
+use App\Policies\BookingPolicy;
 use App\Services\BookingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -77,9 +78,7 @@ class BookingController extends Controller
             return $this->errorResponse('Booking not found', [], 404);
         }
 
-        if (!$this->bookingService->isViewableBy($request->user(), $booking)) {
-            return $this->errorResponse('You do not have permission', [], 403);
-        }
+        $this->authorizeBooking($request, 'view', $booking);
 
         return $this->resourceResponse('Detail booking berhasil dimuat.', new BookingResource($booking));
     }
@@ -132,8 +131,8 @@ class BookingController extends Controller
             return $this->errorResponse('Lapangan tidak ditemukan.', [], 404);
         }
 
-        if (!$isAdmin && $field->owner_id !== $request->user()->id) {
-            return $this->errorResponse('Anda bukan pemilik lapangan ini.', [], 403);
+        if (!app(\App\Policies\FieldPolicy::class)->monitor($request->user(), $field)) {
+            throw new AuthorizationException('This action is unauthorized.');
         }
 
         $bookings = $this->bookingService->ownerFieldBookings(
@@ -200,6 +199,7 @@ class BookingController extends Controller
         }
 
         try {
+            $this->authorizeBooking($request, 'approve', $booking);
             $updated = $this->bookingService->approveBooking($request->user(), $booking);
             return $this->resourceResponse('Booking approved', new BookingResource($updated));
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
@@ -220,7 +220,11 @@ class BookingController extends Controller
         }
 
         try {
-            $updated = $this->bookingService->rejectBooking($request->user(), $booking, $request->input('reason'));
+            $this->authorizeBooking($request, 'reject', $booking);
+            $data = $request->validate([
+                'reason' => ['nullable', 'string', 'max:255'],
+            ]);
+            $updated = $this->bookingService->rejectBooking($request->user(), $booking, $data['reason'] ?? null);
             return $this->resourceResponse('Booking rejected', new BookingResource($updated));
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return $this->errorResponse('You do not have permission', [], 403);
@@ -240,13 +244,25 @@ class BookingController extends Controller
         }
 
         try {
+            $this->authorizeBooking($request, 'confirm', $booking);
             $updated = $this->bookingService->confirmBooking($request->user(), $booking);
 
             return $this->resourceResponse('Booking confirmed', new BookingResource($updated));
         } catch (UnauthorizedBookingActionException $e) {
             return $this->errorResponse('You do not have permission', [], 403);
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse('You do not have permission', [], 403);
         } catch (InvalidBookingStatusException $e) {
             return $this->errorResponse($e->getMessage(), [], 409);
+        }
+    }
+
+    private function authorizeBooking(Request $request, string $ability, Booking $booking): void
+    {
+        $policy = app(BookingPolicy::class);
+
+        if (!$policy->{$ability}($request->user(), $booking)) {
+            throw new AuthorizationException('This action is unauthorized.');
         }
     }
 }

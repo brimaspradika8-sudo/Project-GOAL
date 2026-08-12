@@ -10,6 +10,7 @@ use App\Http\Resources\FieldResource;
 use App\Models\Field;
 use App\Models\SuperAdminAuditLog;
 use App\Models\Profile;
+use App\Policies\FieldPolicy;
 use App\Services\FieldService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
@@ -91,9 +92,7 @@ class FieldController extends Controller
         $user = $request->user();
         $isAdmin = $user->profile?->role === Profile::ROLE_SUPER_ADMIN;
 
-        if (!$isAdmin && $field->owner_id !== $user->id) {
-            return $this->errorResponse('Anda bukan pemilik lapangan ini.', [], 403);
-        }
+        $this->authorizeField($request, 'update', $field);
 
         $field = $this->fieldService->update($field, $request->validated(), $user, $isAdmin);
 
@@ -110,13 +109,7 @@ class FieldController extends Controller
             return $this->errorResponse('Lapangan tidak ditemukan.', [], 404);
         }
 
-        $profile = $request->user()->profile;
-        $isOwner = $field->owner_id === $request->user()->id;
-        $isAdmin = $profile && $profile->role === Profile::ROLE_SUPER_ADMIN;
-
-        if (!$isOwner && !$isAdmin) {
-            return $this->errorResponse('Anda bukan pemilik lapangan ini.', [], 403);
-        }
+        $this->authorizeField($request, 'delete', $field);
 
         $this->fieldService->delete($field, $request->user());
 
@@ -301,5 +294,14 @@ class FieldController extends Controller
         $this->fieldService->invalidateCache();
 
         return $this->successResponse("{$count} lapangan berhasil dihapus permanen.", ['deleted' => $count]);
+    }
+
+    private function authorizeField(Request $request, string $ability, Field $field): void
+    {
+        $policy = app(FieldPolicy::class);
+
+        if (!$policy->{$ability}($request->user(), $field)) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('This action is unauthorized.');
+        }
     }
 }
