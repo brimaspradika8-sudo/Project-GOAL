@@ -8,12 +8,14 @@ use App\Events\BookingCreated;
 use App\Events\BookingExpired;
 use App\Events\BookingRejected;
 use App\Listeners\LogFailedBookingNotification;
+use App\Listeners\LogFailedQueuedNotificationJob;
 use App\Listeners\SendBookingApprovedNotification;
 use App\Listeners\SendBookingCancelledNotification;
 use App\Listeners\SendBookingCreatedNotification;
 use App\Listeners\SendBookingExpiredNotification;
 use App\Listeners\SendBookingRejectedNotification;
 use Illuminate\Notifications\Events\NotificationFailed;
+use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
@@ -32,5 +34,6 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(BookingExpired::class, SendBookingExpiredNotification::class);
         Event::listen(BookingCancelled::class, SendBookingCancelledNotification::class);
         Event::listen(NotificationFailed::class, LogFailedBookingNotification::class);
+        Event::listen(JobFailed::class, LogFailedQueuedNotificationJob::class);
     }
 }

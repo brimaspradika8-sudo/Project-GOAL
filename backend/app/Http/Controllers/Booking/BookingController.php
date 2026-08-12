@@ -51,6 +51,24 @@ class BookingController extends Controller
         ]);
     }
 
+    public function history(Request $request): JsonResponse
+    {
+        $bookings = $this->bookingService->getUserBookingHistory(
+            $request->user(),
+            $this->filters($request),
+            (int) $request->query('page', 1)
+        );
+
+        return $this->successResponse('Riwayat booking berhasil dimuat.', [
+            'data' => BookingResource::collection($bookings)->resolve($request),
+            'pagination' => [
+                'current_page' => $bookings->currentPage(),
+                'last_page'    => $bookings->lastPage(),
+                'total'        => $bookings->total(),
+            ],
+        ]);
+    }
+
     public function show(Request $request, int $id): JsonResponse
     {
         $booking = Booking::with(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name'])->find($id);
@@ -168,8 +186,8 @@ class BookingController extends Controller
     {
         return array_filter([
             'status'   => $request->query('status'),
-            'date'     => $request->query('date'),
-            'field_id' => $request->query('field_id'),
+            'date'     => $request->query('date') ?? $request->query('tanggal'),
+            'field_id' => $request->query('field_id') ?? $request->query('field'),
         ], fn ($v) => $v !== null && $v !== '');
     }
 

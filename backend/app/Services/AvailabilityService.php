@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\BookingStatus;
 use App\Enums\SlotStatus;
+use App\Models\Booking;
 use App\Models\Field;
 
 class AvailabilityService
@@ -58,6 +60,47 @@ class AvailabilityService
     }
 
     /**
+     * Determine live field status without persisting it.
+     *
+     * @return string AVAILABLE|BOOKED|PLAYING|CLOSED
+     */
+    public function liveFieldStatus(Field $field, ?string $date = null, ?string $time = null): string
+    {
+        $date = $date ?? now()->toDateString();
+        $time = $this->normalizeTime($time ?? now()->format('H:i'));
+
+        $openTime = $field->open_time ? substr((string) $field->open_time, 0, 5) : null;
+        $closeTime = $field->close_time ? substr((string) $field->close_time, 0, 5) : null;
+
+        if (!$openTime || !$closeTime || $time < $openTime || $time >= $closeTime) {
+            return 'CLOSED';
+        }
+
+        $activeStatuses = [
+            BookingStatus::APPROVED->value,
+            BookingStatus::CONFIRMED->value,
+        ];
+
+        $isPlaying = Booking::where('field_id', $field->id)
+            ->where('booking_date', $date)
+            ->whereIn('status', $activeStatuses)
+            ->where('start_time', '<=', $time)
+            ->where('end_time', '>', $time)
+            ->exists();
+
+        if ($isPlaying) {
+            return 'PLAYING';
+        }
+
+        $isBooked = Booking::where('field_id', $field->id)
+            ->where('booking_date', $date)
+            ->whereIn('status', $activeStatuses)
+            ->exists();
+
+        return $isBooked ? 'BOOKED' : 'AVAILABLE';
+    }
+
+    /**
      * @param array{start_time: string, end_time: string} $slot
      * @param array<int, array{start: string, end: string}> $bookedRanges
      */
@@ -94,5 +137,10 @@ class AvailabilityService
         }
 
         return SlotStatus::AVAILABLE;
+    }
+
+    private function normalizeTime(string $time): string
+    {
+        return strlen($time) === 5 ? $time : substr($time, 0, 5);
     }
 }

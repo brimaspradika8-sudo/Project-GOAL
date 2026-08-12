@@ -129,6 +129,20 @@ class BookingService
             ->paginate(10, ['*'], 'page', $page);
     }
 
+    /**
+     * @param array{status?: string, date?: string, tanggal?: string} $filters
+     */
+    public function getUserBookingHistory(User $user, array $filters = [], int $page = 1): LengthAwarePaginator
+    {
+        $filters = $this->normalizeBookingFilters($filters);
+
+        return Booking::with(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name'])
+            ->where('user_id', $user->id)
+            ->applyFilters($filters)
+            ->latest()
+            ->paginate(10, ['*'], 'page', $page);
+    }
+
     public function findForUser(User $user, int $id): ?Booking
     {
         return Booking::with(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name'])
@@ -138,6 +152,7 @@ class BookingService
 
     public function ownerBookings(User $owner, array $filters = [], int $page = 1): LengthAwarePaginator
     {
+        $filters = $this->normalizeBookingFilters($filters);
         $query = Booking::with(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name']);
 
         $isAdmin = $owner->profile?->role === Profile::ROLE_SUPER_ADMIN;
@@ -160,6 +175,7 @@ class BookingService
 
     public function ownerFieldBookings(User $owner, int $fieldId, array $filters = [], int $page = 1): LengthAwarePaginator
     {
+        $filters = $this->normalizeBookingFilters($filters);
         $query = Booking::with(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name'])
             ->where('field_id', $fieldId);
 
@@ -180,6 +196,8 @@ class BookingService
      */
     public function adminBookings(User $admin, array $filters = [], int $page = 1): LengthAwarePaginator
     {
+        $filters = $this->normalizeBookingFilters($filters);
+
         if ($admin->profile?->role !== Profile::ROLE_SUPER_ADMIN) {
             throw new AuthorizationException('You do not have permission');
         }
@@ -404,5 +422,20 @@ class BookingService
         if ($overlap) {
             throw new BookingConflictException();
         }
+    }
+
+    private function normalizeBookingFilters(array $filters): array
+    {
+        if (!empty($filters['tanggal']) && empty($filters['date'])) {
+            $filters['date'] = $filters['tanggal'];
+        }
+
+        if (!empty($filters['field']) && empty($filters['field_id'])) {
+            $filters['field_id'] = $filters['field'];
+        }
+
+        unset($filters['tanggal'], $filters['field']);
+
+        return $filters;
     }
 }

@@ -158,6 +158,60 @@ class AvailabilityTest extends TestCase
             ->assertJsonPath('data.slots.0.status', 'AVAILABLE');
     }
 
+    public function test_live_field_status_is_playing_during_active_booking(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->makeField(['buffer_duration_minutes' => 0]);
+
+        Booking::create([
+            'user_id' => $player->id,
+            'field_id' => $field->id,
+            'booking_date' => '2026-08-20',
+            'start_time' => '07:00',
+            'end_time' => '08:00',
+            'duration_minutes' => 60,
+            'total_price' => 100000,
+            'status' => BookingStatus::CONFIRMED->value,
+        ]);
+
+        $this->assertSame(
+            'PLAYING',
+            app(AvailabilityService::class)->liveFieldStatus($field, '2026-08-20', '07:30')
+        );
+    }
+
+    public function test_live_field_status_is_booked_when_booking_exists_later(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->makeField(['buffer_duration_minutes' => 0]);
+
+        Booking::create([
+            'user_id' => $player->id,
+            'field_id' => $field->id,
+            'booking_date' => '2026-08-20',
+            'start_time' => '10:00',
+            'end_time' => '11:00',
+            'duration_minutes' => 60,
+            'total_price' => 100000,
+            'status' => BookingStatus::APPROVED->value,
+        ]);
+
+        $this->assertSame(
+            'BOOKED',
+            app(AvailabilityService::class)->liveFieldStatus($field, '2026-08-20', '07:30')
+        );
+    }
+
+    public function test_live_field_status_is_closed_outside_operating_hours(): void
+    {
+        $field = $this->makeField();
+
+        $this->assertSame(
+            'CLOSED',
+            app(AvailabilityService::class)->liveFieldStatus($field, '2026-08-20', '23:30')
+        );
+    }
+
     public function test_status_is_booked_when_slot_overlaps_booked_range(): void
     {
         $field = $this->makeField(['buffer_duration_minutes' => 0]);

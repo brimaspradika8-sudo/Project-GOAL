@@ -27,7 +27,6 @@ class BookingStatusService
             BookingStatus::COMPLETED->value,
         ],
         BookingStatus::CONFIRMED->value => [
-            BookingStatus::CANCELLED->value,
             BookingStatus::COMPLETED->value,
         ],
         BookingStatus::REJECTED->value => [],

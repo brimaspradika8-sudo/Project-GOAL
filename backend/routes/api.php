@@ -92,6 +92,7 @@ use App\Http\Controllers\NotificationController;
         Route::middleware('role:player')->group(function () {
             Route::post('/bookings',              [BookingController::class, 'store']);
             Route::get('/bookings/my',            [BookingController::class, 'myBookings']);
+            Route::get('/bookings/history',       [BookingController::class, 'history']);
             Route::patch('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
         });
         Route::get('/bookings/{id}', [BookingController::class, 'show']);

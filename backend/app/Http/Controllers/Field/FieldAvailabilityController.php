@@ -39,6 +39,7 @@ class FieldAvailabilityController extends Controller
             ],
             'date' => $result['date'],
             'tanggal' => $result['date'],
+            'field_status' => $this->availabilityService->liveFieldStatus($field, $date),
             'slots' => $result['slots'],
         ]);
     }
