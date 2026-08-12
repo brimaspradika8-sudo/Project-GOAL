@@ -6,9 +6,11 @@ use App\Http\Controllers\Profile\ProfileController;
 use App\Http\Controllers\Profile\OnboardingController;
 use App\Http\Controllers\Profile\AvatarController;
 use App\Http\Controllers\Field\FieldController;
+use App\Http\Controllers\Field\FieldAvailabilityController;
 use App\Http\Controllers\Owner\OwnerRequestController;
 use App\Http\Controllers\Owner\FieldBookingConfigurationController;
 use App\Http\Controllers\Owner\SuperAdminOwnerController;
+use App\Http\Controllers\Booking\BookingController;
 use App\Http\Controllers\SuperAdmin\UserController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\NotificationController;
@@ -24,6 +26,7 @@ use App\Http\Controllers\NotificationController;
     Route::middleware('throttle:60,1')->group(function () {
         Route::get('/fields',                      [FieldController::class, 'index']);
         Route::get('/fields/{id}',                 [FieldController::class, 'show']);
+        Route::get('/fields/{id}/availability',    [FieldAvailabilityController::class, 'show']);
         Route::get('/me/onboarding/check-username',[OnboardingController::class, 'checkUsername']);
     });
 // Protected (Sanctum + rate limit)
@@ -83,5 +86,17 @@ use App\Http\Controllers\NotificationController;
             Route::put('/super-admin/users/{id}',     [UserController::class, 'update']);
             Route::put('/super-admin/users/{id}/role',[UserController::class, 'updateRole']);
             Route::delete('/super-admin/users/{id}',  [UserController::class, 'destroy']);
+        });
+        // Bookings (Sprint 3) - player
+        Route::middleware('role:player')->group(function () {
+            Route::post('/bookings',              [BookingController::class, 'store']);
+            Route::get('/bookings/my',            [BookingController::class, 'myBookings']);
+            Route::patch('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
+        });
+        Route::get('/bookings/{id}', [BookingController::class, 'show']);
+        // Bookings - owner / super admin
+        Route::middleware('role:owner,super_admin')->group(function () {
+            Route::get('/owner/bookings',                [BookingController::class, 'ownerIndex']);
+            Route::get('/owner/fields/{id}/bookings',    [BookingController::class, 'ownerFieldBookings']);
         });
 });

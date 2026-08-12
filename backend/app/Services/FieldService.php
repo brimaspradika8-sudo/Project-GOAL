@@ -168,6 +168,11 @@ class FieldService
         return Field::approved()->with('owner:id,name')->find($id);
     }
 
+    public function findApprovedWithPrices(int $id): ?Field
+    {
+        return Field::approved()->with(['owner:id,name', 'prices'])->find($id);
+    }
+
     public function create(User $user, array $data): Field
     {
         $isSuperAdmin = $user->profile?->role === Profile::ROLE_SUPER_ADMIN;
