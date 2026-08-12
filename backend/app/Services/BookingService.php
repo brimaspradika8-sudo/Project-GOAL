@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\BookingStatus;
 use App\Exceptions\BookingAlreadyExpiredException;
 use App\Exceptions\BookingAlreadyProcessedException;
+use App\Exceptions\BookingCannotBeCancelledException;
 use App\Exceptions\BookingConflictException;
 use App\Jobs\BookingExpirationJob;
 use App\Models\Booking;
@@ -12,8 +13,11 @@ use App\Models\Field;
 use App\Models\Notification;
 use App\Models\Profile;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class BookingService
@@ -98,23 +102,31 @@ class BookingService
     {
         $booking = Booking::with('field:id,name,owner_id')->find($id);
 
-        if (!$booking || $booking->user_id !== $user->id) {
-            throw ValidationException::withMessages(['id' => 'Booking tidak ditemukan.']);
+        if (!$booking) {
+            throw (new ModelNotFoundException)->setModel(Booking::class, $id);
+        }
+
+        if ($booking->user_id !== $user->id) {
+            throw new AuthorizationException('You do not have permission');
         }
 
         if (!in_array($booking->status, [
             BookingStatus::WAITING_OWNER_APPROVAL->value,
             BookingStatus::APPROVED->value,
         ], true)) {
-            throw ValidationException::withMessages([
-                'status' => 'Booking tidak dapat dibatalkan pada status ' . $booking->status . '.',
-            ]);
+            throw new BookingCannotBeCancelledException('Booking cannot be cancelled');
         }
 
         $booking->update([
             'status'        => BookingStatus::CANCELLED->value,
             'cancelled_at'  => now(),
             'cancel_reason' => $reason,
+        ]);
+
+        Log::info('Booking cancelled', [
+            'booking_id' => $booking->id,
+            'user_id'    => $user->id,
+            'reason'     => $reason,
         ]);
 
         $fieldOwner = $booking->field?->owner;
@@ -146,32 +158,67 @@ class BookingService
             ->find($id);
     }
 
-    public function ownerBookings(User $owner, int $page = 1): LengthAwarePaginator
+    public function ownerBookings(User $owner, array $filters = [], int $page = 1): LengthAwarePaginator
     {
-        $query = Booking::with(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name'])
-            ->whereHas('field', fn ($q) => $q->where('owner_id', $owner->id))
+        $query = Booking::with(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name']);
+
+        $isAdmin = $owner->profile?->role === Profile::ROLE_SUPER_ADMIN;
+
+        if (!$isAdmin) {
+            $query->whereHas('field', fn ($q) => $q->where('owner_id', $owner->id));
+        }
+
+        $query->applyFilters($filters)
             ->latest();
 
-        if ($owner->profile?->role === Profile::ROLE_SUPER_ADMIN) {
-            $query = Booking::with(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name'])
-                ->latest();
-        }
+        Log::info('Owner accessed bookings', [
+            'user_id' => $owner->id,
+            'is_admin' => $isAdmin,
+            'filters' => $filters,
+        ]);
 
         return $query->paginate(10, ['*'], 'page', $page);
     }
 
-    public function ownerFieldBookings(User $owner, int $fieldId, int $page = 1): LengthAwarePaginator
+    public function ownerFieldBookings(User $owner, int $fieldId, array $filters = [], int $page = 1): LengthAwarePaginator
     {
         $query = Booking::with(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name'])
-            ->where('field_id', $fieldId)
-            ->whereHas('field', fn ($q) => $q->where('owner_id', $owner->id))
+            ->where('field_id', $fieldId);
+
+        if ($owner->profile?->role !== Profile::ROLE_SUPER_ADMIN) {
+            $query->whereHas('field', fn ($q) => $q->where('owner_id', $owner->id));
+        }
+
+        $query->applyFilters($filters)
             ->latest();
 
-        if ($owner->profile?->role === Profile::ROLE_SUPER_ADMIN) {
-            $query = Booking::with(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name'])
-                ->where('field_id', $fieldId)
-                ->latest();
+        return $query->paginate(10, ['*'], 'page', $page);
+    }
+
+    /**
+     * Super admin sees all bookings across all owners.
+     *
+     * @param array{status?: string, date?: string, field_id?: int, owner_id?: int} $filters
+     */
+    public function adminBookings(User $admin, array $filters = [], int $page = 1): LengthAwarePaginator
+    {
+        if ($admin->profile?->role !== Profile::ROLE_SUPER_ADMIN) {
+            throw new AuthorizationException('You do not have permission');
         }
+
+        $query = Booking::with(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name']);
+
+        if (!empty($filters['owner_id'])) {
+            $query->whereHas('field', fn ($q) => $q->where('owner_id', $filters['owner_id']));
+        }
+
+        $query->applyFilters($filters)
+            ->latest();
+
+        Log::info('Admin monitored bookings', [
+            'user_id' => $admin->id,
+            'filters' => $filters,
+        ]);
 
         return $query->paginate(10, ['*'], 'page', $page);
     }

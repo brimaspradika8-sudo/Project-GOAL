@@ -267,7 +267,7 @@ class BookingTest extends TestCase
         ])->json('data.id');
 
         $this->authAs($other)->getJson("/api/bookings/{$bookingId}")
-            ->assertNotFound();
+            ->assertForbidden();
     }
 
     public function test_booking_detail_visible_to_field_owner(): void
@@ -317,7 +317,7 @@ class BookingTest extends TestCase
         ])->json('data.id');
 
         $this->authAs($other)->patchJson("/api/bookings/{$bookingId}/cancel")
-            ->assertUnprocessable();
+            ->assertForbidden();
     }
 
     public function test_cannot_cancel_completed_booking(): void
@@ -338,7 +338,8 @@ class BookingTest extends TestCase
         ]);
 
         $this->authAs($player)->patchJson("/api/bookings/{$booking->id}/cancel")
-            ->assertUnprocessable();
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Booking cannot be cancelled');
     }
 
     public function test_owner_can_list_incoming_bookings(): void
@@ -544,6 +545,221 @@ class BookingTest extends TestCase
             'user_id' => $owner->id,
             'type' => 'booking_requested',
         ]);
+    }
+
+    public function test_player_can_cancel_expired_booking_gets_409(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor();
+
+        $booking = Booking::create([
+            'user_id' => $player->id,
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'start_time' => '07:00',
+            'end_time' => '08:00',
+            'duration_minutes' => 60,
+            'total_price' => 70000,
+            'status' => BookingStatus::EXPIRED->value,
+            'expired_at' => now()->subMinute(),
+        ]);
+
+        $this->authAs($player)->patchJson("/api/bookings/{$booking->id}/cancel", [
+            'reason' => 'Terlambat',
+        ])->assertStatus(409)
+            ->assertJsonPath('message', 'Booking cannot be cancelled');
+    }
+
+    public function test_booking_detail_not_found_returns_404(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+
+        $this->authAs($player)->getJson('/api/bookings/999999')
+            ->assertNotFound();
+    }
+
+    public function test_cancelling_missing_booking_returns_404(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+
+        $this->authAs($player)->patchJson('/api/bookings/999999/cancel', [
+            'reason' => 'Tidak jadi',
+        ])->assertNotFound();
+    }
+
+    public function test_owner_can_filter_incoming_bookings_by_status(): void
+    {
+        $owner = $this->userWithRole(UserRole::OWNER, true);
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor([], $owner);
+
+        $waitingId = $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->json('data.id');
+
+        $this->authAs($owner)->patchJson("/api/owner/bookings/{$waitingId}/approve")->assertOk();
+
+        $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '08:30', 'end_time' => '09:30']],
+        ])->assertCreated();
+
+        $this->authAs($owner)->getJson('/api/owner/bookings?status=APPROVED')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.status', BookingStatus::APPROVED->value);
+    }
+
+    public function test_owner_can_filter_incoming_bookings_by_date(): void
+    {
+        $owner = $this->userWithRole(UserRole::OWNER, true);
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor([], $owner);
+
+        $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->assertCreated();
+
+        $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => '2026-08-21',
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->assertCreated();
+
+        $this->authAs($owner)->getJson('/api/owner/bookings?date=' . $this->date)
+            ->assertOk()
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.booking_date', $this->date);
+    }
+
+    public function test_owner_can_filter_incoming_bookings_by_field(): void
+    {
+        $owner = $this->userWithRole(UserRole::OWNER, true);
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $fieldA = $this->fieldFor([], $owner);
+        $fieldB = $this->fieldFor(['name' => 'Lapangan B'], $owner);
+
+        $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $fieldA->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->assertCreated();
+
+        $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $fieldB->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->assertCreated();
+
+        $this->authAs($owner)->getJson('/api/owner/bookings?field_id=' . $fieldA->id)
+            ->assertOk()
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.field_id', $fieldA->id);
+    }
+
+    public function test_super_admin_can_monitor_all_bookings(): void
+    {
+        $superAdmin = $this->userWithRole(UserRole::SUPER_ADMIN);
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor();
+
+        $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->assertCreated();
+
+        $this->authAs($superAdmin)->getJson('/api/admin/bookings')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.data');
+    }
+
+    public function test_super_admin_can_filter_admin_bookings_by_status(): void
+    {
+        $superAdmin = $this->userWithRole(UserRole::SUPER_ADMIN);
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor();
+
+        $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->assertCreated();
+
+        $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '08:30', 'end_time' => '09:30']],
+        ])->assertCreated();
+
+        $this->authAs($superAdmin)->getJson('/api/admin/bookings?status=WAITING_OWNER_APPROVAL')
+            ->assertOk()
+            ->assertJsonCount(2, 'data.data')
+            ->assertJsonPath('data.data.0.status', BookingStatus::WAITING_OWNER_APPROVAL->value);
+    }
+
+    public function test_super_admin_can_filter_admin_bookings_by_owner(): void
+    {
+        $superAdmin = $this->userWithRole(UserRole::SUPER_ADMIN);
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $ownerA = $this->userWithRole(UserRole::OWNER, true);
+        $ownerB = $this->userWithRole(UserRole::OWNER, true);
+        $fieldA = $this->fieldFor([], $ownerA);
+        $fieldB = $this->fieldFor([], $ownerB);
+
+        $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $fieldA->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->assertCreated();
+
+        $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $fieldB->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->assertCreated();
+
+        $this->authAs($superAdmin)->getJson('/api/admin/bookings?owner_id=' . $ownerA->id)
+            ->assertOk()
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.field.owner_id', $ownerA->id);
+    }
+
+    public function test_player_cannot_access_admin_bookings_endpoint(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+
+        $this->authAs($player)->getJson('/api/admin/bookings')->assertForbidden();
+    }
+
+    public function test_owner_cannot_access_admin_bookings_endpoint(): void
+    {
+        $owner = $this->userWithRole(UserRole::OWNER, true);
+
+        $this->authAs($owner)->getJson('/api/admin/bookings')->assertForbidden();
+    }
+
+    public function test_super_admin_can_view_any_booking_detail(): void
+    {
+        $superAdmin = $this->userWithRole(UserRole::SUPER_ADMIN);
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor();
+
+        $bookingId = $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->json('data.id');
+
+        $this->authAs($superAdmin)->getJson("/api/bookings/{$bookingId}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $bookingId)
+            ->assertJsonPath('data.user.id', $player->id);
     }
 
     private function userWithRole(UserRole $role, bool $verifiedOwner = false): User

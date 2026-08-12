@@ -101,4 +101,8 @@ use App\Http\Controllers\NotificationController;
             Route::patch('/owner/bookings/{id}/approve', [BookingController::class, 'approve']);
             Route::patch('/owner/bookings/{id}/reject',  [BookingController::class, 'reject']);
         });
+        // Bookings - super admin monitoring
+        Route::middleware('role:super_admin')->group(function () {
+            Route::get('/admin/bookings', [BookingController::class, 'adminIndex']);
+        });
 });

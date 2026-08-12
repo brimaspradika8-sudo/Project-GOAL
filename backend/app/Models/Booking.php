@@ -55,4 +55,26 @@ class Booking extends Model
     {
         return $query->whereIn('status', (array) config('booking.lock_statuses', []));
     }
+
+    /**
+     * Apply common listing filters: status, date, field_id.
+     *
+     * @param array{status?: string, date?: string, field_id?: int|string} $filters
+     */
+    public function scopeApplyFilters(Builder $query, array $filters = []): Builder
+    {
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($filters['date'])) {
+            $query->where('booking_date', $filters['date']);
+        }
+
+        if (!empty($filters['field_id'])) {
+            $query->where('field_id', $filters['field_id']);
+        }
+
+        return $query;
+    }
 }

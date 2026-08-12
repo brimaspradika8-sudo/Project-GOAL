@@ -23,17 +23,31 @@ class BookingExpirationJob implements ShouldQueue
 
     public function handle(NotificationService $notifications): void
     {
+        Log::info('Booking expiration started', ['booking_id' => $this->bookingId]);
+
         $booking = Booking::with(['field:id,name,owner_id', 'user:id,name'])->find($this->bookingId);
 
-        if (!$booking || $booking->status !== BookingStatus::WAITING_OWNER_APPROVAL->value) {
+        if (!$booking) {
+            Log::info('Booking not found for expiration', ['booking_id' => $this->bookingId]);
+            return;
+        }
+
+        // Only bookings waiting for owner approval may be expired by this job.
+        if ($booking->status !== BookingStatus::WAITING_OWNER_APPROVAL->value) {
+            Log::info('Booking not expired because status is not waiting approval', ['booking_id' => $booking->id, 'status' => $booking->status]);
             return;
         }
 
         if (!$booking->expired_at || $booking->expired_at->isFuture()) {
+            Log::info('Booking not expired because expired_at is not reached', ['booking_id' => $booking->id, 'expired_at' => $booking->expired_at]);
             return;
         }
 
+        $previous = $booking->status;
+
         $booking->update(['status' => BookingStatus::EXPIRED->value]);
+
+        Log::info('Booking expired', ['booking_id' => $booking->id, 'previous_status' => $previous, 'new_status' => $booking->status]);
 
         $notifications->create(
             $booking->user,

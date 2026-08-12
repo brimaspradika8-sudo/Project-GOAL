@@ -14,6 +14,7 @@ class CancelBookingRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'reason'        => ['nullable', 'string', 'max:255'],
             'cancel_reason' => ['nullable', 'string', 'max:255'],
         ];
     }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Booking;
 
 use App\Exceptions\BookingAlreadyExpiredException;
 use App\Exceptions\BookingAlreadyProcessedException;
+use App\Exceptions\BookingCannotBeCancelledException;
 use App\Exceptions\BookingConflictException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Booking\CancelBookingRequest;
@@ -11,6 +12,8 @@ use App\Http\Requests\Booking\StoreBookingRequest;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
 use App\Services\BookingService;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -50,8 +53,12 @@ class BookingController extends Controller
     {
         $booking = Booking::with(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name'])->find($id);
 
-        if (!$booking || !$this->bookingService->isViewableBy($request->user(), $booking)) {
-            return $this->errorResponse('Booking tidak ditemukan.', [], 404);
+        if (!$booking) {
+            return $this->errorResponse('Booking not found', [], 404);
+        }
+
+        if (!$this->bookingService->isViewableBy($request->user(), $booking)) {
+            return $this->errorResponse('You do not have permission', [], 403);
         }
 
         return $this->resourceResponse('Detail booking berhasil dimuat.', new BookingResource($booking));
@@ -60,7 +67,17 @@ class BookingController extends Controller
     public function cancel(CancelBookingRequest $request, int $id): JsonResponse
     {
         try {
-            $booking = $this->bookingService->cancel($request->user(), $id, $request->input('cancel_reason'));
+            $booking = $this->bookingService->cancel(
+                $request->user(),
+                $id,
+                $request->input('reason') ?? $request->input('cancel_reason')
+            );
+        } catch (ModelNotFoundException $e) {
+            return $this->errorResponse('Booking not found', [], 404);
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse('You do not have permission', [], 403);
+        } catch (BookingCannotBeCancelledException $e) {
+            return $this->errorResponse('Booking cannot be cancelled', [], 409);
         } catch (ValidationException $e) {
             return $this->errorResponse($e->getMessage(), $e->errors(), 422);
         }
@@ -70,7 +87,11 @@ class BookingController extends Controller
 
     public function ownerIndex(Request $request): JsonResponse
     {
-        $bookings = $this->bookingService->ownerBookings($request->user(), (int) $request->query('page', 1));
+        $bookings = $this->bookingService->ownerBookings(
+            $request->user(),
+            $this->filters($request),
+            (int) $request->query('page', 1)
+        );
 
         return $this->successResponse('Daftar booking masuk berhasil dimuat.', [
             'data' => BookingResource::collection($bookings)->resolve($request),
@@ -95,7 +116,12 @@ class BookingController extends Controller
             return $this->errorResponse('Anda bukan pemilik lapangan ini.', [], 403);
         }
 
-        $bookings = $this->bookingService->ownerFieldBookings($request->user(), $id, (int) $request->query('page', 1));
+        $bookings = $this->bookingService->ownerFieldBookings(
+            $request->user(),
+            $id,
+            $this->filters($request),
+            (int) $request->query('page', 1)
+        );
 
         return $this->successResponse('Daftar booking lapangan berhasil dimuat.', [
             'data' => BookingResource::collection($bookings)->resolve($request),
@@ -105,6 +131,44 @@ class BookingController extends Controller
                 'total'        => $bookings->total(),
             ],
         ]);
+    }
+
+    /**
+     * Super admin monitoring across all bookings.
+     * Filters: status, date, field_id, owner_id.
+     */
+    public function adminIndex(Request $request): JsonResponse
+    {
+        $filters = array_filter([
+            'status'   => $request->query('status'),
+            'date'     => $request->query('date'),
+            'field_id' => $request->query('field_id'),
+            'owner_id' => $request->query('owner_id'),
+        ], fn ($v) => $v !== null && $v !== '');
+
+        $bookings = $this->bookingService->adminBookings(
+            $request->user(),
+            $filters,
+            (int) $request->query('page', 1)
+        );
+
+        return $this->successResponse('Daftar seluruh booking berhasil dimuat.', [
+            'data' => BookingResource::collection($bookings)->resolve($request),
+            'pagination' => [
+                'current_page' => $bookings->currentPage(),
+                'last_page'    => $bookings->lastPage(),
+                'total'        => $bookings->total(),
+            ],
+        ]);
+    }
+
+    private function filters(Request $request): array
+    {
+        return array_filter([
+            'status'   => $request->query('status'),
+            'date'     => $request->query('date'),
+            'field_id' => $request->query('field_id'),
+        ], fn ($v) => $v !== null && $v !== '');
     }
 
     public function approve(Request $request, int $id): JsonResponse
