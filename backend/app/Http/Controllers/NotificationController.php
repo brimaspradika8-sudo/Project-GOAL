@@ -31,7 +31,7 @@ class NotificationController extends Controller
         ]);
     }
 
-    public function markRead(Request $request, int $id): JsonResponse
+    public function markRead(Request $request, string $id): JsonResponse
     {
         $marked = $this->notifications->markAsRead($request->user(), $id);
 

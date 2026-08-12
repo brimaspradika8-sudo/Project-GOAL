@@ -27,6 +27,7 @@ use App\Http\Controllers\NotificationController;
         Route::get('/fields',                      [FieldController::class, 'index']);
         Route::get('/fields/{id}',                 [FieldController::class, 'show']);
         Route::get('/fields/{id}/availability',    [FieldAvailabilityController::class, 'show']);
+        Route::get('/lapangan/{id}/slots',         [FieldAvailabilityController::class, 'show']);
         Route::get('/me/onboarding/check-username',[OnboardingController::class, 'checkUsername']);
     });
 // Protected (Sanctum + rate limit)
@@ -100,6 +101,7 @@ use App\Http\Controllers\NotificationController;
             Route::get('/owner/fields/{id}/bookings',    [BookingController::class, 'ownerFieldBookings']);
             Route::patch('/owner/bookings/{id}/approve', [BookingController::class, 'approve']);
             Route::patch('/owner/bookings/{id}/reject',  [BookingController::class, 'reject']);
+            Route::patch('/bookings/{id}/confirm',       [BookingController::class, 'confirm']);
         });
         // Bookings - super admin monitoring
         Route::middleware('role:super_admin')->group(function () {

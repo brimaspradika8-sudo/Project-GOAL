@@ -9,7 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('notifications', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
+            $table->string('notifiable_type')->nullable();
+            $table->unsignedBigInteger('notifiable_id')->nullable();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->string('type', 50);
             $table->string('title');
@@ -19,6 +21,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['user_id', 'read_at']);
+            $table->index(['notifiable_type', 'notifiable_id']);
         });
     }
 

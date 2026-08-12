@@ -10,7 +10,7 @@ use App\Models\Field;
 use App\Models\FieldPrice;
 use App\Models\Profile;
 use App\Models\User;
-use App\Services\NotificationService;
+use App\Services\BookingStatusService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -38,7 +38,7 @@ class BookingExpirationJobTest extends TestCase
         ]);
 
         $job = new BookingExpirationJob($booking->id);
-        $job->handle($this->app->make(NotificationService::class));
+        $job->handle($this->app->make(BookingStatusService::class));
 
         $this->assertDatabaseHas('bookings', [
             'id' => $booking->id,
@@ -78,10 +78,10 @@ class BookingExpirationJobTest extends TestCase
         ]);
 
         $job1 = new BookingExpirationJob($approved->id);
-        $job1->handle($this->app->make(NotificationService::class));
+        $job1->handle($this->app->make(BookingStatusService::class));
 
         $job2 = new BookingExpirationJob($rejected->id);
-        $job2->handle($this->app->make(NotificationService::class));
+        $job2->handle($this->app->make(BookingStatusService::class));
 
         $this->assertDatabaseHas('bookings', [
             'id' => $approved->id,
@@ -113,7 +113,7 @@ class BookingExpirationJobTest extends TestCase
         ]);
 
         $job = new BookingExpirationJob($booking->id);
-        $job->handle($this->app->make(NotificationService::class));
+        $job->handle($this->app->make(BookingStatusService::class));
 
         // now another player should be able to book the same slot
         $this->authAs($playerB)->postJson('/api/bookings', [
@@ -134,7 +134,7 @@ class BookingExpirationJobTest extends TestCase
         $response = $this->authAs($player)->postJson('/api/bookings', [
             'field_id' => $field->id,
             'booking_date' => $this->date,
-            'slots' => [['start_time' => '11:00', 'end_time' => '12:00']],
+            'slots' => [['start_time' => '10:00', 'end_time' => '11:00']],
         ])->assertCreated();
 
         $bookingId = $response->json('data.id');

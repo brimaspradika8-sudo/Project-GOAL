@@ -3,14 +3,17 @@
 namespace App\Services;
 
 use App\Enums\BookingStatus;
+use App\Events\BookingCreated;
 use App\Exceptions\BookingAlreadyExpiredException;
 use App\Exceptions\BookingAlreadyProcessedException;
 use App\Exceptions\BookingCannotBeCancelledException;
 use App\Exceptions\BookingConflictException;
+use App\Exceptions\InvalidBookingStatusException;
+use App\Exceptions\InvalidBookingStatusTransitionException;
+use App\Exceptions\UnauthorizedBookingActionException;
 use App\Jobs\BookingExpirationJob;
 use App\Models\Booking;
 use App\Models\Field;
-use App\Models\Notification;
 use App\Models\Profile;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -25,7 +28,7 @@ class BookingService
     public function __construct(
         private SlotGeneratorService $slotGenerator,
         private PricingService $pricing,
-        private NotificationService $notifications,
+        private BookingStatusService $statusService,
     ) {}
 
     public function create(User $user, array $data): Booking
@@ -77,20 +80,7 @@ class BookingService
 
             BookingExpirationJob::dispatch($booking->id)->delay($expiresAt);
 
-            if ($field->owner) {
-                $this->notifications->create(
-                    $field->owner,
-                    Notification::TYPE_BOOKING_REQUESTED,
-                    'Permintaan Booking Baru',
-                    "Booking baru untuk {$field->name} pada {$booking->booking_date->format('Y-m-d')} pukul {$startTime}-{$endTime}.",
-                    [
-                        'booking_id'   => $booking->id,
-                        'field_id'     => $field->id,
-                        'field_name'   => $field->name,
-                        'total_price'  => $totalPrice,
-                    ]
-                );
-            }
+            event(new BookingCreated($booking->load(['field.owner', 'user'])));
 
             return $booking;
         });
@@ -117,8 +107,7 @@ class BookingService
             throw new BookingCannotBeCancelledException('Booking cannot be cancelled');
         }
 
-        $booking->update([
-            'status'        => BookingStatus::CANCELLED->value,
+        $booking = $this->statusService->transition($booking, BookingStatus::CANCELLED, [
             'cancelled_at'  => now(),
             'cancel_reason' => $reason,
         ]);
@@ -128,17 +117,6 @@ class BookingService
             'user_id'    => $user->id,
             'reason'     => $reason,
         ]);
-
-        $fieldOwner = $booking->field?->owner;
-        if ($fieldOwner) {
-            $this->notifications->create(
-                $fieldOwner,
-                Notification::TYPE_BOOKING_CANCELLED,
-                'Booking Dibatalkan',
-                "Booking untuk {$booking->field->name} pada {$booking->booking_date->format('Y-m-d')} pukul {$booking->start_time}-{$booking->end_time} dibatalkan." . ($reason ? " Alasan: {$reason}" : ''),
-                ['booking_id' => $booking->id, 'field_id' => $booking->field_id]
-            );
-        }
 
         return $booking->load(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name']);
     }
@@ -237,14 +215,17 @@ class BookingService
             throw new BookingAlreadyExpiredException('Booking already expired');
         }
 
-        $booking->update([
-            'status' => BookingStatus::APPROVED->value,
+        try {
+            $booking = $this->statusService->transition($booking, BookingStatus::APPROVED, [
             'approved_at' => now(),
             'rejected_at' => null,
             'rejection_reason' => null,
-        ]);
+            ]);
+        } catch (InvalidBookingStatusTransitionException $e) {
+            throw new BookingAlreadyProcessedException('Booking already processed', 0, $e);
+        }
 
-        return $booking->fresh();
+        return $booking;
     }
 
     public function rejectBooking(User $owner, Booking $booking, ?string $reason = null): Booking
@@ -261,13 +242,36 @@ class BookingService
             throw new BookingAlreadyExpiredException('Booking already expired');
         }
 
-        $booking->update([
-            'status' => BookingStatus::REJECTED->value,
+        try {
+            $booking = $this->statusService->transition($booking, BookingStatus::REJECTED, [
             'rejected_at' => now(),
             'rejection_reason' => $reason,
-        ]);
+            ]);
+        } catch (InvalidBookingStatusTransitionException $e) {
+            throw new BookingAlreadyProcessedException('Booking already processed', 0, $e);
+        }
 
-        return $booking->fresh();
+        return $booking;
+    }
+
+    public function confirmBooking(User $owner, Booking $booking): Booking
+    {
+        if ($booking->field?->owner_id !== $owner->id && $owner->profile?->role !== Profile::ROLE_SUPER_ADMIN) {
+            throw new UnauthorizedBookingActionException('You do not have permission');
+        }
+
+        if ($booking->status !== BookingStatus::APPROVED->value) {
+            throw new InvalidBookingStatusException('Booking must be approved before confirmation');
+        }
+
+        try {
+            return $this->statusService->transition($booking, BookingStatus::CONFIRMED, [
+                'confirmed_at' => now(),
+                'confirmed_by' => $owner->id,
+            ]);
+        } catch (InvalidBookingStatusTransitionException $e) {
+            throw new InvalidBookingStatusException('Booking must be approved before confirmation', 0, $e);
+        }
     }
 
     /**
@@ -402,4 +406,3 @@ class BookingService
         }
     }
 }
-

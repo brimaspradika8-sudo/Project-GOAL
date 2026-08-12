@@ -25,6 +25,8 @@ class BookingResource extends JsonResource
             'rejection_reason' => $this->rejection_reason,
             'cancelled_at'     => $this->cancelled_at?->toISOString(),
             'cancel_reason'    => $this->cancel_reason,
+            'confirmed_at'     => $this->confirmed_at?->toISOString(),
+            'confirmed_by'     => $this->confirmed_by,
             'completed_at'     => $this->completed_at?->toISOString(),
             'created_at'       => $this->created_at?->toISOString(),
             'field'            => $this->whenLoaded('field', fn () => [

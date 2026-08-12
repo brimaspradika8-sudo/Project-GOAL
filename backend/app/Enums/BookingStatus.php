@@ -9,6 +9,7 @@ enum BookingStatus: string
     case REJECTED = 'REJECTED';
     case EXPIRED = 'EXPIRED';
     case CANCELLED = 'CANCELLED';
+    case CONFIRMED = 'CONFIRMED';
     case COMPLETED = 'COMPLETED';
 
     public static function values(): array

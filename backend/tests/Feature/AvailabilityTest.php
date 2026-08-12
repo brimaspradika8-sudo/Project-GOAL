@@ -2,8 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Enums\BookingStatus;
+use App\Enums\UserRole;
+use App\Models\Booking;
 use App\Models\Field;
 use App\Models\FieldPrice;
+use App\Models\Profile;
 use App\Models\User;
 use App\Services\AvailabilityService;
 use App\Services\PricingService;
@@ -98,6 +102,60 @@ class AvailabilityTest extends TestCase
         $this->assertSame('10:00', $slots[2]['start_time']);
         $this->assertSame('AVAILABLE', $slots[0]['status']);
         $this->assertSame(70000, $slots[0]['price']);
+    }
+
+    public function test_lapangan_slots_endpoint_accepts_tanggal_query(): void
+    {
+        $field = $this->makeField();
+
+        $this->getJson("/api/lapangan/{$field->id}/slots?tanggal=2026-08-20")
+            ->assertOk()
+            ->assertJsonPath('data.tanggal', '2026-08-20')
+            ->assertJsonPath('data.lapangan.id', $field->id)
+            ->assertJsonPath('data.slots.0.status', 'AVAILABLE');
+    }
+
+    public function test_approved_booking_marks_slot_as_booked(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->makeField(['buffer_duration_minutes' => 0]);
+
+        Booking::create([
+            'user_id' => $player->id,
+            'field_id' => $field->id,
+            'booking_date' => '2026-08-20',
+            'start_time' => '07:00',
+            'end_time' => '08:00',
+            'duration_minutes' => 60,
+            'total_price' => 100000,
+            'status' => BookingStatus::APPROVED->value,
+        ]);
+
+        $this->getJson("/api/lapangan/{$field->id}/slots?tanggal=2026-08-20")
+            ->assertOk()
+            ->assertJsonPath('data.slots.0.status', 'BOOKED');
+    }
+
+    public function test_expired_booking_returns_slot_to_available(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->makeField(['buffer_duration_minutes' => 0]);
+
+        Booking::create([
+            'user_id' => $player->id,
+            'field_id' => $field->id,
+            'booking_date' => '2026-08-20',
+            'start_time' => '07:00',
+            'end_time' => '08:00',
+            'duration_minutes' => 60,
+            'total_price' => 100000,
+            'status' => BookingStatus::EXPIRED->value,
+            'expired_at' => now()->subMinute(),
+        ]);
+
+        $this->getJson("/api/lapangan/{$field->id}/slots?tanggal=2026-08-20")
+            ->assertOk()
+            ->assertJsonPath('data.slots.0.status', 'AVAILABLE');
     }
 
     public function test_status_is_booked_when_slot_overlaps_booked_range(): void
@@ -221,5 +279,22 @@ class AvailabilityTest extends TestCase
         $field->forceFill(['status' => $overrides['status'] ?? 'approved'])->save();
 
         return $field;
+    }
+
+    private function userWithRole(UserRole $role): User
+    {
+        $user = User::factory()->create();
+
+        Profile::create([
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'full_name' => $user->name,
+            'username' => 'availability_user_' . $user->id,
+            'role' => $role->value,
+            'is_owner_verified' => $role === UserRole::OWNER,
+            'onboarding_completed' => true,
+        ]);
+
+        return $user->load('profile');
     }
 }

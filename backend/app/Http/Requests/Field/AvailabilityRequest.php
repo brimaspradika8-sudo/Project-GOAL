@@ -14,7 +14,8 @@ class AvailabilityRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'date' => ['required', 'date_format:Y-m-d'],
+            'date' => ['required_without:tanggal', 'date_format:Y-m-d'],
+            'tanggal' => ['required_without:date', 'date_format:Y-m-d'],
         ];
     }
 }

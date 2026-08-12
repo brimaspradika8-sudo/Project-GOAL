@@ -5,12 +5,16 @@ namespace App\Services;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Str;
 
 class NotificationService
 {
     public function create(User $user, string $type, string $title, string $body, array $data = []): Notification
     {
         return Notification::create([
+            'id' => (string) Str::uuid(),
+            'notifiable_type' => User::class,
+            'notifiable_id' => $user->id,
             'user_id' => $user->id,
             'type'    => $type,
             'title'   => $title,
@@ -27,6 +31,9 @@ class NotificationService
 
         foreach ($users as $user) {
             Notification::create([
+                'id' => (string) Str::uuid(),
+                'notifiable_type' => User::class,
+                'notifiable_id' => $user->id,
                 'user_id' => $user->id,
                 'type'    => $type,
                 'title'   => $title,
@@ -52,7 +59,7 @@ class NotificationService
             ->count();
     }
 
-    public function markAsRead(User $user, int $id): bool
+    public function markAsRead(User $user, string $id): bool
     {
         return Notification::where('user_id', $user->id)
             ->where('id', $id)

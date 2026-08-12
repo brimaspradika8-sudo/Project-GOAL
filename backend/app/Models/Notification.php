@@ -17,12 +17,21 @@ class Notification extends Model
     public const TYPE_FIELD_DELETED         = 'field_deleted';
     public const TYPE_ROLE_CHANGED          = 'role_changed';
     public const TYPE_BOOKING_REQUESTED     = 'booking_requested';
+    public const TYPE_BOOKING_APPROVED      = 'booking_approved';
+    public const TYPE_BOOKING_REJECTED      = 'booking_rejected';
     public const TYPE_BOOKING_CANCELLED     = 'booking_cancelled';
     public const TYPE_BOOKING_EXPIRED       = 'booking_expired';
 
     protected $table = 'notifications';
 
+    public $incrementing = false;
+
+    protected $keyType = 'string';
+
     protected $fillable = [
+        'id',
+        'notifiable_type',
+        'notifiable_id',
         'user_id',
         'type',
         'title',

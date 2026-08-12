@@ -3,9 +3,9 @@
 namespace App\Jobs;
 
 use App\Enums\BookingStatus;
+use App\Exceptions\InvalidBookingStatusTransitionException;
 use App\Models\Booking;
-use App\Models\Notification;
-use App\Services\NotificationService;
+use App\Services\BookingStatusService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -21,7 +21,7 @@ class BookingExpirationJob implements ShouldQueue
 
     public function __construct(public int $bookingId) {}
 
-    public function handle(NotificationService $notifications): void
+    public function handle(BookingStatusService $statusService): void
     {
         Log::info('Booking expiration started', ['booking_id' => $this->bookingId]);
 
@@ -43,18 +43,13 @@ class BookingExpirationJob implements ShouldQueue
             return;
         }
 
-        $previous = $booking->status;
-
-        $booking->update(['status' => BookingStatus::EXPIRED->value]);
-
-        Log::info('Booking expired', ['booking_id' => $booking->id, 'previous_status' => $previous, 'new_status' => $booking->status]);
-
-        $notifications->create(
-            $booking->user,
-            Notification::TYPE_BOOKING_EXPIRED,
-            'Booking Kedaluwarsa',
-            "Booking untuk {$booking->field->name} pada {$booking->booking_date->format('Y-m-d')} pukul {$booking->start_time}-{$booking->end_time} kedaluwarsa karena tidak disetujui.",
-            ['booking_id' => $booking->id, 'field_id' => $booking->field_id]
-        );
+        try {
+            $statusService->transition($booking, BookingStatus::EXPIRED);
+        } catch (InvalidBookingStatusTransitionException $e) {
+            Log::info('Booking expiration skipped because transition is invalid', [
+                'booking_id' => $booking->id,
+                'status' => $booking->status,
+            ]);
+        }
     }
 }

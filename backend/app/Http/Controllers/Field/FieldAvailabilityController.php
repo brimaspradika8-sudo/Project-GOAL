@@ -26,14 +26,19 @@ class FieldAvailabilityController extends Controller
             return $this->errorResponse('Lapangan tidak ditemukan.', [], 404);
         }
 
-        $date = $request->query('date');
+        $date = $request->query('date') ?? $request->query('tanggal');
         $bookedRanges = $this->bookingService->bookedRangesForDate($field->id, $date);
 
         $result = $this->availabilityService->forDate($field, $date, $bookedRanges);
 
         return $this->successResponse('Ketersediaan lapangan berhasil dimuat.', [
             'field' => (new FieldResource($field))->resolve($request),
+            'lapangan' => [
+                'id' => $field->id,
+                'name' => $field->name,
+            ],
             'date' => $result['date'],
+            'tanggal' => $result['date'],
             'slots' => $result['slots'],
         ]);
     }

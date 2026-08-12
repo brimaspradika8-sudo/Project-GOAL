@@ -6,6 +6,8 @@ use App\Exceptions\BookingAlreadyExpiredException;
 use App\Exceptions\BookingAlreadyProcessedException;
 use App\Exceptions\BookingCannotBeCancelledException;
 use App\Exceptions\BookingConflictException;
+use App\Exceptions\InvalidBookingStatusException;
+use App\Exceptions\UnauthorizedBookingActionException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Booking\CancelBookingRequest;
 use App\Http\Requests\Booking\StoreBookingRequest;
@@ -208,6 +210,25 @@ class BookingController extends Controller
             return $this->errorResponse('Booking already processed', [], 409);
         } catch (BookingAlreadyExpiredException $e) {
             return $this->errorResponse('Booking already expired', [], 409);
+        }
+    }
+
+    public function confirm(Request $request, int $id): JsonResponse
+    {
+        $booking = Booking::with('field')->find($id);
+
+        if (!$booking) {
+            return $this->errorResponse('Booking not found', [], 404);
+        }
+
+        try {
+            $updated = $this->bookingService->confirmBooking($request->user(), $booking);
+
+            return $this->resourceResponse('Booking confirmed', new BookingResource($updated));
+        } catch (UnauthorizedBookingActionException $e) {
+            return $this->errorResponse('You do not have permission', [], 403);
+        } catch (InvalidBookingStatusException $e) {
+            return $this->errorResponse($e->getMessage(), [], 409);
         }
     }
 }

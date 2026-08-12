@@ -25,6 +25,8 @@ class Booking extends Model
         'rejection_reason',
         'cancelled_at',
         'cancel_reason',
+        'confirmed_at',
+        'confirmed_by',
         'completed_at',
     ];
 
@@ -34,6 +36,7 @@ class Booking extends Model
         'approved_at'  => 'datetime',
         'rejected_at'  => 'datetime',
         'cancelled_at' => 'datetime',
+        'confirmed_at' => 'datetime',
         'completed_at' => 'datetime',
     ];
 
@@ -45,6 +48,11 @@ class Booking extends Model
     public function field(): BelongsTo
     {
         return $this->belongsTo(Field::class);
+    }
+
+    public function confirmer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'confirmed_by');
     }
 
     /**
