@@ -18,7 +18,8 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/', label: 'Beranda', icon: 'home' },
   { href: '/booking', label: 'Booking', icon: 'event-available' },
-  { href: '/matches', label: 'Match', icon: 'sports-soccer' },
+  { href: '/fields', label: 'Lapangan', icon: 'stadium' },
+  { href: '/matches', label: 'Pertandingan', icon: 'sports-soccer' },
 ];
 
 export default function TopNavbar() {

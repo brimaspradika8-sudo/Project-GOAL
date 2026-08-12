@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Booking;
 
+use App\Exceptions\BookingAlreadyExpiredException;
+use App\Exceptions\BookingAlreadyProcessedException;
 use App\Exceptions\BookingConflictException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Booking\CancelBookingRequest;
@@ -103,5 +105,45 @@ class BookingController extends Controller
                 'total'        => $bookings->total(),
             ],
         ]);
+    }
+
+    public function approve(Request $request, int $id): JsonResponse
+    {
+        $booking = Booking::with('field')->find($id);
+
+        if (!$booking) {
+            return $this->errorResponse('Booking not found', [], 404);
+        }
+
+        try {
+            $updated = $this->bookingService->approveBooking($request->user(), $booking);
+            return $this->resourceResponse('Booking approved', new BookingResource($updated));
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return $this->errorResponse('You do not have permission', [], 403);
+        } catch (BookingAlreadyProcessedException $e) {
+            return $this->errorResponse('Booking already processed', [], 409);
+        } catch (BookingAlreadyExpiredException $e) {
+            return $this->errorResponse('Booking already expired', [], 409);
+        }
+    }
+
+    public function reject(Request $request, int $id): JsonResponse
+    {
+        $booking = Booking::with('field')->find($id);
+
+        if (!$booking) {
+            return $this->errorResponse('Booking not found', [], 404);
+        }
+
+        try {
+            $updated = $this->bookingService->rejectBooking($request->user(), $booking, $request->input('reason'));
+            return $this->resourceResponse('Booking rejected', new BookingResource($updated));
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return $this->errorResponse('You do not have permission', [], 403);
+        } catch (BookingAlreadyProcessedException $e) {
+            return $this->errorResponse('Booking already processed', [], 409);
+        } catch (BookingAlreadyExpiredException $e) {
+            return $this->errorResponse('Booking already expired', [], 409);
+        }
     }
 }

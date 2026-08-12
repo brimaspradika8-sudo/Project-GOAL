@@ -376,6 +376,78 @@ class BookingTest extends TestCase
             ->assertJsonCount(1, 'data.data');
     }
 
+    public function test_owner_can_approve_waiting_booking(): void
+    {
+        $owner = $this->userWithRole(UserRole::OWNER, true);
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor([], $owner);
+
+        $bookingId = $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->json('data.id');
+
+        $this->authAs($owner)->patchJson("/api/owner/bookings/{$bookingId}/approve")
+            ->assertOk()
+            ->assertJsonPath('message', 'Booking approved')
+            ->assertJsonPath('data.status', BookingStatus::APPROVED->value);
+
+        $this->assertDatabaseHas('bookings', [
+            'id' => $bookingId,
+            'status' => BookingStatus::APPROVED->value,
+        ]);
+    }
+
+    public function test_owner_can_reject_waiting_booking(): void
+    {
+        $owner = $this->userWithRole(UserRole::OWNER, true);
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor([], $owner);
+
+        $bookingId = $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->json('data.id');
+
+        $this->authAs($owner)->patchJson("/api/owner/bookings/{$bookingId}/reject", [
+            'reason' => 'Lapangan sedang maintenance',
+        ])->assertOk()
+            ->assertJsonPath('message', 'Booking rejected')
+            ->assertJsonPath('data.status', BookingStatus::REJECTED->value)
+            ->assertJsonPath('data.rejection_reason', 'Lapangan sedang maintenance');
+
+        $this->assertDatabaseHas('bookings', [
+            'id' => $bookingId,
+            'status' => BookingStatus::REJECTED->value,
+            'rejection_reason' => 'Lapangan sedang maintenance',
+        ]);
+    }
+
+    public function test_owner_cannot_approve_others_booking(): void
+    {
+        $owner = $this->userWithRole(UserRole::OWNER, true);
+        $otherOwner = $this->userWithRole(UserRole::OWNER, true);
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor([], $otherOwner);
+
+        $bookingId = $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->json('data.id');
+
+        $this->authAs($owner)->patchJson("/api/owner/bookings/{$bookingId}/approve")
+            ->assertForbidden();
+    }
+
+    public function test_player_cannot_access_owner_booking_endpoints(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $this->authAs($player)->getJson('/api/owner/bookings')->assertForbidden();
+    }
+
     public function test_owner_cannot_list_bookings_for_others_field(): void
     {
         $owner = $this->userWithRole(UserRole::OWNER, true);

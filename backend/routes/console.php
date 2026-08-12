@@ -8,4 +8,5 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+Schedule::command('booking:expire')->everyMinute();
 Schedule::command('goal:check-failed-jobs')->everyFiveMinutes();

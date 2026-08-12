@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Enums\BookingStatus;
+use App\Exceptions\BookingAlreadyExpiredException;
+use App\Exceptions\BookingAlreadyProcessedException;
 use App\Exceptions\BookingConflictException;
 use App\Jobs\BookingExpirationJob;
 use App\Models\Booking;
@@ -172,6 +174,53 @@ class BookingService
         }
 
         return $query->paginate(10, ['*'], 'page', $page);
+    }
+
+    public function approveBooking(User $owner, Booking $booking): Booking
+    {
+        if ($booking->field?->owner_id !== $owner->id && $owner->profile?->role !== Profile::ROLE_SUPER_ADMIN) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('You do not have permission');
+        }
+
+        if ($booking->status !== BookingStatus::WAITING_OWNER_APPROVAL->value) {
+            throw new BookingAlreadyProcessedException('Booking already processed');
+        }
+
+        if ($booking->expired_at && $booking->expired_at->isPast()) {
+            throw new BookingAlreadyExpiredException('Booking already expired');
+        }
+
+        $booking->update([
+            'status' => BookingStatus::APPROVED->value,
+            'approved_at' => now(),
+            'rejected_at' => null,
+            'rejection_reason' => null,
+        ]);
+
+        return $booking->fresh();
+    }
+
+    public function rejectBooking(User $owner, Booking $booking, ?string $reason = null): Booking
+    {
+        if ($booking->field?->owner_id !== $owner->id && $owner->profile?->role !== Profile::ROLE_SUPER_ADMIN) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('You do not have permission');
+        }
+
+        if ($booking->status !== BookingStatus::WAITING_OWNER_APPROVAL->value) {
+            throw new BookingAlreadyProcessedException('Booking already processed');
+        }
+
+        if ($booking->expired_at && $booking->expired_at->isPast()) {
+            throw new BookingAlreadyExpiredException('Booking already expired');
+        }
+
+        $booking->update([
+            'status' => BookingStatus::REJECTED->value,
+            'rejected_at' => now(),
+            'rejection_reason' => $reason,
+        ]);
+
+        return $booking->fresh();
     }
 
     /**

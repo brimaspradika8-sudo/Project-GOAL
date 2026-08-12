@@ -98,5 +98,7 @@ use App\Http\Controllers\NotificationController;
         Route::middleware('role:owner,super_admin')->group(function () {
             Route::get('/owner/bookings',                [BookingController::class, 'ownerIndex']);
             Route::get('/owner/fields/{id}/bookings',    [BookingController::class, 'ownerFieldBookings']);
+            Route::patch('/owner/bookings/{id}/approve', [BookingController::class, 'approve']);
+            Route::patch('/owner/bookings/{id}/reject',  [BookingController::class, 'reject']);
         });
 });

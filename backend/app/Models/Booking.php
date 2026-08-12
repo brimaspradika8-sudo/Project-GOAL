@@ -21,6 +21,8 @@ class Booking extends Model
         'status',
         'expired_at',
         'approved_at',
+        'rejected_at',
+        'rejection_reason',
         'cancelled_at',
         'cancel_reason',
         'completed_at',
@@ -30,6 +32,7 @@ class Booking extends Model
         'booking_date' => 'date:Y-m-d',
         'expired_at'   => 'datetime',
         'approved_at'  => 'datetime',
+        'rejected_at'  => 'datetime',
         'cancelled_at' => 'datetime',
         'completed_at' => 'datetime',
     ];

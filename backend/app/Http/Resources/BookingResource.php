@@ -19,6 +19,8 @@ class BookingResource extends JsonResource
             'status'           => $this->status,
             'expired_at'       => $this->expired_at?->toISOString(),
             'approved_at'      => $this->approved_at?->toISOString(),
+            'rejected_at'      => $this->rejected_at?->toISOString(),
+            'rejection_reason' => $this->rejection_reason,
             'cancelled_at'     => $this->cancelled_at?->toISOString(),
             'cancel_reason'    => $this->cancel_reason,
             'completed_at'     => $this->completed_at?->toISOString(),
