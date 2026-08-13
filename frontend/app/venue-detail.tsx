@@ -337,7 +337,15 @@ export default function VenueDetailScreen() {
                   onPress={() => {
                     if (!isAvailable) return;
                     Haptics.selectionAsync();
-                    router.push({ pathname: '/booking-flow', params: { id: String(f.id) } });
+                    router.push({
+                      pathname: '/booking-confirmation',
+                      params: {
+                        id: String(f.id),
+                        date: slotsData?.date ?? formatDate(new Date()),
+                        startTime: slot.start_time,
+                        endTime: slot.end_time,
+                      },
+                    });
                   }}
                   disabled={!isAvailable}
                 >

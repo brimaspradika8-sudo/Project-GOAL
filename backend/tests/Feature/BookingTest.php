@@ -53,6 +53,22 @@ class BookingTest extends TestCase
         ]);
     }
 
+    public function test_player_can_create_booking_using_singular_endpoint(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor();
+
+        $this->authAs($player)->postJson('/api/booking', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [
+                ['start_time' => '07:00', 'end_time' => '08:00'],
+            ],
+        ])->assertCreated()
+            ->assertJsonPath('message', 'Booking request berhasil dibuat.')
+            ->assertJsonPath('data.field_id', $field->id);
+    }
+
     public function test_booking_expiration_is_fifteen_minutes_ahead(): void
     {
         $player = $this->userWithRole(UserRole::PLAYER);

@@ -17,13 +17,11 @@ import { SafeImage } from '../components/SafeImage';
 import { FadeInView } from '../components/FadeInView';
 import { useTheme } from '../lib/theme';
 import { useSlots } from '../hooks/useBooking';
-import { createBooking, type TimeSlot } from '../services/bookingService';
-import { useToastStore } from '../store/toastStore';
-import { getErrorMessage } from '../lib/api';
+import { type TimeSlot } from '../services/bookingService';
 import { SPORT_LABELS } from '../lib/fieldValidation';
 import { apiFetch } from '../lib/apiClient';
 import type { Field } from '../store/fieldStore';
-import { BookingSummary, CalendarPicker, TimeSlotCard } from '../components/booking';
+import { CalendarPicker, TimeSlotCard } from '../components/booking';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -61,10 +59,9 @@ const DURATION_OPTIONS = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function BookingFlowScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, date, startTime } = useLocalSearchParams<{ id: string; date?: string; startTime?: string }>();
   const fieldId = Number(id);
   const { colors } = useTheme();
-  const showToast = useToastStore((s) => s.show);
   const st = makeStyles(colors);
 
   // Field info
@@ -81,7 +78,7 @@ export default function BookingFlowScreen() {
 
   // Date state
   const today = formatDate(new Date());
-  const [selectedDate, setSelectedDate] = useState(today);
+  const [selectedDate, setSelectedDate] = useState(date ?? today);
   const [displayDate, setDisplayDate] = useState(new Date());
 
   // Slots
@@ -91,13 +88,16 @@ export default function BookingFlowScreen() {
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [selectedDuration, setSelectedDuration] = useState(DURATION_OPTIONS[1]); // default 1.5h
 
-  // Submission
-  const [submitting, setSubmitting] = useState(false);
-
   // Reset slot when date changes
   useEffect(() => {
     setSelectedSlot(null);
   }, [selectedDate]);
+
+  useEffect(() => {
+    if (!startTime || !slotsData?.slots?.length) return;
+    const slot = slotsData.slots.find((item) => item.start_time === startTime && item.status === 'AVAILABLE');
+    if (slot) setSelectedSlot(slot);
+  }, [slotsData, startTime]);
 
   useEffect(() => {
     setDisplayDate(new Date(`${selectedDate}T00:00:00`));
@@ -109,28 +109,18 @@ export default function BookingFlowScreen() {
     ? Math.round((field.price_per_hour / 60) * selectedDuration.minutes)
     : null;
 
-  // Submit booking
-  const handleConfirmBooking = async () => {
-    if (!selectedSlot || !endTime) {
-      showToast({ type: 'error', title: 'Pilih slot waktu terlebih dahulu' });
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const res = await createBooking({
-        field_id: fieldId,
-        booking_date: selectedDate,
-        slots: [{ start_time: selectedSlot.start_time, end_time: endTime }],
-      });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      const booking = res.data ?? (res as any);
-      router.replace({ pathname: '/booking-waiting', params: { id: String(booking.id) } });
-    } catch (e: any) {
-      const msg = getErrorMessage(e?.data, 'Gagal membuat booking');
-      showToast({ type: 'error', title: 'Gagal', description: msg });
-    } finally {
-      setSubmitting(false);
-    }
+  const handleContinueToConfirmation = () => {
+    if (!selectedSlot || !endTime) return;
+    Haptics.selectionAsync();
+    router.push({
+      pathname: '/booking-confirmation',
+      params: {
+        id: String(fieldId),
+        date: selectedDate,
+        startTime: selectedSlot.start_time,
+        endTime,
+      },
+    });
   };
 
   if (fieldLoading) {
@@ -309,16 +299,11 @@ export default function BookingFlowScreen() {
             <Text style={st.bottomPriceValue}>{totalPrice != null ? formatPrice(totalPrice) : '-'}</Text>
           </View>
           <TouchableOpacity
-            style={[st.confirmBtn, submitting && st.confirmBtnDisabled]}
-            onPress={handleConfirmBooking}
-            disabled={submitting}
+            style={st.confirmBtn}
+            onPress={handleContinueToConfirmation}
             activeOpacity={0.85}
           >
-            {submitting ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={st.confirmBtnText}>Konfirmasi Booking</Text>
-            )}
+            <Text style={st.confirmBtnText}>Lanjut Konfirmasi</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -401,6 +386,13 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   retryBtnText: { ...FONTS.labelMd, color: colors.onPrimary },
 
   slotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  slotWrap: {
+    width: '30%',
+    borderRadius: SIZES.borderRadius,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    overflow: 'hidden',
+  },
   slotChip: {
     width: '30%', paddingVertical: 10, paddingHorizontal: 6,
     borderRadius: SIZES.borderRadius, borderWidth: 1.5,

@@ -16,7 +16,7 @@ $origins = $isProduction
 
 return [
     'paths' => ['api/*'],
-    'allowed_methods' => ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     'allowed_origins' => $origins,
     'allowed_origins_patterns' => $isProduction ? [] : [
         '/^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|9\.\d+\.\d+\.\d+)(:\d+)?$/',

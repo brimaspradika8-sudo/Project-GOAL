@@ -20,7 +20,7 @@ import { confirmPayment } from '../services/bookingService';
 import { useToastStore } from '../store/toastStore';
 import { SPORT_LABELS } from '../lib/fieldValidation';
 import { getErrorMessage } from '../lib/api';
-import { PaymentCard, type PaymentMethod } from '../components/booking/PaymentCard';
+import PaymentCard, { type PaymentMethod } from '../components/booking/PaymentCard';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
