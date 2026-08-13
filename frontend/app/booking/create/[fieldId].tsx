@@ -14,16 +14,16 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../../../components/goalTheme';
 import { SafeImage } from '../../../components/SafeImage';
+import { FadeInView } from '../../../components/FadeInView';
+import { HorizontalDatePicker } from '../../../components/booking';
 import { useTheme } from '../../../lib/theme';
-import { useBreakpoint } from '../../../lib/responsive';
 import { useSlots } from '../../../hooks/useBooking';
 import { getFieldDetail } from '../../../services/bookingService';
 import { useBookingStore } from '../../../store/bookingStore';
 import { useToastStore } from '../../../store/toastStore';
 import { getErrorMessage } from '../../../lib/api';
 import { SPORT_LABELS } from '../../../lib/fieldValidation';
-import { BookingSummary, CalendarPicker, TimeSlotCard } from '../../../components/booking';
-import { EmptyState, ErrorState, Loading } from '../../../components/common';
+import { EmptyState, ErrorState } from '../../../components/common';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -34,8 +34,9 @@ function formatDate(d: Date): string {
   return `${y}-${m}-${dd}`;
 }
 
-function formatDateDisplay(d: Date): string {
-  return d.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+function formatDateDisplay(iso: string): string {
+  const date = new Date(`${iso}T00:00:00`);
+  return date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 function addMinutesToTime(time: string, minutes: number): string {
@@ -46,16 +47,24 @@ function addMinutesToTime(time: string, minutes: number): string {
   return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
 }
 
-function formatPrice(price: number | null): string {
+function formatRupiah(price: number | null): string {
   if (price == null) return 'Hubungi';
   return `Rp${price.toLocaleString('id-ID')}`;
 }
 
+function pricePerHourLabel(price: number | null): string {
+  if (price == null) return 'Hubungi';
+  return `Rp${price.toLocaleString('id-ID')}/jam`;
+}
+
 const DURATION_OPTIONS = [
-  { label: '1 jam', minutes: 60 },
-  { label: '2 jam', minutes: 120 },
-  { label: '3 jam', minutes: 180 },
+  { label: '1 Jam', minutes: 60 },
+  { label: '2 Jam', minutes: 120 },
+  { label: '3 Jam', minutes: 180 },
 ];
+
+const WHITE = '#FFFFFF';
+const MUTED_TEXT = '#64748B';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -70,8 +79,6 @@ export default function BookingCreateScreen() {
   const fieldIdNumber = Number(params.fieldId);
   const { colors } = useTheme();
   const showToast = useToastStore((s) => s.show);
-  const breakpoint = useBreakpoint();
-  const isDesktop = breakpoint === 'desktop';
   const st = makeStyles(colors);
 
   // ── Booking flow state (Zustand) ─────────────────────────────────────────
@@ -129,17 +136,18 @@ export default function BookingCreateScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fieldIdNumber]);
 
-  // Default tanggal hari ini untuk flow baru
+  // Default tanggal hari ini
   useEffect(() => {
     if (!selectedDate) setDate(today);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Slots ─────────────────────────────────────────────────────────────────
+  // ── Slots (dipicu saat tanggal berubah) ───────────────────────────────────
   const { slotsData, loading: slotsLoading, error: slotsError, refetch: refetchSlots } = useSlots(fieldIdNumber, selectedDate ?? today);
 
   const handleDateChange = (iso: string) => {
     if (iso === selectedDate) return;
+    Haptics.selectionAsync();
     setDate(iso);
     clearSlots();
   };
@@ -164,19 +172,19 @@ export default function BookingCreateScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [durationMinutes]);
 
-  const displayDate = selectedDate ? new Date(`${selectedDate}T00:00:00`) : new Date();
+  const canContinue = !!selectedDate && !!selectedSlot && !!endTime;
 
   const handleContinue = async () => {
-    if (!selectedSlot || !endTime) {
-      showToast({ type: 'error', title: 'Pilih slot waktu terlebih dahulu' });
+    if (!canContinue) {
+      showToast({ type: 'info', title: 'Pilih tanggal dan jam terlebih dahulu' });
       return;
     }
     setSubmitting(true);
     try {
       const booking = await create({
         field_id: fieldIdNumber,
-        booking_date: selectedDate ?? today,
-        slots: [{ start_time: selectedSlot.start_time, end_time: endTime }],
+        booking_date: selectedDate!,
+        slots: [{ start_time: selectedSlot!.start_time, end_time: endTime! }],
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setBookingId(booking.id);
@@ -189,27 +197,29 @@ export default function BookingCreateScreen() {
     }
   };
 
-  const renderFieldCard = (compact = false) => {
+  // ── Renderers ─────────────────────────────────────────────────────────────
+
+  const renderFieldCard = () => {
     const field = selectedField;
     if (!field) return null;
     return (
-      <View style={[st.fieldCard, compact && st.fieldCardCompact]}>
-        <SafeImage source={{ uri: field.image_url ?? '' }} style={[st.fieldImage, compact && st.fieldImageCompact]} fallbackSize={32} />
+      <View style={st.fieldCard}>
+        <SafeImage source={{ uri: field.image_url ?? '' }} style={st.fieldImage} fallbackSize={32} />
         <View style={st.fieldInfo}>
           <Text style={st.fieldName} numberOfLines={1}>{field.name}</Text>
           {field.sport_type ? (
             <View style={st.fieldMeta}>
-              <MaterialIcons name="sports" size={13} color={colors.primary} />
+              <MaterialIcons name="sports-soccer" size={13} color={colors.primary} />
               <Text style={st.fieldMetaText}>{SPORT_LABELS[field.sport_type] ?? field.sport_type}</Text>
             </View>
           ) : null}
           {field.location ? (
             <View style={st.fieldMeta}>
-              <MaterialIcons name="location-on" size={13} color={colors.textTertiary} />
+              <MaterialIcons name="location-on" size={13} color={MUTED_TEXT} />
               <Text style={st.fieldMetaText} numberOfLines={1}>{field.location}</Text>
             </View>
           ) : null}
-          <Text style={st.fieldPrice}>{formatPrice(field.price_per_hour)}<Text style={st.fieldPriceUnit}>/jam</Text></Text>
+          <Text style={st.fieldPrice}>{pricePerHourLabel(field.price_per_hour)}</Text>
         </View>
       </View>
     );
@@ -218,58 +228,15 @@ export default function BookingCreateScreen() {
   const renderDateSection = () => (
     <View style={st.section}>
       <Text style={st.sectionTitle}>Pilih Tanggal</Text>
-      <CalendarPicker value={selectedDate ?? today} onChange={handleDateChange} />
-    </View>
-  );
-
-  const renderSlotSection = () => (
-    <View style={st.section}>
-      <View style={st.sectionHeader}>
-        <Text style={st.sectionTitle}>Pilih Slot Waktu</Text>
-        {slotsData?.field_status && (
-          <View style={[st.liveStatusBadge, { backgroundColor: slotsData.field_status === 'AVAILABLE' ? colors.primaryContainer : colors.errorContainer }]}>
-            <View style={[st.liveStatusDot, { backgroundColor: slotsData.field_status === 'AVAILABLE' ? colors.primary : colors.error }]} />
-            <Text style={[st.liveStatusText, { color: slotsData.field_status === 'AVAILABLE' ? colors.primary : colors.error }]}>
-              {slotsData.field_status === 'AVAILABLE' ? 'Tersedia' : slotsData.field_status === 'PLAYING' ? 'Sedang Dimainkan' : 'Sedang Dipakai'}
-            </Text>
-          </View>
-        )}
+      <View style={st.card}>
+        <HorizontalDatePicker value={selectedDate} onChange={handleDateChange} />
       </View>
-
-      {slotsLoading ? (
-        <Loading message="Memuat slot..." />
-      ) : slotsError ? (
-        <ErrorState title="Slot gagal dimuat" description={slotsError} onRetry={refetchSlots} />
-      ) : !slotsData?.slots?.length ? (
-        <EmptyState icon="event-busy" title="Tidak ada slot tersedia" description="Coba pilih tanggal lain." />
-      ) : (
-        <View style={st.slotsGrid}>
-          {slotsData.slots.map((slot, i) => {
-            const isAvailable = slot.status === 'AVAILABLE';
-            const isSelected = selectedSlot?.start_time === slot.start_time;
-            return (
-              <View key={i} style={[st.slotWrap, isSelected && { borderColor: colors.primary }]}>
-                <TimeSlotCard
-                  time={slot.start_time}
-                  status={slot.status}
-                  onPress={() => {
-                    if (isAvailable) {
-                      setSlot({ start_time: slot.start_time, end_time: addMinutesToTime(slot.start_time, durationMinutes) });
-                      Haptics.selectionAsync();
-                    }
-                  }}
-                />
-              </View>
-            );
-          })}
-        </View>
-      )}
     </View>
   );
 
   const renderDurationSection = () => (
     <View style={st.section}>
-      <Text style={st.sectionTitle}>Pilih Durasi</Text>
+      <Text style={st.sectionTitle}>Durasi Sewa</Text>
       <View style={st.durationRow}>
         {DURATION_OPTIONS.map((opt) => {
           const isSelected = opt.minutes === durationMinutes;
@@ -280,7 +247,7 @@ export default function BookingCreateScreen() {
               onPress={() => { setDuration(opt.minutes); Haptics.selectionAsync(); }}
               activeOpacity={0.8}
             >
-              <Text style={[st.durationText, isSelected && { color: colors.onPrimary }]}>{opt.label}</Text>
+              <Text style={[st.durationText, isSelected && { color: WHITE }]}>{opt.label}</Text>
             </TouchableOpacity>
           );
         })}
@@ -288,40 +255,116 @@ export default function BookingCreateScreen() {
     </View>
   );
 
+  const renderSlotSection = () => (
+    <View style={st.section}>
+      <View style={st.sectionHeader}>
+        <Text style={st.sectionTitle}>Pilih Jam</Text>
+        {slotsData?.field_status && (
+          <View style={[st.liveStatusBadge, { backgroundColor: slotsData.field_status === 'AVAILABLE' ? colors.primaryContainer : colors.errorContainer }]}>
+            <View style={[st.liveStatusDot, { backgroundColor: slotsData.field_status === 'AVAILABLE' ? colors.primary : colors.error }]} />
+            <Text style={[st.liveStatusText, { color: slotsData.field_status === 'AVAILABLE' ? colors.primary : colors.error }]}>
+              {slotsData.field_status === 'AVAILABLE' ? 'Tersedia' : slotsData.field_status === 'PLAYING' ? 'Sedang Dimainkan' : 'Sedang Dipakai'}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <View style={st.card}>
+        {slotsLoading ? (
+          <View style={st.slotsLoading}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={st.slotsLoadingText}>Memuat jadwal...</Text>
+          </View>
+        ) : slotsError ? (
+          <ErrorState title="Jadwal gagal dimuat" description={slotsError} onRetry={refetchSlots} />
+        ) : !slotsData?.slots?.length ? (
+          <EmptyState icon="event-busy" title="Tidak ada slot tersedia" description="Coba pilih tanggal lain." />
+        ) : (
+          <View style={st.slotsGrid}>
+            {slotsData.slots.map((slot, i) => {
+              const isAvailable = slot.status === 'AVAILABLE';
+              const isSelected = selectedSlot?.start_time === slot.start_time;
+              return (
+                <TouchableOpacity
+                  key={i}
+                  activeOpacity={isAvailable ? 0.75 : 1}
+                  disabled={!isAvailable}
+                  onPress={() => {
+                    setSlot({ start_time: slot.start_time, end_time: addMinutesToTime(slot.start_time, durationMinutes) });
+                    Haptics.selectionAsync();
+                  }}
+                  style={[
+                    st.slotBtn,
+                    isSelected && st.slotBtnSelected,
+                    !isSelected && isAvailable && st.slotBtnAvailable,
+                    !isAvailable && st.slotBtnBooked,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      st.slotTime,
+                      isSelected ? { color: WHITE } : isAvailable ? { color: colors.primary } : { color: colors.textTertiary },
+                    ]}
+                  >
+                    {slot.start_time}
+                  </Text>
+                  {isSelected ? (
+                    <Text style={[st.slotHint, { color: 'rgba(255,255,255,0.9)' }]}>Dipilih</Text>
+                  ) : !isAvailable ? (
+                    <Text style={[st.slotHint, { color: colors.textTertiary }]}>
+                      {slot.status === 'BOOKED' ? 'Penuh' : 'Tutup'}
+                    </Text>
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
   const renderSummary = () => {
     if (!selectedSlot || !endTime) return null;
     return (
-      <BookingSummary
-        field={selectedField?.name ?? 'Lapangan'}
-        date={formatDateDisplay(displayDate)}
-        time={`${selectedSlot.start_time} – ${endTime}`}
-        duration={selectedDuration.label}
-        price={totalPrice != null ? formatPrice(totalPrice) : 'Hubungi'}
-      />
+      <View style={st.section}>
+        <Text style={st.sectionTitle}>Ringkasan</Text>
+        <View style={st.card}>
+          <View style={st.summaryRow}>
+            <Text style={st.summaryLabel}>Lapangan</Text>
+            <Text style={st.summaryValue} numberOfLines={1}>{selectedField?.name ?? 'Lapangan'}</Text>
+          </View>
+          <View style={st.summaryRow}>
+            <Text style={st.summaryLabel}>Tanggal</Text>
+            <Text style={st.summaryValue}>{selectedDate ? formatDateDisplay(selectedDate) : '-'}</Text>
+          </View>
+          <View style={st.summaryRow}>
+            <Text style={st.summaryLabel}>Jam</Text>
+            <Text style={st.summaryValue}>{selectedSlot.start_time} – {endTime}</Text>
+          </View>
+          <View style={st.summaryRow}>
+            <Text style={st.summaryLabel}>Durasi</Text>
+            <Text style={st.summaryValue}>{selectedDuration.label}</Text>
+          </View>
+          <View style={st.summaryDivider} />
+          <View style={st.summaryTotalRow}>
+            <Text style={st.summaryTotalLabel}>Total</Text>
+            <Text style={st.summaryTotalValue}>{totalPrice != null ? formatRupiah(totalPrice) : 'Hubungi'}</Text>
+          </View>
+        </View>
+      </View>
     );
   };
-
-  const renderSubmitButton = (inline = false) => (
-    <TouchableOpacity
-      style={[st.confirmBtn, inline && st.confirmBtnInline, submitting && st.confirmBtnDisabled]}
-      onPress={handleContinue}
-      disabled={submitting}
-      activeOpacity={0.85}
-    >
-      {submitting ? (
-        <ActivityIndicator color={colors.onPrimary} size="small" />
-      ) : (
-        <Text style={st.confirmBtnText}>Lanjut Pembayaran</Text>
-      )}
-    </TouchableOpacity>
-  );
 
   if (!selectedField && !fieldError) {
     return (
       <View style={st.container}>
         <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
         <Header title="Booking Lapangan" />
-        <Loading message="Memuat lapangan..." />
+        <View style={st.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={st.centeredText}>Memuat lapangan...</Text>
+        </View>
       </View>
     );
   }
@@ -331,16 +374,18 @@ export default function BookingCreateScreen() {
       <View style={st.container}>
         <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
         <Header title="Booking Lapangan" />
-        <ErrorState
-          title="Lapangan tidak bisa dimuat"
-          description={fieldError}
-          onRetry={() => {
-            setFieldError(null);
-            getFieldDetail(fieldIdNumber)
-              .then(setField)
-              .catch((e: any) => setFieldError(e?.message || 'Gagal memuat detail lapangan'));
-          }}
-        />
+        <View style={st.centered}>
+          <ErrorState
+            title="Lapangan tidak bisa dimuat"
+            description={fieldError}
+            onRetry={() => {
+              setFieldError(null);
+              getFieldDetail(fieldIdNumber)
+                .then(setField)
+                .catch((e: any) => setFieldError(e?.message || 'Gagal memuat detail lapangan'));
+            }}
+          />
+        </View>
       </View>
     );
   }
@@ -351,62 +396,54 @@ export default function BookingCreateScreen() {
 
       <Header title="Booking Lapangan" />
 
-      {isDesktop ? (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={st.desktopScroll}>
-          <View style={st.desktopRow}>
-            <View style={st.desktopLeft}>
-              {renderFieldCard()}
-              <View style={st.infoCard}>
-                <Text style={st.infoCardTitle}>Informasi Lapangan</Text>
-                <View style={st.infoRow}>
-                  <MaterialIcons name="sports" size={16} color={colors.primary} />
-                  <Text style={st.infoRowText}>{selectedField?.sport_type ? (SPORT_LABELS[selectedField.sport_type] ?? selectedField.sport_type) : 'Tidak diketahui'}</Text>
-                </View>
-                <View style={st.infoRow}>
-                  <MaterialIcons name="location-on" size={16} color={colors.textTertiary} />
-                  <Text style={st.infoRowText}>{selectedField?.location || 'Lokasi tidak tersedia'}</Text>
-                </View>
-                <View style={st.infoRow}>
-                  <MaterialIcons name="payments" size={16} color={colors.primary} />
-                  <Text style={st.infoRowText}>{formatPrice(selectedField?.price_per_hour ?? null)}/jam</Text>
-                </View>
-                {selectedField?.description ? (
-                  <Text style={st.infoDesc}>{selectedField.description}</Text>
-                ) : null}
-              </View>
-            </View>
+      <ScrollView contentContainerStyle={st.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <FadeInView slideUp={12} duration={320}>
+          {renderFieldCard()}
+        </FadeInView>
 
-            <View style={st.desktopRight}>
-              {renderDateSection()}
-              {renderSlotSection()}
-              {renderDurationSection()}
-              {renderSummary()}
-              {selectedSlot && renderSubmitButton(true)}
-            </View>
-          </View>
-        </ScrollView>
-      ) : (
-        <>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={st.scrollContent}>
-            {renderFieldCard()}
-            {renderDateSection()}
-            {renderSlotSection()}
-            {renderDurationSection()}
-            {renderSummary()}
-            <View style={{ height: 120 }} />
-          </ScrollView>
+        <FadeInView delay={60} duration={320}>
+          {renderDateSection()}
+        </FadeInView>
 
-          {selectedSlot && (
-            <View style={st.bottomBar}>
-              <View>
-                <Text style={st.bottomPriceLabel}>Total Bayar</Text>
-                <Text style={st.bottomPriceValue}>{totalPrice != null ? formatPrice(totalPrice) : '-'}</Text>
-              </View>
-              {renderSubmitButton()}
-            </View>
+        <FadeInView delay={120} duration={320}>
+          {renderDurationSection()}
+        </FadeInView>
+
+        <FadeInView delay={180} duration={320}>
+          {renderSlotSection()}
+        </FadeInView>
+
+        <FadeInView delay={240} duration={320}>
+          {renderSummary()}
+        </FadeInView>
+
+        <View style={{ height: 130 }} />
+      </ScrollView>
+
+      {/* Sticky bottom action */}
+      <View style={st.bottomBar}>
+        <View style={st.bottomTotalRow}>
+          <Text style={st.bottomLabel}>{canContinue ? 'Total' : 'Pilih jadwal'}</Text>
+          <Text style={[st.bottomAmount, !canContinue && { color: colors.textTertiary }]}>
+            {canContinue && totalPrice != null ? formatRupiah(totalPrice) : '—'}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[st.cta, !canContinue && st.ctaDisabled]}
+          onPress={handleContinue}
+          disabled={!canContinue || submitting}
+          activeOpacity={0.85}
+        >
+          {submitting ? (
+            <ActivityIndicator color={WHITE} size="small" />
+          ) : (
+            <>
+              <Text style={st.ctaText}>Lanjut Pembayaran</Text>
+              <MaterialIcons name="arrow-forward" size={18} color={WHITE} />
+            </>
           )}
-        </>
-      )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -419,7 +456,7 @@ function Header({ title }: { title: string }) {
       <TouchableOpacity style={st.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
         <MaterialIcons name="arrow-back" size={22} color={colors.text} />
       </TouchableOpacity>
-      <Text style={st.headerTitle}>{title}</Text>
+      <Text style={st.headerTitle} numberOfLines={1}>{title}</Text>
       <View style={{ width: 40 }} />
     </View>
   );
@@ -428,8 +465,25 @@ function Header({ title }: { title: string }) {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    gap: 12,
+    padding: 32,
+  },
+  centeredText: {
+    ...FONTS.bodyMd,
+    color: colors.textSecondary,
+  },
 
   header: {
     flexDirection: 'row',
@@ -443,19 +497,21 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     borderBottomColor: colors.divider,
   },
   backBtn: {
-    width: 40, height: 40, borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.surfaceContainer,
   },
   headerTitle: { ...FONTS.headlineSm, color: colors.text },
 
-  scrollContent: { paddingHorizontal: 16, paddingTop: 16 },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
 
-  desktopScroll: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 48, alignItems: 'center' },
-  desktopRow: { flexDirection: 'row', gap: 24, width: '100%', maxWidth: 1080 },
-  desktopLeft: { width: 320, gap: 16, alignSelf: 'flex-start' },
-  desktopRight: { flex: 1, gap: 20 },
-
+  // ── Venue summary ─────────────────────────────────────────────────────────
   fieldCard: {
     flexDirection: 'row',
     gap: 14,
@@ -465,69 +521,114 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     marginBottom: 20,
     ...SHADOWS.sm,
   },
-  fieldCardCompact: { marginBottom: 0 },
-  fieldImage: { width: 72, height: 72, borderRadius: SIZES.borderRadius, backgroundColor: colors.surfaceContainer },
-  fieldImageCompact: { width: 64, height: 64 },
-  fieldInfo: { flex: 1 },
-  fieldName: { ...FONTS.headlineSm, color: colors.text, marginBottom: 4 },
-  fieldMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 },
+  fieldImage: {
+    width: 90,
+    height: 90,
+    borderRadius: SIZES.borderRadiusLg,
+    backgroundColor: colors.surfaceContainer,
+  },
+  fieldInfo: { flex: 1, justifyContent: 'center', gap: 3 },
+  fieldName: { ...FONTS.headlineSm, color: colors.text },
+  fieldMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   fieldMetaText: { ...FONTS.bodySm, color: colors.textSecondary, flex: 1 },
   fieldPrice: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '700', color: colors.primary, marginTop: 4 },
-  fieldPriceUnit: { fontSize: 12, fontWeight: '400', color: colors.textSecondary },
 
-  infoCard: {
-    backgroundColor: colors.surfaceWhite,
-    borderRadius: SIZES.borderRadiusLg,
-    padding: 16,
-    gap: 10,
-    ...SHADOWS.sm,
-  },
-  infoCardTitle: { ...FONTS.headlineSm, color: colors.text },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  infoRowText: { ...FONTS.bodyMd, color: colors.text, flex: 1 },
-  infoDesc: { ...FONTS.bodySm, color: colors.textSecondary, lineHeight: 20 },
-
+  // ── Sections ──────────────────────────────────────────────────────────────
   section: { marginBottom: 20 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   sectionTitle: { ...FONTS.headlineSm, color: colors.text, marginBottom: 12 },
+  card: {
+    backgroundColor: colors.surfaceWhite,
+    borderRadius: SIZES.borderRadiusLg,
+    padding: 16,
+    ...SHADOWS.sm,
+  },
 
   liveStatusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   liveStatusDot: { width: 6, height: 6, borderRadius: 3 },
-  liveStatusText: { ...FONTS.labelSm },
+  liveStatusText: { ...FONTS.labelSm, fontWeight: '700' },
 
-  slotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  slotWrap: { borderWidth: 1, borderColor: 'transparent', borderRadius: 10, padding: 2 },
-
+  // ── Durasi ────────────────────────────────────────────────────────────────
   durationRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   durationChip: {
-    paddingHorizontal: 18, paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     borderRadius: SIZES.borderRadiusFull,
-    borderWidth: 1.5, borderColor: colors.divider,
+    borderWidth: 1.5,
+    borderColor: colors.divider,
     backgroundColor: colors.surfaceWhite,
   },
   durationText: { ...FONTS.titleSm, color: colors.text },
 
+  // ── Slot grid ─────────────────────────────────────────────────────────────
+  slotsLoading: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 24, justifyContent: 'center' },
+  slotsLoadingText: { ...FONTS.bodyMd, color: colors.textSecondary },
+  slotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  slotBtn: {
+    width: '22%',
+    height: 62,
+    borderRadius: SIZES.borderRadius,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  slotBtnSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  slotBtnAvailable: {
+    backgroundColor: colors.surfaceWhite,
+    borderColor: colors.primary,
+  },
+  slotBtnBooked: {
+    backgroundColor: colors.surfaceContainer,
+    borderColor: colors.divider,
+  },
+  slotTime: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700' },
+  slotHint: { fontFamily: FONT_FAMILY, fontSize: 10, marginTop: 2 },
+
+  // ── Summary ───────────────────────────────────────────────────────────────
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginBottom: 10 },
+  summaryLabel: { ...FONTS.bodyMd, color: colors.textSecondary },
+  summaryValue: { ...FONTS.labelLg, color: colors.text, flex: 1, textAlign: 'right' },
+  summaryDivider: { height: 1, backgroundColor: colors.divider, marginVertical: 12 },
+  summaryTotalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  summaryTotalLabel: { ...FONTS.titleLg, color: colors.text },
+  summaryTotalValue: { fontFamily: FONT_FAMILY, fontSize: 20, fontWeight: '700', color: colors.primary },
+
+  // ── Bottom bar ────────────────────────────────────────────────────────────
   bottomBar: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: colors.surfaceWhite,
     paddingHorizontal: 20,
-    paddingTop: 14,
+    paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    borderTopWidth: 1, borderTopColor: colors.divider,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
     ...SHADOWS.xl,
   },
-  bottomPriceLabel: { ...FONTS.bodySm, color: colors.textSecondary },
-  bottomPriceValue: { fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: '700', color: colors.primary },
-  confirmBtn: {
+  bottomTotalRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  bottomLabel: { ...FONTS.bodySm, color: colors.textSecondary },
+  bottomAmount: { fontFamily: FONT_FAMILY, fontSize: 20, fontWeight: '700', color: colors.primary },
+  cta: {
+    height: 52,
+    borderRadius: 14,
     backgroundColor: colors.primary,
-    borderRadius: SIZES.borderRadius,
-    paddingHorizontal: 24, paddingVertical: 14,
-    alignItems: 'center', justifyContent: 'center',
-    minWidth: 180,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
     ...SHADOWS.primary,
   },
-  confirmBtnInline: { width: '100%', marginTop: 4 },
-  confirmBtnDisabled: { opacity: 0.6 },
-  confirmBtnText: { ...FONTS.buttonLg, color: colors.onPrimary },
+  ctaDisabled: {
+    backgroundColor: colors.surfaceContainerHigh,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: 'none' }
+      : { shadowOpacity: 0, elevation: 0 }
+    ),
+  },
+  ctaText: { ...FONTS.buttonLg, color: WHITE },
 });
