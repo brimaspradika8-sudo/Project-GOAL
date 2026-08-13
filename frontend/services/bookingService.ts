@@ -1,4 +1,5 @@
 import { apiGet, apiSend, apiFetch } from '../lib/apiClient';
+import type { Field } from '../store/fieldStore';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -8,6 +9,7 @@ export type BookingStatus =
   | 'WAITING_PAYMENT'
   | 'CONFIRMED'
   | 'COMPLETED'
+  | 'REJECTED'
   | 'CANCELLED'
   | 'EXPIRED';
 
@@ -107,6 +109,27 @@ export async function getSlots(fieldId: number, date: string): Promise<SlotsResp
   const body = await res.json();
   // Response is wrapped in { message, data: { slots, field_status, ... } }
   return body.data ?? body;
+}
+
+/**
+ * Alias of getSlots for the booking create flow.
+ * GET /lapangan/{id}/slots?tanggal=YYYY-MM-DD
+ */
+export async function getAvailableSlots(fieldId: number, date: string): Promise<SlotsResponse> {
+  return getSlots(fieldId, date);
+}
+
+/**
+ * GET /fields/{id}
+ * Fetch field detail for the booking create screen.
+ */
+export async function getFieldDetail(fieldId: number): Promise<Field> {
+  const res = await apiFetch(`/fields/${fieldId}`, { skipToken: true });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw { status: res.status, message: data?.message || 'Gagal memuat detail lapangan' };
+  }
+  return res.json();
 }
 
 /**

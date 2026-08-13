@@ -1,26 +1,26 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   View,
   Text,
+  ScrollView,
   TouchableOpacity,
   Platform,
   StatusBar,
   ActivityIndicator,
-  ScrollView,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../components/goalTheme';
-import { FadeInView } from '../components/FadeInView';
-import { useTheme } from '../lib/theme';
-import { useBookingDetail } from '../hooks/useBooking';
-import { confirmPayment } from '../services/bookingService';
-import { useToastStore } from '../store/toastStore';
-import { SPORT_LABELS } from '../lib/fieldValidation';
-import { getErrorMessage } from '../lib/api';
-import PaymentCard, { type PaymentMethod } from '../components/booking/PaymentCard';
+import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../../../components/goalTheme';
+import { useTheme } from '../../../lib/theme';
+import { useBookingDetail, useBookingPolling } from '../../../hooks/useBooking';
+import { confirmPayment, type Booking } from '../../../services/bookingService';
+import { useToastStore } from '../../../store/toastStore';
+import { SPORT_LABELS } from '../../../lib/fieldValidation';
+import { getErrorMessage } from '../../../lib/api';
+import PaymentCard, { type PaymentMethod } from '../../../components/booking/PaymentCard';
+import { ErrorState, EmptyState, Loading } from '../../../components/common';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -34,6 +34,10 @@ function formatDateDisplay(d: string): string {
   return date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+function isTerminal(status: Booking['status']): boolean {
+  return status === 'REJECTED' || status === 'CANCELLED' || status === 'EXPIRED';
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function BookingPaymentScreen() {
@@ -42,10 +46,26 @@ export default function BookingPaymentScreen() {
   const { colors } = useTheme();
   const showToast = useToastStore((s) => s.show);
   const st = makeStyles(colors);
+
+  const { booking, loading, error, refetch } = useBookingDetail(bookingId);
   const [paying, setPaying] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
 
-  const { booking, loading } = useBookingDetail(bookingId);
+  // Poll while waiting for the owner's approval.
+  const waitingForApproval = booking?.status === 'WAITING_OWNER_APPROVAL';
+  useBookingPolling({
+    bookingId,
+    targetStatuses: ['APPROVED'],
+    onStatusChange: () => { refetch(); },
+    enabled: waitingForApproval,
+  });
+
+  // Already confirmed → show the success / e-ticket screen.
+  useEffect(() => {
+    if (booking?.status === 'CONFIRMED') {
+      router.replace({ pathname: '/booking-success', params: { id: String(bookingId) } });
+    }
+  }, [booking?.status, bookingId]);
 
   const handlePay = async () => {
     if (!booking) return;
@@ -57,87 +77,107 @@ export default function BookingPaymentScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace({ pathname: '/booking-success', params: { id: String(updated.id) } });
     } catch (e: any) {
-      const msg = getErrorMessage(e?.data, 'Pembayaran gagal. Coba lagi.');
+      const msg = getErrorMessage(e?.data ?? e, 'Pembayaran gagal. Coba lagi.');
       showToast({ type: 'error', title: 'Gagal', description: msg });
     } finally {
       setPaying(false);
     }
   };
 
-  if (loading || !booking) {
+  if (loading) {
     return (
-      <View style={st.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={st.container}>
+        <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+        <Header title="Pembayaran" />
+        <Loading message="Memuat data booking..." />
       </View>
     );
   }
 
+  if (error || !booking) {
+    return (
+      <View style={st.container}>
+        <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+        <Header title="Pembayaran" />
+        <ErrorState
+          title="Data booking tidak bisa dimuat"
+          description={error ?? 'Booking tidak ditemukan.'}
+          onRetry={refetch}
+        />
+      </View>
+    );
+  }
+
+  if (isTerminal(booking.status)) {
+    return (
+      <View style={st.container}>
+        <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+        <Header title="Pembayaran" />
+        <EmptyState
+          icon="cancel"
+          title="Booking tidak aktif"
+          description={`Booking ini berstatus ${booking.status.replace(/_/g, ' ').toLowerCase()}.`}
+          actionLabel="Kembali"
+          onAction={() => router.back()}
+        />
+      </View>
+    );
+  }
+
+  // Waiting for the owner to approve the request.
+  if (waitingForApproval) {
+    return (
+      <View style={st.container}>
+        <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+        <Header title="Pembayaran" />
+
+        <ScrollView contentContainerStyle={st.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={st.waitingSection}>
+            <View style={[st.waitingIconWrap, { backgroundColor: colors.floodlight + '20' }]}>
+              <ActivityIndicator size="large" color={colors.floodlight} />
+            </View>
+            <Text style={st.waitingTitle}>Menunggu Persetujuan Owner</Text>
+            <Text style={st.waitingDesc}>
+              Pemilik lapangan akan menyetujui booking Anda.{'\n'}
+              Status akan diperbarui otomatis di layar ini.
+            </Text>
+          </View>
+
+          {renderSummary(booking)}
+
+          <View style={st.noteCard}>
+            <MaterialIcons name="info-outline" size={16} color={colors.primary} />
+            <Text style={st.noteText}>
+              Anda dapat membatalkan booking ini sebelum disetujui dari halaman daftar booking.
+            </Text>
+          </View>
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // Ready to pay (status APPROVED).
   return (
     <View style={st.container}>
       <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
-      {/* Header */}
-      <View style={st.header}>
-        <View style={{ width: 40 }} />
-        <Text style={st.headerTitle}>Pembayaran</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <Header title="Pembayaran" />
 
       <ScrollView contentContainerStyle={st.scrollContent} showsVerticalScrollIndicator={false}>
 
-        {/* Status Badge */}
-        <FadeInView style={st.statusBadgeWrap}>
+        <View style={st.statusBadgeWrap}>
           <View style={[st.statusBadge, { backgroundColor: colors.floodlight + '20', borderColor: colors.floodlight }]}>
             <MaterialIcons name="check-circle" size={16} color={colors.floodlight} />
             <Text style={[st.statusBadgeText, { color: colors.floodlight }]}>BOOKING DISETUJUI OWNER</Text>
           </View>
-        </FadeInView>
+        </View>
 
-        {/* Booking Summary Card */}
-        <FadeInView delay={80} style={st.summaryCard}>
-          <View style={st.summaryHeader}>
-            <View style={[st.summaryIconWrap, { backgroundColor: colors.primaryContainer }]}>
-              <MaterialIcons name="stadium" size={22} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={st.summaryFieldName} numberOfLines={1}>
-                {booking.field?.name ?? `Field #${booking.field_id}`}
-              </Text>
-              <Text style={st.summarySport}>
-                {SPORT_LABELS[booking.field?.sport_type ?? ''] ?? (booking.field?.sport_type ?? '-')}
-              </Text>
-            </View>
-          </View>
-
-          <View style={st.summaryDivider} />
-
-          <View style={st.summaryRow}>
-            <Text style={st.summaryLabel}>Tanggal</Text>
-            <Text style={st.summaryValue}>{formatDateDisplay(booking.booking_date)}</Text>
-          </View>
-          <View style={st.summaryRow}>
-            <Text style={st.summaryLabel}>Jam</Text>
-            <Text style={st.summaryValue}>{booking.start_time} – {booking.end_time}</Text>
-          </View>
-          <View style={st.summaryRow}>
-            <Text style={st.summaryLabel}>Durasi</Text>
-            <Text style={st.summaryValue}>{Math.round(booking.duration_minutes / 60 * 10) / 10} jam</Text>
-          </View>
-          <View style={st.summaryRow}>
-            <Text style={st.summaryLabel}>Lokasi</Text>
-            <Text style={[st.summaryValue, { flex: 2 }]} numberOfLines={2}>{booking.field?.location ?? '-'}</Text>
-          </View>
-
-          <View style={st.summaryDivider} />
-
-          <View style={st.totalRow}>
-            <Text style={st.totalLabel}>Total Pembayaran</Text>
-            <Text style={st.totalValue}>{formatPrice(booking.total_price)}</Text>
-          </View>
-        </FadeInView>
+        {renderSummary(booking)}
 
         {/* Payment Method */}
-        <FadeInView delay={160} style={st.methodCard}>
+        <View style={st.methodCard}>
           <Text style={st.methodTitle}>Metode Pembayaran</Text>
           <View style={st.methodList}>
             <PaymentCard
@@ -162,15 +202,14 @@ export default function BookingPaymentScreen() {
               disabled
             />
           </View>
-        </FadeInView>
+        </View>
 
-        {/* Info Note */}
-        <FadeInView delay={200} style={st.noteCard}>
+        <View style={st.noteCard}>
           <MaterialIcons name="info-outline" size={16} color={colors.primary} />
           <Text style={st.noteText}>
             Bayar tunai saat tiba di lapangan. Datang 10 menit sebelum waktu bermain. Booking akan dikonfirmasi setelah pembayaran ini.
           </Text>
-        </FadeInView>
+        </View>
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -199,6 +238,66 @@ export default function BookingPaymentScreen() {
       </View>
     </View>
   );
+
+  function renderSummary(booking: Booking) {
+    return (
+      <View style={st.summaryCard}>
+        <View style={st.summaryHeader}>
+          <View style={[st.summaryIconWrap, { backgroundColor: colors.primaryContainer }]}>
+            <MaterialIcons name="stadium" size={22} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={st.summaryFieldName} numberOfLines={1}>
+              {booking.field?.name ?? `Field #${booking.field_id}`}
+            </Text>
+            <Text style={st.summarySport}>
+              {SPORT_LABELS[booking.field?.sport_type ?? ''] ?? (booking.field?.sport_type ?? '-')}
+            </Text>
+          </View>
+        </View>
+
+        <View style={st.summaryDivider} />
+
+        <View style={st.summaryRow}>
+          <Text style={st.summaryLabel}>Tanggal</Text>
+          <Text style={st.summaryValue}>{formatDateDisplay(booking.booking_date)}</Text>
+        </View>
+        <View style={st.summaryRow}>
+          <Text style={st.summaryLabel}>Jam</Text>
+          <Text style={st.summaryValue}>{booking.start_time} – {booking.end_time}</Text>
+        </View>
+        <View style={st.summaryRow}>
+          <Text style={st.summaryLabel}>Durasi</Text>
+          <Text style={st.summaryValue}>{Math.round(booking.duration_minutes / 60 * 10) / 10} jam</Text>
+        </View>
+        <View style={st.summaryRow}>
+          <Text style={st.summaryLabel}>Lokasi</Text>
+          <Text style={[st.summaryValue, { flex: 2 }]} numberOfLines={2}>{booking.field?.location ?? '-'}</Text>
+        </View>
+
+        <View style={st.summaryDivider} />
+
+        <View style={st.totalRow}>
+          <Text style={st.totalLabel}>Total Pembayaran</Text>
+          <Text style={st.totalValue}>{formatPrice(booking.total_price)}</Text>
+        </View>
+      </View>
+    );
+  }
+}
+
+function Header({ title }: { title: string }) {
+  const { colors } = useTheme();
+  const st = makeStyles(colors);
+  return (
+    <View style={st.header}>
+      <TouchableOpacity style={st.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
+        <MaterialIcons name="arrow-back" size={22} color={colors.text} />
+      </TouchableOpacity>
+      <Text style={st.headerTitle}>{title}</Text>
+      <View style={{ width: 40 }} />
+    </View>
+  );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -215,6 +314,11 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     backgroundColor: colors.background,
     borderBottomWidth: 1, borderBottomColor: colors.divider,
   },
+  backBtn: {
+    width: 40, height: 40, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surfaceContainer,
+  },
   headerTitle: { ...FONTS.headlineSm, color: colors.text },
 
   scrollContent: { paddingHorizontal: 20, paddingTop: 24, maxWidth: 480, alignSelf: 'center', width: '100%' },
@@ -226,6 +330,11 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     borderRadius: SIZES.borderRadiusFull, borderWidth: 1,
   },
   statusBadgeText: { ...FONTS.labelMd, fontWeight: '700', letterSpacing: 0.5 },
+
+  waitingSection: { alignItems: 'center', marginBottom: 24, paddingVertical: 24 },
+  waitingIconWrap: { width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  waitingTitle: { ...FONTS.headlineSm, color: colors.text, textAlign: 'center', marginBottom: 8 },
+  waitingDesc: { ...FONTS.bodyMd, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
 
   summaryCard: {
     backgroundColor: colors.surfaceWhite,

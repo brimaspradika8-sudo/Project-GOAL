@@ -28,6 +28,7 @@ const STATUS_CONFIG: Record<BookingStatus, { label: string; bgKey: string; textK
   WAITING_PAYMENT:        { label: 'Menunggu Pembayaran', bgKey: 'warning', textKey: 'warning', icon: 'payment' },
   CONFIRMED:              { label: 'Booking Aktif', bgKey: 'primary', textKey: 'primary', icon: 'event-available' },
   COMPLETED:              { label: 'Selesai', bgKey: 'textTertiary', textKey: 'textTertiary', icon: 'done-all' },
+  REJECTED:               { label: 'Ditolak', bgKey: 'error', textKey: 'error', icon: 'cancel' },
   CANCELLED:              { label: 'Dibatalkan', bgKey: 'error', textKey: 'error', icon: 'cancel' },
   EXPIRED:                { label: 'Kadaluarsa', bgKey: 'error', textKey: 'error', icon: 'timer-off' },
 };
@@ -43,7 +44,7 @@ function formatDateDisplay(d: string): string {
 }
 
 const ACTIVE_STATUSES: BookingStatus[] = ['WAITING_OWNER_APPROVAL', 'APPROVED', 'WAITING_PAYMENT', 'CONFIRMED'];
-const PAST_STATUSES: BookingStatus[] = ['COMPLETED', 'CANCELLED', 'EXPIRED'];
+const PAST_STATUSES: BookingStatus[] = ['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED'];
 
 // ─── Booking Card ─────────────────────────────────────────────────────────────
 

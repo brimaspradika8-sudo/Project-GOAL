@@ -337,7 +337,7 @@ export default function VenueDetailScreen() {
                   onPress={() => {
                     if (!isAvailable) return;
                     Haptics.selectionAsync();
-                    router.push({ pathname: '/booking-flow', params: { id: String(f.id) } });
+                    router.push({ pathname: '/booking/create/[fieldId]', params: { fieldId: String(f.id) } });
                   }}
                   disabled={!isAvailable}
                 >
@@ -354,7 +354,7 @@ export default function VenueDetailScreen() {
                 activeOpacity={0.8}
                 onPress={() => {
                   Haptics.selectionAsync();
-                  router.push({ pathname: '/booking-flow', params: { id: String(f.id) } });
+                  router.push({ pathname: '/booking/create/[fieldId]', params: { fieldId: String(f.id) } });
                 }}
               >
                 <Text style={[st.slotMoreText, { color: colors.primary }]}>+{slots.length - 9}</Text>
@@ -441,7 +441,7 @@ export default function VenueDetailScreen() {
           onPress={() => {
             if (!isApproved) return;
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            router.push({ pathname: '/booking-flow', params: { id: String(f.id) } });
+            router.push({ pathname: '/booking/create/[fieldId]', params: { fieldId: String(f.id) } });
           }}
           disabled={!isApproved}
         >

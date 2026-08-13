@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  getSlots,
+  getAvailableSlots,
   getBooking,
   getBookingHistory,
   getMyBookings,
@@ -28,7 +28,7 @@ export function useSlots(fieldId: number | null, date: string): UseSlotsResult {
     setLoading(true);
     setError(null);
     try {
-      const data = await getSlots(fieldId, date);
+      const data = await getAvailableSlots(fieldId, date);
       setSlotsData(data);
     } catch (e: any) {
       setError(e?.message || 'Gagal memuat slot waktu');

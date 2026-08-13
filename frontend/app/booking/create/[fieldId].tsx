@@ -12,18 +12,17 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../components/goalTheme';
-import { SafeImage } from '../components/SafeImage';
-import { FadeInView } from '../components/FadeInView';
-import { useTheme } from '../lib/theme';
-import { useSlots } from '../hooks/useBooking';
-import { createBooking, type TimeSlot } from '../services/bookingService';
-import { useToastStore } from '../store/toastStore';
-import { getErrorMessage } from '../lib/api';
-import { SPORT_LABELS } from '../lib/fieldValidation';
-import { apiFetch } from '../lib/apiClient';
-import type { Field } from '../store/fieldStore';
-import { BookingSummary, CalendarPicker, TimeSlotCard } from '../components/booking';
+import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../../../components/goalTheme';
+import { SafeImage } from '../../../components/SafeImage';
+import { useTheme } from '../../../lib/theme';
+import { useSlots } from '../../../hooks/useBooking';
+import { createBooking, getFieldDetail, type TimeSlot } from '../../../services/bookingService';
+import { useToastStore } from '../../../store/toastStore';
+import { getErrorMessage } from '../../../lib/api';
+import { SPORT_LABELS } from '../../../lib/fieldValidation';
+import type { Field } from '../../../store/fieldStore';
+import { BookingSummary, CalendarPicker, TimeSlotCard } from '../../../components/booking';
+import { EmptyState, ErrorState, Loading } from '../../../components/common';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -60,9 +59,9 @@ const DURATION_OPTIONS = [
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function BookingFlowScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const fieldId = Number(id);
+export default function BookingCreateScreen() {
+  const { fieldId } = useLocalSearchParams<{ fieldId: string }>();
+  const fieldIdNumber = Number(fieldId);
   const { colors } = useTheme();
   const showToast = useToastStore((s) => s.show);
   const st = makeStyles(colors);
@@ -70,31 +69,40 @@ export default function BookingFlowScreen() {
   // Field info
   const [field, setField] = useState<Field | null>(null);
   const [fieldLoading, setFieldLoading] = useState(true);
+  const [fieldError, setFieldError] = useState<string | null>(null);
 
   useEffect(() => {
-    apiFetch(`/fields/${fieldId}`, { skipToken: true })
-      .then(r => r.json())
-      .then(data => setField(data))
-      .catch(() => {})
-      .finally(() => setFieldLoading(false));
-  }, [fieldId]);
+    let cancelled = false;
+    (async () => {
+      setFieldLoading(true);
+      setFieldError(null);
+      try {
+        const data = await getFieldDetail(fieldIdNumber);
+        if (!cancelled) setField(data);
+      } catch (e: any) {
+        if (!cancelled) setFieldError(e?.message || 'Gagal memuat detail lapangan');
+      } finally {
+        if (!cancelled) setFieldLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [fieldIdNumber]);
 
-  // Date state
+  // Date state (CalendarPicker starts from today, past dates are not offered)
   const today = formatDate(new Date());
   const [selectedDate, setSelectedDate] = useState(today);
   const [displayDate, setDisplayDate] = useState(new Date());
 
   // Slots
-  const { slotsData, loading: slotsLoading, error: slotsError, refetch: refetchSlots } = useSlots(fieldId, selectedDate);
+  const { slotsData, loading: slotsLoading, error: slotsError, refetch: refetchSlots } = useSlots(fieldIdNumber, selectedDate);
 
   // Selection state
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
-  const [selectedDuration, setSelectedDuration] = useState(DURATION_OPTIONS[1]); // default 1.5h
+  const [selectedDuration, setSelectedDuration] = useState(DURATION_OPTIONS[1]);
 
   // Submission
   const [submitting, setSubmitting] = useState(false);
 
-  // Reset slot when date changes
   useEffect(() => {
     setSelectedSlot(null);
   }, [selectedDate]);
@@ -103,14 +111,12 @@ export default function BookingFlowScreen() {
     setDisplayDate(new Date(`${selectedDate}T00:00:00`));
   }, [selectedDate]);
 
-  // Computed end_time
   const endTime = selectedSlot ? addMinutesToTime(selectedSlot.start_time, selectedDuration.minutes) : null;
   const totalPrice = field?.price_per_hour != null
     ? Math.round((field.price_per_hour / 60) * selectedDuration.minutes)
     : null;
 
-  // Submit booking
-  const handleConfirmBooking = async () => {
+  const handleContinue = async () => {
     if (!selectedSlot || !endTime) {
       showToast({ type: 'error', title: 'Pilih slot waktu terlebih dahulu' });
       return;
@@ -118,15 +124,15 @@ export default function BookingFlowScreen() {
     setSubmitting(true);
     try {
       const res = await createBooking({
-        field_id: fieldId,
+        field_id: fieldIdNumber,
         booking_date: selectedDate,
         slots: [{ start_time: selectedSlot.start_time, end_time: endTime }],
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const booking = res.data ?? (res as any);
-      router.replace({ pathname: '/booking-waiting', params: { id: String(booking.id) } });
+      router.replace({ pathname: '/booking/payment/[id]', params: { id: String(booking.id) } });
     } catch (e: any) {
-      const msg = getErrorMessage(e?.data, 'Gagal membuat booking');
+      const msg = getErrorMessage(e?.data ?? e, 'Gagal membuat booking');
       showToast({ type: 'error', title: 'Gagal', description: msg });
     } finally {
       setSubmitting(false);
@@ -135,58 +141,68 @@ export default function BookingFlowScreen() {
 
   if (fieldLoading) {
     return (
-      <View style={st.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={st.container}>
+        <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+        <Header title="Pesan Lapangan" />
+        <Loading message="Memuat lapangan..." />
+      </View>
+    );
+  }
+
+  if (fieldError || !field) {
+    return (
+      <View style={st.container}>
+        <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+        <Header title="Pesan Lapangan" />
+        <ErrorState
+          title="Lapangan tidak bisa dimuat"
+          description={fieldError ?? 'Lapangan tidak ditemukan.'}
+          onRetry={() => {
+            setFieldLoading(true);
+            setFieldError(null);
+            getFieldDetail(fieldIdNumber)
+              .then(setField)
+              .catch((e: any) => setFieldError(e?.message || 'Gagal memuat detail lapangan'))
+              .finally(() => setFieldLoading(false));
+          }}
+        />
       </View>
     );
   }
 
   return (
     <View style={st.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
-      {/* Header */}
-      <View style={st.header}>
-        <TouchableOpacity style={st.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
-          <MaterialIcons name="arrow-back" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={st.headerTitle}>Pesan Lapangan</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <Header title="Pesan Lapangan" />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={st.scrollContent}>
 
         {/* Field Card */}
-        {field && (
-          <FadeInView style={st.fieldCard}>
-            <SafeImage
-              source={{ uri: field.image_url ?? '' }}
-              style={st.fieldImage}
-              fallbackSize={32}
-            />
-            <View style={st.fieldInfo}>
-              <Text style={st.fieldName} numberOfLines={1}>{field.name}</Text>
-              <View style={st.fieldMeta}>
-                <MaterialIcons name="sports" size={13} color={colors.primary} />
-                <Text style={st.fieldMetaText}>{SPORT_LABELS[field.sport_type] ?? field.sport_type}</Text>
-              </View>
-              <View style={st.fieldMeta}>
-                <MaterialIcons name="location-on" size={13} color={colors.textTertiary} />
-                <Text style={st.fieldMetaText} numberOfLines={1}>{field.location}</Text>
-              </View>
-              <Text style={st.fieldPrice}>{formatPrice(field.price_per_hour)}<Text style={st.fieldPriceUnit}>/jam</Text></Text>
+        <View style={st.fieldCard}>
+          <SafeImage source={{ uri: field.image_url ?? '' }} style={st.fieldImage} fallbackSize={32} />
+          <View style={st.fieldInfo}>
+            <Text style={st.fieldName} numberOfLines={1}>{field.name}</Text>
+            <View style={st.fieldMeta}>
+              <MaterialIcons name="sports" size={13} color={colors.primary} />
+              <Text style={st.fieldMetaText}>{SPORT_LABELS[field.sport_type] ?? field.sport_type}</Text>
             </View>
-          </FadeInView>
-        )}
+            <View style={st.fieldMeta}>
+              <MaterialIcons name="location-on" size={13} color={colors.textTertiary} />
+              <Text style={st.fieldMetaText} numberOfLines={1}>{field.location}</Text>
+            </View>
+            <Text style={st.fieldPrice}>{formatPrice(field.price_per_hour)}<Text style={st.fieldPriceUnit}>/jam</Text></Text>
+          </View>
+        </View>
 
         {/* Date Selection */}
-        <FadeInView delay={80} style={st.section}>
+        <View style={st.section}>
           <Text style={st.sectionTitle}>Pilih Tanggal</Text>
           <CalendarPicker value={selectedDate} onChange={setSelectedDate} />
-        </FadeInView>
+        </View>
 
         {/* Slot Selection */}
-        <FadeInView delay={120} style={st.section}>
+        <View style={st.section}>
           <View style={st.sectionHeader}>
             <Text style={st.sectionTitle}>Pilih Slot Waktu</Text>
             {slotsData?.field_status && (
@@ -200,51 +216,46 @@ export default function BookingFlowScreen() {
           </View>
 
           {slotsLoading ? (
-            <View style={st.slotsLoading}>
-              <ActivityIndicator color={colors.primary} />
-              <Text style={st.slotsLoadingText}>Memuat slot...</Text>
-            </View>
+            <Loading message="Memuat slot..." />
           ) : slotsError ? (
-            <View style={st.slotsError}>
-              <MaterialIcons name="error-outline" size={24} color={colors.error} />
-              <Text style={st.slotsErrorText}>{slotsError}</Text>
-              <TouchableOpacity onPress={refetchSlots} style={st.retryBtn}>
-                <Text style={st.retryBtnText}>Coba lagi</Text>
-              </TouchableOpacity>
-            </View>
+            <ErrorState
+              title="Slot gagal dimuat"
+              description={slotsError}
+              onRetry={refetchSlots}
+            />
           ) : !slotsData?.slots?.length ? (
-            <View style={st.slotsError}>
-              <MaterialIcons name="event-busy" size={32} color={colors.textTertiary} />
-              <Text style={st.slotsErrorText}>Tidak ada slot tersedia</Text>
-            </View>
+            <EmptyState
+              icon="event-busy"
+              title="Tidak ada slot tersedia"
+              description="Coba pilih tanggal lain."
+            />
           ) : (
             <View style={st.slotsGrid}>
               {slotsData.slots.map((slot, i) => {
                 const isAvailable = slot.status === 'AVAILABLE';
                 const isSelected = selectedSlot?.start_time === slot.start_time;
                 return (
-                  <View
-                    key={i}
-                    style={[
-                      st.slotWrap,
-                      isSelected && { borderColor: colors.primary },
-                    ]}
-                  >
+                  <View key={i} style={[st.slotWrap, isSelected && { borderColor: colors.primary }]}>
                     <TimeSlotCard
                       time={slot.start_time}
                       status={slot.status}
-                      onPress={() => { if (isAvailable) { setSelectedSlot(slot); Haptics.selectionAsync(); } }}
+                      onPress={() => {
+                        if (isAvailable) {
+                          setSelectedSlot(slot);
+                          Haptics.selectionAsync();
+                        }
+                      }}
                     />
                   </View>
                 );
               })}
             </View>
           )}
-        </FadeInView>
+        </View>
 
         {/* Duration Selection */}
         {selectedSlot && (
-          <FadeInView delay={0} style={st.section}>
+          <View style={st.section}>
             <Text style={st.sectionTitle}>Pilih Durasi</Text>
             <View style={st.durationRow}>
               {DURATION_OPTIONS.map((opt) => {
@@ -256,46 +267,23 @@ export default function BookingFlowScreen() {
                     onPress={() => { setSelectedDuration(opt); Haptics.selectionAsync(); }}
                     activeOpacity={0.8}
                   >
-                    <Text style={[st.durationText, isSelected && { color: '#fff' }]}>{opt.label}</Text>
+                    <Text style={[st.durationText, isSelected && { color: colors.onPrimary }]}>{opt.label}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
-          </FadeInView>
+          </View>
         )}
 
         {/* Booking Summary */}
         {selectedSlot && endTime && (
-          <FadeInView delay={0} style={st.summaryCard}>
-            <Text style={st.summaryTitle}>Ringkasan Pesanan</Text>
-
-            <View style={st.summaryRow}>
-              <Text style={st.summaryLabel}>Lapangan</Text>
-              <Text style={st.summaryValue} numberOfLines={1}>{field?.name ?? '-'}</Text>
-            </View>
-            <View style={st.summaryDivider} />
-            <View style={st.summaryRow}>
-              <Text style={st.summaryLabel}>Tanggal</Text>
-              <Text style={st.summaryValue}>{formatDateDisplay(displayDate)}</Text>
-            </View>
-            <View style={st.summaryDivider} />
-            <View style={st.summaryRow}>
-              <Text style={st.summaryLabel}>Jam</Text>
-              <Text style={st.summaryValue}>{selectedSlot.start_time} – {endTime}</Text>
-            </View>
-            <View style={st.summaryDivider} />
-            <View style={st.summaryRow}>
-              <Text style={st.summaryLabel}>Durasi</Text>
-              <Text style={st.summaryValue}>{selectedDuration.label}</Text>
-            </View>
-            <View style={st.summaryDivider} />
-            <View style={st.summaryRow}>
-              <Text style={st.summaryLabel}>Total Harga</Text>
-              <Text style={[st.summaryValue, { color: colors.primary, fontWeight: '700' }]}>
-                {totalPrice != null ? formatPrice(totalPrice) : 'Hubungi'}
-              </Text>
-            </View>
-          </FadeInView>
+          <BookingSummary
+            field={field.name}
+            date={formatDateDisplay(displayDate)}
+            time={`${selectedSlot.start_time} – ${endTime}`}
+            duration={selectedDuration.label}
+            price={totalPrice != null ? formatPrice(totalPrice) : 'Hubungi'}
+          />
         )}
 
         <View style={{ height: 120 }} />
@@ -310,18 +298,32 @@ export default function BookingFlowScreen() {
           </View>
           <TouchableOpacity
             style={[st.confirmBtn, submitting && st.confirmBtnDisabled]}
-            onPress={handleConfirmBooking}
+            onPress={handleContinue}
             disabled={submitting}
             activeOpacity={0.85}
           >
             {submitting ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color={colors.onPrimary} size="small" />
             ) : (
-              <Text style={st.confirmBtnText}>Konfirmasi Booking</Text>
+              <Text style={st.confirmBtnText}>Lanjut Pembayaran</Text>
             )}
           </TouchableOpacity>
         </View>
       )}
+    </View>
+  );
+}
+
+function Header({ title }: { title: string }) {
+  const { colors } = useTheme();
+  const st = makeStyles(colors);
+  return (
+    <View style={st.header}>
+      <TouchableOpacity style={st.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
+        <MaterialIcons name="arrow-back" size={22} color={colors.text} />
+      </TouchableOpacity>
+      <Text style={st.headerTitle}>{title}</Text>
+      <View style={{ width: 40 }} />
     </View>
   );
 }
@@ -377,38 +379,8 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   liveStatusDot: { width: 6, height: 6, borderRadius: 3 },
   liveStatusText: { ...FONTS.labelSm },
 
-  datePicker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceWhite,
-    borderRadius: SIZES.borderRadius,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    overflow: 'hidden',
-  },
-  dateArrow: {
-    width: 44, height: 52, alignItems: 'center', justifyContent: 'center',
-  },
-  dateArrowDisabled: { opacity: 0.3 },
-  dateDisplay: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 14 },
-  dateText: { ...FONTS.titleMd, color: colors.text },
-
-  slotsLoading: { alignItems: 'center', gap: 8, paddingVertical: 24 },
-  slotsLoadingText: { ...FONTS.bodySm, color: colors.textSecondary },
-  slotsError: { alignItems: 'center', gap: 8, paddingVertical: 24 },
-  slotsErrorText: { ...FONTS.bodySm, color: colors.textSecondary, textAlign: 'center' },
-  retryBtn: { paddingHorizontal: 20, paddingVertical: 8, borderRadius: 8, backgroundColor: colors.primary },
-  retryBtnText: { ...FONTS.labelMd, color: colors.onPrimary },
-
   slotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   slotWrap: { borderWidth: 1, borderColor: 'transparent', borderRadius: 10, padding: 2 },
-  slotChip: {
-    width: '30%', paddingVertical: 10, paddingHorizontal: 6,
-    borderRadius: SIZES.borderRadius, borderWidth: 1.5,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  slotTime: { ...FONTS.titleSm, textAlign: 'center' },
-  slotStatus: { ...FONTS.labelSm, textAlign: 'center', marginTop: 2 },
 
   durationRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   durationChip: {
@@ -418,21 +390,6 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     backgroundColor: colors.surfaceWhite,
   },
   durationText: { ...FONTS.titleSm, color: colors.text },
-
-  summaryCard: {
-    backgroundColor: colors.surfaceWhite,
-    borderRadius: SIZES.borderRadiusLg,
-    padding: 18,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    ...SHADOWS.sm,
-  },
-  summaryTitle: { ...FONTS.headlineSm, color: colors.text, marginBottom: 14 },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
-  summaryLabel: { ...FONTS.bodyMd, color: colors.textSecondary, flex: 1 },
-  summaryValue: { ...FONTS.bodyMd, color: colors.text, fontWeight: '600', flex: 2, textAlign: 'right' },
-  summaryDivider: { height: 1, backgroundColor: colors.divider, marginVertical: 10 },
 
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
