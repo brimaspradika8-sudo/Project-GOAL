@@ -22,7 +22,6 @@ import { useBookingStore } from '../../../store/bookingStore';
 import { useToastStore } from '../../../store/toastStore';
 import { getErrorMessage } from '../../../lib/api';
 import { SPORT_LABELS } from '../../../lib/fieldValidation';
-import type { Field } from '../../../store/fieldStore';
 import { BookingSummary, CalendarPicker, TimeSlotCard } from '../../../components/booking';
 import { EmptyState, ErrorState, Loading } from '../../../components/common';
 
