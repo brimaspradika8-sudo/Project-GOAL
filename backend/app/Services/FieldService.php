@@ -11,11 +11,11 @@ use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use App\Services\SupabaseStorageService;
 
 class FieldService
 {
     private string $cachePrefix = 'fields_';
+
     private int $cacheTtl = 60;
 
     public function __construct(
@@ -24,13 +24,13 @@ class FieldService
     ) {}
 
     private const SPORT_ALIASES = [
-        'futsal'      => ['futsal'],
-        'basketball'  => ['basketball', 'basket'],
-        'badminton'   => ['badminton'],
-        'volleyball'  => ['volleyball', 'voli'],
-        'tennis'      => ['tennis', 'tenis'],
+        'futsal' => ['futsal'],
+        'basketball' => ['basketball', 'basket'],
+        'badminton' => ['badminton'],
+        'volleyball' => ['volleyball', 'voli'],
+        'tennis' => ['tennis', 'tenis'],
         'mini_soccer' => ['mini_soccer'],
-        'other'       => ['other', 'lainnya'],
+        'other' => ['other', 'lainnya'],
     ];
 
     private static function sportAliases(string $sport): array
@@ -48,7 +48,7 @@ class FieldService
 
     private static function normalizeSport(?string $sport): string
     {
-        if (!$sport) {
+        if (! $sport) {
             return 'all';
         }
 
@@ -75,7 +75,7 @@ class FieldService
 
     public function listApproved(?string $search = null, ?string $sport = null, int $page = 1, mixed $minPrice = null, mixed $maxPrice = null, string $sort = 'latest'): LengthAwarePaginator
     {
-        $query = Field::approved()->with('owner:id,name');
+        $query = Field::approved()->with('owner:id,name')->with('images');
 
         if ($search) {
             $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
@@ -113,7 +113,7 @@ class FieldService
             return $this->listApproved($search, $sport, $page);
         }
 
-        $cacheKey = $this->cachePrefix . 'approved_' . self::normalizeSport($sport);
+        $cacheKey = $this->cachePrefix.'approved_'.self::normalizeSport($sport);
 
         return Cache::remember($cacheKey, $this->cacheTtl, function () use ($sport) {
             $query = Field::approved()
@@ -130,9 +130,9 @@ class FieldService
 
     public function invalidateCache(): void
     {
-        Cache::forget($this->cachePrefix . 'approved_all');
+        Cache::forget($this->cachePrefix.'approved_all');
         foreach (SportType::values() as $sport) {
-            Cache::forget($this->cachePrefix . 'approved_' . strtolower($sport));
+            Cache::forget($this->cachePrefix.'approved_'.strtolower($sport));
         }
     }
 
@@ -153,24 +153,24 @@ class FieldService
         }
 
         return $query
-            ->with(['owner:id,name', 'approver:id,name', 'prices'])
+            ->with(['owner:id,name', 'approver:id,name', 'prices', 'images'])
             ->latest()
             ->paginate(15);
     }
 
     public function find(int $id): ?Field
     {
-        return Field::with('owner:id,name')->find($id);
+        return Field::with('owner:id,name')->with('images')->find($id);
     }
 
     public function findApproved(int $id): ?Field
     {
-        return Field::approved()->with('owner:id,name')->find($id);
+        return Field::approved()->with('owner:id,name')->with('images')->find($id);
     }
 
     public function findApprovedWithPrices(int $id): ?Field
     {
-        return Field::approved()->with(['owner:id,name', 'prices'])->find($id);
+        return Field::approved()->with(['owner:id,name', 'prices', 'images'])->find($id);
     }
 
     public function create(User $user, array $data): Field
@@ -193,7 +193,7 @@ class FieldService
             'approved_at' => $isSuperAdmin ? now() : null,
         ])->save();
 
-        if (!$isSuperAdmin) {
+        if (! $isSuperAdmin) {
             $this->notifications->createForRole(
                 Profile::ROLE_SUPER_ADMIN,
                 Notification::TYPE_FIELD_SUBMITTED,
@@ -208,7 +208,7 @@ class FieldService
 
     public function update(Field $field, array $data, User $user, bool $isAdmin = false): Field
     {
-        if (!$isAdmin && $field->owner_id !== $user->id) {
+        if (! $isAdmin && $field->owner_id !== $user->id) {
             throw new \RuntimeException('Anda bukan pemilik lapangan ini.');
         }
 
@@ -226,7 +226,7 @@ class FieldService
             try {
                 $this->storage->delete($oldImageUrl);
             } catch (\Exception $e) {
-                Log::warning('Gagal menghapus gambar lapangan lama: ' . $e->getMessage());
+                Log::warning('Gagal menghapus gambar lapangan lama: '.$e->getMessage());
             }
         }
 
@@ -383,7 +383,7 @@ class FieldService
     {
         $owner = $field->owner;
 
-        if (!$owner) {
+        if (! $owner) {
             return;
         }
 
@@ -409,7 +409,9 @@ class FieldService
     {
         $field = Field::onlyTrashed()->find($id);
 
-        if (!$field) return false;
+        if (! $field) {
+            return false;
+        }
 
         if ($field->image_url) {
             $this->storage->delete($field->image_url);

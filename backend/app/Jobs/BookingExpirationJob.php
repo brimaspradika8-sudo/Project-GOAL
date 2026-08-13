@@ -32,9 +32,9 @@ class BookingExpirationJob implements ShouldQueue
             return;
         }
 
-        // Only bookings waiting for owner approval may be expired by this job.
-        if ($booking->status !== BookingStatus::WAITING_OWNER_APPROVAL->value) {
-            Log::info('Booking not expired because status is not waiting approval', ['booking_id' => $booking->id, 'status' => $booking->status]);
+        // Only bookings waiting for owner confirmation may be expired by this job.
+        if ($booking->status !== BookingStatus::WAITING_CONFIRMATION->value) {
+            Log::info('Booking not expired because status is not waiting confirmation', ['booking_id' => $booking->id, 'status' => $booking->status]);
             return;
         }
 

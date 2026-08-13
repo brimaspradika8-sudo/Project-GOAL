@@ -35,7 +35,7 @@ class BookingService
     {
         $field = Field::approved()->with('owner:id,name')->find($data['field_id']);
 
-        if (!$field) {
+        if (! $field) {
             throw ValidationException::withMessages([
                 'field_id' => 'Lapangan tidak ditemukan atau belum disetujui.',
             ]);
@@ -67,15 +67,16 @@ class BookingService
 
         $booking = DB::transaction(function () use ($user, $field, $data, $startTime, $endTime, $duration, $totalPrice, $expiresAt) {
             $booking = Booking::create([
-                'user_id'          => $user->id,
-                'field_id'         => $field->id,
-                'booking_date'     => $data['booking_date'],
-                'start_time'       => $startTime,
-                'end_time'         => $endTime,
+                'user_id' => $user->id,
+                'field_id' => $field->id,
+                'booking_date' => $data['booking_date'],
+                'start_time' => $startTime,
+                'end_time' => $endTime,
                 'duration_minutes' => $duration,
-                'total_price'      => $totalPrice,
-                'status'           => BookingStatus::WAITING_OWNER_APPROVAL->value,
-                'expired_at'       => $expiresAt,
+                'total_price' => $totalPrice,
+                'payment_method' => $data['payment_method'] ?? 'cash',
+                'status' => BookingStatus::WAITING_CONFIRMATION->value,
+                'expired_at' => $expiresAt,
             ]);
 
             BookingExpirationJob::dispatch($booking->id)->delay($expiresAt);
@@ -88,11 +89,31 @@ class BookingService
         return $booking->load(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name']);
     }
 
+    public function confirmCashBooking(User $user, Booking $booking): Booking
+    {
+        if ($booking->user_id !== $user->id) {
+            throw new AuthorizationException('You do not have permission');
+        }
+
+        if ($booking->status !== BookingStatus::WAITING_CONFIRMATION->value) {
+            throw ValidationException::withMessages([
+                'status' => 'Status booking tidak dapat dikonfirmasi saat ini.',
+            ]);
+        }
+
+        $booking->update([
+            'payment_method' => 'cash',
+            'status' => BookingStatus::WAITING_CONFIRMATION->value,
+        ]);
+
+        return $booking->fresh()->load(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name']);
+    }
+
     public function cancel(User $user, int $id, ?string $reason): Booking
     {
         $booking = Booking::with('field:id,name,owner_id')->find($id);
 
-        if (!$booking) {
+        if (! $booking) {
             throw (new ModelNotFoundException)->setModel(Booking::class, $id);
         }
 
@@ -100,15 +121,12 @@ class BookingService
             throw new AuthorizationException('You do not have permission');
         }
 
-        if (!in_array($booking->status, [
-            BookingStatus::WAITING_OWNER_APPROVAL->value,
-            BookingStatus::APPROVED->value,
-        ], true)) {
+        if ($booking->status !== BookingStatus::WAITING_CONFIRMATION->value) {
             throw new BookingCannotBeCancelledException('Booking cannot be cancelled');
         }
 
         $booking = $this->statusService->transition($booking, BookingStatus::CANCELLED, [
-            'cancelled_at'  => now(),
+            'cancelled_at' => now(),
             'cancel_reason' => $reason,
         ]);
 
@@ -128,7 +146,7 @@ class BookingService
     }
 
     /**
-     * @param array{status?: string, date?: string, tanggal?: string} $filters
+     * @param  array{status?: string, date?: string, tanggal?: string}  $filters
      */
     public function getUserBookingHistory(User $user, array $filters = [], int $page = 1): LengthAwarePaginator
     {
@@ -155,8 +173,8 @@ class BookingService
 
         $isAdmin = $owner->profile?->role === Profile::ROLE_SUPER_ADMIN;
 
-        if (!$isAdmin) {
-            if (!empty($filters['field_id']) && !$this->ownerOwnsField($owner, (int) $filters['field_id'])) {
+        if (! $isAdmin) {
+            if (! empty($filters['field_id']) && ! $this->ownerOwnsField($owner, (int) $filters['field_id'])) {
                 $this->logSecurityAction($owner, 'unauthorized_attempt', (int) $filters['field_id'], [
                     'resource_type' => 'field',
                     'attempted_action' => 'owner.bookings.filter',
@@ -198,7 +216,7 @@ class BookingService
     /**
      * Super admin sees all bookings across all owners.
      *
-     * @param array{status?: string, date?: string, field_id?: int, owner_id?: int} $filters
+     * @param  array{status?: string, date?: string, field_id?: int, owner_id?: int}  $filters
      */
     public function adminBookings(User $admin, array $filters = [], int $page = 1): LengthAwarePaginator
     {
@@ -210,7 +228,7 @@ class BookingService
 
         $query = Booking::with(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name']);
 
-        if (!empty($filters['owner_id'])) {
+        if (! empty($filters['owner_id'])) {
             $query->whereHas('field', fn ($q) => $q->where('owner_id', $filters['owner_id']));
         }
 
@@ -232,10 +250,10 @@ class BookingService
                 'attempted_action' => 'booking.approve',
             ]);
 
-            throw new \Illuminate\Auth\Access\AuthorizationException('You do not have permission');
+            throw new AuthorizationException('You do not have permission');
         }
 
-        if ($booking->status !== BookingStatus::WAITING_OWNER_APPROVAL->value) {
+        if ($booking->status !== BookingStatus::WAITING_CONFIRMATION->value) {
             throw new BookingAlreadyProcessedException('Booking already processed');
         }
 
@@ -244,10 +262,12 @@ class BookingService
         }
 
         try {
-            $booking = $this->statusService->transition($booking, BookingStatus::APPROVED, [
-            'approved_at' => now(),
-            'rejected_at' => null,
-            'rejection_reason' => null,
+            $booking = $this->statusService->transition($booking, BookingStatus::CONFIRMED, [
+                'approved_at' => now(),
+                'confirmed_at' => now(),
+                'confirmed_by' => $owner->id,
+                'rejected_at' => null,
+                'rejection_reason' => null,
             ]);
         } catch (InvalidBookingStatusTransitionException $e) {
             throw new BookingAlreadyProcessedException('Booking already processed', 0, $e);
@@ -265,10 +285,10 @@ class BookingService
                 'attempted_action' => 'booking.reject',
             ]);
 
-            throw new \Illuminate\Auth\Access\AuthorizationException('You do not have permission');
+            throw new AuthorizationException('You do not have permission');
         }
 
-        if ($booking->status !== BookingStatus::WAITING_OWNER_APPROVAL->value) {
+        if ($booking->status !== BookingStatus::WAITING_CONFIRMATION->value) {
             throw new BookingAlreadyProcessedException('Booking already processed');
         }
 
@@ -278,8 +298,8 @@ class BookingService
 
         try {
             $booking = $this->statusService->transition($booking, BookingStatus::REJECTED, [
-            'rejected_at' => now(),
-            'rejection_reason' => $reason,
+                'rejected_at' => now(),
+                'rejection_reason' => $reason,
             ]);
         } catch (InvalidBookingStatusTransitionException $e) {
             throw new BookingAlreadyProcessedException('Booking already processed', 0, $e);
@@ -290,31 +310,30 @@ class BookingService
         return $booking;
     }
 
-    public function confirmBooking(User $owner, Booking $booking): Booking
+    public function completeBooking(User $owner, Booking $booking): Booking
     {
         if ($booking->field?->owner_id !== $owner->id && $owner->profile?->role !== Profile::ROLE_SUPER_ADMIN) {
             $this->logSecurityAction($owner, 'unauthorized_attempt', $booking->id, [
-                'attempted_action' => 'booking.confirm',
+                'attempted_action' => 'booking.complete',
             ]);
 
             throw new UnauthorizedBookingActionException('You do not have permission');
         }
 
-        if ($booking->status !== BookingStatus::APPROVED->value) {
-            throw new InvalidBookingStatusException('Booking must be approved before confirmation');
+        if ($booking->status !== BookingStatus::CONFIRMED->value) {
+            throw new InvalidBookingStatusException('Booking must be confirmed before completion');
         }
 
         try {
-            $booking = $this->statusService->transition($booking, BookingStatus::CONFIRMED, [
-                'confirmed_at' => now(),
-                'confirmed_by' => $owner->id,
+            $booking = $this->statusService->transition($booking, BookingStatus::COMPLETED, [
+                'completed_at' => now(),
             ]);
 
-            $this->logSecurityAction($owner, 'booking.confirmed', $booking->id);
+            $this->logSecurityAction($owner, 'booking.completed', $booking->id);
 
             return $booking;
         } catch (InvalidBookingStatusTransitionException $e) {
-            throw new InvalidBookingStatusException('Booking must be approved before confirmation', 0, $e);
+            throw new InvalidBookingStatusException('Booking must be confirmed before completion', 0, $e);
         }
     }
 
@@ -331,7 +350,7 @@ class BookingService
             ->get(['start_time', 'end_time'])
             ->map(fn (Booking $b) => [
                 'start' => substr((string) $b->start_time, 0, 5),
-                'end'   => substr((string) $b->end_time, 0, 5),
+                'end' => substr((string) $b->end_time, 0, 5),
             ])
             ->values()
             ->all();
@@ -351,7 +370,7 @@ class BookingService
     }
 
     /**
-     * @param array<int, array{start_time: string, end_time: string}> $slots
+     * @param  array<int, array{start_time: string, end_time: string}>  $slots
      * @return array<int, array{start_time: string, end_time: string}>
      */
     private function normalizeSlots(array $slots): array
@@ -359,7 +378,7 @@ class BookingService
         return collect($slots)
             ->map(fn (array $slot) => [
                 'start_time' => $this->normalizeTime($slot['start_time']),
-                'end_time'   => $this->normalizeTime($slot['end_time']),
+                'end_time' => $this->normalizeTime($slot['end_time']),
             ])
             ->sortBy('start_time')
             ->values()
@@ -377,14 +396,14 @@ class BookingService
      * Every selected slot must match one of the field's generated bookable
      * slots (same boundaries), and must fall inside operating hours.
      *
-     * @param array<int, array{start_time: string, end_time: string}> $slots
+     * @param  array<int, array{start_time: string, end_time: string}>  $slots
      */
     private function validateSlotsAgainstSchedule(Field $field, array $slots): void
     {
         $openTime = $field->open_time ? substr((string) $field->open_time, 0, 5) : null;
         $closeTime = $field->close_time ? substr((string) $field->close_time, 0, 5) : null;
 
-        if (!$openTime || !$closeTime || !$field->session_duration_minutes) {
+        if (! $openTime || ! $closeTime || ! $field->session_duration_minutes) {
             throw ValidationException::withMessages([
                 'slots' => 'Lapangan belum memiliki jadwal operasional.',
             ]);
@@ -403,7 +422,7 @@ class BookingService
             $expectedEnd = $valid[$slot['start_time']] ?? null;
             if ($expectedEnd === null || $expectedEnd !== $slot['end_time']) {
                 throw ValidationException::withMessages([
-                    'slots' => 'Slot ' . $slot['start_time'] . '-' . $slot['end_time'] . ' tidak tersedia pada jadwal lapangan.',
+                    'slots' => 'Slot '.$slot['start_time'].'-'.$slot['end_time'].' tidak tersedia pada jadwal lapangan.',
                 ]);
             }
         }
@@ -413,7 +432,7 @@ class BookingService
      * Selected slots must be consecutive (each starts where the previous ends)
      * so they form a single continuous booking.
      *
-     * @param array<int, array{start_time: string, end_time: string}> $slots
+     * @param  array<int, array{start_time: string, end_time: string}>  $slots
      */
     private function assertSlotsContiguous(array $slots): void
     {
@@ -446,17 +465,17 @@ class BookingService
             ->exists();
 
         if ($overlap) {
-            throw new BookingConflictException();
+            throw new BookingConflictException;
         }
     }
 
     private function normalizeBookingFilters(array $filters): array
     {
-        if (!empty($filters['tanggal']) && empty($filters['date'])) {
+        if (! empty($filters['tanggal']) && empty($filters['date'])) {
             $filters['date'] = $filters['tanggal'];
         }
 
-        if (!empty($filters['field']) && empty($filters['field_id'])) {
+        if (! empty($filters['field']) && empty($filters['field_id'])) {
             $filters['field_id'] = $filters['field'];
         }
 

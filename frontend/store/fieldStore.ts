@@ -2,6 +2,14 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiFetch } from '../lib/apiClient';
 
+export interface FieldImage {
+  id: number;
+  field_id: number;
+  image_path: string;
+  is_primary: boolean;
+  created_at?: string | null;
+}
+
 export interface Field {
   id: number;
   name: string;
@@ -11,6 +19,7 @@ export interface Field {
   description: string | null;
   price_per_hour: number | null;
   image_url: string | null;
+  images?: FieldImage[];
   status: 'pending' | 'approved' | 'rejected';
   approved_at: string | null;
   owner?: { id: number; name: string };

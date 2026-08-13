@@ -18,6 +18,7 @@ class Booking extends Model
         'end_time',
         'duration_minutes',
         'total_price',
+        'payment_method',
         'status',
         'expired_at',
         'approved_at',

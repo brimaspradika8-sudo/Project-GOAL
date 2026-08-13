@@ -18,6 +18,7 @@ class BookingResource extends JsonResource
             'end_time'         => substr((string) $this->end_time, 0, 5),
             'duration_minutes' => $this->duration_minutes,
             'total_price'      => $this->total_price,
+            'payment_method'   => $this->payment_method ?? 'cash',
             'status'           => $this->status,
             'expired_at'       => $this->expired_at?->toISOString(),
             'approved_at'      => $this->approved_at?->toISOString(),
@@ -36,6 +37,7 @@ class BookingResource extends JsonResource
                 'location'        => $this->field->location,
                 'image_url'       => $this->field->image_url,
                 'price_per_hour'  => $this->field->price_per_hour,
+                'session_duration_minutes' => $this->field->session_duration_minutes,
                 'owner_id'        => $this->field->owner_id ?? null,
             ]),
             'user'             => $this->whenLoaded('user', fn () => [

@@ -4,9 +4,7 @@ import type { Field } from '../store/fieldStore';
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type BookingStatus =
-  | 'WAITING_OWNER_APPROVAL'
-  | 'APPROVED'
-  | 'WAITING_PAYMENT'
+  | 'WAITING_CONFIRMATION'
   | 'CONFIRMED'
   | 'COMPLETED'
   | 'REJECTED'
@@ -20,6 +18,7 @@ export interface BookingField {
   location: string;
   image_url: string | null;
   price_per_hour: number | null;
+  session_duration_minutes: number | null;
   owner_id: number | null;
 }
 
@@ -32,6 +31,7 @@ export interface Booking {
   end_time: string;           // "HH:MM"
   duration_minutes: number;
   total_price: number;
+  payment_method: string;
   status: BookingStatus;
   expired_at: string | null;
   approved_at: string | null;
@@ -50,7 +50,8 @@ export interface Booking {
 export interface TimeSlot {
   start_time: string;   // "HH:MM"
   end_time: string;     // "HH:MM"
-  status: 'AVAILABLE' | 'BOOKED' | 'CLOSED';
+  status: 'AVAILABLE' | 'BOOKED' | 'BUFFER' | 'CLOSED';
+  price: number | null;
 }
 
 export type FieldLiveStatus = 'AVAILABLE' | 'BOOKED' | 'PLAYING';
@@ -68,6 +69,7 @@ export interface CreateBookingPayload {
   field_id: number;
   booking_date: string;  // "YYYY-MM-DD"
   slots: Array<{ start_time: string; end_time: string }>;
+  payment_method?: string;
 }
 
 export interface BookingHistoryResponse {
@@ -187,22 +189,28 @@ export async function getMyBookings(page = 1): Promise<BookingHistoryResponse> {
  * PATCH /bookings/{id}/cancel
  * Cancel a booking.
  */
+export async function confirmBooking(id: number): Promise<{ data: Booking; message: string }> {
+  return apiSend('PATCH', `/bookings/${id}/confirm`, {});
+}
+
+/**
+ * Alias for cash confirmation flow on payment screen.
+ */
+export async function confirmPayment(id: number): Promise<{ data: Booking; message: string }> {
+  return confirmBooking(id);
+}
+
+/**
+ * PATCH /bookings/{id}/cancel
+ * Cancel a booking.
+ */
 export async function cancelBooking(id: number, reason: string): Promise<{ data: Booking; message: string }> {
   return apiSend('PATCH', `/bookings/${id}/cancel`, { body: { reason } });
 }
 
 /**
- * PATCH /bookings/{id}/confirm
- * Confirm payment — player confirms their own booking.
- * Also used by owner to confirm cash payment (same endpoint, authorized via BookingPolicy).
- */
-export async function confirmPayment(id: number): Promise<{ data: Booking; message: string }> {
-  return apiSend('PATCH', `/bookings/${id}/confirm`, {});
-}
-
-/**
  * PATCH /owner/bookings/{id}/approve
- * Owner approves a booking request.
+ * Owner approves a booking request (transitions to CONFIRMED).
  */
 export async function ownerApproveBooking(id: number): Promise<{ data: Booking; message: string }> {
   return apiSend('PATCH', `/owner/bookings/${id}/approve`, {});
@@ -214,6 +222,14 @@ export async function ownerApproveBooking(id: number): Promise<{ data: Booking; 
  */
 export async function ownerRejectBooking(id: number, reason?: string): Promise<{ data: Booking; message: string }> {
   return apiSend('PATCH', `/owner/bookings/${id}/reject`, { body: { reason: reason ?? '' } });
+}
+
+/**
+ * PATCH /owner/bookings/{id}/complete
+ * Owner marks a confirmed booking as completed.
+ */
+export async function ownerCompleteBooking(id: number): Promise<{ data: Booking; message: string }> {
+  return apiSend('PATCH', `/owner/bookings/${id}/complete`, {});
 }
 
 /**

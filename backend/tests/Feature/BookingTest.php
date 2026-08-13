@@ -36,11 +36,12 @@ class BookingTest extends TestCase
         ]);
 
         $response->assertCreated()
-            ->assertJsonPath('data.status', BookingStatus::WAITING_OWNER_APPROVAL->value)
+            ->assertJsonPath('data.status', BookingStatus::WAITING_CONFIRMATION->value)
             ->assertJsonPath('data.start_time', '07:00')
             ->assertJsonPath('data.end_time', '08:00')
             ->assertJsonPath('data.duration_minutes', 60)
             ->assertJsonPath('data.total_price', 70000)
+            ->assertJsonPath('data.payment_method', 'cash')
             ->assertJsonPath('data.field.name', $field->name);
 
         $this->assertDatabaseHas('bookings', [
@@ -49,7 +50,8 @@ class BookingTest extends TestCase
             'booking_date' => $this->date,
             'start_time' => '07:00',
             'end_time' => '08:00',
-            'status' => BookingStatus::WAITING_OWNER_APPROVAL->value,
+            'status' => BookingStatus::WAITING_CONFIRMATION->value,
+            'payment_method' => 'cash',
         ]);
     }
 
@@ -212,6 +214,27 @@ class BookingTest extends TestCase
         ])->assertCreated();
     }
 
+    public function test_player_can_confirm_cash_booking(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor();
+
+        $booking = $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [
+                ['start_time' => '07:00', 'end_time' => '08:00'],
+            ],
+            'payment_method' => 'cash',
+        ])->decodeResponseJson()['data'];
+
+        $this->authAs($player)
+            ->patchJson('/api/bookings/' . $booking['id'] . '/confirm')
+            ->assertOk()
+            ->assertJsonPath('data.id', $booking['id'])
+            ->assertJsonPath('data.status', BookingStatus::WAITING_CONFIRMATION->value);
+    }
+
     public function test_owner_cannot_create_booking(): void
     {
         $owner = $this->userWithRole(UserRole::OWNER, true);
@@ -274,7 +297,7 @@ class BookingTest extends TestCase
             'slots' => [['start_time' => '08:30', 'end_time' => '09:30']],
         ])->assertCreated();
 
-        $this->authAs($player)->getJson('/api/bookings/history?status=WAITING_OWNER_APPROVAL')
+        $this->authAs($player)->getJson('/api/bookings/history?status=WAITING_CONFIRMATION')
             ->assertOk()
             ->assertJsonCount(1, 'data.data')
             ->assertJsonPath('data.data.0.user_id', $player->id);
@@ -477,11 +500,13 @@ class BookingTest extends TestCase
         $this->authAs($owner)->patchJson("/api/owner/bookings/{$bookingId}/approve")
             ->assertOk()
             ->assertJsonPath('message', 'Booking approved')
-            ->assertJsonPath('data.status', BookingStatus::APPROVED->value);
+            ->assertJsonPath('data.status', BookingStatus::CONFIRMED->value)
+            ->assertJsonPath('data.confirmed_by', $owner->id);
 
         $this->assertDatabaseHas('bookings', [
             'id' => $bookingId,
-            'status' => BookingStatus::APPROVED->value,
+            'status' => BookingStatus::CONFIRMED->value,
+            'confirmed_by' => $owner->id,
         ]);
     }
 
@@ -511,7 +536,7 @@ class BookingTest extends TestCase
         ]);
     }
 
-    public function test_owner_can_confirm_approved_booking(): void
+    public function test_owner_approval_confirms_booking(): void
     {
         $owner = $this->userWithRole(UserRole::OWNER, true);
         $player = $this->userWithRole(UserRole::PLAYER);
@@ -524,21 +549,17 @@ class BookingTest extends TestCase
         ])->json('data.id');
 
         $this->authAs($owner)->patchJson("/api/owner/bookings/{$bookingId}/approve")->assertOk();
-
-        $this->authAs($owner)->patchJson("/api/bookings/{$bookingId}/confirm")
-            ->assertOk()
-            ->assertJsonPath('message', 'Booking confirmed')
-            ->assertJsonPath('data.status', BookingStatus::CONFIRMED->value)
-            ->assertJsonPath('data.confirmed_by', $owner->id);
 
         $this->assertDatabaseHas('bookings', [
             'id' => $bookingId,
             'status' => BookingStatus::CONFIRMED->value,
             'confirmed_by' => $owner->id,
         ]);
+
+        $this->assertNotNull(Booking::find($bookingId)->confirmed_at);
     }
 
-    public function test_confirmed_booking_cannot_return_to_approved(): void
+    public function test_confirmed_booking_cannot_be_approved_twice(): void
     {
         $owner = $this->userWithRole(UserRole::OWNER, true);
         $player = $this->userWithRole(UserRole::PLAYER);
@@ -551,13 +572,12 @@ class BookingTest extends TestCase
         ])->json('data.id');
 
         $this->authAs($owner)->patchJson("/api/owner/bookings/{$bookingId}/approve")->assertOk();
-        $this->authAs($owner)->patchJson("/api/bookings/{$bookingId}/confirm")->assertOk();
 
         $this->authAs($owner)->patchJson("/api/owner/bookings/{$bookingId}/approve")
             ->assertStatus(409);
     }
 
-    public function test_owner_cannot_confirm_other_owners_booking(): void
+    public function test_owner_cannot_reject_others_booking(): void
     {
         $ownerA = $this->userWithRole(UserRole::OWNER, true);
         $ownerB = $this->userWithRole(UserRole::OWNER, true);
@@ -570,13 +590,12 @@ class BookingTest extends TestCase
             'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
         ])->json('data.id');
 
-        $this->authAs($ownerB)->patchJson("/api/owner/bookings/{$bookingId}/approve")->assertOk();
-
-        $this->authAs($ownerA)->patchJson("/api/bookings/{$bookingId}/confirm")
-            ->assertForbidden();
+        $this->authAs($ownerA)->patchJson("/api/owner/bookings/{$bookingId}/reject", [
+            'reason' => 'Bukan lapangan saya',
+        ])->assertForbidden();
     }
 
-    public function test_player_cannot_confirm_booking(): void
+    public function test_player_cannot_approve_booking(): void
     {
         $owner = $this->userWithRole(UserRole::OWNER, true);
         $player = $this->userWithRole(UserRole::PLAYER);
@@ -588,27 +607,8 @@ class BookingTest extends TestCase
             'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
         ])->json('data.id');
 
-        $this->authAs($owner)->patchJson("/api/owner/bookings/{$bookingId}/approve")->assertOk();
-
-        $this->authAs($player)->patchJson("/api/bookings/{$bookingId}/confirm")
+        $this->authAs($player)->patchJson("/api/owner/bookings/{$bookingId}/approve")
             ->assertForbidden();
-    }
-
-    public function test_waiting_booking_cannot_be_confirmed(): void
-    {
-        $owner = $this->userWithRole(UserRole::OWNER, true);
-        $player = $this->userWithRole(UserRole::PLAYER);
-        $field = $this->fieldFor([], $owner);
-
-        $bookingId = $this->authAs($player)->postJson('/api/bookings', [
-            'field_id' => $field->id,
-            'booking_date' => $this->date,
-            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
-        ])->json('data.id');
-
-        $this->authAs($owner)->patchJson("/api/bookings/{$bookingId}/confirm")
-            ->assertStatus(409)
-            ->assertJsonPath('message', 'Booking must be approved before confirmation');
     }
 
     public function test_owner_cannot_approve_others_booking(): void
@@ -677,7 +677,7 @@ class BookingTest extends TestCase
             'end_time' => '08:00',
             'duration_minutes' => 60,
             'total_price' => 70000,
-            'status' => BookingStatus::WAITING_OWNER_APPROVAL->value,
+            'status' => BookingStatus::WAITING_CONFIRMATION->value,
             'expired_at' => now()->subMinute(),
         ]);
 
@@ -689,7 +689,7 @@ class BookingTest extends TestCase
         ]);
     }
 
-    public function test_expiration_job_does_not_expire_approved_booking(): void
+    public function test_expiration_job_does_not_expire_confirmed_booking(): void
     {
         $player = $this->userWithRole(UserRole::PLAYER);
         $field = $this->fieldFor();
@@ -702,7 +702,7 @@ class BookingTest extends TestCase
             'end_time' => '08:00',
             'duration_minutes' => 60,
             'total_price' => 70000,
-            'status' => BookingStatus::APPROVED->value,
+            'status' => BookingStatus::CONFIRMED->value,
             'approved_at' => now(),
             'expired_at' => now()->subMinute(),
         ]);
@@ -711,7 +711,7 @@ class BookingTest extends TestCase
 
         $this->assertDatabaseHas('bookings', [
             'id' => $booking->id,
-            'status' => BookingStatus::APPROVED->value,
+            'status' => BookingStatus::CONFIRMED->value,
         ]);
     }
 
@@ -807,7 +807,7 @@ class BookingTest extends TestCase
             'end_time' => '08:00',
             'duration_minutes' => 60,
             'total_price' => 70000,
-            'status' => BookingStatus::WAITING_OWNER_APPROVAL->value,
+            'status' => BookingStatus::WAITING_CONFIRMATION->value,
             'expired_at' => now()->subMinute(),
         ]);
 
@@ -897,10 +897,10 @@ class BookingTest extends TestCase
             'slots' => [['start_time' => '08:30', 'end_time' => '09:30']],
         ])->assertCreated();
 
-        $this->authAs($owner)->getJson('/api/owner/bookings?status=APPROVED')
+        $this->authAs($owner)->getJson('/api/owner/bookings?status=CONFIRMED')
             ->assertOk()
             ->assertJsonCount(1, 'data.data')
-            ->assertJsonPath('data.data.0.status', BookingStatus::APPROVED->value);
+            ->assertJsonPath('data.data.0.status', BookingStatus::CONFIRMED->value);
     }
 
     public function test_owner_can_filter_incoming_bookings_by_date(): void
@@ -987,10 +987,10 @@ class BookingTest extends TestCase
             'slots' => [['start_time' => '08:30', 'end_time' => '09:30']],
         ])->assertCreated();
 
-        $this->authAs($superAdmin)->getJson('/api/admin/bookings?status=WAITING_OWNER_APPROVAL')
+        $this->authAs($superAdmin)->getJson('/api/admin/bookings?status=WAITING_CONFIRMATION')
             ->assertOk()
             ->assertJsonCount(2, 'data.data')
-            ->assertJsonPath('data.data.0.status', BookingStatus::WAITING_OWNER_APPROVAL->value);
+            ->assertJsonPath('data.data.0.status', BookingStatus::WAITING_CONFIRMATION->value);
     }
 
     public function test_super_admin_can_filter_admin_bookings_by_owner(): void

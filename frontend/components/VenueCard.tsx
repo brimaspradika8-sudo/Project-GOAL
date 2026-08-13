@@ -125,7 +125,7 @@ export default function VenueCard({ field, onFavoriteToggle, isFavorite = false 
                 });
                 return;
               }
-              router.push({ pathname: '/(tabs)/booking', params: { venueId: String(field.id) } });
+              router.push({ pathname: '/venue-detail', params: { id: String(field.id) } });
             }}
           >
             <Text style={[st.bookBtnText, !isApproved && st.bookBtnTextDisabled]}>

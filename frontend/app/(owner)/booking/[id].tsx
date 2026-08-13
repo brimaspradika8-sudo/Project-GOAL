@@ -17,8 +17,8 @@ import { useProfileStore } from '../../../store/profileStore';
 
 /**
  * BookingDetailScreen – menampilkan detail pemesanan dan aksi yang relevan
- *   • Player: dapat mengunggah bukti pembayaran, mengkonfirmasi, atau membatalkan (jika masih menunggu persetujuan).
- *   • Owner: dapat menyetujui atau menolak ketika status = WAITING_OWNER_APPROVAL.
+ *   • Player: dapat membatalkan saat status masih WAITING_CONFIRMATION, atau mengonfirmasi setelah booking dikonfirmasi owner.
+ *   • Owner: dapat menyetujui atau menolak ketika status = WAITING_CONFIRMATION.
  *   • Admin: hanya melihat (tidak ada aksi khusus di layar ini).
  */
 
@@ -121,13 +121,13 @@ export default function BookingDetailScreen() {
 
       {/* Action Buttons based on role & status */}
       <View style={styles.actions}>
-        {isPlayer && booking.status === 'WAITING_PAYMENT' && (
+        {isPlayer && booking.status === 'CONFIRMED' && (
           <Button title="Konfirmasi Pembayaran" onPress={handleConfirmPayment} variant="primary" />
         )}
-        {isPlayer && booking.status === 'WAITING_OWNER_APPROVAL' && (
+        {isPlayer && booking.status === 'WAITING_CONFIRMATION' && (
           <Button title="Batalkan" onPress={handleCancel} variant="secondary" />
         )}
-        {isOwner && booking.status === 'WAITING_OWNER_APPROVAL' && (
+        {isOwner && booking.status === 'WAITING_CONFIRMATION' && (
           <>
             <Button title="Setujui" onPress={handleOwnerApprove} variant="primary" />
             <Button title="Tolak" onPress={handleOwnerReject} variant="secondary" />
@@ -140,11 +140,10 @@ export default function BookingDetailScreen() {
 
 function statusColor(status: string): string {
   const map: Record<string, string> = {
-    WAITING_OWNER_APPROVAL: '#ffb400',
-    APPROVED: '#4caf50',
-    WAITING_PAYMENT: '#ff9800',
+    WAITING_CONFIRMATION: '#ffb400',
     CONFIRMED: '#2196f3',
     COMPLETED: '#9c27b0',
+    REJECTED: '#f44336',
     CANCELLED: '#f44336',
     EXPIRED: '#607d8b',
   };

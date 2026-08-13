@@ -401,6 +401,135 @@ export default function OwnerFieldsPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // ── Gallery (multi-image) ──────────────────────────────────────────────────
+  const [galleryTarget, setGalleryTarget] = useState<any | null>(null);
+  const [galleryUploading, setGalleryUploading] = useState(false);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
+  const [galleryBusyId, setGalleryBusyId] = useState<number | null>(null);
+
+  const uploadFieldImage = async (uri: string, mime?: string): Promise<{ url: string | null; error?: string }> => {
+    try {
+      const formData = new FormData();
+      const filename = uri.split('/').pop() || 'photo.jpg';
+      const ext = filename.split('.').pop()?.toLowerCase() || 'jpg';
+      const finalMime = mime || mimeFromExt(ext);
+
+      if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        const blob = await response.blob();
+        formData.append('image', blob, filename);
+      } else {
+        formData.append('image', { uri, name: filename, type: finalMime } as any);
+      }
+
+      const res = await apiFetch(`/owner/fields/${galleryTarget.id}/images`, { method: 'POST', body: formData });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return { url: null, error: data?.message || 'Gagal mengunggah foto. Silakan coba lagi.' };
+      }
+      const uploaded = getResponseData<any>(data);
+      return { url: uploaded?.image_url ?? uploaded?.id ? 'ok' : null };
+    } catch {
+      return { url: null, error: 'Gagal terhubung ke server upload.' };
+    }
+  };
+
+  const openGallery = (f: any) => {
+    setGalleryTarget(f);
+    setGalleryError(null);
+  };
+
+  const closeGallery = () => {
+    setGalleryTarget(null);
+    setGalleryUploading(false);
+    setGalleryError(null);
+    setGalleryBusyId(null);
+  };
+
+  const refreshGalleryField = async () => {
+    try {
+      const res = await apiFetch('/fields/my/list');
+      const data = await res.json().catch(() => ({}));
+      setFields(data?.data ?? []);
+      const updated = (data?.data ?? []).find((x: any) => x.id === galleryTarget?.id);
+      if (updated) setGalleryTarget(updated);
+    } catch {}
+  };
+
+  const addGalleryImage = async () => {
+    if (!galleryTarget) return;
+    const current = (galleryTarget.images ?? []).length;
+    if (current >= 5) {
+      setGalleryError('Maksimal 5 foto per lapangan.');
+      return;
+    }
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Izin Ditolak', 'Diperlukan akses ke galeri foto.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    const mime = asset.mimeType || '';
+    const ext = asset.uri.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
+    const finalMime = mime || mimeFromExt(ext);
+
+    setGalleryUploading(true);
+    setGalleryError(null);
+    const { error } = await uploadFieldImage(asset.uri, finalMime);
+    setGalleryUploading(false);
+    if (error) {
+      setGalleryError(error);
+      return;
+    }
+    await refreshGalleryField();
+  };
+
+  const setPrimaryImage = async (image: any) => {
+    if (!image.is_primary) {
+      setGalleryBusyId(image.id);
+      setGalleryError(null);
+      try {
+        const res = await apiFetch(`/owner/images/${image.id}/primary`, { method: 'PATCH' });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          setGalleryError(data?.message || 'Gagal mengubah foto utama.');
+        } else {
+          await refreshGalleryField();
+        }
+      } catch {
+        setGalleryError('Gagal terhubung ke server.');
+      } finally {
+        setGalleryBusyId(null);
+      }
+    }
+  };
+
+  const deleteGalleryImage = async (image: any) => {
+    setGalleryBusyId(image.id);
+    setGalleryError(null);
+    try {
+      const res = await apiFetch(`/owner/images/${image.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setGalleryError(data?.message || 'Gagal menghapus foto.');
+      } else {
+        await refreshGalleryField();
+      }
+    } catch {
+      setGalleryError('Gagal terhubung ke server.');
+    } finally {
+      setGalleryBusyId(null);
+    }
+  };
+
   const handleDelete = (id: number, name: string) => {
     setDeleteTarget({ id, name });
   };
@@ -517,6 +646,13 @@ export default function OwnerFieldsPage() {
                     ) : null}
                     <View style={st.actions}>
                       <TouchableOpacity
+                        style={[st.actionBtn, { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outline }]}
+                        onPress={() => openGallery(f)}
+                        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                      >
+                        <MaterialIcons name="photo-library" size={16} color={colors.textSecondary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
                         style={[st.actionBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
                         onPress={() => openEdit(f)}
                         hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
@@ -590,7 +726,144 @@ export default function OwnerFieldsPage() {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      <GalleryModal
+        visible={!!galleryTarget}
+        field={galleryTarget}
+        uploading={galleryUploading}
+        error={galleryError}
+        busyId={galleryBusyId}
+        onAdd={addGalleryImage}
+        onSetPrimary={setPrimaryImage}
+        onDelete={deleteGalleryImage}
+        onClose={closeGallery}
+        st={st}
+        colors={colors}
+      />
     </>
+  );
+}
+
+function GalleryModal({
+  visible, field, uploading, error, busyId,
+  onAdd, onSetPrimary, onDelete, onClose, st, colors,
+}: {
+  visible: boolean;
+  field: any | null;
+  uploading: boolean;
+  error: string | null;
+  busyId: number | null;
+  onAdd: () => void;
+  onSetPrimary: (image: any) => void;
+  onDelete: (image: any) => void;
+  onClose: () => void;
+  st: ReturnType<typeof makeStyles>;
+  colors: ThemeColors;
+}) {
+  const images: any[] = field?.images ?? [];
+  const maxReached = images.length >= 5;
+  const primary = images.find((i) => i.is_primary);
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={st.modalOverlay}>
+        <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={onClose} />
+        <View style={st.sheet}>
+          <View style={st.sheetHandle} />
+
+          <View style={st.sheetHeader}>
+            <View style={[st.sheetIconWrap, { backgroundColor: colors.primaryContainer }]}>
+              <MaterialIcons name="photo-library" size={22} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={st.sheetTitle}>Foto Lapangan</Text>
+              <Text style={st.gallerySubtitle}>{field?.name ?? ''}</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={st.sheetClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <MaterialIcons name="close" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          {error ? (
+            <AlertBox type="error" title={error} style={st.alertBox} />
+          ) : null}
+
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <View style={st.galleryGrid}>
+              {images.map((img) => (
+                <View key={img.id} style={st.galleryItem}>
+                  <Image source={{ uri: img.image_path }} style={st.galleryImg} resizeMode="cover" />
+                  {img.is_primary ? (
+                    <View style={[st.galleryPrimaryBadge, { backgroundColor: colors.primary }]}>
+                      <MaterialIcons name="star" size={10} color={colors.onPrimary} />
+                      <Text style={st.galleryPrimaryText}>Utama</Text>
+                    </View>
+                  ) : null}
+                  <View style={st.galleryActions}>
+                    {!img.is_primary ? (
+                      <TouchableOpacity
+                        style={st.galleryActionBtn}
+                        onPress={() => onSetPrimary(img)}
+                        disabled={busyId === img.id}
+                        hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                      >
+                        {busyId === img.id ? (
+                          <ActivityIndicator size="small" color={colors.onPrimary} />
+                        ) : (
+                          <MaterialIcons name="star-border" size={16} color={colors.onPrimary} />
+                        )}
+                      </TouchableOpacity>
+                    ) : null}
+                    <TouchableOpacity
+                      style={[st.galleryActionBtn, { backgroundColor: colors.error }]}
+                      onPress={() => onDelete(img)}
+                      disabled={busyId === img.id}
+                      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+                    >
+                      {busyId === img.id ? (
+                        <ActivityIndicator size="small" color={colors.onPrimary} />
+                      ) : (
+                        <MaterialIcons name="delete" size={16} color={colors.onPrimary} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+
+              {!maxReached ? (
+                <TouchableOpacity style={st.galleryAdd} onPress={onAdd} disabled={uploading} activeOpacity={0.8}>
+                  {uploading ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <>
+                      <View style={[st.galleryAddCircle, { borderColor: colors.primary }]}>
+                        <MaterialIcons name="add" size={22} color={colors.primary} />
+                      </View>
+                      <Text style={st.galleryAddText}>Tambah Foto</Text>
+                      <Text style={st.galleryAddHint}>{images.length}/5</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <View style={st.galleryAdd}>
+                  <View style={[st.galleryAddCircle, { borderColor: colors.textTertiary }]}>
+                    <MaterialIcons name="check" size={22} color={colors.textTertiary} />
+                  </View>
+                  <Text style={[st.galleryAddText, { color: colors.textTertiary }]}>Maksimal 5 foto</Text>
+                  <Text style={st.galleryAddHint}>{images.length}/5</Text>
+                </View>
+              )}
+            </View>
+
+            <Text style={st.galleryNote}>
+              {primary
+                ? `Foto utama saat ini: ${primary.image_path.split('/').pop()?.slice(0, 24) ?? 'Utama'}`
+                : 'Foto utama wajib ada. Foto pertama yang diunggah otomatis menjadi foto utama.'}
+            </Text>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -951,6 +1224,71 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   sheetTitle: { ...FONTS.headlineSm, fontSize: 18, color: colors.text, flex: 1 },
   sheetClose: { padding: 6, backgroundColor: colors.surfaceContainerLow, borderRadius: 20 },
   alertBox: { marginBottom: 16 },
+  gallerySubtitle: { ...FONTS.bodySm, color: colors.textSecondary, marginTop: 2 },
+
+  // Gallery grid
+  galleryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  galleryItem: {
+    width: '31%',
+    aspectRatio: 1.4,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    position: 'relative',
+  },
+  galleryImg: { width: '100%', height: '100%' },
+  galleryPrimaryBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  galleryPrimaryText: { ...FONTS.labelSm, fontSize: 9, color: colors.onPrimary, fontWeight: '700' },
+  galleryActions: {
+    position: 'absolute',
+    bottom: 6,
+    right: 6,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  galleryActionBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  galleryAdd: {
+    width: '31%',
+    aspectRatio: 1.4,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.outline,
+    backgroundColor: colors.surfaceContainerLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  galleryAddCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  galleryAddText: { ...FONTS.labelMd, fontSize: 11, color: colors.primary, fontWeight: '700' },
+  galleryAddHint: { ...FONTS.bodySm, fontSize: 10, color: colors.textTertiary },
+  galleryNote: { ...FONTS.bodySm, color: colors.textSecondary, marginTop: 16, paddingHorizontal: 2 },
 
   // Image picker
   imagePicker: {

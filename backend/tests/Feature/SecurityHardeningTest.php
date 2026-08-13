@@ -176,7 +176,7 @@ class SecurityHardeningTest extends TestCase
             'end_time' => '08:00',
             'duration_minutes' => 60,
             'total_price' => 70000,
-            'status' => BookingStatus::WAITING_OWNER_APPROVAL->value,
+            'status' => BookingStatus::WAITING_CONFIRMATION->value,
             'expired_at' => now()->addMinutes(15),
         ]);
     }

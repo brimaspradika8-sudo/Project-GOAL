@@ -13,7 +13,10 @@ use App\Http\Requests\Booking\CancelBookingRequest;
 use App\Http\Requests\Booking\StoreBookingRequest;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
+use App\Models\Field;
+use App\Models\Profile;
 use App\Policies\BookingPolicy;
+use App\Policies\FieldPolicy;
 use App\Services\BookingService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -46,8 +49,8 @@ class BookingController extends Controller
             'data' => BookingResource::collection($bookings)->resolve($request),
             'pagination' => [
                 'current_page' => $bookings->currentPage(),
-                'last_page'    => $bookings->lastPage(),
-                'total'        => $bookings->total(),
+                'last_page' => $bookings->lastPage(),
+                'total' => $bookings->total(),
             ],
         ]);
     }
@@ -64,8 +67,8 @@ class BookingController extends Controller
             'data' => BookingResource::collection($bookings)->resolve($request),
             'pagination' => [
                 'current_page' => $bookings->currentPage(),
-                'last_page'    => $bookings->lastPage(),
-                'total'        => $bookings->total(),
+                'last_page' => $bookings->lastPage(),
+                'total' => $bookings->total(),
             ],
         ]);
     }
@@ -74,13 +77,33 @@ class BookingController extends Controller
     {
         $booking = Booking::with(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name'])->find($id);
 
-        if (!$booking) {
+        if (! $booking) {
             return $this->errorResponse('Booking not found', [], 404);
         }
 
         $this->authorizeBooking($request, 'view', $booking);
 
         return $this->resourceResponse('Detail booking berhasil dimuat.', new BookingResource($booking));
+    }
+
+    public function confirm(Request $request, int $id): JsonResponse
+    {
+        $booking = Booking::with('field')->find($id);
+
+        if (! $booking) {
+            return $this->errorResponse('Booking not found', [], 404);
+        }
+
+        try {
+            $this->authorizeBooking($request, 'view', $booking);
+            $updated = $this->bookingService->confirmCashBooking($request->user(), $booking);
+
+            return $this->resourceResponse('Booking berhasil dikonfirmasi.', new BookingResource($updated));
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse('You do not have permission', [], 403);
+        } catch (ValidationException $e) {
+            return $this->errorResponse($e->getMessage(), $e->errors(), 422);
+        }
     }
 
     public function cancel(CancelBookingRequest $request, int $id): JsonResponse
@@ -116,22 +139,22 @@ class BookingController extends Controller
             'data' => BookingResource::collection($bookings)->resolve($request),
             'pagination' => [
                 'current_page' => $bookings->currentPage(),
-                'last_page'    => $bookings->lastPage(),
-                'total'        => $bookings->total(),
+                'last_page' => $bookings->lastPage(),
+                'total' => $bookings->total(),
             ],
         ]);
     }
 
     public function ownerFieldBookings(Request $request, int $id): JsonResponse
     {
-        $isAdmin = $request->user()->profile?->role === \App\Models\Profile::ROLE_SUPER_ADMIN;
-        $field = \App\Models\Field::find($id);
+        $isAdmin = $request->user()->profile?->role === Profile::ROLE_SUPER_ADMIN;
+        $field = Field::find($id);
 
-        if (!$field) {
+        if (! $field) {
             return $this->errorResponse('Lapangan tidak ditemukan.', [], 404);
         }
 
-        if (!app(\App\Policies\FieldPolicy::class)->monitor($request->user(), $field)) {
+        if (! app(FieldPolicy::class)->monitor($request->user(), $field)) {
             throw new AuthorizationException('This action is unauthorized.');
         }
 
@@ -146,8 +169,8 @@ class BookingController extends Controller
             'data' => BookingResource::collection($bookings)->resolve($request),
             'pagination' => [
                 'current_page' => $bookings->currentPage(),
-                'last_page'    => $bookings->lastPage(),
-                'total'        => $bookings->total(),
+                'last_page' => $bookings->lastPage(),
+                'total' => $bookings->total(),
             ],
         ]);
     }
@@ -159,8 +182,8 @@ class BookingController extends Controller
     public function adminIndex(Request $request): JsonResponse
     {
         $filters = array_filter([
-            'status'   => $request->query('status'),
-            'date'     => $request->query('date'),
+            'status' => $request->query('status'),
+            'date' => $request->query('date'),
             'field_id' => $request->query('field_id'),
             'owner_id' => $request->query('owner_id'),
         ], fn ($v) => $v !== null && $v !== '');
@@ -175,8 +198,8 @@ class BookingController extends Controller
             'data' => BookingResource::collection($bookings)->resolve($request),
             'pagination' => [
                 'current_page' => $bookings->currentPage(),
-                'last_page'    => $bookings->lastPage(),
-                'total'        => $bookings->total(),
+                'last_page' => $bookings->lastPage(),
+                'total' => $bookings->total(),
             ],
         ]);
     }
@@ -184,8 +207,8 @@ class BookingController extends Controller
     private function filters(Request $request): array
     {
         return array_filter([
-            'status'   => $request->query('status'),
-            'date'     => $request->query('date') ?? $request->query('tanggal'),
+            'status' => $request->query('status'),
+            'date' => $request->query('date') ?? $request->query('tanggal'),
             'field_id' => $request->query('field_id') ?? $request->query('field'),
         ], fn ($v) => $v !== null && $v !== '');
     }
@@ -194,15 +217,16 @@ class BookingController extends Controller
     {
         $booking = Booking::with('field')->find($id);
 
-        if (!$booking) {
+        if (! $booking) {
             return $this->errorResponse('Booking not found', [], 404);
         }
 
         try {
             $this->authorizeBooking($request, 'approve', $booking);
             $updated = $this->bookingService->approveBooking($request->user(), $booking);
+
             return $this->resourceResponse('Booking approved', new BookingResource($updated));
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+        } catch (AuthorizationException $e) {
             return $this->errorResponse('You do not have permission', [], 403);
         } catch (BookingAlreadyProcessedException $e) {
             return $this->errorResponse('Booking already processed', [], 409);
@@ -215,7 +239,7 @@ class BookingController extends Controller
     {
         $booking = Booking::with('field')->find($id);
 
-        if (!$booking) {
+        if (! $booking) {
             return $this->errorResponse('Booking not found', [], 404);
         }
 
@@ -225,8 +249,9 @@ class BookingController extends Controller
                 'reason' => ['nullable', 'string', 'max:255'],
             ]);
             $updated = $this->bookingService->rejectBooking($request->user(), $booking, $data['reason'] ?? null);
+
             return $this->resourceResponse('Booking rejected', new BookingResource($updated));
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+        } catch (AuthorizationException $e) {
             return $this->errorResponse('You do not have permission', [], 403);
         } catch (BookingAlreadyProcessedException $e) {
             return $this->errorResponse('Booking already processed', [], 409);
@@ -235,19 +260,19 @@ class BookingController extends Controller
         }
     }
 
-    public function confirm(Request $request, int $id): JsonResponse
+    public function complete(Request $request, int $id): JsonResponse
     {
         $booking = Booking::with('field')->find($id);
 
-        if (!$booking) {
+        if (! $booking) {
             return $this->errorResponse('Booking not found', [], 404);
         }
 
         try {
-            $this->authorizeBooking($request, 'confirm', $booking);
-            $updated = $this->bookingService->confirmBooking($request->user(), $booking);
+            $this->authorizeBooking($request, 'complete', $booking);
+            $updated = $this->bookingService->completeBooking($request->user(), $booking);
 
-            return $this->resourceResponse('Booking confirmed', new BookingResource($updated));
+            return $this->resourceResponse('Booking completed', new BookingResource($updated));
         } catch (UnauthorizedBookingActionException $e) {
             return $this->errorResponse('You do not have permission', [], 403);
         } catch (AuthorizationException $e) {
@@ -261,7 +286,7 @@ class BookingController extends Controller
     {
         $policy = app(BookingPolicy::class);
 
-        if (!$policy->{$ability}($request->user(), $booking)) {
+        if (! $policy->{$ability}($request->user(), $booking)) {
             throw new AuthorizationException('This action is unauthorized.');
         }
     }

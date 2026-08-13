@@ -20,21 +20,22 @@ class BookingPolicy
         return $booking->user_id === $user->id;
     }
 
-    public function confirm(User $user, Booking $booking): bool
-    {
-        return $this->isSuperAdmin($user)
-            || $booking->field?->owner_id === $user->id
-            || $booking->user_id === $user->id; // player confirms their own payment
-    }
-
     public function approve(User $user, Booking $booking): bool
     {
-        return $this->confirm($user, $booking);
+        return $this->isSuperAdmin($user)
+            || $booking->field?->owner_id === $user->id;
     }
 
     public function reject(User $user, Booking $booking): bool
     {
-        return $this->confirm($user, $booking);
+        return $this->isSuperAdmin($user)
+            || $booking->field?->owner_id === $user->id;
+    }
+
+    public function complete(User $user, Booking $booking): bool
+    {
+        return $this->isSuperAdmin($user)
+            || $booking->field?->owner_id === $user->id;
     }
 
     private function isSuperAdmin(User $user): bool

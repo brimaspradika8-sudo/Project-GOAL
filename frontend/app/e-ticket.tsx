@@ -38,14 +38,13 @@ function ticketCode(id: number): string {
 
 function statusLabel(status: Booking['status']): string {
   switch (status) {
-    case 'CONFIRMED': return 'AKTIF';
-    case 'APPROVED': return 'TERKONFIRMASI';
-    case 'WAITING_OWNER_APPROVAL': return 'MENUNGGU';
+    case 'CONFIRMED': return 'TERKONFIRMASI';
+    case 'WAITING_CONFIRMATION': return 'MENUNGGU';
     case 'COMPLETED': return 'SELESAI';
     case 'REJECTED': return 'DITOLAK';
     case 'CANCELLED': return 'DIBATALKAN';
     case 'EXPIRED': return 'KEDALUWARSA';
-    default: return status.replace(/_/g, ' ').toUpperCase();
+    default: return String(status).replace(/_/g, ' ').toUpperCase();
   }
 }
 

@@ -12,11 +12,11 @@ class ExpireBookings extends Command
 {
     protected $signature = 'booking:expire';
 
-    protected $description = 'Expire waiting owner approval bookings whose expiry time has passed.';
+    protected $description = 'Expire waiting confirmation bookings whose expiry time has passed.';
 
     public function handle(): int
     {
-        $bookings = Booking::where('status', BookingStatus::WAITING_OWNER_APPROVAL->value)
+        $bookings = Booking::where('status', BookingStatus::WAITING_CONFIRMATION->value)
             ->whereNotNull('expired_at')
             ->where('expired_at', '<=', now())
             ->get();

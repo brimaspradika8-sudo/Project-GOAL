@@ -9,6 +9,21 @@ import {
   type BookingStatus,
 } from '../services/bookingService';
 
+// ─── useNow ───────────────────────────────────────────────────────────────────
+// Returns the device's current time, refreshed every `intervalMs` so slot
+// availability follows real time while the screen stays open.
+
+export function useNow(intervalMs = 30000): Date {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), intervalMs);
+    return () => clearInterval(timer);
+  }, [intervalMs]);
+
+  return now;
+}
+
 // ─── useSlots ─────────────────────────────────────────────────────────────────
 
 interface UseSlotsResult {

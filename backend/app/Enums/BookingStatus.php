@@ -4,8 +4,7 @@ namespace App\Enums;
 
 enum BookingStatus: string
 {
-    case WAITING_OWNER_APPROVAL = 'WAITING_OWNER_APPROVAL';
-    case APPROVED = 'APPROVED';
+    case WAITING_CONFIRMATION = 'WAITING_CONFIRMATION';
     case REJECTED = 'REJECTED';
     case EXPIRED = 'EXPIRED';
     case CANCELLED = 'CANCELLED';

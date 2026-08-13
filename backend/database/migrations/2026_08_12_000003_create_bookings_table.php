@@ -21,7 +21,8 @@ return new class extends Migration
             $table->time('end_time');
             $table->unsignedSmallInteger('duration_minutes');
             $table->unsignedBigInteger('total_price');
-            $table->string('status')->default('WAITING_OWNER_APPROVAL');
+            $table->string('payment_method')->default('cash');
+            $table->string('status')->default('WAITING_CONFIRMATION');
             $table->timestamp('expired_at')->nullable();
             $table->timestamp('approved_at')->nullable();
             $table->timestamp('cancelled_at')->nullable();

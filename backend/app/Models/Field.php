@@ -12,6 +12,7 @@ class Field extends Model
     use SoftDeletes;
 
     protected $table = 'fields';
+
     protected $fillable = [
         'owner_id',
         'name',
@@ -33,7 +34,7 @@ class Field extends Model
 
     protected $casts = [
         'price_per_hour' => 'integer',
-        'approved_at'    => 'datetime',
+        'approved_at' => 'datetime',
         'session_duration_minutes' => 'integer',
         'buffer_duration_minutes' => 'integer',
     ];
@@ -51,6 +52,11 @@ class Field extends Model
     public function prices(): HasMany
     {
         return $this->hasMany(FieldPrice::class)->orderBy('start_time');
+    }
+
+    public function images(): HasMany
+    {
+        return $this->hasMany(FieldImage::class)->orderByDesc('is_primary')->orderBy('id');
     }
 
     public function scopeApproved($query)

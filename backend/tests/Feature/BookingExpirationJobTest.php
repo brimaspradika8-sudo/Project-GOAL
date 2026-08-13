@@ -33,7 +33,7 @@ class BookingExpirationJobTest extends TestCase
             'end_time' => '08:00',
             'duration_minutes' => 60,
             'total_price' => 70000,
-            'status' => BookingStatus::WAITING_OWNER_APPROVAL->value,
+            'status' => BookingStatus::WAITING_CONFIRMATION->value,
             'expired_at' => now()->subMinute(),
         ]);
 
@@ -46,12 +46,12 @@ class BookingExpirationJobTest extends TestCase
         ]);
     }
 
-    public function test_job_does_not_change_approved_or_rejected(): void
+    public function test_job_does_not_change_confirmed_or_rejected(): void
     {
         $player = $this->userWithRole(UserRole::PLAYER);
         $field = $this->fieldFor();
 
-        $approved = Booking::create([
+        $confirmed = Booking::create([
             'user_id' => $player->id,
             'field_id' => $field->id,
             'booking_date' => $this->date,
@@ -59,9 +59,10 @@ class BookingExpirationJobTest extends TestCase
             'end_time' => '09:00',
             'duration_minutes' => 60,
             'total_price' => 70000,
-            'status' => BookingStatus::APPROVED->value,
+            'status' => BookingStatus::CONFIRMED->value,
             'expired_at' => now()->subMinute(),
             'approved_at' => now()->subMinutes(10),
+            'confirmed_at' => now()->subMinutes(10),
         ]);
 
         $rejected = Booking::create([
@@ -77,15 +78,15 @@ class BookingExpirationJobTest extends TestCase
             'rejected_at' => now()->subMinutes(5),
         ]);
 
-        $job1 = new BookingExpirationJob($approved->id);
+        $job1 = new BookingExpirationJob($confirmed->id);
         $job1->handle($this->app->make(BookingStatusService::class));
 
         $job2 = new BookingExpirationJob($rejected->id);
         $job2->handle($this->app->make(BookingStatusService::class));
 
         $this->assertDatabaseHas('bookings', [
-            'id' => $approved->id,
-            'status' => BookingStatus::APPROVED->value,
+            'id' => $confirmed->id,
+            'status' => BookingStatus::CONFIRMED->value,
         ]);
 
         $this->assertDatabaseHas('bookings', [
@@ -108,7 +109,7 @@ class BookingExpirationJobTest extends TestCase
             'end_time' => '11:00',
             'duration_minutes' => 60,
             'total_price' => 70000,
-            'status' => BookingStatus::WAITING_OWNER_APPROVAL->value,
+            'status' => BookingStatus::WAITING_CONFIRMATION->value,
             'expired_at' => now()->subMinute(),
         ]);
 

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,6 +9,7 @@ import {
   StatusBar,
   ActivityIndicator,
   RefreshControl,
+  Dimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
@@ -16,22 +17,47 @@ import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
 import { SafeImage } from '../../components/SafeImage';
 import { FadeInView } from '../../components/FadeInView';
 import { useTheme } from '../../lib/theme';
+import { useIsMobileWeb } from '../../lib/responsive';
 import { useBookingHistory } from '../../hooks/useBooking';
 import { type Booking, type BookingStatus } from '../../services/bookingService';
 import { SPORT_LABELS } from '../../lib/fieldValidation';
 
-// ─── Status Config ────────────────────────────────────────────────────────────
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const STATUS_CONFIG: Record<BookingStatus, { label: string; bgKey: string; textKey: string; icon: string }> = {
-  WAITING_OWNER_APPROVAL: { label: 'Menunggu Persetujuan', bgKey: 'floodlight', textKey: 'floodlight', icon: 'schedule' },
-  APPROVED:               { label: 'Disetujui — Bayar Sekarang', bgKey: 'info', textKey: 'info', icon: 'check-circle-outline' },
-  WAITING_PAYMENT:        { label: 'Menunggu Pembayaran', bgKey: 'warning', textKey: 'warning', icon: 'payment' },
-  CONFIRMED:              { label: 'Booking Aktif', bgKey: 'primary', textKey: 'primary', icon: 'event-available' },
-  COMPLETED:              { label: 'Selesai', bgKey: 'textTertiary', textKey: 'textTertiary', icon: 'done-all' },
-  REJECTED:               { label: 'Ditolak', bgKey: 'error', textKey: 'error', icon: 'cancel' },
-  CANCELLED:              { label: 'Dibatalkan', bgKey: 'error', textKey: 'error', icon: 'cancel' },
-  EXPIRED:                { label: 'Kadaluarsa', bgKey: 'error', textKey: 'error', icon: 'timer-off' },
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const PRIMARY = '#10B981';
+const PRIMARY_LIGHT = '#D1FAE5';
+const YELLOW = '#F59E0B';
+const YELLOW_LIGHT = '#FEF3C7';
+const RED = '#EF4444';
+const RED_LIGHT = '#FEE2E2';
+const GRAY = '#6B7280';
+const GRAY_LIGHT = '#F3F4F6';
+const WHITE = '#FFFFFF';
+
+type TabKey = 'aktif' | 'riwayat';
+
+const ACTIVE_STATUSES: BookingStatus[] = ['WAITING_CONFIRMATION', 'CONFIRMED'];
+const PAST_STATUSES: BookingStatus[] = ['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED'];
+
+// ─── Status Badge Config ──────────────────────────────────────────────────────
+
+const STATUS_CONFIG: Record<BookingStatus, {
+  label: string;
+  dot: string;
+  bg: string;
+  text: string;
+}> = {
+  WAITING_CONFIRMATION: { label: 'Menunggu Konfirmasi', dot: '🟡', bg: YELLOW_LIGHT, text: YELLOW },
+  CONFIRMED:            { label: 'Dikonfirmasi',         dot: '🟢', bg: PRIMARY_LIGHT, text: PRIMARY },
+  COMPLETED:            { label: 'Selesai',              dot: '⚪', bg: GRAY_LIGHT,    text: GRAY },
+  REJECTED:             { label: 'Ditolak',              dot: '🔴', bg: RED_LIGHT,     text: RED },
+  CANCELLED:            { label: 'Dibatalkan',           dot: '🔴', bg: RED_LIGHT,     text: RED },
+  EXPIRED:              { label: 'Kadaluarsa',           dot: '🔴', bg: RED_LIGHT,     text: RED },
 };
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatPrice(p: number): string {
   return `Rp${p.toLocaleString('id-ID')}`;
@@ -40,200 +66,402 @@ function formatPrice(p: number): string {
 function formatDateDisplay(d: string): string {
   if (!d) return '-';
   const date = new Date(d + 'T00:00:00');
-  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-const ACTIVE_STATUSES: BookingStatus[] = ['WAITING_OWNER_APPROVAL', 'APPROVED', 'WAITING_PAYMENT', 'CONFIRMED'];
-const PAST_STATUSES: BookingStatus[] = ['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED'];
+function formatDuration(minutes: number): string {
+  if (!minutes) return '-';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h > 0 && m > 0) return `${h} jam ${m} menit`;
+  if (h > 0) return `${h} jam`;
+  return `${m} menit`;
+}
+
+// ─── Status Badge Component ───────────────────────────────────────────────────
+
+function StatusBadge({ status }: { status: BookingStatus }) {
+  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.EXPIRED;
+  return (
+    <View style={[badgeSt.pill, { backgroundColor: cfg.bg }]}>
+      <Text style={badgeSt.dot}>{cfg.dot}</Text>
+      <Text style={[badgeSt.label, { color: cfg.text }]}>{cfg.label}</Text>
+    </View>
+  );
+}
+
+const badgeSt = StyleSheet.create({
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+  },
+  dot: { fontSize: 10 },
+  label: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', letterSpacing: 0.1 },
+});
 
 // ─── Booking Card ─────────────────────────────────────────────────────────────
 
-function BookingCard({ booking, colors, onPress }: {
+function BookingCard({
+  booking,
+  onPress,
+}: {
   booking: Booking;
-  colors: ReturnType<typeof useTheme>['colors'];
   onPress: () => void;
 }) {
-  const cfg = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.EXPIRED;
-  const accentColor = (colors as any)[cfg.textKey] ?? colors.textTertiary;
-  const accentBg = accentColor + '18';
   const sportLabel = SPORT_LABELS[booking.field?.sport_type ?? ''] ?? (booking.field?.sport_type ?? '');
+  const imageUri = booking.field?.image_url ?? '';
 
   return (
-    <TouchableOpacity style={[st.card, { backgroundColor: colors.surfaceWhite }]} onPress={onPress} activeOpacity={0.8}>
-      {/* Image strip */}
-      <View style={st.cardImageWrap}>
-        <SafeImage source={{ uri: booking.field?.image_url ?? '' }} style={st.cardImage} fallbackSize={28} />
-        <View style={[st.cardStatusBadge, { backgroundColor: accentBg, borderColor: accentColor }]}>
-          <MaterialIcons name={cfg.icon as any} size={10} color={accentColor} />
-          <Text style={[st.cardStatusText, { color: accentColor }]}>{cfg.label}</Text>
-        </View>
+    <TouchableOpacity
+      style={cardSt.wrapper}
+      onPress={onPress}
+      activeOpacity={0.82}
+    >
+      {/* ── Left: venue image ── */}
+      <View style={cardSt.imageWrap}>
+        <SafeImage
+          source={{ uri: imageUri }}
+          style={cardSt.image}
+          fallbackSize={32}
+        />
       </View>
 
-      {/* Info */}
-      <View style={st.cardBody}>
-        <Text style={[st.cardFieldName, { color: colors.text }]} numberOfLines={1}>
-          {booking.field?.name ?? `Field #${booking.field_id}`}
-        </Text>
-        <Text style={[st.cardSport, { color: colors.textSecondary }]} numberOfLines={1}>{sportLabel}</Text>
+      {/* ── Right: info ── */}
+      <View style={cardSt.body}>
+        {/* Status badge */}
+        <StatusBadge status={booking.status} />
 
-        <View style={st.cardMeta}>
-          <View style={st.cardMetaItem}>
-            <MaterialIcons name="event" size={13} color={colors.primary} />
-            <Text style={[st.cardMetaText, { color: colors.textSecondary }]}>{formatDateDisplay(booking.booking_date)}</Text>
+        {/* Venue name */}
+        <Text style={cardSt.fieldName} numberOfLines={1}>
+          {booking.field?.name ?? `Lapangan #${booking.field_id}`}
+        </Text>
+
+        {/* Sport type */}
+        {!!sportLabel && (
+          <Text style={cardSt.sport} numberOfLines={1}>{sportLabel}</Text>
+        )}
+
+        {/* Date & time */}
+        <View style={cardSt.metaCol}>
+          <View style={cardSt.metaRow}>
+            <Text style={cardSt.metaIcon}>📅</Text>
+            <Text style={cardSt.metaText}>{formatDateDisplay(booking.booking_date)}</Text>
           </View>
-          <View style={st.cardMetaItem}>
-            <MaterialIcons name="access-time" size={13} color={colors.primary} />
-            <Text style={[st.cardMetaText, { color: colors.textSecondary }]}>{booking.start_time} – {booking.end_time}</Text>
+          <View style={cardSt.metaRow}>
+            <Text style={cardSt.metaIcon}>⏰</Text>
+            <Text style={cardSt.metaText}>{booking.start_time} – {booking.end_time}</Text>
           </View>
         </View>
 
-        <View style={st.cardFooter}>
-          <Text style={[st.cardPrice, { color: colors.primary }]}>{formatPrice(booking.total_price)}</Text>
-          <View style={[st.cardActionBtn, { backgroundColor: colors.primaryContainer }]}>
-            <Text style={[st.cardActionText, { color: colors.primary }]}>
-              {booking.status === 'APPROVED' ? 'Bayar →' :
-               booking.status === 'WAITING_OWNER_APPROVAL' ? 'Menunggu →' :
-               'Detail →'}
-            </Text>
-          </View>
+        {/* Footer: price + detail button */}
+        <View style={cardSt.footer}>
+          <Text style={cardSt.price}>{formatPrice(booking.total_price)}</Text>
+          <TouchableOpacity style={cardSt.detailBtn} onPress={onPress} activeOpacity={0.8}>
+            <Text style={cardSt.detailBtnText}>Lihat Detail</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </TouchableOpacity>
   );
 }
 
-const st = StyleSheet.create({
-  card: {
+const cardSt = StyleSheet.create({
+  wrapper: {
     flexDirection: 'row',
-    borderRadius: SIZES.borderRadiusLg,
+    backgroundColor: WHITE,
+    borderRadius: 20,
+    marginBottom: 14,
     overflow: 'hidden',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    ...SHADOWS.sm,
+    ...SHADOWS.md,
   },
-  cardImageWrap: { width: 92, position: 'relative' },
-  cardImage: { width: 92, height: '100%' },
-  cardStatusBadge: {
-    position: 'absolute', bottom: 6, left: 4, right: 4,
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    paddingHorizontal: 5, paddingVertical: 3,
-    borderRadius: 6, borderWidth: 1,
+  imageWrap: {
+    width: 110,
+    height: 'auto',
   },
-  cardStatusText: { fontFamily: FONT_FAMILY, fontSize: 8, fontWeight: '800', letterSpacing: 0.2, flex: 1 },
-  cardBody: { flex: 1, padding: 12, gap: 4 },
-  cardFieldName: { ...FONTS.titleMd },
-  cardSport: { ...FONTS.bodySm },
-  cardMeta: { gap: 4, marginTop: 4 },
-  cardMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  cardMetaText: { ...FONTS.bodySm },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
-  cardPrice: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '700' },
-  cardActionBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  cardActionText: { ...FONTS.labelMd },
+  image: {
+    width: 110,
+    height: '100%',
+    minHeight: 150,
+  },
+  body: {
+    flex: 1,
+    padding: 14,
+    gap: 6,
+  },
+  fieldName: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+    marginTop: 2,
+  },
+  sport: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  metaCol: { gap: 3, marginTop: 2 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  metaIcon: { fontSize: 12 },
+  metaText: { fontFamily: FONT_FAMILY, fontSize: 12, color: '#4B5563', fontWeight: '500' },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  price: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 15,
+    fontWeight: '800',
+    color: PRIMARY,
+  },
+  detailBtn: {
+    borderWidth: 1.5,
+    borderColor: PRIMARY,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  detailBtnText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '700',
+    color: PRIMARY,
+  },
+});
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+
+function EmptyState({ tab }: { tab: TabKey }) {
+  const isActive = tab === 'aktif';
+  return (
+    <FadeInView>
+      <View style={emptySt.container}>
+        <View style={emptySt.iconWrap}>
+          <MaterialIcons
+            name={isActive ? 'event-busy' : 'history'}
+            size={52}
+            color={PRIMARY}
+          />
+        </View>
+        <Text style={emptySt.title}>
+          {isActive ? 'Belum ada booking aktif' : 'Belum ada riwayat booking'}
+        </Text>
+        <Text style={emptySt.subtitle}>
+          {isActive
+            ? 'Yuk cari lapangan dan mulai bermain!'
+            : 'Semua riwayat booking kamu akan muncul di sini.'}
+        </Text>
+        {isActive && (
+          <TouchableOpacity
+            style={emptySt.btn}
+            onPress={() => router.push('/(tabs)/fields')}
+            activeOpacity={0.85}
+          >
+            <MaterialIcons name="search" size={16} color={WHITE} />
+            <Text style={emptySt.btnText}>Cari Lapangan</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </FadeInView>
+  );
+}
+
+const emptySt = StyleSheet.create({
+  container: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    gap: 8,
+  },
+  iconWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: PRIMARY_LIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  title: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  btn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: PRIMARY,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  btnText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '700',
+    color: WHITE,
+  },
 });
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function BookingTabScreen() {
   const { colors, resolved } = useTheme();
-  const styles = makeStyles(colors);
+  const isMobile = useIsMobileWeb();
   const { bookings, loading, refreshing, error, refresh } = useBookingHistory();
+  const [activeTab, setActiveTab] = useState<TabKey>('aktif');
 
-  // Refresh when tab comes into focus
   useFocusEffect(useCallback(() => {
     refresh();
   }, [refresh]));
 
   const upcoming = bookings.filter(b => ACTIVE_STATUSES.includes(b.status));
   const history  = bookings.filter(b => PAST_STATUSES.includes(b.status));
+  const displayed = activeTab === 'aktif' ? upcoming : history;
 
   function navigateToBooking(b: Booking) {
-    if (b.status === 'WAITING_OWNER_APPROVAL') {
-      router.push({ pathname: '/booking-waiting', params: { id: String(b.id) } });
-    } else if (b.status === 'APPROVED') {
-      router.push({ pathname: '/booking-payment', params: { id: String(b.id) } });
+    if (b.status === 'WAITING_CONFIRMATION') {
+      router.push({ pathname: '/booking/payment/[id]', params: { id: String(b.id) } });
     } else if (b.status === 'CONFIRMED') {
       router.push({ pathname: '/booking-success', params: { id: String(b.id) } });
     }
-    // COMPLETED, CANCELLED, EXPIRED → no navigation for now
-  }
-
-  function renderEmpty(message: string) {
-    return (
-      <View style={styles.emptyBox}>
-        <MaterialIcons name="event-busy" size={40} color={colors.textTertiary} />
-        <Text style={styles.emptyText}>{message}</Text>
-      </View>
-    );
+    // COMPLETED, REJECTED, CANCELLED, EXPIRED — no navigation for now
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[st.root, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={resolved === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Booking</Text>
+      {/* ── Header ── */}
+      <View style={st.header}>
+        <View style={st.headerLeft}>
+          <Text style={st.headerTitle}>My Booking</Text>
+          <Text style={st.headerSubtitle}>Lihat dan kelola semua booking kamu</Text>
+        </View>
         <TouchableOpacity
-          style={[styles.newBookingBtn, { backgroundColor: colors.primary }]}
+          style={st.headerCta}
           onPress={() => router.push('/(tabs)/fields')}
           activeOpacity={0.85}
         >
-          <MaterialIcons name="add" size={18} color={colors.onPrimary} />
-          <Text style={[styles.newBookingText, { color: colors.onPrimary }]}>Booking Baru</Text>
+          <MaterialIcons name="add" size={18} color={WHITE} />
+          <Text style={st.headerCtaText}>Cari Lapangan</Text>
         </TouchableOpacity>
       </View>
 
+      {/* ── Tab Bar ── */}
+      <View style={st.tabBarOuter}>
+        <View style={st.tabBarInner}>
+          {(['aktif', 'riwayat'] as TabKey[]).map(tab => {
+            const isActive = activeTab === tab;
+            const count = tab === 'aktif' ? upcoming.length : history.length;
+            return (
+              <TouchableOpacity
+                key={tab}
+                style={[st.tabBtn, isActive && st.tabBtnActive]}
+                onPress={() => setActiveTab(tab)}
+                activeOpacity={0.8}
+              >
+                <Text style={[st.tabLabel, isActive && st.tabLabelActive]}>
+                  {tab === 'aktif' ? 'Aktif' : 'Riwayat'}
+                </Text>
+                {count > 0 && (
+                  <View style={[st.tabBadge, isActive ? st.tabBadgeActive : st.tabBadgeInactive]}>
+                    <Text style={[st.tabBadgeText, isActive ? { color: PRIMARY } : { color: GRAY }]}>
+                      {count}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
+      {/* ── Content ── */}
       {loading ? (
-        <View style={styles.loadingCenter}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Memuat booking...</Text>
+        <View style={st.center}>
+          <ActivityIndicator size="large" color={PRIMARY} />
+          <Text style={[st.loadingText, { color: colors.textSecondary }]}>Memuat booking...</Text>
         </View>
       ) : error ? (
-        <View style={styles.loadingCenter}>
-          <MaterialIcons name="error-outline" size={40} color={colors.error} />
-          <Text style={[styles.errorText, { color: colors.textSecondary }]}>{error}</Text>
-          <TouchableOpacity style={[styles.retryBtn, { backgroundColor: colors.primary }]} onPress={refresh}>
-            <Text style={[styles.retryText, { color: colors.onPrimary }]}>Coba Lagi</Text>
+        <View style={st.center}>
+          <View style={st.errorIconWrap}>
+            <MaterialIcons name="wifi-off" size={40} color={RED} />
+          </View>
+          <Text style={st.errorTitle}>Gagal memuat data</Text>
+          <Text style={[st.errorMsg, { color: colors.textSecondary }]}>{error}</Text>
+          <TouchableOpacity style={st.retryBtn} onPress={refresh} activeOpacity={0.85}>
+            <MaterialIcons name="refresh" size={16} color={WHITE} />
+            <Text style={st.retryText}>Coba Lagi</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            st.scrollContent,
+            !isMobile && { maxWidth: 720, alignSelf: 'center', width: '100%' },
+          ]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={refresh}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
+              tintColor={PRIMARY}
+              colors={[PRIMARY]}
             />
           }
         >
-          {/* Upcoming Bookings */}
-          <FadeInView>
-            <Text style={styles.sectionTitle}>Booking Aktif</Text>
-            {upcoming.length === 0
-              ? renderEmpty('Tidak ada booking aktif.\nMulai pesan lapangan sekarang!')
-              : upcoming.map(b => (
-                  <BookingCard key={b.id} booking={b} colors={colors} onPress={() => navigateToBooking(b)} />
-                ))
-            }
-          </FadeInView>
-
-          {/* History */}
-          {history.length > 0 && (
-            <FadeInView delay={100}>
-              <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Riwayat</Text>
-              {history.map(b => (
-                <BookingCard key={b.id} booking={b} colors={colors} onPress={() => {}} />
+          {displayed.length === 0 ? (
+            <EmptyState tab={activeTab} />
+          ) : (
+            <FadeInView>
+              {displayed.map((b, i) => (
+                <BookingCard
+                  key={b.id}
+                  booking={b}
+                  onPress={() => navigateToBooking(b)}
+                />
               ))}
             </FadeInView>
           )}
-
-          <View style={{ height: 40 }} />
+          <View style={{ height: 120 }} />
         </ScrollView>
+      )}
+
+      {/* ── Floating CTA (mobile only) ── */}
+      {isMobile && !loading && !error && displayed.length > 0 && (
+        <View style={st.floatingWrap} pointerEvents="box-none">
+          <TouchableOpacity
+            style={st.floatingBtn}
+            onPress={() => router.push('/(tabs)/fields')}
+            activeOpacity={0.9}
+          >
+            <MaterialIcons name="search" size={20} color={WHITE} />
+            <Text style={st.floatingBtnText}>+ Cari Lapangan</Text>
+          </TouchableOpacity>
+        </View>
       )}
     </View>
   );
@@ -241,42 +469,186 @@ export default function BookingTabScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
-  container: { flex: 1 },
+const st = StyleSheet.create({
+  root: { flex: 1 },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 56 : 44,
-    paddingBottom: 14,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1, borderBottomColor: colors.divider,
+    paddingTop: Platform.OS === 'ios' ? 58 : 44,
+    paddingBottom: 16,
+    backgroundColor: WHITE,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
-  headerTitle: { fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: '700', color: colors.text },
-  newBookingBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: SIZES.borderRadius,
+  headerLeft: { gap: 2 },
+  headerTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#111827',
+    letterSpacing: -0.3,
   },
-  newBookingText: { ...FONTS.labelMd },
-
-  scrollContent: { paddingHorizontal: 16, paddingTop: 20 },
-  sectionTitle: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 12 },
-
-  loadingCenter: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  loadingText: { ...FONTS.bodyMd },
-  errorText: { ...FONTS.bodyMd, textAlign: 'center' },
-  retryBtn: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: SIZES.borderRadius },
-  retryText: { ...FONTS.buttonMd },
-
-  emptyBox: {
+  headerSubtitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  headerCta: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 36,
-    gap: 10,
-    backgroundColor: colors.surfaceContainer,
-    borderRadius: SIZES.borderRadiusLg,
-    marginBottom: 8,
+    gap: 5,
+    backgroundColor: PRIMARY,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
   },
-  emptyText: { ...FONTS.bodyMd, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+  headerCtaText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '700',
+    color: WHITE,
+  },
+
+  // Tab bar
+  tabBarOuter: {
+    backgroundColor: WHITE,
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  tabBarInner: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+  },
+  tabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 9,
+  },
+  tabBtnActive: {
+    backgroundColor: PRIMARY,
+    ...SHADOWS.sm,
+  },
+  tabLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '700',
+    color: GRAY,
+  },
+  tabLabelActive: {
+    color: WHITE,
+  },
+  tabBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+  },
+  tabBadgeActive: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  tabBadgeInactive: {
+    backgroundColor: '#E5E7EB',
+  },
+  tabBadgeText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+
+  // Scroll content
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+  },
+
+  // States
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    padding: 32,
+  },
+  loadingText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+  },
+  errorIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: RED_LIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  errorTitle: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  errorMsg: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: PRIMARY,
+    paddingHorizontal: 24,
+    paddingVertical: 11,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+  retryText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '700',
+    color: WHITE,
+  },
+
+  // Floating button
+  floatingWrap: {
+    position: 'absolute',
+    bottom: 90,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  floatingBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: PRIMARY,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 50,
+    ...SHADOWS.lg,
+  },
+  floatingBtnText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 15,
+    fontWeight: '700',
+    color: WHITE,
+  },
 });

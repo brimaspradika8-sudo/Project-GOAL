@@ -128,7 +128,7 @@ class AvailabilityTest extends TestCase
             'end_time' => '08:00',
             'duration_minutes' => 60,
             'total_price' => 100000,
-            'status' => BookingStatus::APPROVED->value,
+            'status' => BookingStatus::CONFIRMED->value,
         ]);
 
         $this->getJson("/api/lapangan/{$field->id}/slots?tanggal=2026-08-20")
@@ -193,7 +193,7 @@ class AvailabilityTest extends TestCase
             'end_time' => '11:00',
             'duration_minutes' => 60,
             'total_price' => 100000,
-            'status' => BookingStatus::APPROVED->value,
+            'status' => BookingStatus::CONFIRMED->value,
         ]);
 
         $this->assertSame(

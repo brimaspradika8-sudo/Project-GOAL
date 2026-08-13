@@ -6,7 +6,7 @@ return [
     | Booking expiration window (minutes)
     |--------------------------------------------------------------------------
     |
-    | WAITING_OWNER_APPROVAL bookings expire after this many minutes.
+    | WAITING_CONFIRMATION bookings expire after this many minutes.
     | The BookingExpirationJob checks this window.
     |
     */
@@ -24,8 +24,7 @@ return [
     */
 
     'lock_statuses' => [
-        'WAITING_OWNER_APPROVAL',
-        'APPROVED',
-        'CONFIRMED', // future
+        'WAITING_CONFIRMATION',
+        'CONFIRMED',
     ],
 ];

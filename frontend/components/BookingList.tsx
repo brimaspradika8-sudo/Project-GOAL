@@ -75,9 +75,7 @@ export const BookingList: React.FC<BookingListProps> = ({ role, onSelect }) => {
 
   const renderItem = ({ item }: { item: Booking }) => {
     const statusColor = {
-      WAITING_OWNER_APPROVAL: '#ffb400',
-      APPROVED: '#4caf50',
-      WAITING_PAYMENT: '#ff9800',
+      WAITING_CONFIRMATION: '#ffb400',
       CONFIRMED: '#2196f3',
       COMPLETED: '#9c27b0',
       REJECTED: '#f44336',

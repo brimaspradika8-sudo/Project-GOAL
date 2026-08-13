@@ -17,7 +17,6 @@ import { useTheme } from '../lib/theme';
 import { useBookingPolling, useBookingDetail } from '../hooks/useBooking';
 import { cancelBooking, type Booking } from '../services/bookingService';
 import { useToastStore } from '../store/toastStore';
-import { SPORT_LABELS } from '../lib/fieldValidation';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -83,13 +82,11 @@ export default function BookingWaitingScreen() {
   // Poll for status changes
   const { booking: polledBooking } = useBookingPolling({
     bookingId,
-    targetStatuses: ['APPROVED', 'CANCELLED', 'EXPIRED', 'CONFIRMED'],
+    targetStatuses: ['CONFIRMED', 'CANCELLED', 'EXPIRED', 'REJECTED'],
     onStatusChange: (b) => {
-      if (b.status === 'APPROVED') {
+      if (b.status === 'CONFIRMED') {
         router.replace({ pathname: '/booking-payment', params: { id: String(b.id) } });
-      } else if (b.status === 'CONFIRMED') {
-        router.replace({ pathname: '/booking-success', params: { id: String(b.id) } });
-      } else if (b.status === 'CANCELLED' || b.status === 'EXPIRED') {
+      } else if (b.status === 'CANCELLED' || b.status === 'EXPIRED' || b.status === 'REJECTED') {
         showToast({
           type: 'error',
           title: b.status === 'EXPIRED' ? 'Booking kadaluarsa' : 'Booking dibatalkan',
@@ -143,9 +140,9 @@ export default function BookingWaitingScreen() {
         {/* Waiting Animation */}
         <View style={st.animSection}>
           <View style={st.iconOuter}>
-            <PulsingCircle color={colors.floodlight + '40'} />
-            <View style={[st.iconCircle, { backgroundColor: colors.floodlight + '20' }]}>
-              <MaterialIcons name="schedule" size={52} color={colors.floodlight} />
+            <PulsingCircle color={colors.floodlight + '35'} />
+            <View style={[st.iconCircle, { backgroundColor: colors.floodlight + '16' }]}>
+              <MaterialIcons name="schedule" size={56} color={colors.floodlight} />
             </View>
           </View>
           <Text style={st.waitTitle}>Menunggu Konfirmasi Owner</Text>
@@ -157,9 +154,9 @@ export default function BookingWaitingScreen() {
 
         {/* Status Badge */}
         <View style={st.statusBadgeWrap}>
-          <View style={[st.statusBadge, { backgroundColor: colors.floodlight + '20', borderColor: colors.floodlight }]}>
+          <View style={[st.statusBadge, { backgroundColor: colors.floodlight + '14', borderColor: colors.floodlight + '40' }]}>
             <ActivityIndicator size="small" color={colors.floodlight} />
-            <Text style={[st.statusBadgeText, { color: colors.floodlight }]}>MENUNGGU PERSETUJUAN OWNER</Text>
+            <Text style={[st.statusBadgeText, { color: colors.floodlight }]}>MENUNGGU KONFIRMASI OWNER</Text>
           </View>
         </View>
 
@@ -169,42 +166,48 @@ export default function BookingWaitingScreen() {
             <Text style={st.infoCardTitle}>Detail Pesanan</Text>
 
             <View style={st.infoRow}>
-              <MaterialIcons name="stadium" size={18} color={colors.primary} />
+              <View style={[st.infoIconWrap, { backgroundColor: colors.primaryContainer }]}>
+                <MaterialIcons name="stadium" size={18} color={colors.primary} />
+              </View>
               <View style={st.infoRowText}>
                 <Text style={st.infoLabel}>Lapangan</Text>
                 <Text style={st.infoValue}>{booking.field?.name ?? `Field #${booking.field_id}`}</Text>
               </View>
             </View>
 
-            <View style={st.infoRow}>
-              <MaterialIcons name="sports" size={18} color={colors.primary} />
-              <View style={st.infoRowText}>
-                <Text style={st.infoLabel}>Olahraga</Text>
-                <Text style={st.infoValue}>{SPORT_LABELS[booking.field?.sport_type ?? ''] ?? (booking.field?.sport_type ?? '-')}</Text>
-              </View>
-            </View>
+            <View style={st.infoDivider} />
 
             <View style={st.infoRow}>
-              <MaterialIcons name="event" size={18} color={colors.primary} />
+              <View style={[st.infoIconWrap, { backgroundColor: colors.primaryContainer }]}>
+                <MaterialIcons name="event" size={18} color={colors.primary} />
+              </View>
               <View style={st.infoRowText}>
                 <Text style={st.infoLabel}>Tanggal</Text>
                 <Text style={st.infoValue}>{formatDateDisplay(booking.booking_date)}</Text>
               </View>
             </View>
 
+            <View style={st.infoDivider} />
+
             <View style={st.infoRow}>
-              <MaterialIcons name="access-time" size={18} color={colors.primary} />
+              <View style={[st.infoIconWrap, { backgroundColor: colors.primaryContainer }]}>
+                <MaterialIcons name="access-time" size={18} color={colors.primary} />
+              </View>
               <View style={st.infoRowText}>
                 <Text style={st.infoLabel}>Jam</Text>
                 <Text style={st.infoValue}>{booking.start_time} – {booking.end_time}</Text>
               </View>
             </View>
 
+            <View style={st.infoDivider} />
+
             <View style={st.infoRow}>
-              <MaterialIcons name="payments" size={18} color={colors.primary} />
+              <View style={[st.infoIconWrap, { backgroundColor: colors.primaryContainer }]}>
+                <MaterialIcons name="payments" size={18} color={colors.primary} />
+              </View>
               <View style={st.infoRowText}>
-                <Text style={st.infoLabel}>Total Harga</Text>
-                <Text style={[st.infoValue, { color: colors.primary, fontWeight: '700' }]}>{formatPrice(booking.total_price)}</Text>
+                <Text style={st.infoLabel}>Total</Text>
+                <Text style={[st.infoValue, { color: colors.primary, fontWeight: '700', fontSize: 17 }]}>{formatPrice(booking.total_price)}</Text>
               </View>
             </View>
           </View>
@@ -219,7 +222,7 @@ export default function BookingWaitingScreen() {
         </View>
 
         {/* Cancel Button */}
-        {booking && (booking.status === 'WAITING_OWNER_APPROVAL' || booking.status === 'APPROVED') && (
+        {booking && (booking.status === 'WAITING_CONFIRMATION' || booking.status === 'CONFIRMED') && (
           <TouchableOpacity
             style={[st.cancelBtn, cancelling && { opacity: 0.6 }]}
             onPress={handleCancel}
@@ -257,54 +260,58 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   headerTitle: { ...FONTS.headlineSm, color: colors.text },
   closeBtn: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceContainer },
 
-  scrollContent: { paddingHorizontal: 20, paddingTop: 32, alignItems: 'stretch', maxWidth: 480, alignSelf: 'center', width: '100%' },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 28, alignItems: 'stretch', maxWidth: 480, alignSelf: 'center', width: '100%' },
 
-  animSection: { alignItems: 'center', marginBottom: 28 },
-  iconOuter: { width: 96, height: 96, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  animSection: { alignItems: 'center', marginBottom: 32, paddingVertical: 12 },
+  iconOuter: { width: 100, height: 100, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   iconCircle: {
-    width: 88, height: 88, borderRadius: 44,
+    width: 96, height: 96, borderRadius: 48,
     alignItems: 'center', justifyContent: 'center',
     position: 'absolute',
   },
-  waitTitle: { fontFamily: FONT_FAMILY, fontSize: 20, fontWeight: '700', color: colors.text, marginBottom: 10, textAlign: 'center' },
+  waitTitle: { fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 12, textAlign: 'center' },
   waitDesc: { ...FONTS.bodyMd, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
 
-  statusBadgeWrap: { alignItems: 'center', marginBottom: 24 },
+  statusBadgeWrap: { alignItems: 'center', marginBottom: 28 },
   statusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 16, paddingVertical: 8,
-    borderRadius: SIZES.borderRadiusFull, borderWidth: 1,
+    paddingHorizontal: 18, paddingVertical: 10,
+    borderRadius: SIZES.borderRadiusFull, borderWidth: 1.2,
   },
-  statusBadgeText: { ...FONTS.labelMd, fontWeight: '700', letterSpacing: 0.5 },
+  statusBadgeText: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', letterSpacing: 0.6 },
 
   infoCard: {
     backgroundColor: colors.surfaceWhite,
     borderRadius: SIZES.borderRadiusLg,
-    padding: 18,
-    marginBottom: 16,
+    padding: 20,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: colors.divider,
     gap: 14,
     ...SHADOWS.sm,
   },
-  infoCardTitle: { ...FONTS.headlineSm, color: colors.text, marginBottom: 4 },
-  infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  infoCardTitle: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
+  infoIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   infoRowText: { flex: 1 },
-  infoLabel: { ...FONTS.bodySm, color: colors.textTertiary, marginBottom: 2 },
-  infoValue: { ...FONTS.titleMd, color: colors.text },
+  infoLabel: { ...FONTS.bodySm, color: colors.textSecondary, marginBottom: 3 },
+  infoValue: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '600', color: colors.text },
+  infoDivider: { height: 1, backgroundColor: colors.divider, marginVertical: 10 },
 
   hintCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
     backgroundColor: colors.primaryContainer,
-    borderRadius: SIZES.borderRadius, padding: 14, marginBottom: 20,
+    borderRadius: SIZES.borderRadius, padding: 16, marginBottom: 24,
+    borderWidth: 1, borderColor: colors.primary + '20',
   },
-  hintText: { ...FONTS.bodySm, color: colors.textSecondary, flex: 1, lineHeight: 18 },
+  hintText: { ...FONTS.bodySm, color: colors.textSecondary, flex: 1, lineHeight: 18, fontWeight: '500' },
 
   cancelBtn: {
-    borderWidth: 1.5, borderColor: colors.error,
+    borderWidth: 1.5, borderColor: colors.error + '60',
     borderRadius: SIZES.borderRadius,
-    paddingVertical: 14, alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 15, alignItems: 'center', justifyContent: 'center',
     marginBottom: 12,
+    backgroundColor: colors.error + '04',
   },
-  cancelBtnText: { ...FONTS.buttonMd, color: colors.error },
+  cancelBtnText: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '600', color: colors.error },
 });

@@ -29,55 +29,105 @@ function formatDateDisplay(d: string): string {
   return date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+function formatDuration(minutes: number): string {
+  const hours = minutes / 60;
+  return (Math.round(hours * 10) / 10) + ' jam';
+}
+
 // ─── Success Check Animation ──────────────────────────────────────────────────
 
-function SuccessCheck({ color }: { color: string }) {
+function SuccessCheck({ color, colors }: { color: string; colors: ReturnType<typeof useTheme>['colors'] }) {
   const scaleAnim = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.spring(scaleAnim, {
+    Animated.sequence([
+      Animated.spring(scaleAnim, {
+        toValue: 1.1,
+        tension: 80,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 60,
+        friction: 10,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    Animated.timing(rotateAnim, {
       toValue: 1,
-      tension: 100,
-      friction: 5,
+      duration: 800,
       useNativeDriver: true,
     }).start();
-  }, [scaleAnim]);
+  }, [scaleAnim, rotateAnim]);
+
+  const rotation = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
-    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
-      <View style={[styles.checkCircle, { backgroundColor: color }]}>
-        <MaterialIcons name="check" size={52} color="#fff" />
-      </View>
-    </Animated.View>
+    <View style={styles.checkOuter}>
+      <Animated.View style={[
+        styles.checkRing,
+        { 
+          transform: [{ rotate: rotation }],
+          borderColor: color,
+        },
+      ]} />
+      <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
+        <View style={[styles.checkCircle, { backgroundColor: color }]}>
+          <MaterialIcons name="check" size={56} color="#fff" />
+        </View>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  checkOuter: {
+    width: 120, height: 120, borderRadius: 60,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  checkRing: {
+    position: 'absolute',
+    width: 120, height: 120, borderRadius: 60,
+    borderWidth: 2,
+  },
   checkCircle: {
     width: 100, height: 100, borderRadius: 50,
     alignItems: 'center', justifyContent: 'center',
   },
 });
 
-// ─── Ticket Row ───────────────────────────────────────────────────────────────
+// ─── Summary Row ──────────────────────────────────────────────────────────────
 
-function TicketRow({ label, value, highlight = false, colors }: {
+function SummaryRow({ label, value, colors }: {
   label: string;
   value: string;
-  highlight?: boolean;
   colors: ReturnType<typeof useTheme>['colors'];
 }) {
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 4 }}>
-      <Text style={{ fontFamily: FONT_FAMILY, fontSize: 10, fontWeight: '800', color: colors.textTertiary, letterSpacing: 0.5, flex: 1 }}>
-        {label}
-      </Text>
-      <Text style={[{ fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '600', color: highlight ? colors.primary : colors.text, textAlign: 'right', flex: 2 }]}>
-        {value}
-      </Text>
+    <View style={s.row}>
+      <Text style={[s.rowLabel, { color: colors.textSecondary }]}>{label}</Text>
+      <Text style={[s.rowValue, { color: colors.text }]}>{value}</Text>
     </View>
   );
 }
+
+const s = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 12,
+  },
+  rowLabel: { ...FONTS.bodyMd, flex: 1 },
+  rowValue: { ...FONTS.bodyMd, fontWeight: '600', textAlign: 'right', flex: 2 },
+});
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -92,6 +142,7 @@ export default function BookingSuccessScreen() {
   if (loading || !booking) {
     return (
       <View style={st.centered}>
+        <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -114,68 +165,58 @@ export default function BookingSuccessScreen() {
 
         {/* Success Section */}
         <View style={st.successSection}>
-          <SuccessCheck color={colors.primary} />
-          <Text style={st.successTitle}>Pembayaran Berhasil!</Text>
+          <SuccessCheck color={colors.primary} colors={colors} />
+          <View style={st.successMeta}>
+            <Text style={st.bookingRef}>Booking #{booking?.id}</Text>
+            <Text style={[st.bookingRef, { color: colors.textSecondary, fontSize: 13 }]}>Kode referensi untuk kuitansi</Text>
+          </View>
+          <Text style={st.successTitle}>Booking Berhasil Dibuat</Text>
           <Text style={st.successDesc}>
-            Booking Anda telah dikonfirmasi.{'\n'}Selamat bermain! 🎉
+            Permintaan booking Anda telah terkirim ke pemilik lapangan.{'\n'}Tunggu notifikasi persetujuan.
           </Text>
         </View>
 
-        {/* Ticket Card */}
-        <View style={st.ticketCard}>
-          {/* Ticket Header */}
-          <View style={st.ticketHeader}>
-            <View style={st.ticketLogoRow}>
-              <View style={[st.ticketLogoIcon, { backgroundColor: colors.primaryContainer }]}>
-                <MaterialIcons name="sports-soccer" size={14} color={colors.primary} />
-              </View>
-              <Text style={[st.ticketLogo, { color: colors.primary }]}>GOAL</Text>
-            </View>
-            <View style={[st.ticketBadge, { backgroundColor: colors.primaryContainer }]}>
-              <Text style={[st.ticketBadgeText, { color: colors.primary }]}>CONFIRMED</Text>
-            </View>
+        {/* Status Card */}
+        <View style={[st.statusCard, { backgroundColor: colors.floodlight + '12', borderColor: colors.floodlight + '40' }]}>
+          <View style={[st.statusIconWrap, { backgroundColor: colors.floodlight + '20' }]}>
+            <MaterialIcons name="schedule" size={22} color={colors.onWarning ?? '#B45309'} />
           </View>
-
-          {/* Divider */}
-          <View style={st.ticketDivider}>
-            <View style={[st.ticketHole, { backgroundColor: colors.background }]} />
-            <View style={[st.ticketDividerLine, { borderColor: colors.outlineVariant }]} />
-            <View style={[st.ticketHole, { backgroundColor: colors.background }]} />
+          <View style={{ flex: 1 }}>
+            <Text style={[st.statusTitle, { color: colors.onWarning ?? '#B45309', fontWeight: '700' }]}>Menunggu Persetujuan Owner</Text>
+            <Text style={[st.statusDesc, { color: colors.textSecondary, marginTop: 3 }]}>
+              Pemilik lapangan akan segera merespons permintaan Anda.
+            </Text>
           </View>
+        </View>
 
-          {/* Ticket Body */}
-          <View style={st.ticketBody}>
-            <TicketRow label="LAPANGAN" value={booking.field?.name ?? `Field #${booking.field_id}`} colors={colors} />
-            <View style={{ height: 10 }} />
-            <TicketRow label="OLAHRAGA" value={SPORT_LABELS[booking.field?.sport_type ?? ''] ?? (booking.field?.sport_type ?? '-')} colors={colors} />
-            <View style={{ height: 10 }} />
-            <View style={{ flexDirection: 'row', gap: 20 }}>
-              <View style={{ flex: 1 }}>
-                <TicketRow label="TANGGAL" value={formatDateDisplay(booking.booking_date)} colors={colors} />
-              </View>
+        {/* Booking Summary */}
+        <View style={st.summaryCard}>
+          <View style={st.summaryHeader}>
+            <View style={[st.summaryIconWrap, { backgroundColor: colors.primaryContainer }]}>
+              <MaterialIcons name="stadium" size={22} color={colors.primary} />
             </View>
-            <View style={{ height: 10 }} />
-            <View style={{ flexDirection: 'row', gap: 20 }}>
-              <View style={{ flex: 1 }}>
-                <TicketRow label="JAM" value={`${booking.start_time} – ${booking.end_time}`} colors={colors} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <TicketRow label="TOTAL" value={formatPrice(booking.total_price)} highlight colors={colors} />
-              </View>
+            <View style={{ flex: 1 }}>
+              <Text style={st.summaryFieldName} numberOfLines={1}>
+                {booking.field?.name ?? `Field #${booking.field_id}`}
+              </Text>
+              <Text style={st.summarySport}>
+                {SPORT_LABELS[booking.field?.sport_type ?? ''] ?? (booking.field?.sport_type ?? '-')}
+              </Text>
             </View>
           </View>
 
-          {/* Divider */}
-          <View style={st.ticketDivider}>
-            <View style={[st.ticketHole, { backgroundColor: colors.background }]} />
-            <View style={[st.ticketDividerLine, { borderColor: colors.outlineVariant }]} />
-            <View style={[st.ticketHole, { backgroundColor: colors.background }]} />
-          </View>
+          <View style={st.summaryDivider} />
 
-          {/* QR Footer */}
-          <View style={st.ticketFooter}>
-            <MaterialIcons name="qr-code-2" size={72} color={colors.textTertiary} />
-            <Text style={[st.qrText, { color: colors.textTertiary }]}>Tunjukkan saat tiba di lapangan</Text>
+          <SummaryRow label="Tanggal" value={formatDateDisplay(booking.booking_date)} colors={colors} />
+          <SummaryRow label="Jam" value={`${booking.start_time} – ${booking.end_time}`} colors={colors} />
+          <SummaryRow label="Durasi" value={formatDuration(booking.duration_minutes)} colors={colors} />
+          <SummaryRow label="Metode Pembayaran" value="Cash" colors={colors} />
+
+          <View style={st.summaryDivider} />
+
+          <View style={st.totalRow}>
+            <Text style={st.totalLabel}>Total Harga</Text>
+            <Text style={st.totalValue}>{formatPrice(booking.total_price)}</Text>
           </View>
         </View>
 
@@ -183,7 +224,7 @@ export default function BookingSuccessScreen() {
         <View style={[st.infoCard, { backgroundColor: colors.primaryContainer }]}>
           <MaterialIcons name="info-outline" size={16} color={colors.primary} />
           <Text style={[st.infoText, { color: colors.textSecondary }]}>
-            Datang 10 menit sebelum waktu bermain. Tunjukkan booking ini kepada petugas lapangan.
+            Pembayaran dilakukan secara cash langsung kepada pemilik lapangan saat tiba di venue.
           </Text>
         </View>
 
@@ -191,18 +232,11 @@ export default function BookingSuccessScreen() {
         <View style={st.actions}>
           <TouchableOpacity
             style={[st.primaryBtn, { backgroundColor: colors.primary }]}
-            onPress={() => router.replace({ pathname: '/e-ticket', params: { id: String(bookingId) } })}
-            activeOpacity={0.85}
-          >
-            <Text style={[st.primaryBtnText, { color: colors.onPrimary }]}>Lihat E-Ticket</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[st.secondaryBtn, { borderColor: colors.primary, backgroundColor: colors.surfaceWhite }]}
             onPress={() => router.replace('/(tabs)/booking')}
             activeOpacity={0.85}
           >
-            <MaterialIcons name="event-available" size={20} color={colors.primary} />
-            <Text style={[st.secondaryBtnText, { color: colors.primary }]}>Lihat Semua Booking</Text>
+            <MaterialIcons name="event-available" size={20} color={colors.onPrimary} />
+            <Text style={[st.primaryBtnText, { color: colors.onPrimary }]}>Lihat Booking</Text>
           </TouchableOpacity>
         </View>
 
@@ -231,49 +265,50 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
 
   scrollContent: { paddingHorizontal: 20, paddingTop: 32, maxWidth: 480, alignSelf: 'center', width: '100%' },
 
-  successSection: { alignItems: 'center', marginBottom: 28 },
-  successTitle: { fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: '700', color: colors.text, marginTop: 16, marginBottom: 8, textAlign: 'center' },
-  successDesc: { ...FONTS.bodyMd, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+  successSection: { alignItems: 'center', marginBottom: 32, paddingVertical: 8 },
+  successMeta: { alignItems: 'center', gap: 4, marginVertical: 18, marginBottom: 12 },
+  bookingRef: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '700', color: colors.primary },
+  successTitle: { fontFamily: FONT_FAMILY, fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 10, textAlign: 'center' },
+  successDesc: { ...FONTS.bodyMd, color: colors.textSecondary, textAlign: 'center', lineHeight: 22, maxWidth: 320 },
 
-  ticketCard: {
+  statusCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 14,
+    borderRadius: SIZES.borderRadiusLg, borderWidth: 1,
+    padding: 16, marginBottom: 20,
+  },
+  statusIconWrap: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  statusTitle: { fontFamily: FONT_FAMILY, fontSize: 15 },
+  statusDesc: { ...FONTS.bodySm, lineHeight: 18 },
+
+  summaryCard: {
     backgroundColor: colors.surfaceWhite,
-    borderRadius: SIZES.borderRadiusXl,
+    borderRadius: SIZES.borderRadiusLg,
+    padding: 20, marginBottom: 20,
     borderWidth: 1, borderColor: colors.divider,
-    overflow: 'hidden',
-    marginBottom: 16,
-    ...SHADOWS.lg,
+    ...SHADOWS.sm,
   },
-  ticketHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 18,
-  },
-  ticketLogoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  ticketLogoIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  ticketLogo: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '800', letterSpacing: 1 },
-  ticketBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  ticketBadgeText: { fontSize: 10, fontWeight: '800', fontFamily: FONT_FAMILY, letterSpacing: 0.5 },
-  ticketDivider: { flexDirection: 'row', alignItems: 'center' },
-  ticketHole: { width: 20, height: 20, borderRadius: 10 },
-  ticketDividerLine: { flex: 1, height: 1, borderStyle: 'dashed', borderWidth: 1 },
-  ticketBody: { padding: 18 },
-  ticketFooter: { padding: 18, alignItems: 'center', gap: 6 },
-  qrText: { ...FONTS.bodySm },
+  summaryHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 },
+  summaryIconWrap: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  summaryFieldName: { fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: '700', color: colors.text },
+  summarySport: { ...FONTS.bodySm, color: colors.textSecondary, marginTop: 3 },
+  summaryDivider: { height: 1, backgroundColor: colors.divider, marginVertical: 14 },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  totalLabel: { fontFamily: FONT_FAMILY, fontSize: 14, color: colors.textSecondary, fontWeight: '500' },
+  totalValue: { fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: '800', color: colors.primary },
 
   infoCard: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    borderRadius: SIZES.borderRadius, padding: 14, marginBottom: 20,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    borderRadius: SIZES.borderRadius, padding: 16, marginBottom: 24,
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
   },
-  infoText: { ...FONTS.bodySm, flex: 1, lineHeight: 18 },
+  infoText: { ...FONTS.bodySm, flex: 1, lineHeight: 18, color: colors.textSecondary },
 
-  actions: { gap: 12 },
-  secondaryBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    height: 50, borderRadius: SIZES.borderRadius, borderWidth: 1.5, gap: 8,
-  },
-  secondaryBtnText: { ...FONTS.buttonMd },
+  actions: { gap: 12, marginTop: 8 },
   primaryBtn: {
-    height: 50, borderRadius: SIZES.borderRadius,
-    alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    height: 54, borderRadius: SIZES.borderRadius,
     ...SHADOWS.primary,
   },
-  primaryBtnText: { ...FONTS.buttonMd },
+  primaryBtnText: { ...FONTS.buttonLg, fontWeight: '600' },
 });

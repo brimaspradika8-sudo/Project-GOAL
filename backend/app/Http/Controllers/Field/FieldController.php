@@ -3,32 +3,37 @@
 namespace App\Http\Controllers\Field;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Field\ApproveFieldRequest;
 use App\Http\Requests\Field\StoreFieldRequest;
 use App\Http\Requests\Field\UpdateFieldRequest;
-use App\Http\Requests\Field\ApproveFieldRequest;
 use App\Http\Resources\FieldResource;
 use App\Models\Field;
-use App\Models\SuperAdminAuditLog;
+use App\Models\FieldImage;
 use App\Models\Profile;
+use App\Models\SuperAdminAuditLog;
 use App\Policies\FieldPolicy;
 use App\Services\FieldService;
+use App\Services\SupabaseStorageService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class FieldController extends Controller
 {
     public function __construct(
-        private FieldService $fieldService
+        private FieldService $fieldService,
+        private SupabaseStorageService $storage
     ) {}
 
     private function paginatedResponse(LengthAwarePaginator $paginator): JsonResponse
     {
         return $this->successResponse('Daftar lapangan berhasil dimuat.', FieldResource::collection($paginator->items()), 200, [
-                'current_page' => $paginator->currentPage(),
-                'last_page'    => $paginator->lastPage(),
-                'per_page'     => $paginator->perPage(),
-                'total'        => $paginator->total(),
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'per_page' => $paginator->perPage(),
+            'total' => $paginator->total(),
         ]);
     }
 
@@ -53,7 +58,7 @@ class FieldController extends Controller
     {
         $field = $this->fieldService->findApproved($id);
 
-        if (!$field) {
+        if (! $field) {
             return $this->errorResponse('Lapangan tidak ditemukan.', [], 404);
         }
 
@@ -85,7 +90,7 @@ class FieldController extends Controller
     {
         $field = $this->fieldService->find($id);
 
-        if (!$field) {
+        if (! $field) {
             return $this->errorResponse('Lapangan tidak ditemukan.', [], 404);
         }
 
@@ -105,7 +110,7 @@ class FieldController extends Controller
     {
         $field = $this->fieldService->find($id);
 
-        if (!$field) {
+        if (! $field) {
             return $this->errorResponse('Lapangan tidak ditemukan.', [], 404);
         }
 
@@ -142,7 +147,7 @@ class FieldController extends Controller
     {
         $field = $this->fieldService->find($id);
 
-        if (!$field) {
+        if (! $field) {
             return $this->errorResponse('Lapangan tidak ditemukan.', [], 404);
         }
 
@@ -161,7 +166,7 @@ class FieldController extends Controller
 
         SuperAdminAuditLog::create([
             'actor_id' => $request->user()->id,
-            'action' => 'field.' . $request->status,
+            'action' => 'field.'.$request->status,
             'target_type' => 'field',
             'target_id' => $field->id,
             'metadata' => ['reason' => $request->reason],
@@ -188,7 +193,7 @@ class FieldController extends Controller
     {
         $success = $this->fieldService->restore($id);
 
-        if (!$success) {
+        if (! $success) {
             return $this->errorResponse('Lapangan tidak ditemukan di tempat sampah.', [], 404);
         }
 
@@ -210,7 +215,7 @@ class FieldController extends Controller
     {
         $success = $this->fieldService->forceDelete($id);
 
-        if (!$success) {
+        if (! $success) {
             return $this->errorResponse('Lapangan tidak ditemukan di tempat sampah.', [], 404);
         }
 
@@ -228,6 +233,118 @@ class FieldController extends Controller
         return $this->successResponse('Lapangan berhasil dihapus permanen.');
     }
 
+    public function storeImage(Request $request, int $id): JsonResponse
+    {
+        $field = $this->fieldService->find($id);
+
+        if (! $field) {
+            return $this->errorResponse('Lapangan tidak ditemukan.', [], 404);
+        }
+
+        $this->authorizeField($request, 'update', $field);
+
+        $data = $request->validate([
+            'image' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'is_primary' => ['sometimes', 'boolean'],
+        ]);
+
+        $currentCount = $field->images()->count();
+
+        if ($currentCount >= 5) {
+            return $this->errorResponse('Maksimal 5 foto per lapangan.', [], 422);
+        }
+
+        $file = $request->file('image');
+
+        try {
+            $extension = strtolower($file->extension());
+            $filename = bin2hex(random_bytes(16)).'.'.$extension;
+            $path = 'fields/'.$field->id.'/'.$filename;
+
+            $mime = $file->getMimeType() ?: 'image/jpeg';
+            $contents = file_get_contents($file->getRealPath());
+            $publicUrl = $this->storage->upload($path, $contents, $mime);
+
+            $isPrimary = $currentCount === 0 || filter_var($data['is_primary'] ?? false, FILTER_VALIDATE_BOOL);
+
+            if ($isPrimary) {
+                $field->images()->where('is_primary', true)->update(['is_primary' => false]);
+            }
+
+            $field->images()->create([
+                'image_path' => $publicUrl,
+                'is_primary' => $isPrimary,
+            ]);
+
+            $this->syncPrimaryImageUrl($field);
+
+            $this->fieldService->invalidateCache();
+
+            return $this->resourceResponse('Foto berhasil ditambahkan.', new FieldResource($field->load('images')), 201);
+        } catch (\Exception $e) {
+            Log::error('Field image upload exception: '.$e->getMessage(), [
+                'exception' => get_class($e),
+            ]);
+
+            return $this->errorResponse('Gagal mengunggah foto. Silakan coba lagi.', [], 500);
+        }
+    }
+
+    public function setPrimaryImage(Request $request, int $imageId): JsonResponse
+    {
+        $image = FieldImage::with('field')->find($imageId);
+
+        if (! $image || ! $image->field) {
+            return $this->errorResponse('Foto tidak ditemukan.', [], 404);
+        }
+
+        $this->authorizeField($request, 'update', $image->field);
+
+        $image->field->images()->where('is_primary', true)->update(['is_primary' => false]);
+        $image->update(['is_primary' => true]);
+
+        $this->syncPrimaryImageUrl($image->field);
+
+        $this->fieldService->invalidateCache();
+
+        return $this->resourceResponse('Foto utama berhasil diubah.', new FieldResource($image->field->load('images')));
+    }
+
+    public function destroyImage(Request $request, int $imageId): JsonResponse
+    {
+        $image = FieldImage::with('field')->find($imageId);
+
+        if (! $image || ! $image->field) {
+            return $this->errorResponse('Foto tidak ditemukan.', [], 404);
+        }
+
+        $this->authorizeField($request, 'update', $image->field);
+
+        $field = $image->field;
+        $wasPrimary = $image->is_primary;
+
+        try {
+            $this->storage->delete($image->image_path);
+        } catch (\Exception $e) {
+            Log::warning('Gagal menghapus foto lapangan dari storage: '.$e->getMessage());
+        }
+
+        $image->delete();
+
+        if ($wasPrimary) {
+            $newPrimary = $field->images()->first();
+            if ($newPrimary) {
+                $newPrimary->update(['is_primary' => true]);
+            }
+        }
+
+        $this->syncPrimaryImageUrl($field);
+
+        $this->fieldService->invalidateCache();
+
+        return $this->resourceResponse('Foto berhasil dihapus.', new FieldResource($field->load('images')));
+    }
+
     public function bulkApprove(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -243,7 +360,7 @@ class FieldController extends Controller
 
         SuperAdminAuditLog::create([
             'actor_id' => $request->user()->id,
-            'action' => 'field.bulk_' . $data['status'],
+            'action' => 'field.bulk_'.$data['status'],
             'metadata' => ['ids' => $data['ids'], 'processed' => $count],
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
@@ -300,8 +417,17 @@ class FieldController extends Controller
     {
         $policy = app(FieldPolicy::class);
 
-        if (!$policy->{$ability}($request->user(), $field)) {
-            throw new \Illuminate\Auth\Access\AuthorizationException('This action is unauthorized.');
+        if (! $policy->{$ability}($request->user(), $field)) {
+            throw new AuthorizationException('This action is unauthorized.');
+        }
+    }
+
+    private function syncPrimaryImageUrl(Field $field): void
+    {
+        $primary = $field->images()->where('is_primary', true)->first();
+
+        if ($primary) {
+            $field->forceFill(['image_url' => $primary->image_path])->save();
         }
     }
 }

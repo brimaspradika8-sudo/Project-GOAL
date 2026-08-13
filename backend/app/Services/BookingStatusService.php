@@ -15,16 +15,11 @@ use Illuminate\Support\Facades\Log;
 class BookingStatusService
 {
     private const TRANSITIONS = [
-        BookingStatus::WAITING_OWNER_APPROVAL->value => [
-            BookingStatus::APPROVED->value,
+        BookingStatus::WAITING_CONFIRMATION->value => [
+            BookingStatus::CONFIRMED->value,
             BookingStatus::REJECTED->value,
             BookingStatus::EXPIRED->value,
             BookingStatus::CANCELLED->value,
-        ],
-        BookingStatus::APPROVED->value => [
-            BookingStatus::CANCELLED->value,
-            BookingStatus::CONFIRMED->value,
-            BookingStatus::COMPLETED->value,
         ],
         BookingStatus::CONFIRMED->value => [
             BookingStatus::COMPLETED->value,
@@ -66,28 +61,27 @@ class BookingStatusService
 
     private function dispatchStatusEvent(Booking $booking, string $oldStatus, BookingStatus $newStatus): void
     {
-        if ($oldStatus === BookingStatus::WAITING_OWNER_APPROVAL->value && $newStatus === BookingStatus::APPROVED) {
+        if ($oldStatus === BookingStatus::WAITING_CONFIRMATION->value && $newStatus === BookingStatus::CONFIRMED) {
             event(new BookingApproved($booking));
             return;
         }
 
-        if ($oldStatus === BookingStatus::WAITING_OWNER_APPROVAL->value && $newStatus === BookingStatus::REJECTED) {
+        if ($oldStatus === BookingStatus::WAITING_CONFIRMATION->value && $newStatus === BookingStatus::REJECTED) {
             event(new BookingRejected($booking));
             return;
         }
 
-        if ($oldStatus === BookingStatus::WAITING_OWNER_APPROVAL->value && $newStatus === BookingStatus::EXPIRED) {
+        if ($oldStatus === BookingStatus::WAITING_CONFIRMATION->value && $newStatus === BookingStatus::EXPIRED) {
             event(new BookingExpired($booking));
             return;
         }
 
-        if (in_array($oldStatus, [BookingStatus::WAITING_OWNER_APPROVAL->value, BookingStatus::APPROVED->value], true)
-            && $newStatus === BookingStatus::CANCELLED) {
+        if ($oldStatus === BookingStatus::WAITING_CONFIRMATION->value && $newStatus === BookingStatus::CANCELLED) {
             event(new BookingCancelled($booking));
             return;
         }
 
-        if ($oldStatus === BookingStatus::APPROVED->value && $newStatus === BookingStatus::COMPLETED) {
+        if ($oldStatus === BookingStatus::CONFIRMED->value && $newStatus === BookingStatus::COMPLETED) {
             event(new BookingCompleted($booking));
         }
     }

@@ -10,8 +10,7 @@ $origins = $isProduction
         'http://localhost:8000',
         'http://127.0.0.1:8000',
         'http://127.0.0.1:8081',
-        'http://9.9.8.117:8000',
-        'http://9.9.8.117:8081',
+        'http://172.19.192.179:8000',
     ];
 
 return [
@@ -19,7 +18,7 @@ return [
     'allowed_methods' => ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     'allowed_origins' => $origins,
     'allowed_origins_patterns' => $isProduction ? [] : [
-        '/^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|9\.\d+\.\d+\.\d+)(:\d+)?$/',
+        '/^https?:\/\/(localhost|127\.0\.0\.1|172\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|9\.\d+\.\d+\.\d+)(:\d+)?$/',
         '/^https?:\/\/.*\.loca\.lt(:\d+)?$/',
         '/^https?:\/\/.*\.ngrok-free\.app$/',
         '/^https?:\/\/.*\.ngrok-free\.dev$/',

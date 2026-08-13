@@ -13,10 +13,12 @@ import { useToastStore } from '../../store/toastStore';
 import {
   ownerApproveBooking,
   ownerRejectBooking,
+  ownerCompleteBooking,
   confirmPayment,
   getOwnerBookings,
   type Booking,
 } from '../../services/bookingService';
+import { SafeImage } from '../SafeImage';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -153,6 +155,7 @@ function BookingCard({
   onApprove,
   onReject,
   onConfirmCash,
+  onComplete,
   loadingAction,
   colors,
   resolved,
@@ -162,6 +165,7 @@ function BookingCard({
   onApprove: (id: number) => void;
   onReject: (b: Booking) => void;
   onConfirmCash: (id: number) => void;
+  onComplete: (id: number) => void;
   loadingAction: number | null;
   colors: any;
   resolved: 'light' | 'dark';
@@ -169,7 +173,7 @@ function BookingCard({
   const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
   const cardSurface = colors.surface;
 
-  const status = statusCfg[booking.status] ?? statusCfg['WAITING_OWNER_APPROVAL'];
+  const status = statusCfg[booking.status] ?? statusCfg['WAITING_CONFIRMATION'];
   const priceStr = formatPrice(booking.total_price);
   const fieldName = booking.field?.name ?? `Field #${booking.field_id}`;
   const renterName = booking.user?.name ?? '-';
@@ -179,8 +183,9 @@ function BookingCard({
     : booking.start_time || '-';
 
   const isLoading = loadingAction === booking.id;
-  const needsApproval = booking.status === 'WAITING_OWNER_APPROVAL';
-  const needsPayment = booking.status === 'APPROVED' || booking.status === 'WAITING_PAYMENT';
+  const needsApproval = booking.status === 'WAITING_CONFIRMATION';
+  const needsPayment = booking.status === 'CONFIRMED';
+  const needsComplete = booking.status === 'CONFIRMED';
 
   return (
     <View style={[styles.card, { backgroundColor: cardSurface, borderColor: colors.outline ?? colors.divider }]}>
@@ -282,22 +287,29 @@ function BookingCard({
           )}
         </TouchableOpacity>
       )}
+
+      {needsComplete && (
+        <TouchableOpacity
+          style={[styles.cashBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+          onPress={() => onComplete(booking.id)}
+          disabled={isLoading}
+          activeOpacity={0.8}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <MaterialIcons name="done-all" size={16} color="#fff" />
+              <Text style={[styles.cashBtnText, { color: '#fff' }]}>Tandai Selesai</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────────
-
-type TabKey = 'all' | 'WAITING_OWNER_APPROVAL' | 'APPROVED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
-
-const TABS: { key: TabKey; label: string }[] = [
-  { key: 'all', label: 'Semua' },
-  { key: 'WAITING_OWNER_APPROVAL', label: 'Menunggu' },
-  { key: 'APPROVED', label: 'Disetujui' },
-  { key: 'CONFIRMED', label: 'Terkonfirmasi' },
-  { key: 'COMPLETED', label: 'Selesai' },
-  { key: 'CANCELLED', label: 'Dibatalkan' },
-];
 
 export default function OwnerBookingsPage() {
   const { colors, resolved } = useTheme();
@@ -305,19 +317,17 @@ export default function OwnerBookingsPage() {
   const showToast = useToastStore((s) => s.show);
 
   const statusCfg: Record<string, StatusConfig> = {
-    WAITING_OWNER_APPROVAL: { label: 'Menunggu Approval',    bg: colors.floodlight + '22', color: colors.onWarning ?? '#B45309',  icon: 'schedule' },
-    APPROVED:               { label: 'Disetujui',            bg: colors.primaryContainer,  color: colors.primary,                 icon: 'check-circle' },
-    WAITING_PAYMENT:        { label: 'Menunggu Pembayaran',  bg: colors.floodlight + '22', color: colors.onWarning ?? '#B45309',  icon: 'credit-card' },
-    CONFIRMED:              { label: 'Terkonfirmasi',        bg: colors.primaryContainer,  color: colors.primary,                 icon: 'verified' },
-    COMPLETED:              { label: 'Selesai',              bg: colors.surfaceContainerHigh, color: colors.textSecondary,        icon: 'done-all' },
-    CANCELLED:              { label: 'Dibatalkan',           bg: colors.errorContainer,    color: colors.error,                   icon: 'cancel' },
-    EXPIRED:                { label: 'Kadaluarsa',           bg: colors.errorContainer,    color: colors.error,                   icon: 'timer-off' },
+    WAITING_CONFIRMATION: { label: 'Menunggu Konfirmasi', bg: colors.floodlight + '22', color: colors.onWarning ?? '#B45309', icon: 'schedule' },
+    CONFIRMED:            { label: 'Terkonfirmasi',       bg: colors.primaryContainer,  color: colors.primary,                 icon: 'verified' },
+    COMPLETED:            { label: 'Selesai',             bg: colors.surfaceContainerHigh, color: colors.textSecondary,        icon: 'done-all' },
+    REJECTED:             { label: 'Ditolak',             bg: colors.errorContainer,    color: colors.error,                   icon: 'cancel' },
+    CANCELLED:            { label: 'Dibatalkan',          bg: colors.errorContainer,    color: colors.error,                   icon: 'cancel' },
+    EXPIRED:              { label: 'Kadaluarsa',          bg: colors.errorContainer,    color: colors.error,                   icon: 'timer-off' },
   };
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabKey>('all');
   const [loadingAction, setLoadingAction] = useState<number | null>(null);
 
   // Reject modal state
@@ -339,19 +349,9 @@ export default function OwnerBookingsPage() {
   useEffect(() => { fetchBookings(); }, [fetchBookings]);
   const onRefresh = useCallback(() => { setRefreshing(true); fetchBookings(); }, [fetchBookings]);
 
-  // Filter bookings — APPROVED also covers WAITING_PAYMENT in the tab
-  const filteredBookings = bookings.filter(b => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'APPROVED') return b.status === 'APPROVED' || b.status === 'WAITING_PAYMENT';
-    return b.status === activeTab;
+  const filteredBookings = [...bookings].sort((a, b) => {
+    return new Date(b.created_at ?? b.booking_date).getTime() - new Date(a.created_at ?? a.booking_date).getTime();
   });
-
-  // Count badges for tab headers
-  const countForTab = (tab: TabKey): number => {
-    if (tab === 'all') return bookings.length;
-    if (tab === 'APPROVED') return bookings.filter(b => b.status === 'APPROVED' || b.status === 'WAITING_PAYMENT').length;
-    return bookings.filter(b => b.status === tab).length;
-  };
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -396,6 +396,19 @@ export default function OwnerBookingsPage() {
     }
   }, [fetchBookings, showToast]);
 
+  const handleComplete = useCallback(async (id: number) => {
+    setLoadingAction(id);
+    try {
+      await ownerCompleteBooking(id);
+      showToast({ type: 'success', title: 'Booking selesai', description: 'Status booking berubah menjadi COMPLETED.' });
+      fetchBookings();
+    } catch {
+      showToast({ type: 'error', title: 'Gagal', description: 'Coba lagi nanti.' });
+    } finally {
+      setLoadingAction(null);
+    }
+  }, [fetchBookings, showToast]);
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
@@ -405,49 +418,6 @@ export default function OwnerBookingsPage() {
         subtitle="Pantau dan kelola jadwal lapangan Anda"
         showBack={false}
       />
-
-      {/* Tab filter — horizontal scroll */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[st.tabRow, { borderBottomColor: colors.outline ?? colors.divider }]}
-        style={{ backgroundColor: colors.surface }}
-      >
-        {TABS.map(t => {
-          const count = countForTab(t.key);
-          const isActive = activeTab === t.key;
-          return (
-            <TouchableOpacity
-              key={t.key}
-              style={[
-                st.tabBtn,
-                { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline ?? colors.divider },
-                isActive && [st.tabBtnActive, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '60' }],
-              ]}
-              onPress={() => setActiveTab(t.key)}
-              activeOpacity={0.75}
-            >
-              <Text style={[
-                st.tabText,
-                { color: colors.textSecondary },
-                isActive && [st.tabTextActive, { color: colors.primary }],
-              ]}>
-                {t.label}
-              </Text>
-              {count > 0 && (
-                <View style={[
-                  st.tabCount,
-                  { backgroundColor: isActive ? colors.primary : colors.outline ?? colors.divider },
-                ]}>
-                  <Text style={[st.tabCountText, { color: isActive ? '#fff' : colors.textSecondary }]}>
-                    {count}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
 
       {loading ? (
         <View style={st.loadingWrap}>
@@ -485,6 +455,7 @@ export default function OwnerBookingsPage() {
                 onApprove={handleApprove}
                 onReject={setRejectTarget}
                 onConfirmCash={handleConfirmCash}
+                onComplete={handleComplete}
                 loadingAction={loadingAction}
                 colors={colors}
                 resolved={resolved}
@@ -549,64 +520,64 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'li
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 20, padding: 18, marginBottom: 16,
+    borderRadius: 16, padding: 20, marginBottom: 16,
     borderWidth: 1, ...SHADOWS.sm,
   },
   cardHeader: {
     flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 14,
+    alignItems: 'center', marginBottom: 16,
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   iconWrap: {
-    width: 32, height: 32, borderRadius: 10,
+    width: 36, height: 36, borderRadius: 12,
     justifyContent: 'center', alignItems: 'center',
   },
-  bookingCode: { ...FONTS.titleLg, letterSpacing: 0.5, flex: 1 },
+  bookingCode: { fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: '700', letterSpacing: 0.5, flex: 1 },
   statusBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1,
   },
-  statusText: { ...FONTS.labelSm },
+  statusText: { fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700' },
 
   detailGrid: {
     flexDirection: 'row',
-    borderRadius: 14, padding: 14, marginBottom: 10,
+    borderRadius: 12, padding: 16, marginBottom: 12,
     borderWidth: 1,
   },
   detailCol: { flex: 1 },
-  colDivider: { width: 1, marginHorizontal: 14 },
-  detailLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 },
-  detailLabel: { ...FONTS.labelSm, textTransform: 'uppercase', letterSpacing: 0.5 },
-  detailVal: { ...FONTS.titleMd },
+  colDivider: { width: 1, marginHorizontal: 16 },
+  detailLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 },
+  detailLabel: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6 },
+  detailVal: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '700' },
 
   scheduleGrid: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: 14, padding: 14, marginBottom: 12,
-    borderWidth: 1, flexWrap: 'wrap', gap: 6,
+    borderRadius: 12, padding: 16, marginBottom: 14,
+    borderWidth: 1, flexWrap: 'wrap', gap: 8,
   },
-  scheduleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  scheduleText: { ...FONTS.labelMd },
+  scheduleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  scheduleText: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '500' },
   scheduleDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', marginHorizontal: 4 },
   pricePill: {
     marginLeft: 'auto',
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 10, borderWidth: 1,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 12, borderWidth: 1.2,
   },
-  priceText: { ...FONTS.titleMd },
+  priceText: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '800' },
 
   // Action buttons
-  actionRow: { flexDirection: 'row', gap: 10 },
+  actionRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
   actionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, paddingVertical: 11, borderRadius: 12,
+    gap: 7, paddingVertical: 13, borderRadius: 12,
   },
   rejectBtn: { borderWidth: 1.5, backgroundColor: 'transparent' },
   approveBtn: {},
-  actionBtnText: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700' },
+  actionBtnText: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '700' },
 
   cashBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, paddingVertical: 13, borderRadius: 12, borderWidth: 1,
+    gap: 8, paddingVertical: 14, borderRadius: 12, borderWidth: 1.2,
   },
   cashBtnText: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700' },
 });

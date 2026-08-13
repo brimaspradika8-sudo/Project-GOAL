@@ -20,7 +20,7 @@ class AvailabilityService
      * Statuses are computed dynamically from booked ranges; nothing is
      * persisted. bookedRanges is empty until booking exists (Sprint 3).
      *
-     * @param array<int, array{start: string, end: string}> $bookedRanges
+     * @param  array<int, array{start: string, end: string}>  $bookedRanges
      * @return array{field: Field, date: string, slots: array<int, array{start_time: string, end_time: string, price: int|null, status: string}>}
      */
     public function forDate(Field $field, string $date, array $bookedRanges = []): array
@@ -30,7 +30,7 @@ class AvailabilityService
         $sessionMinutes = $field->session_duration_minutes;
         $bufferMinutes = $field->buffer_duration_minutes ?? 0;
 
-        if (!$openTime || !$closeTime || !$sessionMinutes) {
+        if (! $openTime || ! $closeTime || ! $sessionMinutes) {
             return [
                 'field' => $field,
                 'date' => $date,
@@ -42,12 +42,15 @@ class AvailabilityService
             ? $field->prices
             : $field->prices()->get();
 
+        $isToday = $date === now()->toDateString();
+        $currentTime = now()->format('H:i');
+
         $slots = collect($this->slotGenerator->generate($openTime, $closeTime, $sessionMinutes, $bufferMinutes))
             ->map(fn (array $slot) => [
                 'start_time' => $slot['start_time'],
                 'end_time' => $slot['end_time'],
                 'price' => $this->pricing->priceForSlot($field, $slot['start_time'], $slot['end_time'], $prices),
-                'status' => $this->statusFor($slot, $field, $bookedRanges)->value,
+                'status' => $this->statusFor($slot, $field, $bookedRanges, $isToday, $currentTime)->value,
             ])
             ->values()
             ->all();
@@ -72,12 +75,11 @@ class AvailabilityService
         $openTime = $field->open_time ? substr((string) $field->open_time, 0, 5) : null;
         $closeTime = $field->close_time ? substr((string) $field->close_time, 0, 5) : null;
 
-        if (!$openTime || !$closeTime || $time < $openTime || $time >= $closeTime) {
+        if (! $openTime || ! $closeTime || $time < $openTime || $time >= $closeTime) {
             return 'CLOSED';
         }
 
         $activeStatuses = [
-            BookingStatus::APPROVED->value,
             BookingStatus::CONFIRMED->value,
         ];
 
@@ -94,23 +96,27 @@ class AvailabilityService
 
         $isBooked = Booking::where('field_id', $field->id)
             ->where('booking_date', $date)
-            ->whereIn('status', $activeStatuses)
+            ->whereIn('status', (array) config('booking.lock_statuses', []))
             ->exists();
 
         return $isBooked ? 'BOOKED' : 'AVAILABLE';
     }
 
     /**
-     * @param array{start_time: string, end_time: string} $slot
-     * @param array<int, array{start: string, end: string}> $bookedRanges
+     * @param  array{start_time: string, end_time: string}  $slot
+     * @param  array<int, array{start: string, end: string}>  $bookedRanges
      */
-    private function statusFor(array $slot, Field $field, array $bookedRanges): SlotStatus
+    private function statusFor(array $slot, Field $field, array $bookedRanges, bool $isToday = false, string $currentTime = ''): SlotStatus
     {
         $slotStart = $this->slotGenerator->toMinutes($slot['start_time']);
         $slotEnd = $this->slotGenerator->toMinutes($slot['end_time']);
 
         if ($slotStart < $this->slotGenerator->toMinutes(substr((string) $field->open_time, 0, 5))
             || $slotEnd > $this->slotGenerator->toMinutes(substr((string) $field->close_time, 0, 5))) {
+            return SlotStatus::CLOSED;
+        }
+
+        if ($isToday && $currentTime && $slotEnd <= $this->slotGenerator->toMinutes($currentTime)) {
             return SlotStatus::CLOSED;
         }
 
