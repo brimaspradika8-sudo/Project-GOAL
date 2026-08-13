@@ -46,6 +46,23 @@ interface FieldState {
 
 const FIELDS_CACHE_KEY = 'cached_fields_';
 
+function parseErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Terjadi kesalahan';
+}
+
+function normalizeFieldsResponse(body: unknown): { data: Field[]; meta: PaginationMeta | null } {
+  if (!body || typeof body !== 'object') {
+    return { data: [], meta: null };
+  }
+
+  const payload = body as { data?: unknown; meta?: unknown };
+
+  return {
+    data: Array.isArray(payload.data) ? payload.data as Field[] : [],
+    meta: payload.meta && typeof payload.meta === 'object' ? payload.meta as PaginationMeta : null,
+  };
+}
+
 export const useFieldStore = create<FieldState>((set, get) => ({
   fields: [],
   meta: null,
@@ -82,6 +99,7 @@ export const useFieldStore = create<FieldState>((set, get) => ({
       });
       if (!res.ok) throw new Error('Gagal memuat data lapangan');
       const body = await res.json();
+      const normalized = normalizeFieldsResponse(body);
 
       const state = get();
       if (state._fetchGen !== gen) return;
@@ -89,19 +107,19 @@ export const useFieldStore = create<FieldState>((set, get) => ({
       await AsyncStorage.setItem(cacheKey, JSON.stringify(body));
 
       set({
-        fields: body.data,
-        meta: body.meta,
+        fields: normalized.data,
+        meta: normalized.meta,
         loading: false,
         _fetchGen: gen,
         lastParams: { sport, search, filters },
       });
-    } catch (e: any) {
+    } catch (e) {
       const state = get();
       if (state._fetchGen !== gen) return;
 
       const hasCache = !!await AsyncStorage.getItem(cacheKey);
       if (!hasCache) {
-        set({ error: e.message || 'Terjadi kesalahan', loading: false });
+        set({ error: parseErrorMessage(e), loading: false });
       }
     }
   },
@@ -124,9 +142,10 @@ export const useFieldStore = create<FieldState>((set, get) => ({
       });
       if (!res.ok) throw new Error('Gagal memuat data');
       const body = await res.json();
+      const normalized = normalizeFieldsResponse(body);
       set({
-        fields: [...fields, ...body.data],
-        meta: body.meta,
+        fields: [...fields, ...normalized.data],
+        meta: normalized.meta,
         loadingMore: false,
       });
     } catch {

@@ -20,6 +20,7 @@ import { confirmPayment } from '../services/bookingService';
 import { useToastStore } from '../store/toastStore';
 import { SPORT_LABELS } from '../lib/fieldValidation';
 import { getErrorMessage } from '../lib/api';
+import { PaymentCard, type PaymentMethod } from '../components/booking/PaymentCard';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -42,6 +43,7 @@ export default function BookingPaymentScreen() {
   const showToast = useToastStore((s) => s.show);
   const st = makeStyles(colors);
   const [paying, setPaying] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
 
   const { booking, loading } = useBookingDetail(bookingId);
 
@@ -137,15 +139,28 @@ export default function BookingPaymentScreen() {
         {/* Payment Method */}
         <FadeInView delay={160} style={st.methodCard}>
           <Text style={st.methodTitle}>Metode Pembayaran</Text>
-          <View style={st.methodOption}>
-            <View style={[st.methodRadioOuter, { borderColor: colors.primary }]}>
-              <View style={[st.methodRadioInner, { backgroundColor: colors.primary }]} />
-            </View>
-            <MaterialIcons name="payments" size={22} color={colors.primary} />
-            <Text style={st.methodName}>Cash / Tunai</Text>
-            <View style={st.methodBadge}>
-              <Text style={[st.methodBadgeText, { color: colors.primary }]}>Bayar di Tempat</Text>
-            </View>
+          <View style={st.methodList}>
+            <PaymentCard
+              method="cash"
+              title="Cash / Tunai"
+              description="Bayar langsung saat tiba di venue."
+              selected={paymentMethod === 'cash'}
+              onPress={() => setPaymentMethod('cash')}
+            />
+            <PaymentCard
+              method="transfer"
+              title="Transfer Bank"
+              description="Akan tersedia setelah rekening venue dikonfigurasi."
+              selected={paymentMethod === 'transfer'}
+              disabled
+            />
+            <PaymentCard
+              method="gateway"
+              title="Payment Gateway"
+              description="Kartu, e-wallet, dan virtual account."
+              selected={paymentMethod === 'gateway'}
+              disabled
+            />
           </View>
         </FadeInView>
 
@@ -239,12 +254,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     ...SHADOWS.sm,
   },
   methodTitle: { ...FONTS.headlineSm, color: colors.text, marginBottom: 14 },
-  methodOption: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  methodRadioOuter: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  methodRadioInner: { width: 10, height: 10, borderRadius: 5 },
-  methodName: { ...FONTS.titleMd, color: colors.text, flex: 1 },
-  methodBadge: { backgroundColor: colors.primaryContainer, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  methodBadgeText: { ...FONTS.labelMd },
+  methodList: { gap: 10 },
 
   noteCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,

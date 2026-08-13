@@ -25,6 +25,7 @@ import type { Field } from '../store/fieldStore';
 import { useToastStore } from '../store/toastStore';
 import { SPORT_LABELS } from '../lib/fieldValidation';
 import * as Linking from 'expo-linking';
+import { getSlots, type SlotsResponse } from '../services/bookingService';
 
 const SPORT_ICONS: Record<string, string> = {
   futsal: 'sports-soccer',
@@ -41,6 +42,19 @@ function formatPrice(price: number | null): string {
   return `Rp${price.toLocaleString('id-ID')}`;
 }
 
+function formatDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+const SLOT_PALETTE = {
+  AVAILABLE: { bg: '#E6F9ED', border: '#10B981', text: '#047857' },
+  BOOKED:    { bg: '#FEE2E2', border: '#EF4444', text: '#991B1B' },
+  CLOSED:    { bg: '#F3F4F6', border: '#D1D5DB', text: '#6B7280' },
+};
+
 export default function VenueDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
@@ -52,6 +66,10 @@ export default function VenueDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const { hydrate, isFavorite, toggleFavorite } = useFavoriteStore();
+
+  // ── Slot preview state ────────────────────────────────────────────────────
+  const [slotsData, setSlotsData] = useState<SlotsResponse | null>(null);
+  const [slotsLoading, setSlotsLoading] = useState(false);
 
   useEffect(() => {
     hydrate().catch(() => {});
@@ -71,15 +89,33 @@ export default function VenueDetailScreen() {
     }
   }, [id]);
 
+  const fetchSlots = useCallback(async () => {
+    if (!id) return;
+    setSlotsLoading(true);
+    try {
+      const data = await getSlots(Number(id), formatDate(new Date()));
+      setSlotsData(data);
+    } catch {
+      setSlotsData(null);
+    } finally {
+      setSlotsLoading(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     fetchField();
   }, [fetchField]);
 
+  useEffect(() => {
+    // Load slots after field is loaded (we need to know it's approved)
+    if (field?.status === 'approved') fetchSlots();
+  }, [field, fetchSlots]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchField();
+    await Promise.all([fetchField(), fetchSlots()]);
     setRefreshing(false);
-  }, [fetchField]);
+  }, [fetchField, fetchSlots]);
 
   const st = makeStyles(colors, isDesktop, screenWidth);
 
@@ -239,6 +275,112 @@ export default function VenueDetailScreen() {
     );
   }
 
+  function renderSlotPreview() {
+    if (!isApproved) return null;
+    const slots = slotsData?.slots ?? [];
+    const fieldStatus = slotsData?.field_status;
+    const availableCount = slots.filter(s => s.status === 'AVAILABLE').length;
+
+    return (
+      <View style={st.section}>
+        {/* Section header */}
+        <View style={st.slotPreviewHeader}>
+          <Text style={st.sectionTitle}>Slot Hari Ini</Text>
+          <View style={st.slotHeaderRight}>
+            {fieldStatus && (
+              <View style={[
+                st.liveStatusBadge,
+                { backgroundColor: fieldStatus === 'AVAILABLE' ? '#E6F9ED' : '#FEE2E2' },
+              ]}>
+                <View style={[st.liveStatusDot, { backgroundColor: fieldStatus === 'AVAILABLE' ? '#10B981' : '#EF4444' }]} />
+                <Text style={[st.liveStatusText, { color: fieldStatus === 'AVAILABLE' ? '#047857' : '#991B1B' }]}>
+                  {fieldStatus === 'AVAILABLE' ? 'Tersedia' : fieldStatus === 'PLAYING' ? 'Sedang Bermain' : 'Sedang Dipakai'}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Summary */}
+        {!slotsLoading && slots.length > 0 && (
+          <Text style={st.slotSummaryText}>
+            {availableCount > 0
+              ? `${availableCount} slot tersedia`
+              : 'Semua slot sudah penuh'}
+          </Text>
+        )}
+
+        {/* Slot chips */}
+        {slotsLoading ? (
+          <View style={st.slotsLoading}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={st.slotsLoadingText}>Memuat slot...</Text>
+          </View>
+        ) : slots.length === 0 ? (
+          <View style={st.slotsEmpty}>
+            <MaterialIcons name="event-busy" size={24} color={colors.textTertiary} />
+            <Text style={st.slotsEmptyText}>Tidak ada slot untuk hari ini</Text>
+          </View>
+        ) : (
+          <View style={st.slotsGrid}>
+            {slots.slice(0, 9).map((slot, i) => {
+              const palette = SLOT_PALETTE[slot.status] ?? SLOT_PALETTE.CLOSED;
+              const isAvailable = slot.status === 'AVAILABLE';
+              return (
+                <TouchableOpacity
+                  key={i}
+                  style={[
+                    st.slotChip,
+                    { backgroundColor: palette.bg, borderColor: palette.border },
+                  ]}
+                  activeOpacity={isAvailable ? 0.75 : 1}
+                  onPress={() => {
+                    if (!isAvailable) return;
+                    Haptics.selectionAsync();
+                    router.push({ pathname: '/booking-flow', params: { id: String(f.id) } });
+                  }}
+                  disabled={!isAvailable}
+                >
+                  <Text style={[st.slotTime, { color: palette.text }]}>{slot.start_time}</Text>
+                  <Text style={[st.slotStatus, { color: palette.text }]}>
+                    {slot.status === 'AVAILABLE' ? 'Tersedia' : slot.status === 'BOOKED' ? 'Penuh' : 'Tutup'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            {slots.length > 9 && (
+              <TouchableOpacity
+                style={[st.slotChipMore, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '40' }]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  router.push({ pathname: '/booking-flow', params: { id: String(f.id) } });
+                }}
+              >
+                <Text style={[st.slotMoreText, { color: colors.primary }]}>+{slots.length - 9}</Text>
+                <Text style={[st.slotMoreLabel, { color: colors.primary }]}>Lainnya</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* Legend */}
+        {!slotsLoading && slots.length > 0 && (
+          <View style={st.legendRow}>
+            {(['AVAILABLE', 'BOOKED', 'CLOSED'] as const).map(s => (
+              <View key={s} style={st.legendItem}>
+                <View style={[st.legendDot, { backgroundColor: SLOT_PALETTE[s].border }]} />
+                <Text style={[st.legendText, { color: colors.textSecondary }]}>
+                  {s === 'AVAILABLE' ? 'Tersedia' : s === 'BOOKED' ? 'Penuh' : 'Tutup'}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  }
+
   function renderMainContent() {
     return (
       <>
@@ -248,6 +390,7 @@ export default function VenueDetailScreen() {
           <Text style={st.locationText} numberOfLines={1} ellipsizeMode="tail">{f.location}</Text>
         </View>
         {renderInfoBar()}
+        {renderSlotPreview()}
         {renderDescription()}
         {renderOwner()}
         {renderLocation()}
@@ -465,6 +608,49 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isDesktop: bo
     marginBottom: 20,
     ...SHADOWS.sm,
   },
+
+  // ── Slot Preview ──────────────────────────────────────────────────────────
+  slotPreviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  slotHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  liveStatusBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
+  },
+  liveStatusDot: { width: 6, height: 6, borderRadius: 3 },
+  liveStatusText: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700' },
+  slotSummaryText: {
+    fontFamily: FONT_FAMILY, fontSize: 12, color: colors.textSecondary, marginBottom: 12,
+  },
+  slotsLoading: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 20 },
+  slotsLoadingText: { fontFamily: FONT_FAMILY, fontSize: 13, color: colors.textSecondary },
+  slotsEmpty: { alignItems: 'center', gap: 8, paddingVertical: 20 },
+  slotsEmptyText: { fontFamily: FONT_FAMILY, fontSize: 13, color: colors.textSecondary },
+  slotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+  slotChip: {
+    width: '30%',
+    paddingVertical: 9, paddingHorizontal: 4,
+    borderRadius: SIZES.borderRadius, borderWidth: 1.5,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  slotTime: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', textAlign: 'center' },
+  slotStatus: { fontFamily: FONT_FAMILY, fontSize: 10, textAlign: 'center', marginTop: 2 },
+  slotChipMore: {
+    width: '30%',
+    paddingVertical: 9, paddingHorizontal: 4,
+    borderRadius: SIZES.borderRadius, borderWidth: 1.5,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  slotMoreText: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '800', textAlign: 'center' },
+  slotMoreLabel: { fontFamily: FONT_FAMILY, fontSize: 10, textAlign: 'center' },
+  legendRow: { flexDirection: 'row', gap: 16, alignItems: 'center', marginTop: 4 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendText: { fontFamily: FONT_FAMILY, fontSize: 11 },
   infoItem: {
     flexDirection: 'row',
     alignItems: 'center',

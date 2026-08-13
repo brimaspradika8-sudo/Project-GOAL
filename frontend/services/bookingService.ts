@@ -73,6 +73,22 @@ export interface BookingHistoryResponse {
   pagination: { current_page: number; last_page: number; total: number };
 }
 
+const emptyPagination = { current_page: 1, last_page: 1, total: 0 };
+
+function normalizeBookingListResponse(res: any): BookingHistoryResponse {
+  const payload = res?.data?.data !== undefined ? res.data : res;
+  const bookings = Array.isArray(payload?.data)
+    ? payload.data
+    : Array.isArray(payload)
+      ? payload
+      : [];
+
+  return {
+    data: bookings,
+    pagination: payload?.pagination ?? emptyPagination,
+  };
+}
+
 // ─── Service Functions ─────────────────────────────────────────────────────────
 
 /**
@@ -115,7 +131,7 @@ export async function getBooking(id: number): Promise<{ data: Booking; message: 
  */
 export async function getBookingHistory(page = 1): Promise<BookingHistoryResponse> {
   const res: any = await apiGet('/bookings/history', { params: { page } });
-  return res.data ?? res;
+  return normalizeBookingListResponse(res);
 }
 
 /**
@@ -124,7 +140,7 @@ export async function getBookingHistory(page = 1): Promise<BookingHistoryRespons
  */
 export async function getMyBookings(page = 1): Promise<BookingHistoryResponse> {
   const res: any = await apiGet('/bookings/my', { params: { page } });
-  return res.data ?? res;
+  return normalizeBookingListResponse(res);
 }
 
 /**
@@ -138,7 +154,33 @@ export async function cancelBooking(id: number, reason: string): Promise<{ data:
 /**
  * PATCH /bookings/{id}/confirm
  * Confirm payment — player confirms their own booking.
+ * Also used by owner to confirm cash payment (same endpoint, authorized via BookingPolicy).
  */
 export async function confirmPayment(id: number): Promise<{ data: Booking; message: string }> {
   return apiSend('PATCH', `/bookings/${id}/confirm`, {});
+}
+
+/**
+ * PATCH /owner/bookings/{id}/approve
+ * Owner approves a booking request.
+ */
+export async function ownerApproveBooking(id: number): Promise<{ data: Booking; message: string }> {
+  return apiSend('PATCH', `/owner/bookings/${id}/approve`, {});
+}
+
+/**
+ * PATCH /owner/bookings/{id}/reject
+ * Owner rejects a booking request with an optional reason.
+ */
+export async function ownerRejectBooking(id: number, reason?: string): Promise<{ data: Booking; message: string }> {
+  return apiSend('PATCH', `/owner/bookings/${id}/reject`, { body: { reason: reason ?? '' } });
+}
+
+/**
+ * GET /owner/bookings
+ * Fetch all bookings for the authenticated owner.
+ */
+export async function getOwnerBookings(page = 1): Promise<BookingHistoryResponse> {
+  const res: any = await apiGet('/owner/bookings', { params: { page } });
+  return normalizeBookingListResponse(res);
 }

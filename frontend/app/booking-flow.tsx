@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -23,6 +23,7 @@ import { getErrorMessage } from '../lib/api';
 import { SPORT_LABELS } from '../lib/fieldValidation';
 import { apiFetch } from '../lib/apiClient';
 import type { Field } from '../store/fieldStore';
+import { BookingSummary, CalendarPicker, TimeSlotCard } from '../components/booking';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -56,12 +57,6 @@ const DURATION_OPTIONS = [
   { label: '2 jam', minutes: 120 },
   { label: '3 jam', minutes: 180 },
 ];
-
-const SLOT_STATUS_COLORS = {
-  AVAILABLE: { bg: '#E6F9ED', border: '#10B981', text: '#047857' },
-  BOOKED:    { bg: '#FEE2E2', border: '#EF4444', text: '#991B1B' },
-  CLOSED:    { bg: '#F3F4F6', border: '#D1D5DB', text: '#6B7280' },
-};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -104,23 +99,15 @@ export default function BookingFlowScreen() {
     setSelectedSlot(null);
   }, [selectedDate]);
 
+  useEffect(() => {
+    setDisplayDate(new Date(`${selectedDate}T00:00:00`));
+  }, [selectedDate]);
+
   // Computed end_time
   const endTime = selectedSlot ? addMinutesToTime(selectedSlot.start_time, selectedDuration.minutes) : null;
   const totalPrice = field?.price_per_hour != null
     ? Math.round((field.price_per_hour / 60) * selectedDuration.minutes)
     : null;
-
-  // Date navigation
-  const changeDate = useCallback((delta: number) => {
-    const next = new Date(displayDate);
-    next.setDate(next.getDate() + delta);
-    const nextStr = formatDate(next);
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-    if (next < todayDate) return; // no past dates
-    setDisplayDate(next);
-    setSelectedDate(nextStr);
-  }, [displayDate]);
 
   // Submit booking
   const handleConfirmBooking = async () => {
@@ -195,21 +182,7 @@ export default function BookingFlowScreen() {
         {/* Date Selection */}
         <FadeInView delay={80} style={st.section}>
           <Text style={st.sectionTitle}>Pilih Tanggal</Text>
-          <View style={st.datePicker}>
-            <TouchableOpacity
-              style={[st.dateArrow, formatDate(new Date()) === selectedDate && st.dateArrowDisabled]}
-              onPress={() => changeDate(-1)}
-              disabled={formatDate(new Date()) === selectedDate}
-            >
-              <MaterialIcons name="chevron-left" size={24} color={formatDate(new Date()) === selectedDate ? colors.textTertiary : colors.text} />
-            </TouchableOpacity>
-            <View style={st.dateDisplay}>
-              <Text style={st.dateText}>{formatDateDisplay(displayDate)}</Text>
-            </View>
-            <TouchableOpacity style={st.dateArrow} onPress={() => changeDate(1)}>
-              <MaterialIcons name="chevron-right" size={24} color={colors.text} />
-            </TouchableOpacity>
-          </View>
+          <CalendarPicker value={selectedDate} onChange={setSelectedDate} />
         </FadeInView>
 
         {/* Slot Selection */}
@@ -249,25 +222,20 @@ export default function BookingFlowScreen() {
               {slotsData.slots.map((slot, i) => {
                 const isAvailable = slot.status === 'AVAILABLE';
                 const isSelected = selectedSlot?.start_time === slot.start_time;
-                const palette = SLOT_STATUS_COLORS[slot.status] ?? SLOT_STATUS_COLORS.CLOSED;
                 return (
-                  <TouchableOpacity
+                  <View
                     key={i}
                     style={[
-                      st.slotChip,
-                      { backgroundColor: isSelected ? colors.primary : palette.bg, borderColor: isSelected ? colors.primary : palette.border },
+                      st.slotWrap,
+                      isSelected && { borderColor: colors.primary },
                     ]}
-                    onPress={() => { if (isAvailable) { setSelectedSlot(slot); Haptics.selectionAsync(); } }}
-                    disabled={!isAvailable}
-                    activeOpacity={isAvailable ? 0.75 : 1}
                   >
-                    <Text style={[st.slotTime, { color: isSelected ? '#fff' : palette.text }]}>
-                      {slot.start_time}
-                    </Text>
-                    <Text style={[st.slotStatus, { color: isSelected ? 'rgba(255,255,255,0.8)' : palette.text }]}>
-                      {slot.status === 'AVAILABLE' ? 'Tersedia' : slot.status === 'BOOKED' ? 'Penuh' : 'Tutup'}
-                    </Text>
-                  </TouchableOpacity>
+                    <TimeSlotCard
+                      time={slot.start_time}
+                      status={slot.status}
+                      onPress={() => { if (isAvailable) { setSelectedSlot(slot); Haptics.selectionAsync(); } }}
+                    />
+                  </View>
                 );
               })}
             </View>

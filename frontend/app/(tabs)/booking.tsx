@@ -142,7 +142,7 @@ export default function BookingTabScreen() {
   // Refresh when tab comes into focus
   useFocusEffect(useCallback(() => {
     refresh();
-  }, []));
+  }, [refresh]));
 
   const upcoming = bookings.filter(b => ACTIVE_STATUSES.includes(b.status));
   const history  = bookings.filter(b => PAST_STATUSES.includes(b.status));
