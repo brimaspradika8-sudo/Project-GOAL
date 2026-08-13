@@ -18,6 +18,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useProfileStore } from '../../store/profileStore';
+import { getResponseData } from '../../lib/api';
 import { apiFetch } from '../../lib/apiClient';
 import * as ImagePicker from 'expo-image-picker';
 import { mimeFromExt } from '../../lib/fieldValidation';
@@ -173,7 +174,10 @@ export default function ProfileScreen() {
         }
 
         if (profile) {
-          useProfileStore.setState({ profile: { ...profile, avatar_url: data.avatar_url } });
+          const uploaded = getResponseData<{ avatar_url?: string; profile?: any }>(data);
+          useProfileStore.setState({
+            profile: uploaded?.profile ?? { ...profile, avatar_url: uploaded?.avatar_url ?? data?.avatar_url },
+          });
         }
         useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Foto profil diperbarui.' });
       } catch (err: any) {

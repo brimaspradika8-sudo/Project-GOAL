@@ -8,7 +8,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useFieldStore } from '../../store/fieldStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getErrorMessage } from '../../lib/api';
+import { getErrorMessage, getResponseData } from '../../lib/api';
 import { apiFetch } from '../../lib/apiClient';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
@@ -386,7 +386,8 @@ export default function OwnerFieldsPage() {
       if (!res.ok) {
         return { url: null, error: data.message || 'Gagal mengunggah foto. Silakan coba lagi.' };
       }
-      return { url: data.url };
+      const uploaded = getResponseData<{ url?: string }>(data);
+      return { url: uploaded?.url ?? data?.url ?? null };
     } catch {
       return { url: null, error: 'Gagal terhubung ke server upload.' };
     }

@@ -71,6 +71,10 @@ export function getErrorMessage(data: any, fallbackMessage: string = 'Terjadi ke
   return fallbackMessage;
 }
 
+export function getResponseData<T = any>(payload: any): T {
+  return (payload && typeof payload === 'object' && 'data' in payload ? payload.data : payload) as T;
+}
+
 export function getAssetUrl(url: string | null | undefined): string | null {
   if (!url) return null;
   // If it starts with file:// or data: then it's a local/temporary uri

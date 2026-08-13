@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { getErrorMessage, getAssetUrl } from '../../lib/api';
+import { getErrorMessage, getAssetUrl, getResponseData } from '../../lib/api';
 import { apiFetch } from '../../lib/apiClient';
 import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { SkeletonCards } from '../Skeleton';
@@ -175,7 +175,8 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
         console.error('[uploadImage] gagal:', res.status, data);
         return { url: null, error: getErrorMessage(data, 'Gagal mengunggah foto. Coba lagi.') };
       }
-      return { url: data.url ?? null };
+      const uploaded = getResponseData<{ url?: string }>(data);
+      return { url: uploaded?.url ?? data?.url ?? null };
     } catch (err: any) {
       console.error('[uploadImage] exception:', err?.message ?? err);
       return { url: null, error: 'Gagal terhubung ke server upload.' };

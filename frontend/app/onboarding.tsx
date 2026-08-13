@@ -21,6 +21,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { getResponseData } from '../lib/api';
 import { apiFetch } from '../lib/apiClient';
 import { useProfileStore } from '../store/profileStore';
 import { useUsernameCheck } from '../hooks/useUsernameCheck';
@@ -205,7 +206,8 @@ export default function OnboardingScreen() {
       if (!res.ok) {
         return { url: null, error: data.message || 'Gagal mengunggah foto profil. Silakan coba lagi.' };
       }
-      return { url: data.avatar_url };
+      const uploaded = getResponseData<{ avatar_url?: string }>(data);
+      return { url: uploaded?.avatar_url ?? data?.avatar_url ?? null };
     } catch {
       return { url: null, error: 'Gagal terhubung ke server upload.' };
     }
