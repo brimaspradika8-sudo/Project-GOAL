@@ -7,6 +7,7 @@ export interface Field {
   name: string;
   sport_type: string;
   location: string;
+  address?: string | null;
   description: string | null;
   price_per_hour: number | null;
   image_url: string | null;

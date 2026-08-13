@@ -137,7 +137,8 @@ export async function getFieldDetail(fieldId: number): Promise<Field> {
     const data = await res.json().catch(() => ({}));
     throw { status: res.status, message: data?.message || 'Gagal memuat detail lapangan' };
   }
-  return res.json();
+  const body = await res.json();
+  return body?.data ?? body;
 }
 
 /**

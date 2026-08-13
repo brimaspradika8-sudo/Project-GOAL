@@ -16,6 +16,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../components/goalTheme';
 import { SafeImage } from '../components/SafeImage';
+import { Skeleton } from '../components/Skeleton';
 import { apiFetch } from '../lib/apiClient';
 import { useFavoriteStore } from '../store/favoriteStore';
 
@@ -39,7 +40,7 @@ const SPORT_ICONS: Record<string, string> = {
 
 function formatPrice(price: number | null): string {
   if (price == null) return 'Hubungi';
-  return `Rp${price.toLocaleString('id-ID')}`;
+  return `Rp${price.toLocaleString('id-ID')}/jam`;
 }
 
 function formatDate(d: Date): string {
@@ -78,12 +79,19 @@ export default function VenueDetailScreen() {
   const fetchField = useCallback(async () => {
     try {
       const res = await apiFetch(`/fields/${id}`, { skipToken: true });
-      if (!res.ok) throw new Error('Not found');
-      const data = await res.json();
-      setField(data);
+      if (!res.ok) {
+        if (res.status === 404) throw new Error('Lapangan tidak ditemukan');
+        throw new Error('Terjadi kesalahan jaringan');
+      }
+      const body = await res.json();
+      const data = body?.data ?? body;
+      if (!data || typeof data !== 'object' || data.id == null) {
+        throw new Error('Lapangan tidak ditemukan');
+      }
+      setField(data as Field);
       setError(null);
-    } catch {
-      setError('Lapangan tidak ditemukan');
+    } catch (e: any) {
+      setError(e?.message || 'Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -121,9 +129,21 @@ export default function VenueDetailScreen() {
 
   if (loading) {
     return (
-      <View style={st.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={st.errorText}>Memuat data...</Text>
+      <View style={st.container}>
+        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+        <View style={st.skeletonHero}>
+          <Skeleton width="100%" height={260} borderRadius={0} />
+          <View style={st.skeletonBackBtn}>
+            <Skeleton width={40} height={40} borderRadius={12} />
+          </View>
+        </View>
+        <View style={st.skeletonBody}>
+          <Skeleton width="72%" height={26} borderRadius={8} />
+          <Skeleton width="48%" height={15} borderRadius={6} style={{ marginTop: 10 }} />
+          <Skeleton width="100%" height={58} borderRadius={14} style={{ marginTop: 18 }} />
+          <Skeleton width="100%" height={120} borderRadius={14} style={{ marginTop: 18 }} />
+          <Skeleton width="100%" height={120} borderRadius={14} style={{ marginTop: 18 }} />
+        </View>
       </View>
     );
   }
@@ -131,11 +151,23 @@ export default function VenueDetailScreen() {
   if (error || !field) {
     return (
       <View style={st.centered}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
         <MaterialIcons name="error-outline" size={48} color={colors.textTertiary} />
-        <Text style={st.errorText}>{error || 'Lapangan tidak ditemukan'}</Text>
-        <TouchableOpacity onPress={() => router.back()} style={st.backBtnSmall}>
-          <Text style={st.backBtnSmallText}>Kembali</Text>
-        </TouchableOpacity>
+        <Text style={st.errorTitle}>{error || 'Lapangan tidak ditemukan'}</Text>
+        <Text style={st.errorSubtitle}>
+          {error === 'Lapangan tidak ditemukan'
+            ? 'Lapangan yang Anda cari tidak tersedia atau telah dihapus.'
+            : 'Periksa koneksi internet Anda dan coba lagi.'}
+        </Text>
+        <View style={st.errorActions}>
+          <TouchableOpacity onPress={() => { setLoading(true); setError(null); fetchField(); }} style={[st.retryBtn, { backgroundColor: colors.primary }]} activeOpacity={0.8}>
+            <MaterialIcons name="refresh" size={18} color={colors.onPrimary} />
+            <Text style={st.retryBtnText}>Coba lagi</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.back()} style={[st.retryBtn, { backgroundColor: colors.surfaceContainerHigh }]} activeOpacity={0.8}>
+            <Text style={[st.retryBtnText, { color: colors.text }]}>Kembali</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -162,7 +194,7 @@ export default function VenueDetailScreen() {
 
   function renderHero() {
     return (
-      <View style={[st.heroSection, { height: isDesktop ? '100%' : Math.min(280, screenHeight * 0.4) }]}>
+      <View style={[st.heroSection, { height: isDesktop ? '100%' : Math.min(300, screenHeight * 0.42) }]}>
         {hasImage ? (
           <SafeImage source={{ uri: f.image_url! }} style={st.heroImage} fallbackSize={48} />
         ) : (
@@ -197,8 +229,8 @@ export default function VenueDetailScreen() {
         </TouchableOpacity>
         <View style={st.heroContent}>
           <View style={st.heroBadges}>
-            <View style={[st.heroStatusBadge, { backgroundColor: isApproved ? colors.primary : colors.error }]}>
-              <Text style={st.heroStatusText}>{isApproved ? 'Tersedia' : 'Menunggu'}</Text>
+            <View style={[st.heroStatusBadge, { backgroundColor: isApproved ? colors.primary : '#F59E0B' }]}>
+              <Text style={st.heroStatusText}>{isApproved ? 'Tersedia' : 'Menunggu Persetujuan'}</Text>
             </View>
           </View>
         </View>
@@ -216,33 +248,35 @@ export default function VenueDetailScreen() {
         <View style={st.infoDivider} />
         <View style={st.infoItem}>
           <MaterialIcons name="payments" size={18} color={colors.primary} />
-          <Text style={st.infoText}>{formatPrice(f.price_per_hour)}/jam</Text>
+          <Text style={st.infoText}>{formatPrice(f.price_per_hour)}</Text>
         </View>
       </View>
     );
   }
 
   function renderDescription() {
-    if (!f.description) return null;
     return (
       <View style={st.section}>
-        <Text style={st.sectionTitle}>Tentang</Text>
-        <Text style={st.descText}>{f.description}</Text>
+        <Text style={st.sectionTitle}>Tentang Lapangan</Text>
+        <View style={st.descCard}>
+          <Text style={st.descText}>
+            {f.description && f.description.trim() ? f.description : 'Belum ada deskripsi'}
+          </Text>
+        </View>
       </View>
     );
   }
 
   function renderOwner() {
-    if (!f.owner) return null;
     return (
       <View style={st.section}>
-        <Text style={st.sectionTitle}>Pemilik</Text>
+        <Text style={st.sectionTitle}>Dikelola oleh</Text>
         <View style={st.ownerRow}>
           <View style={[st.ownerAvatar, { backgroundColor: colors.primaryContainer }]}>
             <Text style={[st.ownerAvatarText, { color: colors.primary }]}>{initial}</Text>
           </View>
-          <View>
-            <Text style={st.ownerName}>{f.owner.name}</Text>
+          <View style={st.ownerInfo}>
+            <Text style={st.ownerName}>{f.owner?.name || 'Pemilik Lapangan'}</Text>
             <Text style={st.ownerLabel}>Pemilik Lapangan</Text>
           </View>
         </View>
@@ -251,6 +285,7 @@ export default function VenueDetailScreen() {
   }
 
   function renderLocation() {
+    const address = [f.location, f.address].filter(Boolean).join(', ');
     return (
       <View style={st.section}>
         <Text style={st.sectionTitle}>Lokasi</Text>
@@ -271,7 +306,10 @@ export default function VenueDetailScreen() {
               <MaterialIcons name="location-on" size={40} color={colors.error || '#EF4444'} />
             </View>
           </View>
-          <Text style={st.mapAddress}>{f.location}</Text>
+          <View style={st.mapAddressWrap}>
+            <MaterialIcons name="place" size={16} color={colors.primary} />
+            <Text style={st.mapAddress}>{address || 'Alamat belum tersedia'}</Text>
+          </View>
           <TouchableOpacity
             style={[st.mapButton, { backgroundColor: colors.primary }]}
             activeOpacity={0.8}
@@ -350,15 +388,7 @@ export default function VenueDetailScreen() {
                   onPress={() => {
                     if (!isAvailable) return;
                     Haptics.selectionAsync();
-                    router.push({
-                      pathname: '/booking-confirmation',
-                      params: {
-                        id: String(f.id),
-                        date: slotsData?.date ?? formatDate(new Date()),
-                        startTime: slot.start_time,
-                        endTime: slot.end_time,
-                      },
-                    });
+                    openBookingFlow();
                   }}
                   disabled={!isAvailable}
                 >
@@ -451,24 +481,29 @@ export default function VenueDetailScreen() {
         </View>
       )}
 
-      <View style={st.bottomBar}>
-        <View style={st.bottomPrice}>
-          <Text style={st.bottomPriceLabel}>Harga</Text>
-          <Text style={st.bottomPriceValue}>{formatPrice(f.price_per_hour)}/jam</Text>
+      {!isDesktop && (
+        <View style={st.bottomBar}>
+          <View style={st.bottomPrice}>
+            <Text style={st.bottomPriceLabel}>Harga</Text>
+            <Text style={st.bottomPriceValue}>{formatPrice(f.price_per_hour)}</Text>
+          </View>
+          <TouchableOpacity
+            style={[st.bookButton, !isApproved && st.bookButtonDisabled]}
+            activeOpacity={0.85}
+            onPress={() => {
+              if (!isApproved) return;
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              openBookingFlow();
+            }}
+            disabled={!isApproved}
+          >
+            <MaterialIcons name="calendar-today" size={18} color={isApproved ? colors.onPrimary : colors.textTertiary} />
+            <Text style={[st.bookButtonText, !isApproved && { color: colors.textTertiary }]}>
+              {isApproved ? 'Pesan Sekarang' : 'Tidak tersedia'}
+            </Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={[st.bookButton, !isApproved && st.bookButtonDisabled]}
-          activeOpacity={0.85}
-          onPress={() => {
-            if (!isApproved) return;
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            openBookingFlow();
-          }}
-          disabled={!isApproved}
-        >
-          <Text style={st.bookButtonText}>{isApproved ? 'Pesan Sekarang' : 'Tersedia Nanti'}</Text>
-        </TouchableOpacity>
-      </View>
+      )}
     </View>
   );
 }
@@ -487,10 +522,49 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isDesktop: bo
     alignItems: 'center',
     backgroundColor: colors.background,
     gap: 12,
+    padding: 32,
   },
-  errorText: {
+  errorTitle: {
     ...FONTS.headlineSm,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  errorSubtitle: {
+    ...FONTS.bodyMd,
     color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  errorActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  retryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: SIZES.borderRadius,
+  },
+  retryBtnText: {
+    color: colors.onPrimary,
+    fontWeight: '700',
+  },
+  skeletonHero: {
+    height: 260,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  skeletonBackBtn: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 56 : 40,
+    left: 16,
+  },
+  skeletonBody: {
+    padding: 20,
+    gap: 0,
   },
   backBtnSmall: {
     marginTop: 8,
@@ -502,19 +576,6 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isDesktop: bo
   backBtnSmallText: {
     color: colors.onPrimary,
     fontWeight: '700',
-  },
-  desktopGrid: {
-    flexDirection: 'row',
-    maxWidth: 1200,
-    marginHorizontal: 'auto' as any,
-    width: '100%',
-    flex: 1,
-  },
-  desktopLeft: {
-    flex: 3,
-  },
-  desktopRight: {
-    flex: 4,
   },
   desktopOuter: {
     flexDirection: 'row',
@@ -559,7 +620,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isDesktop: bo
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -570,7 +631,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isDesktop: bo
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -629,6 +690,21 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isDesktop: bo
     marginBottom: 20,
     ...SHADOWS.sm,
   },
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  infoText: {
+    ...FONTS.bodySm,
+    color: colors.text,
+    fontWeight: '600',
+  },
+  infoDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: colors.divider,
+  },
 
   // ── Slot Preview ──────────────────────────────────────────────────────────
   slotPreviewHeader: {
@@ -672,21 +748,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isDesktop: bo
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { fontFamily: FONT_FAMILY, fontSize: 11 },
-  infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  infoText: {
-    ...FONTS.bodySm,
-    color: colors.text,
-    fontWeight: '600',
-  },
-  infoDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: colors.divider,
-  },
+
   section: {
     marginBottom: 24,
   },
@@ -695,6 +757,12 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isDesktop: bo
     fontSize: 16,
     color: colors.text,
     marginBottom: 12,
+  },
+  descCard: {
+    backgroundColor: colors.surfaceWhite,
+    borderRadius: SIZES.borderRadius,
+    padding: 16,
+    ...SHADOWS.sm,
   },
   descText: {
     ...FONTS.bodyMd,
@@ -720,6 +788,9 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isDesktop: bo
   ownerAvatarText: {
     ...FONTS.headlineSm,
     fontSize: 18,
+  },
+  ownerInfo: {
+    flex: 1,
   },
   ownerName: {
     ...FONTS.titleMd,
@@ -776,13 +847,18 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isDesktop: bo
   mapCenterPin: {
     zIndex: 2,
   },
-  mapAddress: {
-    ...FONTS.bodyMd,
-    color: colors.textSecondary,
-    textAlign: 'center',
+  mapAddressWrap: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 4,
+  },
+  mapAddress: {
+    ...FONTS.bodyMd,
+    color: colors.textSecondary,
+    flex: 1,
   },
   mapButton: {
     flexDirection: 'row',
@@ -831,9 +907,13 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isDesktop: bo
     color: colors.primary,
   },
   bookButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     backgroundColor: colors.primary,
     borderRadius: SIZES.borderRadius,
-    paddingHorizontal: 28,
+    paddingHorizontal: 24,
     paddingVertical: 14,
     ...SHADOWS.primary,
   },
