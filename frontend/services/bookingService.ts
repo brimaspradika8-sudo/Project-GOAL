@@ -133,11 +133,11 @@ export async function getFieldDetail(fieldId: number): Promise<Field> {
 }
 
 /**
- * POST /bookings
+ * POST /booking
  * Create a new booking request.
  */
 export async function createBooking(payload: CreateBookingPayload): Promise<{ data: Booking; message: string }> {
-  return apiSend('POST', '/bookings', { body: payload });
+  return apiSend('POST', '/booking', { body: payload });
 }
 
 /**

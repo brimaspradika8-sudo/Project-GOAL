@@ -184,6 +184,7 @@ function RootLayoutInner() {
         <Stack.Screen name="venue-detail" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="booking/create/[fieldId]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="booking/payment/[id]" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="booking-confirmation" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="e-ticket" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
         <Stack.Screen name="booking-flow" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="booking-waiting" options={{ animation: 'slide_from_right', gestureEnabled: false }} />

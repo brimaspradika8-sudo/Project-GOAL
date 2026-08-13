@@ -147,9 +147,12 @@ export function useBookingHistory(): UseBookingHistoryResult {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetch = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+  const fetch = useCallback(async ({ isRefresh = false, silent = false } = {}) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else if (!silent) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const res = await getBookingHistory();
@@ -162,8 +165,18 @@ export function useBookingHistory(): UseBookingHistoryResult {
     }
   }, []);
 
+  const refresh = useCallback(() => fetch({ isRefresh: true }), [fetch]);
+
   useEffect(() => {
     fetch();
+  }, [fetch]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      fetch({ silent: true });
+    }, 10000);
+
+    return () => clearInterval(timer);
   }, [fetch]);
 
   return {
@@ -171,6 +184,6 @@ export function useBookingHistory(): UseBookingHistoryResult {
     loading,
     refreshing,
     error,
-    refresh: () => fetch(true),
+    refresh,
   };
 }

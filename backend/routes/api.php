@@ -90,6 +90,7 @@ use App\Http\Controllers\NotificationController;
         });
         // Bookings (Sprint 3) - player
         Route::middleware('role:player')->group(function () {
+            Route::post('/booking',               [BookingController::class, 'store'])->middleware('throttle:booking-sensitive');
             Route::post('/bookings',              [BookingController::class, 'store'])->middleware('throttle:booking-sensitive');
             Route::get('/bookings/my',            [BookingController::class, 'myBookings']);
             Route::get('/bookings/history',       [BookingController::class, 'history']);
