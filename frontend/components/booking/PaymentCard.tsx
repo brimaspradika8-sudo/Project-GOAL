@@ -4,7 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { radius, spacing, typography } from '../theme';
 import { useTheme } from '../../lib/theme';
 
-export type PaymentMethod = 'cash' | 'transfer' | 'gateway';
+export type PaymentMethod = 'cash' | 'transfer' | 'ewallet' | 'gateway';
 
 interface PaymentCardProps {
   method: PaymentMethod;
@@ -18,6 +18,7 @@ interface PaymentCardProps {
 const icons: Record<PaymentMethod, React.ComponentProps<typeof MaterialIcons>['name']> = {
   cash: 'payments',
   transfer: 'account-balance',
+  ewallet: 'account-balance-wallet',
   gateway: 'credit-card',
 };
 

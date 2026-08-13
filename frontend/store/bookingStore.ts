@@ -11,8 +11,33 @@ import {
   type BookingHistoryResponse,
   type CreateBookingPayload,
 } from '../services/bookingService';
+import type { Field } from './fieldStore';
 
-interface BookingState {
+export interface SlotSelection {
+  start_time: string; // "HH:MM"
+  end_time: string;   // "HH:MM"
+}
+
+// ─── Booking flow state (create → payment → e-ticket) ─────────────────────────
+export interface BookingFlowState {
+  selectedField: Field | null;
+  selectedDate: string | null;          // "YYYY-MM-DD"
+  selectedSlots: SlotSelection[];
+  durationMinutes: number;
+  totalPrice: number | null;
+  bookingId: number | null;
+  setField: (field: Field | null) => void;
+  setDate: (date: string | null) => void;
+  setSlot: (slot: SlotSelection) => void;
+  clearSlots: () => void;
+  setDuration: (durationMinutes: number) => void;
+  setTotalPrice: (total: number | null) => void;
+  setBookingId: (id: number | null) => void;
+  resetFlow: () => void;
+}
+
+// ─── Booking list management state ─────────────────────────────────────────────
+interface BookingState extends BookingFlowState {
   bookings: Booking[];
   ownerBookings: Booking[];
   pagination: BookingHistoryResponse['pagination'] | null;
@@ -38,6 +63,31 @@ export const useBookingStore = create<BookingState>((set, get) => ({
   pagination: null,
   loading: false,
   error: null,
+
+  // Booking flow state
+  selectedField: null,
+  selectedDate: null,
+  selectedSlots: [],
+  durationMinutes: 60,
+  totalPrice: null,
+  bookingId: null,
+
+  setField: (field) => set({ selectedField: field }),
+  setDate: (date) => set({ selectedDate: date }),
+  setSlot: (slot) => set({ selectedSlots: [slot] }),
+  clearSlots: () => set({ selectedSlots: [] }),
+  setDuration: (durationMinutes) => set({ durationMinutes }),
+  setTotalPrice: (total) => set({ totalPrice: total }),
+  setBookingId: (id) => set({ bookingId: id }),
+  resetFlow: () =>
+    set({
+      selectedField: null,
+      selectedDate: null,
+      selectedSlots: [],
+      durationMinutes: 60,
+      totalPrice: null,
+      bookingId: null,
+    }),
 
   fetchMyBookings: async (page = 1) => {
     set({ loading: true, error: null });
@@ -105,5 +155,6 @@ export const useBookingStore = create<BookingState>((set, get) => ({
     });
   },
 
-  reset: () => set({ bookings: [], ownerBookings: [], pagination: null, loading: false, error: null }),
+  reset: () =>
+    set({ bookings: [], ownerBookings: [], pagination: null, loading: false, error: null }),
 }));

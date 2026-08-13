@@ -147,6 +147,19 @@ export default function VenueDetailScreen() {
   const sportIcon = (SPORT_ICONS[f.sport_type] || 'sports') as React.ComponentProps<typeof MaterialIcons>['name'];
   const initial = (f.owner?.name || '?').charAt(0).toUpperCase();
 
+  function openBookingFlow() {
+    router.push({
+      pathname: '/booking/create/[fieldId]',
+      params: {
+        fieldId: String(f.id),
+        fieldName: f.name,
+        price: f.price_per_hour != null ? String(f.price_per_hour) : '',
+        image: f.image_url ?? '',
+        location: f.location,
+      },
+    });
+  }
+
   function renderHero() {
     return (
       <View style={[st.heroSection, { height: isDesktop ? '100%' : Math.min(280, screenHeight * 0.4) }]}>
@@ -362,7 +375,7 @@ export default function VenueDetailScreen() {
                 activeOpacity={0.8}
                 onPress={() => {
                   Haptics.selectionAsync();
-                  router.push({ pathname: '/booking/create/[fieldId]', params: { fieldId: String(f.id) } });
+                  openBookingFlow();
                 }}
               >
                 <Text style={[st.slotMoreText, { color: colors.primary }]}>+{slots.length - 9}</Text>
@@ -449,7 +462,7 @@ export default function VenueDetailScreen() {
           onPress={() => {
             if (!isApproved) return;
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            router.push({ pathname: '/booking/create/[fieldId]', params: { fieldId: String(f.id) } });
+            openBookingFlow();
           }}
           disabled={!isApproved}
         >

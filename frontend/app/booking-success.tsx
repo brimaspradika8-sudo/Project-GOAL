@@ -190,19 +190,19 @@ export default function BookingSuccessScreen() {
         {/* Action Buttons */}
         <View style={st.actions}>
           <TouchableOpacity
+            style={[st.primaryBtn, { backgroundColor: colors.primary }]}
+            onPress={() => router.replace({ pathname: '/e-ticket', params: { id: String(bookingId) } })}
+            activeOpacity={0.85}
+          >
+            <Text style={[st.primaryBtnText, { color: colors.onPrimary }]}>Lihat E-Ticket</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={[st.secondaryBtn, { borderColor: colors.primary, backgroundColor: colors.surfaceWhite }]}
             onPress={() => router.replace('/(tabs)/booking')}
             activeOpacity={0.85}
           >
             <MaterialIcons name="event-available" size={20} color={colors.primary} />
             <Text style={[st.secondaryBtnText, { color: colors.primary }]}>Lihat Semua Booking</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[st.primaryBtn, { backgroundColor: colors.primary }]}
-            onPress={() => router.replace('/(tabs)')}
-            activeOpacity={0.85}
-          >
-            <Text style={[st.primaryBtnText, { color: colors.onPrimary }]}>Kembali ke Beranda</Text>
           </TouchableOpacity>
         </View>
 

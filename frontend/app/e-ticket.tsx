@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   StyleSheet,
   View,
@@ -7,32 +7,82 @@ import {
   TouchableOpacity,
   Platform,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../components/goalTheme';
 import { useTheme } from '../lib/theme';
+import { useBookingDetail } from '../hooks/useBooking';
+import { SPORT_LABELS } from '../lib/fieldValidation';
+import type { Booking } from '../services/bookingService';
+
+function formatPrice(p: number): string {
+  return `Rp${p.toLocaleString('id-ID')}`;
+}
+
+function formatDateDisplay(d: string): string {
+  if (!d) return '-';
+  const date = new Date(d + 'T00:00:00');
+  return date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function formatDuration(minutes: number): string {
+  const hours = Math.round((minutes / 60) * 10) / 10;
+  return `${hours} jam`;
+}
+
+function ticketCode(id: number): string {
+  return `GOAL-${String(id).padStart(4, '0')}`;
+}
+
+function statusLabel(status: Booking['status']): string {
+  switch (status) {
+    case 'CONFIRMED': return 'AKTIF';
+    case 'APPROVED': return 'TERKONFIRMASI';
+    case 'WAITING_OWNER_APPROVAL': return 'MENUNGGU';
+    case 'COMPLETED': return 'SELESAI';
+    case 'REJECTED': return 'DITOLAK';
+    case 'CANCELLED': return 'DIBATALKAN';
+    case 'EXPIRED': return 'KEDALUWARSA';
+    default: return status.replace(/_/g, ' ').toUpperCase();
+  }
+}
 
 export default function ETicketScreen() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const bookingId = Number(id);
+  const hasId = Number.isFinite(bookingId) && bookingId > 0;
   const { colors } = useTheme();
-  const ticketCode = useMemo(
-    () => 'GOAL-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
-    []
-  );
   const st = makeStyles(colors);
+
+  const { booking, loading, error } = useBookingDetail(hasId ? bookingId : null);
 
   return (
     <View style={st.container}>
       <StatusBar barStyle={colors.background === '#0C1219' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
       <View style={st.header}>
-        <TouchableOpacity onPress={() => router.replace('/(tabs)')} activeOpacity={0.7} style={st.headerBtn}>
-          <MaterialIcons name="close" size={22} color={colors.text} />
+        <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={st.headerBtn}>
+          <MaterialIcons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={st.headerTitle}>E-Tiket</Text>
         <View style={st.headerBtn} />
       </View>
 
+      {loading && hasId ? (
+        <View style={st.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : error || !booking || !hasId ? (
+        <View style={st.centered}>
+          <MaterialIcons name="error-outline" size={48} color={colors.textTertiary} />
+          <Text style={st.errorText}>{error || 'Tiket tidak ditemukan.'}</Text>
+          <TouchableOpacity style={st.primaryBtn} activeOpacity={0.85} onPress={() => router.replace('/(tabs)/booking')}>
+            <Text style={st.primaryBtnText}>Lihat Booking</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
       <ScrollView contentContainerStyle={st.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={st.successSection}>
           <View style={st.successCircle}>
@@ -51,7 +101,7 @@ export default function ETicketScreen() {
               <Text style={st.ticketLogo}>GOAL</Text>
             </View>
             <View style={st.ticketBadge}>
-              <Text style={st.ticketBadgeText}>AKTIF</Text>
+              <Text style={st.ticketBadgeText}>{statusLabel(booking.status)}</Text>
             </View>
           </View>
 
@@ -65,42 +115,50 @@ export default function ETicketScreen() {
             <View style={st.ticketRow}>
               <View style={st.ticketField}>
                 <Text style={st.ticketLabel}>KODE TIKET</Text>
-                <Text style={st.ticketValue} numberOfLines={1} ellipsizeMode="tail">{ticketCode}</Text>
+                <Text style={st.ticketValue} numberOfLines={1} ellipsizeMode="tail">{ticketCode(booking.id)}</Text>
               </View>
             </View>
 
             <View style={st.ticketRow}>
               <View style={st.ticketField}>
                 <Text style={st.ticketLabel}>VENUE</Text>
-                <Text style={st.ticketValue} numberOfLines={1} ellipsizeMode="tail">Kinetic Stadium</Text>
+                <Text style={st.ticketValue} numberOfLines={1} ellipsizeMode="tail">{booking.field?.name ?? `Field #${booking.field_id}`}</Text>
               </View>
             </View>
 
             <View style={st.ticketRow}>
               <View style={st.ticketField}>
-                <Text style={st.ticketLabel}>LAPANGAN</Text>
-                <Text style={st.ticketValue} numberOfLines={1} ellipsizeMode="tail">Lapangan A - Futsal</Text>
+                <Text style={st.ticketLabel}>OLAHRAGA</Text>
+                <Text style={st.ticketValue} numberOfLines={1} ellipsizeMode="tail">{SPORT_LABELS[booking.field?.sport_type ?? ''] ?? (booking.field?.sport_type ?? '-')}</Text>
               </View>
             </View>
 
             <View style={st.ticketRow2}>
               <View style={st.ticketField}>
                 <Text style={st.ticketLabel}>TANGGAL</Text>
-                <Text style={st.ticketValue} numberOfLines={1} ellipsizeMode="tail">Sabtu, 19 Juli 2025</Text>
-              </View>
-              <View style={st.ticketField}>
-                <Text style={st.ticketLabel}>JAM</Text>
-                <Text style={st.ticketValue}>10:00</Text>
+                <Text style={st.ticketValue} numberOfLines={2} ellipsizeMode="tail">{formatDateDisplay(booking.booking_date)}</Text>
               </View>
             </View>
 
             <View style={st.ticketRow2}>
               <View style={st.ticketField}>
-                <Text style={st.ticketLabel}>DURASI</Text>
-                <Text style={st.ticketValue}>1 Jam</Text>
+                <Text style={st.ticketLabel}>JAM</Text>
+                <Text style={st.ticketValue}>{booking.start_time} – {booking.end_time}</Text>
               </View>
               <View style={st.ticketField}>
-                <Text style={[st.ticketValue, { color: colors.primary }]} numberOfLines={1} ellipsizeMode="tail">Rp150.000</Text>
+                <Text style={st.ticketLabel}>DURASI</Text>
+                <Text style={st.ticketValue}>{formatDuration(booking.duration_minutes)}</Text>
+              </View>
+            </View>
+
+            <View style={st.ticketRow2}>
+              <View style={st.ticketField}>
+                <Text style={st.ticketLabel}>TOTAL</Text>
+                <Text style={[st.ticketValue, { color: colors.primary }]} numberOfLines={1} ellipsizeMode="tail">{formatPrice(booking.total_price)}</Text>
+              </View>
+              <View style={st.ticketField}>
+                <Text style={st.ticketLabel}>LOKASI</Text>
+                <Text style={st.ticketValue} numberOfLines={2} ellipsizeMode="tail">{booking.field?.location ?? '-'}</Text>
               </View>
             </View>
           </View>
@@ -127,10 +185,6 @@ export default function ETicketScreen() {
         </View>
 
         <View style={st.actionButtons}>
-          <TouchableOpacity style={st.secondaryBtn} activeOpacity={0.85}>
-            <MaterialIcons name="download" size={20} color={colors.primary} />
-            <Text style={st.secondaryBtnText}>Unduh Tiket</Text>
-          </TouchableOpacity>
           <TouchableOpacity style={st.primaryBtn} activeOpacity={0.85} onPress={() => router.replace('/(tabs)')}>
             <Text style={st.primaryBtnText}>Kembali ke Beranda</Text>
           </TouchableOpacity>
@@ -138,6 +192,7 @@ export default function ETicketScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      )}
     </View>
   );
 }
@@ -146,6 +201,18 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    gap: 12,
+  },
+  errorText: {
+    ...FONTS.bodyMd,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   header: {
     flexDirection: 'row',

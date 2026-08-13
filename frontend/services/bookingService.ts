@@ -120,6 +120,14 @@ export async function getAvailableSlots(fieldId: number, date: string): Promise<
 }
 
 /**
+ * Alias of getAvailableSlots — availability lookup for a field & date.
+ * GET /lapangan/{id}/slots?tanggal=YYYY-MM-DD
+ */
+export async function getAvailability(fieldId: number, date: string): Promise<SlotsResponse> {
+  return getAvailableSlots(fieldId, date);
+}
+
+/**
  * GET /fields/{id}
  * Fetch field detail for the booking create screen.
  */
@@ -146,6 +154,14 @@ export async function createBooking(payload: CreateBookingPayload): Promise<{ da
  */
 export async function getBooking(id: number): Promise<{ data: Booking; message: string }> {
   return apiGet(`/bookings/${id}`);
+}
+
+/**
+ * Alias of getBooking — booking detail lookup for e-ticket / payment screens.
+ * GET /bookings/{id}
+ */
+export async function getBookingDetail(id: number): Promise<{ data: Booking; message: string }> {
+  return getBooking(id);
 }
 
 /**

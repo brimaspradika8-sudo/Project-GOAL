@@ -182,7 +182,7 @@ export default function BookingPaymentScreen() {
           <View style={st.methodList}>
             <PaymentCard
               method="cash"
-              title="Cash / Tunai"
+              title="Cash di Tempat"
               description="Bayar langsung saat tiba di venue."
               selected={paymentMethod === 'cash'}
               onPress={() => setPaymentMethod('cash')}
@@ -195,10 +195,10 @@ export default function BookingPaymentScreen() {
               disabled
             />
             <PaymentCard
-              method="gateway"
-              title="Payment Gateway"
-              description="Kartu, e-wallet, dan virtual account."
-              selected={paymentMethod === 'gateway'}
+              method="ewallet"
+              title="E-Wallet"
+              description="Akan tersedia segera."
+              selected={paymentMethod === 'ewallet'}
               disabled
             />
           </View>
