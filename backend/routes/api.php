@@ -102,8 +102,10 @@ use App\Http\Controllers\NotificationController;
             Route::get('/owner/fields/{id}/bookings',    [BookingController::class, 'ownerFieldBookings']);
             Route::patch('/owner/bookings/{id}/approve', [BookingController::class, 'approve'])->middleware('throttle:booking-sensitive');
             Route::patch('/owner/bookings/{id}/reject',  [BookingController::class, 'reject'])->middleware('throttle:booking-sensitive');
-            Route::patch('/bookings/{id}/confirm',       [BookingController::class, 'confirm'])->middleware('throttle:booking-sensitive');
         });
+        // Payment confirmation — accessible to player (booking owner), owner, and super_admin
+        // Authorization is handled by BookingPolicy::confirm()
+        Route::patch('/bookings/{id}/confirm', [BookingController::class, 'confirm'])->middleware('throttle:booking-sensitive');
         // Bookings - super admin monitoring
         Route::middleware('role:super_admin')->group(function () {
             Route::get('/admin/bookings', [BookingController::class, 'adminIndex']);

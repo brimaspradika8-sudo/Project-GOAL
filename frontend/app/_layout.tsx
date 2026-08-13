@@ -183,6 +183,10 @@ function RootLayoutInner() {
         <Stack.Screen name="(super-admin)" options={{ animation: 'fade' }} />
         <Stack.Screen name="venue-detail" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="e-ticket" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
+        <Stack.Screen name="booking-flow" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="booking-waiting" options={{ animation: 'slide_from_right', gestureEnabled: false }} />
+        <Stack.Screen name="booking-payment" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="booking-success" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
       </Stack>
       {(showSplash || booting) && (
         <View style={styles.loadingOverlay}>

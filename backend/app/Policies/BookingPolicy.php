@@ -23,7 +23,8 @@ class BookingPolicy
     public function confirm(User $user, Booking $booking): bool
     {
         return $this->isSuperAdmin($user)
-            || $booking->field?->owner_id === $user->id;
+            || $booking->field?->owner_id === $user->id
+            || $booking->user_id === $user->id; // player confirms their own payment
     }
 
     public function approve(User $user, Booking $booking): bool
