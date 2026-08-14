@@ -9,6 +9,7 @@ import { useTheme, type ThemeColors } from '../../lib/theme';
 import { apiFetch } from '../../lib/apiClient';
 import { getErrorMessage } from '../../lib/api';
 import { useToastStore } from '../../store/toastStore';
+import { useIsMobileWeb } from '../../lib/responsive';
 
 type FieldPrice = {
   id: number;
@@ -43,6 +44,7 @@ const DEFAULT_PRICE_FORM: PriceForm = { start_time: '07:00', end_time: '17:00', 
 export default function OwnerBookingSettingsPage() {
   const { colors } = useTheme();
   const st = makeStyles(colors);
+  const isMobile = useIsMobileWeb();
   const [fields, setFields] = useState<OwnerField[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -202,7 +204,10 @@ export default function OwnerBookingSettingsPage() {
     <View style={st.screen}>
       <DashboardHeader title="Booking Settings" subtitle="Konfigurasi jadwal dan harga lapangan" showBack={false} />
       <ScrollView
-        contentContainerStyle={st.content}
+        contentContainerStyle={[
+          st.content,
+          !isMobile && { maxWidth: 900, alignSelf: 'center', width: '100%' }
+        ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} colors={[colors.primary]} />}
         showsVerticalScrollIndicator={false}
       >
@@ -217,17 +222,31 @@ export default function OwnerBookingSettingsPage() {
         ) : (
           <>
             <Text style={st.sectionLabel}>Lapangan</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.fieldTabs}>
-              {fields.map((field) => {
-                const active = selectedField?.id === field.id;
-                return (
-                  <TouchableOpacity key={field.id} style={[st.fieldTab, active && st.fieldTabActive]} onPress={() => setSelectedId(field.id)}>
-                    <Text style={[st.fieldTabTitle, active && st.fieldTabTitleActive]} numberOfLines={1}>{field.name}</Text>
-                    <Text style={[st.fieldTabMeta, active && st.fieldTabMetaActive]}>{field.status}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
+            {isMobile ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.fieldTabs}>
+                {fields.map((field) => {
+                  const active = selectedField?.id === field.id;
+                  return (
+                    <TouchableOpacity key={field.id} style={[st.fieldTab, active && st.fieldTabActive, { width: 180 }]} onPress={() => setSelectedId(field.id)}>
+                      <Text style={[st.fieldTabTitle, active && st.fieldTabTitleActive]} numberOfLines={1}>{field.name}</Text>
+                      <Text style={[st.fieldTabMeta, active && st.fieldTabMetaActive]}>{field.status}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            ) : (
+              <View style={[st.fieldTabs, { flexDirection: 'row', flexWrap: 'wrap' }]}>
+                {fields.map((field) => {
+                  const active = selectedField?.id === field.id;
+                  return (
+                    <TouchableOpacity key={field.id} style={[st.fieldTab, active && st.fieldTabActive, { minWidth: 180, flex: 1, maxWidth: 220 }]} onPress={() => setSelectedId(field.id)}>
+                      <Text style={[st.fieldTabTitle, active && st.fieldTabTitleActive]} numberOfLines={1}>{field.name}</Text>
+                      <Text style={[st.fieldTabMeta, active && st.fieldTabMetaActive]}>{field.status}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
 
             {selectedField ? (
               <>
@@ -413,7 +432,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   alert: { marginBottom: 14 },
   sectionLabel: { ...FONTS.labelSm, color: colors.textSecondary, marginBottom: 10, textTransform: 'uppercase' },
   fieldTabs: { gap: 10, paddingBottom: 16 },
-  fieldTab: { width: 180, padding: 14, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.outline },
+  fieldTab: { padding: 14, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.outline },
   fieldTabActive: { borderColor: colors.primary, backgroundColor: colors.primaryContainer },
   fieldTabTitle: { ...FONTS.titleSm, color: colors.text },
   fieldTabTitleActive: { color: colors.onPrimaryContainer },

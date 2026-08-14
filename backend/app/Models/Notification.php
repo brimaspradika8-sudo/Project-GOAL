@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Notification extends Model
 {
+    use HasUuids;
     public const TYPE_FIELD_APPROVED        = 'field_approved';
     public const TYPE_FIELD_REJECTED        = 'field_rejected';
     public const TYPE_OWNER_REQUEST_APPROVED = 'owner_request_approved';

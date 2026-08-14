@@ -80,8 +80,9 @@ function formatDuration(minutes: number): string {
 
 // ─── Status Badge Component ───────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: BookingStatus }) {
+function StatusBadge({ status, colors, resolved }: { status: BookingStatus, colors: any, resolved: any }) {
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.EXPIRED;
+  const badgeSt = makeBadgeSt(colors, resolved);
   return (
     <View style={[badgeSt.pill, { backgroundColor: cfg.bg }]}>
       <Text style={badgeSt.dot}>{cfg.dot}</Text>
@@ -90,7 +91,7 @@ function StatusBadge({ status }: { status: BookingStatus }) {
   );
 }
 
-const badgeSt = StyleSheet.create({
+const makeBadgeSt = (colors: any, resolved: any) => StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -109,10 +110,15 @@ const badgeSt = StyleSheet.create({
 function BookingCard({
   booking,
   onPress,
+  colors,
+  resolved,
 }: {
   booking: Booking;
   onPress: () => void;
+  colors: any;
+  resolved: any;
 }) {
+  const cardSt = makeCardSt(colors, resolved);
   const sportLabel = SPORT_LABELS[booking.field?.sport_type ?? ''] ?? (booking.field?.sport_type ?? '');
   const imageUri = booking.field?.image_url ?? '';
 
@@ -134,7 +140,7 @@ function BookingCard({
       {/* ── Right: info ── */}
       <View style={cardSt.body}>
         {/* Status badge */}
-        <StatusBadge status={booking.status} />
+        <StatusBadge status={booking.status} colors={colors} resolved={resolved} />
 
         {/* Venue name */}
         <Text style={cardSt.fieldName} numberOfLines={1}>
@@ -170,10 +176,10 @@ function BookingCard({
   );
 }
 
-const cardSt = StyleSheet.create({
+const makeCardSt = (colors: any, resolved: any) => StyleSheet.create({
   wrapper: {
     flexDirection: 'row',
-    backgroundColor: WHITE,
+    backgroundColor: colors.surface,
     borderRadius: 20,
     marginBottom: 14,
     overflow: 'hidden',
@@ -197,19 +203,19 @@ const cardSt = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.text,
     marginTop: 2,
   },
   sport: {
     fontFamily: FONT_FAMILY,
     fontSize: 12,
-    color: '#6B7280',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   metaCol: { gap: 3, marginTop: 2 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   metaIcon: { fontSize: 12 },
-  metaText: { fontFamily: FONT_FAMILY, fontSize: 12, color: '#4B5563', fontWeight: '500' },
+  metaText: { fontFamily: FONT_FAMILY, fontSize: 12, color: colors.textSecondary, fontWeight: '500' },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -217,7 +223,7 @@ const cardSt = StyleSheet.create({
     marginTop: 6,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: colors.outline,
   },
   price: {
     fontFamily: FONT_FAMILY,
@@ -242,7 +248,8 @@ const cardSt = StyleSheet.create({
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
 
-function EmptyState({ tab }: { tab: TabKey }) {
+function EmptyState({ tab, colors, resolved }: { tab: TabKey, colors: any, resolved: any }) {
+  const emptySt = makeEmptySt(colors, resolved);
   const isActive = tab === 'aktif';
   return (
     <FadeInView>
@@ -277,7 +284,7 @@ function EmptyState({ tab }: { tab: TabKey }) {
   );
 }
 
-const emptySt = StyleSheet.create({
+const makeEmptySt = (colors: any, resolved: any) => StyleSheet.create({
   container: {
     alignItems: 'center',
     paddingVertical: 48,
@@ -297,13 +304,13 @@ const emptySt = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 17,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.text,
     textAlign: 'center',
   },
   subtitle: {
     fontFamily: FONT_FAMILY,
     fontSize: 13,
-    color: '#6B7280',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -329,6 +336,7 @@ const emptySt = StyleSheet.create({
 
 export default function BookingTabScreen() {
   const { colors, resolved } = useTheme();
+  const st = makeStyles(colors, resolved);
   const isMobile = useIsMobileWeb();
   const { bookings, loading, refreshing, error, refresh } = useBookingHistory();
   const [activeTab, setActiveTab] = useState<TabKey>('aktif');
@@ -360,42 +368,51 @@ export default function BookingTabScreen() {
           <Text style={st.headerTitle}>My Booking</Text>
           <Text style={st.headerSubtitle}>Lihat dan kelola semua booking kamu</Text>
         </View>
-        <TouchableOpacity
-          style={st.headerCta}
-          onPress={() => router.push('/(tabs)/fields')}
-          activeOpacity={0.85}
-        >
-          <MaterialIcons name="add" size={18} color={WHITE} />
-          <Text style={st.headerCtaText}>Cari Lapangan</Text>
-        </TouchableOpacity>
+        {/* A3: Sembunyikan CTA saat tab aktif kosong (mencegah duplikasi dengan EmptyState) */}
+        {!(displayed.length === 0 && activeTab === 'aktif') && (
+          <TouchableOpacity
+            style={st.headerCta}
+            onPress={() => router.push('/(tabs)/fields')}
+            activeOpacity={0.85}
+          >
+            <MaterialIcons name="add" size={18} color={WHITE} />
+            <Text style={st.headerCtaText}>Cari Lapangan</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── Tab Bar ── */}
       <View style={st.tabBarOuter}>
-        <View style={st.tabBarInner}>
-          {(['aktif', 'riwayat'] as TabKey[]).map(tab => {
-            const isActive = activeTab === tab;
-            const count = tab === 'aktif' ? upcoming.length : history.length;
-            return (
-              <TouchableOpacity
-                key={tab}
-                style={[st.tabBtn, isActive && st.tabBtnActive]}
-                onPress={() => setActiveTab(tab)}
-                activeOpacity={0.8}
-              >
-                <Text style={[st.tabLabel, isActive && st.tabLabelActive]}>
-                  {tab === 'aktif' ? 'Aktif' : 'Riwayat'}
-                </Text>
-                {count > 0 && (
-                  <View style={[st.tabBadge, isActive ? st.tabBadgeActive : st.tabBadgeInactive]}>
-                    <Text style={[st.tabBadgeText, isActive ? { color: PRIMARY } : { color: GRAY }]}>
-                      {count}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+        {/* A2: Wrapper agar tab bar sejajar dengan konten di desktop */}
+        <View style={[
+          st.tabBarConstraint,
+          !isMobile && { maxWidth: 720, alignSelf: 'center', width: '100%' },
+        ]}>
+          <View style={st.tabBarInner}>
+            {(['aktif', 'riwayat'] as TabKey[]).map(tab => {
+              const isActive = activeTab === tab;
+              const count = tab === 'aktif' ? upcoming.length : history.length;
+              return (
+                <TouchableOpacity
+                  key={tab}
+                  style={[st.tabBtn, isActive && st.tabBtnActive]}
+                  onPress={() => setActiveTab(tab)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[st.tabLabel, isActive && st.tabLabelActive]}>
+                    {tab === 'aktif' ? 'Aktif' : 'Riwayat'}
+                  </Text>
+                  {count > 0 && (
+                    <View style={[st.tabBadge, isActive ? st.tabBadgeActive : st.tabBadgeInactive]}>
+                      <Text style={[st.tabBadgeText, isActive ? { color: PRIMARY } : { color: GRAY }]}>
+                        {count}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
       </View>
 
@@ -434,7 +451,7 @@ export default function BookingTabScreen() {
           }
         >
           {displayed.length === 0 ? (
-            <EmptyState tab={activeTab} />
+            <EmptyState tab={activeTab} colors={colors} resolved={resolved} />
           ) : (
             <FadeInView>
               {displayed.map((b, i) => (
@@ -442,6 +459,8 @@ export default function BookingTabScreen() {
                   key={b.id}
                   booking={b}
                   onPress={() => navigateToBooking(b)}
+                  colors={colors}
+                  resolved={resolved}
                 />
               ))}
             </FadeInView>
@@ -469,7 +488,7 @@ export default function BookingTabScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const st = StyleSheet.create({
+const makeStyles = (colors: any, resolved: any) => StyleSheet.create({
   root: { flex: 1 },
 
   // Header
@@ -480,22 +499,24 @@ const st = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 58 : 44,
     paddingBottom: 16,
-    backgroundColor: WHITE,
+    // A1: colors.card tidak ada di ThemeColors → pakai colors.surface
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    // A1: colors.border tidak ada di ThemeColors → pakai colors.outline
+    borderBottomColor: colors.outline,
   },
   headerLeft: { gap: 2 },
   headerTitle: {
     fontFamily: FONT_FAMILY,
     fontSize: 22,
     fontWeight: '800',
-    color: '#111827',
+    color: colors.text,
     letterSpacing: -0.3,
   },
   headerSubtitle: {
     fontFamily: FONT_FAMILY,
     fontSize: 12,
-    color: '#9CA3AF',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   headerCta: {
@@ -516,15 +537,19 @@ const st = StyleSheet.create({
 
   // Tab bar
   tabBarOuter: {
-    backgroundColor: WHITE,
+    // A1: colors.card tidak ada → pakai colors.surface
+    backgroundColor: colors.surface,
     paddingHorizontal: 20,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    // A1: colors.border tidak ada → pakai colors.outline
+    borderBottomColor: colors.outline,
   },
+  // A2: Container untuk constraint max-width tab bar di desktop
+  tabBarConstraint: {},
   tabBarInner: {
     flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: resolved === 'dark' ? colors.outline : '#F3F4F6',
     borderRadius: 12,
     padding: 4,
     gap: 4,
@@ -563,7 +588,7 @@ const st = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.25)',
   },
   tabBadgeInactive: {
-    backgroundColor: '#E5E7EB',
+    backgroundColor: resolved === 'dark' ? '#374151' : '#E5E7EB',
   },
   tabBadgeText: {
     fontFamily: FONT_FAMILY,
@@ -602,7 +627,7 @@ const st = StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 17,
     fontWeight: '700',
-    color: '#111827',
+    color: colors.text,
   },
   errorMsg: {
     fontFamily: FONT_FAMILY,

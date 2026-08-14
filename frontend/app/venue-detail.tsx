@@ -517,12 +517,18 @@ export default function VenueDetailScreen() {
               {renderDescription()}
             </FadeInView>
 
-            <View style={{ height: isMobile ? 140 : 120 }} />
+            {!isMobile && (
+              <FadeInView delay={180} duration={320}>
+                {renderBottomBar()}
+              </FadeInView>
+            )}
+
+            <View style={{ height: isMobile ? 140 : 60 }} />
           </View>
         </View>
       </ScrollView>
 
-      {renderBottomBar()}
+      {isMobile && renderBottomBar()}
     </View>
   );
 }
@@ -823,11 +829,8 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isMobile: boo
     ...SHADOWS.xl,
   },
   floatingWrap: {
-    position: 'absolute',
-    bottom: 32,
-    left: 0,
-    right: 0,
     alignItems: 'center',
+    marginTop: 24,
   },
   floatingBar: {
     flexDirection: 'row',
