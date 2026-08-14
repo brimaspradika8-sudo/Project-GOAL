@@ -17,6 +17,7 @@ import {
   getOwnerBookings,
   type Booking,
 } from '../../services/bookingService';
+import { useIsMobileWeb } from '../../lib/responsive';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -292,6 +293,7 @@ export default function OwnerBookingsPage() {
   const { colors, resolved } = useTheme();
   const st = makeStyles(colors, resolved);
   const showToast = useToastStore((s) => s.show);
+  const isMobile = useIsMobileWeb();
 
   const statusCfg: Record<string, StatusConfig> = {
     WAITING_CONFIRMATION: { label: 'Menunggu Konfirmasi', bg: colors.floodlight + '22', color: colors.onWarning ?? '#B45309', icon: 'schedule' },
@@ -389,7 +391,10 @@ export default function OwnerBookingsPage() {
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={st.contentList}
+          contentContainerStyle={[
+            st.contentList,
+            !isMobile && { maxWidth: 900, alignSelf: 'center', width: '100%' }
+          ]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
