@@ -81,6 +81,7 @@ class FieldAuthorizationTest extends TestCase
             'location' => 'Jl. Stabil 1',
             'description' => 'Lapangan untuk pengujian final.',
             'price_per_hour' => 100000,
+            'image_url' => 'https://via.placeholder.com/640x480.png',
         ], $overrides);
     }
 }

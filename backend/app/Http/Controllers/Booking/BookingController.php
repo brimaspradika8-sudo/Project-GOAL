@@ -86,26 +86,6 @@ class BookingController extends Controller
         return $this->resourceResponse('Detail booking berhasil dimuat.', new BookingResource($booking));
     }
 
-    public function confirm(Request $request, int $id): JsonResponse
-    {
-        $booking = Booking::with('field')->find($id);
-
-        if (! $booking) {
-            return $this->errorResponse('Booking not found', [], 404);
-        }
-
-        try {
-            $this->authorizeBooking($request, 'view', $booking);
-            $updated = $this->bookingService->confirmCashBooking($request->user(), $booking);
-
-            return $this->resourceResponse('Booking berhasil dikonfirmasi.', new BookingResource($updated));
-        } catch (AuthorizationException $e) {
-            return $this->errorResponse('You do not have permission', [], 403);
-        } catch (ValidationException $e) {
-            return $this->errorResponse($e->getMessage(), $e->errors(), 422);
-        }
-    }
-
     public function cancel(CancelBookingRequest $request, int $id): JsonResponse
     {
         try {

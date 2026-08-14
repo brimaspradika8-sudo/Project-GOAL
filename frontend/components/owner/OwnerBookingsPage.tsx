@@ -14,11 +14,9 @@ import {
   ownerApproveBooking,
   ownerRejectBooking,
   ownerCompleteBooking,
-  confirmPayment,
   getOwnerBookings,
   type Booking,
 } from '../../services/bookingService';
-import { SafeImage } from '../SafeImage';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -154,7 +152,6 @@ function BookingCard({
   statusCfg,
   onApprove,
   onReject,
-  onConfirmCash,
   onComplete,
   loadingAction,
   colors,
@@ -164,7 +161,6 @@ function BookingCard({
   statusCfg: Record<string, StatusConfig>;
   onApprove: (id: number) => void;
   onReject: (b: Booking) => void;
-  onConfirmCash: (id: number) => void;
   onComplete: (id: number) => void;
   loadingAction: number | null;
   colors: any;
@@ -184,7 +180,6 @@ function BookingCard({
 
   const isLoading = loadingAction === booking.id;
   const needsApproval = booking.status === 'WAITING_CONFIRMATION';
-  const needsPayment = booking.status === 'CONFIRMED';
   const needsComplete = booking.status === 'CONFIRMED';
 
   return (
@@ -263,29 +258,11 @@ function BookingCard({
             ) : (
               <>
                 <MaterialIcons name="check" size={16} color="#fff" />
-                <Text style={[styles.actionBtnText, { color: '#fff' }]}>Setujui</Text>
+                <Text style={[styles.actionBtnText, { color: '#fff' }]}>Terima</Text>
               </>
             )}
           </TouchableOpacity>
         </View>
-      )}
-
-      {needsPayment && (
-        <TouchableOpacity
-          style={[styles.cashBtn, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '40' }]}
-          onPress={() => onConfirmCash(booking.id)}
-          disabled={isLoading}
-          activeOpacity={0.8}
-        >
-          {isLoading ? (
-            <ActivityIndicator size="small" color={colors.primary} />
-          ) : (
-            <>
-              <MaterialIcons name="payments" size={16} color={colors.primary} />
-              <Text style={[styles.cashBtnText, { color: colors.primary }]}>Konfirmasi Pembayaran Cash</Text>
-            </>
-          )}
-        </TouchableOpacity>
       )}
 
       {needsComplete && (
@@ -359,7 +336,7 @@ export default function OwnerBookingsPage() {
     setLoadingAction(id);
     try {
       await ownerApproveBooking(id);
-      showToast({ type: 'success', title: 'Booking disetujui', description: 'Penyewa akan diberitahu untuk melanjutkan pembayaran.' });
+      showToast({ type: 'success', title: 'Booking dikonfirmasi', description: 'Penyewa akan diberitahu bahwa booking dikonfirmasi.' });
       fetchBookings();
     } catch {
       showToast({ type: 'error', title: 'Gagal menyetujui', description: 'Coba lagi nanti.' });
@@ -382,19 +359,6 @@ export default function OwnerBookingsPage() {
       setRejecting(false);
     }
   }, [rejectTarget, fetchBookings, showToast]);
-
-  const handleConfirmCash = useCallback(async (id: number) => {
-    setLoadingAction(id);
-    try {
-      await confirmPayment(id);
-      showToast({ type: 'success', title: 'Pembayaran dikonfirmasi', description: 'Status booking berubah menjadi CONFIRMED.' });
-      fetchBookings();
-    } catch {
-      showToast({ type: 'error', title: 'Gagal konfirmasi', description: 'Coba lagi nanti.' });
-    } finally {
-      setLoadingAction(null);
-    }
-  }, [fetchBookings, showToast]);
 
   const handleComplete = useCallback(async (id: number) => {
     setLoadingAction(id);
@@ -454,7 +418,6 @@ export default function OwnerBookingsPage() {
                 statusCfg={statusCfg}
                 onApprove={handleApprove}
                 onReject={setRejectTarget}
-                onConfirmCash={handleConfirmCash}
                 onComplete={handleComplete}
                 loadingAction={loadingAction}
                 colors={colors}

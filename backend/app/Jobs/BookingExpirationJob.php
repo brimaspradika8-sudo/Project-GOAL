@@ -44,7 +44,10 @@ class BookingExpirationJob implements ShouldQueue
         }
 
         try {
-            $statusService->transition($booking, BookingStatus::EXPIRED);
+            $statusService->transition($booking, BookingStatus::CANCELLED, [
+                'cancelled_at' => now(),
+                'cancel_reason' => 'Expired',
+            ]);
         } catch (InvalidBookingStatusTransitionException $e) {
             Log::info('Booking expiration skipped because transition is invalid', [
                 'booking_id' => $booking->id,

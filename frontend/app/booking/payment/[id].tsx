@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Platform,
   StatusBar,
-  ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -20,7 +19,6 @@ import PaymentCard from '../../../components/booking/PaymentCard';
 import { ErrorState, EmptyState, Loading } from '../../../components/common';
 import { SafeImage } from '../../../components/SafeImage';
 import { SPORT_LABELS } from '../../../lib/fieldValidation';
-import { useToastStore } from '../../../store/toastStore';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -45,7 +43,6 @@ export default function BookingPaymentScreen() {
   const bookingId = Number(id);
   const { colors } = useTheme();
   const st = makeStyles(colors);
-  const showToast = useToastStore((s) => s.show);
 
   const { booking, loading, error, refetch } = useBookingDetail(bookingId);
 
@@ -56,19 +53,9 @@ export default function BookingPaymentScreen() {
     }
   }, [booking?.status, bookingId]);
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      await import('../../../services/bookingService').then(({ confirmBooking }) => confirmBooking(bookingId));
-      router.replace({ pathname: '/booking-success', params: { id: String(bookingId) } });
-    } catch (error: any) {
-      const message = error?.message || 'Gagal mengonfirmasi booking';
-      showToast({
-        type: 'error',
-        title: 'Gagal konfirmasi',
-        description: message,
-      });
-    }
+    router.replace({ pathname: '/booking-success', params: { id: String(bookingId) } });
   };
 
   if (loading) {
@@ -146,7 +133,7 @@ export default function BookingPaymentScreen() {
         <View style={st.noteCard}>
           <MaterialIcons name="info-outline" size={16} color={colors.primary} />
           <Text style={st.noteText}>
-            Anda dapat membatalkan booking ini sebelum disetujui dari halaman daftar booking.
+            Status booking akan berubah menjadi CONFIRMED setelah owner menyetujui permintaan Anda.
           </Text>
         </View>
 

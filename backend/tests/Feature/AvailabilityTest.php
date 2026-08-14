@@ -149,7 +149,7 @@ class AvailabilityTest extends TestCase
             'end_time' => '08:00',
             'duration_minutes' => 60,
             'total_price' => 100000,
-            'status' => BookingStatus::EXPIRED->value,
+            'status' => BookingStatus::CANCELLED->value,
             'expired_at' => now()->subMinute(),
         ]);
 

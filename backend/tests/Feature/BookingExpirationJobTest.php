@@ -42,7 +42,7 @@ class BookingExpirationJobTest extends TestCase
 
         $this->assertDatabaseHas('bookings', [
             'id' => $booking->id,
-            'status' => BookingStatus::EXPIRED->value,
+            'status' => BookingStatus::CANCELLED->value,
         ]);
     }
 

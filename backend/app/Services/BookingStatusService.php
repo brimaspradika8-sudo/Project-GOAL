@@ -18,14 +18,12 @@ class BookingStatusService
         BookingStatus::WAITING_CONFIRMATION->value => [
             BookingStatus::CONFIRMED->value,
             BookingStatus::REJECTED->value,
-            BookingStatus::EXPIRED->value,
             BookingStatus::CANCELLED->value,
         ],
         BookingStatus::CONFIRMED->value => [
             BookingStatus::COMPLETED->value,
         ],
         BookingStatus::REJECTED->value => [],
-        BookingStatus::EXPIRED->value => [],
         BookingStatus::CANCELLED->value => [],
         BookingStatus::COMPLETED->value => [],
     ];
@@ -71,12 +69,14 @@ class BookingStatusService
             return;
         }
 
-        if ($oldStatus === BookingStatus::WAITING_CONFIRMATION->value && $newStatus === BookingStatus::EXPIRED) {
-            event(new BookingExpired($booking));
-            return;
-        }
+
 
         if ($oldStatus === BookingStatus::WAITING_CONFIRMATION->value && $newStatus === BookingStatus::CANCELLED) {
+            if ($booking->cancel_reason === 'Expired') {
+                event(new BookingExpired($booking));
+                return;
+            }
+
             event(new BookingCancelled($booking));
             return;
         }

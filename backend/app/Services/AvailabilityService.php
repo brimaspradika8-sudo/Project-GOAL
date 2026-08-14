@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Enums\BookingStatus;
 use App\Enums\SlotStatus;
 use App\Models\Booking;
+use App\Models\BookingSlot;
 use App\Models\Field;
+use Illuminate\Support\Facades\DB;
 
 class AvailabilityService
 {
@@ -83,21 +85,52 @@ class AvailabilityService
             BookingStatus::CONFIRMED->value,
         ];
 
-        $isPlaying = Booking::where('field_id', $field->id)
-            ->where('booking_date', $date)
-            ->whereIn('status', $activeStatuses)
+        try {
+            $isPlaying = BookingSlot::whereHas('booking', function ($q) use ($field, $date, $activeStatuses) {
+                $q->where('field_id', $field->id)
+                    ->where('booking_date', $date)
+                    ->whereIn('status', $activeStatuses);
+            })
             ->where('start_time', '<=', $time)
             ->where('end_time', '>', $time)
             ->exists();
 
-        if ($isPlaying) {
-            return 'PLAYING';
-        }
+            if ($isPlaying) {
+                return 'PLAYING';
+            }
 
-        $isBooked = Booking::where('field_id', $field->id)
-            ->where('booking_date', $date)
-            ->whereIn('status', (array) config('booking.lock_statuses', []))
+            $isBooked = BookingSlot::whereHas('booking', function ($q) use ($field, $date) {
+                $q->where('field_id', $field->id)
+                    ->where('booking_date', $date)
+                    ->whereIn('status', (array) config('booking.lock_statuses', []));
+            })
             ->exists();
+        } catch (\Exception $e) {
+            // Fallback: query langsung ke tabel bookings jika booking_slots belum di-migrate
+            $isPlaying = Booking::where('field_id', $field->id)
+                ->where('booking_date', $date)
+                ->whereIn('status', $activeStatuses)
+                ->where('start_time', '<=', $time)
+                ->where('end_time', '>', $time)
+                ->exists();
+
+            if ($isPlaying) {
+                return 'PLAYING';
+            }
+
+            $lockStatuses = array_map(
+                fn ($s) => $s instanceof BookingStatus ? $s->value : $s,
+                (array) config('booking.lock_statuses', [
+                    BookingStatus::WAITING_CONFIRMATION->value,
+                    BookingStatus::CONFIRMED->value,
+                ])
+            );
+
+            $isBooked = Booking::where('field_id', $field->id)
+                ->where('booking_date', $date)
+                ->whereIn('status', $lockStatuses)
+                ->exists();
+        }
 
         return $isBooked ? 'BOOKED' : 'AVAILABLE';
     }

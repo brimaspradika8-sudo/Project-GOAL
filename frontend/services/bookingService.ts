@@ -69,7 +69,7 @@ export interface CreateBookingPayload {
   field_id: number;
   booking_date: string;  // "YYYY-MM-DD"
   slots: Array<{ start_time: string; end_time: string }>;
-  payment_method?: string;
+  payment_method: 'cash';
 }
 
 export interface BookingHistoryResponse {
@@ -160,7 +160,7 @@ export async function getBooking(id: number): Promise<{ data: Booking; message: 
 }
 
 /**
- * Alias of getBooking — booking detail lookup for e-ticket / payment screens.
+ * Alias of getBooking — booking detail lookup for payment / success screens.
  * GET /bookings/{id}
  */
 export async function getBookingDetail(id: number): Promise<{ data: Booking; message: string }> {
@@ -183,21 +183,6 @@ export async function getBookingHistory(page = 1): Promise<BookingHistoryRespons
 export async function getMyBookings(page = 1): Promise<BookingHistoryResponse> {
   const res: any = await apiGet('/bookings/my', { params: { page } });
   return normalizeBookingListResponse(res);
-}
-
-/**
- * PATCH /bookings/{id}/cancel
- * Cancel a booking.
- */
-export async function confirmBooking(id: number): Promise<{ data: Booking; message: string }> {
-  return apiSend('PATCH', `/bookings/${id}/confirm`, {});
-}
-
-/**
- * Alias for cash confirmation flow on payment screen.
- */
-export async function confirmPayment(id: number): Promise<{ data: Booking; message: string }> {
-  return confirmBooking(id);
 }
 
 /**

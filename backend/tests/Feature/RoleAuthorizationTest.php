@@ -159,6 +159,7 @@ class RoleAuthorizationTest extends TestCase
             'location' => 'Jl. Test',
             'description' => 'Lapangan untuk test.',
             'price_per_hour' => 100000,
+            'image_url' => 'https://via.placeholder.com/640x480.png',
         ], $overrides));
     }
 
@@ -170,6 +171,7 @@ class RoleAuthorizationTest extends TestCase
             'location' => 'Jl. Stabil 1',
             'description' => 'Lapangan stabil untuk pengujian.',
             'price_per_hour' => 100000,
+            'image_url' => 'https://via.placeholder.com/640x480.png',
         ], $overrides);
     }
 }

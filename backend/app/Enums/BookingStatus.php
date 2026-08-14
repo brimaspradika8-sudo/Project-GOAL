@@ -6,7 +6,6 @@ enum BookingStatus: string
 {
     case WAITING_CONFIRMATION = 'WAITING_CONFIRMATION';
     case REJECTED = 'REJECTED';
-    case EXPIRED = 'EXPIRED';
     case CANCELLED = 'CANCELLED';
     case CONFIRMED = 'CONFIRMED';
     case COMPLETED = 'COMPLETED';

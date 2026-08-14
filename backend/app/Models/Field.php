@@ -11,6 +11,23 @@ class Field extends Model
 {
     use SoftDeletes;
 
+    protected static function booted()
+    {
+        static::saved(function (Field $field) {
+            if ($field->image_url) {
+                $primary = $field->images()->where('is_primary', true)->first();
+                if (!$primary) {
+                    $field->images()->create([
+                        'image_path' => $field->image_url,
+                        'is_primary' => true,
+                    ]);
+                } else if ($primary->image_path !== $field->image_url) {
+                    $primary->update(['image_path' => $field->image_url]);
+                }
+            }
+        });
+    }
+
     protected $table = 'fields';
 
     protected $fillable = [

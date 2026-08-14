@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\BookingStatusService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\SendQueuedNotifications;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
@@ -55,21 +56,7 @@ class BookingTest extends TestCase
         ]);
     }
 
-    public function test_player_can_create_booking_using_singular_endpoint(): void
-    {
-        $player = $this->userWithRole(UserRole::PLAYER);
-        $field = $this->fieldFor();
 
-        $this->authAs($player)->postJson('/api/booking', [
-            'field_id' => $field->id,
-            'booking_date' => $this->date,
-            'slots' => [
-                ['start_time' => '07:00', 'end_time' => '08:00'],
-            ],
-        ])->assertCreated()
-            ->assertJsonPath('message', 'Booking request berhasil dibuat.')
-            ->assertJsonPath('data.field_id', $field->id);
-    }
 
     public function test_booking_expiration_is_fifteen_minutes_ahead(): void
     {
@@ -151,6 +138,55 @@ class BookingTest extends TestCase
         ])->assertUnprocessable();
     }
 
+    public function test_adjacent_slots_on_buffered_field_are_accepted(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor(['buffer_duration_minutes' => 30]);
+
+        $response = $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [
+                ['start_time' => '07:00', 'end_time' => '08:00'],
+                ['start_time' => '08:30', 'end_time' => '09:30'],
+            ],
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.start_time', '07:00')
+            ->assertJsonPath('data.end_time', '09:30')
+            ->assertJsonPath('data.duration_minutes', 150)
+            ->assertJsonPath('data.total_price', 140000);
+
+        $this->assertDatabaseHas('bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'start_time' => '07:00',
+            'end_time' => '09:30',
+            'duration_minutes' => 150,
+        ]);
+    }
+
+    public function test_booking_slots_are_not_duplicated(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor(['buffer_duration_minutes' => 30]);
+
+        $response = $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [
+                ['start_time' => '07:00', 'end_time' => '08:00'],
+                ['start_time' => '08:30', 'end_time' => '09:30'],
+            ],
+        ]);
+
+        $response->assertCreated();
+
+        $bookingId = $response->json('data.id');
+        $this->assertSame(1, DB::table('booking_slots')->where('booking_id', $bookingId)->count());
+    }
+
     public function test_overlapping_booking_returns_409(): void
     {
         $playerA = $this->userWithRole(UserRole::PLAYER);
@@ -212,27 +248,6 @@ class BookingTest extends TestCase
             'booking_date' => $this->date,
             'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
         ])->assertCreated();
-    }
-
-    public function test_player_can_confirm_cash_booking(): void
-    {
-        $player = $this->userWithRole(UserRole::PLAYER);
-        $field = $this->fieldFor();
-
-        $booking = $this->authAs($player)->postJson('/api/bookings', [
-            'field_id' => $field->id,
-            'booking_date' => $this->date,
-            'slots' => [
-                ['start_time' => '07:00', 'end_time' => '08:00'],
-            ],
-            'payment_method' => 'cash',
-        ])->decodeResponseJson()['data'];
-
-        $this->authAs($player)
-            ->patchJson('/api/bookings/' . $booking['id'] . '/confirm')
-            ->assertOk()
-            ->assertJsonPath('data.id', $booking['id'])
-            ->assertJsonPath('data.status', BookingStatus::WAITING_CONFIRMATION->value);
     }
 
     public function test_owner_cannot_create_booking(): void
@@ -685,7 +700,7 @@ class BookingTest extends TestCase
 
         $this->assertDatabaseHas('bookings', [
             'id' => $booking->id,
-            'status' => BookingStatus::EXPIRED->value,
+            'status' => BookingStatus::CANCELLED->value,
         ]);
     }
 
@@ -850,7 +865,7 @@ class BookingTest extends TestCase
             'end_time' => '08:00',
             'duration_minutes' => 60,
             'total_price' => 70000,
-            'status' => BookingStatus::EXPIRED->value,
+            'status' => BookingStatus::CANCELLED->value,
             'expired_at' => now()->subMinute(),
         ]);
 

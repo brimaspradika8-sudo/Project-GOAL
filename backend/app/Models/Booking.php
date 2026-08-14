@@ -10,6 +10,18 @@ class Booking extends Model
 {
     protected $table = 'bookings';
 
+    protected static function booted()
+    {
+        static::saved(function (Booking $booking) {
+            if ($booking->start_time && $booking->end_time && $booking->slots()->count() === 0) {
+                $booking->slots()->create([
+                    'start_time' => $booking->start_time,
+                    'end_time' => $booking->end_time,
+                ]);
+            }
+        });
+    }
+
     protected $fillable = [
         'user_id',
         'field_id',
@@ -49,6 +61,11 @@ class Booking extends Model
     public function field(): BelongsTo
     {
         return $this->belongsTo(Field::class);
+    }
+
+    public function slots(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(BookingSlot::class, 'booking_id');
     }
 
     public function confirmer(): BelongsTo

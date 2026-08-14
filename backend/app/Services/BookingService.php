@@ -13,6 +13,7 @@ use App\Exceptions\InvalidBookingStatusTransitionException;
 use App\Exceptions\UnauthorizedBookingActionException;
 use App\Jobs\BookingExpirationJob;
 use App\Models\Booking;
+use App\Models\BookingSlot;
 use App\Models\Field;
 use App\Models\Profile;
 use App\Models\User;
@@ -41,14 +42,14 @@ class BookingService
             ]);
         }
 
-        $slots = $this->normalizeSlots($data['slots']);
+        $slots = $this->normalizeSlots($data['slots'], $field);
         $this->validateSlotsAgainstSchedule($field, $slots);
-        $this->assertSlotsContiguous($slots);
+        $this->assertSlotsContiguous($field, $slots);
 
         $startTime = $slots[0]['start_time'];
         $endTime = $slots[count($slots) - 1]['end_time'];
 
-        $this->assertNoConflict($field->id, $data['booking_date'], $startTime, $endTime);
+        $bookingDate = $data['booking_date'] ?? $data['date'];
 
         $duration = $this->slotGenerator->toMinutes($endTime) - $this->slotGenerator->toMinutes($startTime);
         $totalPrice = collect($slots)->sum(fn (array $slot) => $this->pricing->priceForSlot(
@@ -65,11 +66,15 @@ class BookingService
 
         $expiresAt = now()->addMinutes((int) config('booking.expiration_minutes', 15));
 
-        $booking = DB::transaction(function () use ($user, $field, $data, $startTime, $endTime, $duration, $totalPrice, $expiresAt) {
+        $booking = DB::transaction(function () use ($user, $field, $data, $bookingDate, $startTime, $endTime, $duration, $totalPrice, $expiresAt, $slots) {
+            Field::whereKey($field->id)->lockForUpdate()->first();
+
+            $this->assertNoConflict($field->id, $bookingDate, $slots);
+
             $booking = Booking::create([
                 'user_id' => $user->id,
                 'field_id' => $field->id,
-                'booking_date' => $data['booking_date'],
+                'booking_date' => $bookingDate,
                 'start_time' => $startTime,
                 'end_time' => $endTime,
                 'duration_minutes' => $duration,
@@ -81,32 +86,12 @@ class BookingService
 
             BookingExpirationJob::dispatch($booking->id)->delay($expiresAt);
 
-            event(new BookingCreated($booking->load(['field.owner', 'user'])));
+            event(new BookingCreated($booking->load(['field.owner', 'user', 'slots'])));
 
             return $booking;
         });
 
-        return $booking->load(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name']);
-    }
-
-    public function confirmCashBooking(User $user, Booking $booking): Booking
-    {
-        if ($booking->user_id !== $user->id) {
-            throw new AuthorizationException('You do not have permission');
-        }
-
-        if ($booking->status !== BookingStatus::WAITING_CONFIRMATION->value) {
-            throw ValidationException::withMessages([
-                'status' => 'Status booking tidak dapat dikonfirmasi saat ini.',
-            ]);
-        }
-
-        $booking->update([
-            'payment_method' => 'cash',
-            'status' => BookingStatus::WAITING_CONFIRMATION->value,
-        ]);
-
-        return $booking->fresh()->load(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name']);
+        return $booking->load(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name', 'slots']);
     }
 
     public function cancel(User $user, int $id, ?string $reason): Booking
@@ -171,6 +156,11 @@ class BookingService
         $filters = $this->normalizeBookingFilters($filters);
         $query = Booking::with(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name']);
 
+        $role = $owner->profile?->role;
+        if ($role !== Profile::ROLE_OWNER && $role !== Profile::ROLE_SUPER_ADMIN) {
+            throw new AuthorizationException('You do not have permission');
+        }
+
         $isAdmin = $owner->profile?->role === Profile::ROLE_SUPER_ADMIN;
 
         if (! $isAdmin) {
@@ -202,6 +192,11 @@ class BookingService
         $filters = $this->normalizeBookingFilters($filters);
         $query = Booking::with(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name'])
             ->where('field_id', $fieldId);
+
+        $role = $owner->profile?->role;
+        if ($role !== Profile::ROLE_OWNER && $role !== Profile::ROLE_SUPER_ADMIN) {
+            throw new AuthorizationException('You do not have permission');
+        }
 
         if ($owner->profile?->role !== Profile::ROLE_SUPER_ADMIN) {
             $query->whereHas('field', fn ($q) => $q->where('owner_id', $owner->id));
@@ -344,16 +339,32 @@ class BookingService
      */
     public function bookedRangesForDate(int $fieldId, string $date): array
     {
-        return Booking::lockingSlot()
-            ->where('field_id', $fieldId)
-            ->where('booking_date', $date)
+        try {
+            return BookingSlot::whereHas('booking', function ($query) use ($fieldId, $date) {
+                $query->lockingSlot()
+                    ->where('field_id', $fieldId)
+                    ->where('booking_date', $date);
+            })
             ->get(['start_time', 'end_time'])
-            ->map(fn (Booking $b) => [
-                'start' => substr((string) $b->start_time, 0, 5),
-                'end' => substr((string) $b->end_time, 0, 5),
+            ->map(fn (BookingSlot $slot) => [
+                'start' => substr((string) $slot->start_time, 0, 5),
+                'end' => substr((string) $slot->end_time, 0, 5),
             ])
             ->values()
             ->all();
+        } catch (\Exception $e) {
+            // Fallback: query langsung ke tabel bookings jika booking_slots belum di-migrate
+            return Booking::lockingSlot()
+                ->where('field_id', $fieldId)
+                ->where('booking_date', $date)
+                ->get(['start_time', 'end_time'])
+                ->map(fn (Booking $b) => [
+                    'start' => substr((string) $b->start_time, 0, 5),
+                    'end' => substr((string) $b->end_time, 0, 5),
+                ])
+                ->values()
+                ->all();
+        }
     }
 
     public function isViewableBy(User $user, Booking $booking): bool
@@ -370,16 +381,82 @@ class BookingService
     }
 
     /**
-     * @param  array<int, array{start_time: string, end_time: string}>  $slots
+     * @param  array  $slots
      * @return array<int, array{start_time: string, end_time: string}>
      */
-    private function normalizeSlots(array $slots): array
+    private function normalizeSlots(array $slots, Field $field): array
     {
-        return collect($slots)
-            ->map(fn (array $slot) => [
-                'start_time' => $this->normalizeTime($slot['start_time']),
-                'end_time' => $this->normalizeTime($slot['end_time']),
-            ])
+        $openTime = $field->open_time ? substr((string) $field->open_time, 0, 5) : null;
+        $closeTime = $field->close_time ? substr((string) $field->close_time, 0, 5) : null;
+        if (! $openTime || ! $closeTime || ! $field->session_duration_minutes) {
+            throw ValidationException::withMessages([
+                'slots' => 'Lapangan belum memiliki jadwal operasional.',
+            ]);
+        }
+
+        $generatedSlots = $this->slotGenerator->generate(
+            $openTime,
+            $closeTime,
+            (int) $field->session_duration_minutes,
+            (int) ($field->buffer_duration_minutes ?? 0)
+        );
+
+        $validSlotsMap = collect($generatedSlots)->mapWithKeys(fn (array $slot) => [
+            $slot['start_time'] => $slot['end_time'],
+        ]);
+
+        $normalized = [];
+
+        foreach ($slots as $slotItem) {
+            if (is_string($slotItem)) {
+                $startTime = $this->normalizeTime($slotItem);
+                $endTime = $validSlotsMap[$startTime] ?? null;
+                if (! $endTime) {
+                    throw ValidationException::withMessages([
+                        'slots' => "Slot {$startTime} tidak tersedia pada jadwal lapangan.",
+                    ]);
+                }
+                $normalized[] = [
+                    'start_time' => $startTime,
+                    'end_time' => $endTime,
+                ];
+            } elseif (is_array($slotItem) && isset($slotItem['start_time'])) {
+                $startTime = $this->normalizeTime($slotItem['start_time']);
+                $rawEnd = ! empty($slotItem['end_time']) ? $this->normalizeTime($slotItem['end_time']) : null;
+                $endTime = $rawEnd ?: ($validSlotsMap[$startTime] ?? null);
+
+                if ($endTime && ($validSlotsMap[$startTime] ?? null) === $endTime) {
+                    $normalized[] = [
+                        'start_time' => $startTime,
+                        'end_time'   => $endTime,
+                    ];
+                } elseif ($endTime) {
+                    $matchingSlots = collect($generatedSlots)->filter(function ($gSlot) use ($startTime, $endTime) {
+                        return $gSlot['start_time'] >= $startTime && $gSlot['end_time'] <= $endTime;
+                    })->values()->all();
+
+                    if (empty($matchingSlots)) {
+                        throw ValidationException::withMessages([
+                            'slots' => "Slot {$startTime}-{$endTime} tidak tersedia pada jadwal lapangan.",
+                        ]);
+                    }
+
+                    foreach ($matchingSlots as $mSlot) {
+                        $normalized[] = [
+                            'start_time' => $mSlot['start_time'],
+                            'end_time'   => $mSlot['end_time'],
+                        ];
+                    }
+                } else {
+                    throw ValidationException::withMessages([
+                        'slots' => "Slot {$startTime} tidak tersedia pada jadwal lapangan.",
+                    ]);
+                }
+            }
+        }
+
+        return collect($normalized)
+            ->unique(fn ($s) => $s['start_time'])
             ->sortBy('start_time')
             ->values()
             ->all();
@@ -429,43 +506,74 @@ class BookingService
     }
 
     /**
-     * Selected slots must be consecutive (each starts where the previous ends)
-     * so they form a single continuous booking.
+     * Selected slots must be consecutive in the field's generated slot
+     * sequence (buffer-aware: e.g. 07:00-08:00 + 08:30-09:30 on a field
+     * with a 30-minute buffer) so they form a single continuous booking.
      *
      * @param  array<int, array{start_time: string, end_time: string}>  $slots
      */
-    private function assertSlotsContiguous(array $slots): void
+    private function assertSlotsContiguous(Field $field, array $slots): void
     {
-        $start = $slots[0]['start_time'];
-        $end = $slots[0]['end_time'];
+        $openTime = $field->open_time ? substr((string) $field->open_time, 0, 5) : null;
+        $closeTime = $field->close_time ? substr((string) $field->close_time, 0, 5) : null;
 
-        foreach (array_slice($slots, 1) as $slot) {
-            if ($slot['start_time'] !== $end) {
+        if (! $openTime || ! $closeTime || ! $field->session_duration_minutes) {
+            throw ValidationException::withMessages([
+                'slots' => 'Lapangan belum memiliki jadwal operasional.',
+            ]);
+        }
+
+        $generatedStarts = collect($this->slotGenerator->generate(
+            $openTime,
+            $closeTime,
+            (int) $field->session_duration_minutes,
+            (int) ($field->buffer_duration_minutes ?? 0)
+        ))->pluck('start_time')->values()->all();
+
+        $positions = collect($slots)
+            ->map(fn (array $slot) => array_search($slot['start_time'], $generatedStarts, true))
+            ->values();
+
+        if ($positions->contains(fn ($position) => $position === false)) {
+            throw ValidationException::withMessages([
+                'slots' => 'Slot tidak tersedia pada jadwal lapangan.',
+            ]);
+        }
+
+        for ($i = 1; $i < $positions->count(); $i++) {
+            if ($positions[$i] !== $positions[$i - 1] + 1) {
                 throw ValidationException::withMessages([
                     'slots' => 'Slot yang dipilih harus berurutan tanpa jeda.',
                 ]);
             }
-            $end = $slot['end_time'];
-        }
-
-        if ($start === $end) {
-            throw ValidationException::withMessages([
-                'slots' => 'Slot tidak valid.',
-            ]);
         }
     }
 
-    private function assertNoConflict(int $fieldId, string $date, string $startTime, string $endTime): void
+    private function assertNoConflict(int $fieldId, string $date, array $slots): void
     {
-        $overlap = Booking::lockingSlot()
-            ->where('field_id', $fieldId)
-            ->where('booking_date', $date)
-            ->where('start_time', '<', $endTime)
-            ->where('end_time', '>', $startTime)
-            ->exists();
+        foreach ($slots as $slot) {
+            try {
+                $overlap = BookingSlot::whereHas('booking', function ($query) use ($fieldId, $date) {
+                    $query->lockingSlot()
+                        ->where('field_id', $fieldId)
+                        ->where('booking_date', $date);
+                })
+                ->where('start_time', '<', $slot['end_time'])
+                ->where('end_time', '>', $slot['start_time'])
+                ->exists();
+            } catch (\Exception $e) {
+                // Fallback: cek conflict langsung di tabel bookings jika booking_slots belum di-migrate
+                $overlap = Booking::lockingSlot()
+                    ->where('field_id', $fieldId)
+                    ->where('booking_date', $date)
+                    ->where('start_time', '<', $slot['end_time'])
+                    ->where('end_time', '>', $slot['start_time'])
+                    ->exists();
+            }
 
-        if ($overlap) {
-            throw new BookingConflictException;
+            if ($overlap) {
+                throw new BookingConflictException;
+            }
         }
     }
 

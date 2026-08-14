@@ -39,14 +39,23 @@ class FieldController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $search = $request->query('search');
-        $sport = $request->query('sport');
-        $minPrice = $request->query('min_price');
-        $maxPrice = $request->query('max_price');
-        $sort = $request->query('sort', 'latest');
-        $page = max(1, (int) $request->query('page', 1));
+        $data = $request->validate([
+            'search'    => ['nullable', 'string', 'max:255'],
+            'sport'     => ['nullable', 'string', 'max:50'],
+            'min_price' => ['nullable', 'integer', 'min:0'],
+            'max_price' => ['nullable', 'integer', 'min:0'],
+            'sort'      => ['nullable', 'string', 'in:latest,price_asc,price_desc'],
+            'page'      => ['nullable', 'integer', 'min:1'],
+        ]);
 
-        $hasPriceFilter = is_numeric($minPrice) || is_numeric($maxPrice);
+        $search = $data['search'] ?? null;
+        $sport = $data['sport'] ?? null;
+        $minPrice = $data['min_price'] ?? null;
+        $maxPrice = $data['max_price'] ?? null;
+        $sort = $data['sort'] ?? 'latest';
+        $page = $data['page'] ?? 1;
+
+        $hasPriceFilter = $minPrice !== null || $maxPrice !== null;
         $fields = $search || $hasPriceFilter || $sort !== 'latest' || $page > 1
             ? $this->fieldService->listApproved($search, $sport, $page, $minPrice, $maxPrice, $sort)
             : $this->fieldService->listApprovedCached(null, $sport, $page);
@@ -321,6 +330,10 @@ class FieldController extends Controller
         $this->authorizeField($request, 'update', $image->field);
 
         $field = $image->field;
+
+        if ($field->images()->count() <= 1) {
+            return $this->errorResponse('Lapangan wajib memiliki minimal 1 gambar utama.', [], 422);
+        }
         $wasPrimary = $image->is_primary;
 
         try {

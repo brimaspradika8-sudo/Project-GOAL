@@ -95,11 +95,10 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     });
     // Bookings (Sprint 3) - player
     Route::middleware('role:player')->group(function () {
-        Route::post('/booking', [BookingController::class, 'store'])->middleware('throttle:booking-sensitive');
         Route::post('/bookings', [BookingController::class, 'store'])->middleware('throttle:booking-sensitive');
+        Route::post('/booking', [BookingController::class, 'store'])->middleware('throttle:booking-sensitive'); // alias untuk frontend compatibility
         Route::get('/bookings/my', [BookingController::class, 'myBookings']);
         Route::get('/bookings/history', [BookingController::class, 'history']);
-        Route::patch('/bookings/{id}/confirm', [BookingController::class, 'confirm']);
         Route::patch('/bookings/{id}/cancel', [BookingController::class, 'cancel'])->middleware('throttle:booking-sensitive');
     });
     Route::get('/bookings/{id}', [BookingController::class, 'show']);

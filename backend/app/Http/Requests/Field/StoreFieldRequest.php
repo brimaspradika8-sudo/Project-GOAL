@@ -21,7 +21,7 @@ class StoreFieldRequest extends FormRequest
             'location'        => 'nullable|string|max:255',
             'description'     => 'nullable|string|min:10|max:1000',
             'price_per_hour'  => ['nullable', 'numeric', 'min:0'],
-            'image_url'       => 'nullable|url|max:2048',
+            'image_url'       => 'required|url|max:2048',
         ];
 
         $min = config('goal.price_min');
@@ -61,6 +61,7 @@ class StoreFieldRequest extends FormRequest
             'price_per_hour.numeric'  => 'Harga harus berupa angka.',
             'price_per_hour.min'      => 'Harga per jam tidak boleh kurang dari ' . $fmt((int) $min) . '.',
             'price_per_hour.max'      => 'Harga per jam tidak boleh lebih dari ' . $fmt((int) $max) . '.',
+            'image_url.required'      => 'Gambar utama lapangan wajib diisi.',
             'image_url.url'           => 'URL gambar harus berformat URL yang valid.',
             'image_url.max'           => 'URL gambar tidak boleh lebih dari 2048 karakter.',
         ];

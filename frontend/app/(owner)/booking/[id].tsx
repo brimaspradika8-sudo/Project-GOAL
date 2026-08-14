@@ -1,13 +1,11 @@
 // frontend/app/(owner)/booking/[id].tsx
 
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, Text } from 'react-native';
 import { Card, Button, Loading, ErrorState } from '../../../components/common';
-import { Text } from 'react-native'; // Text comes from react-native
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   getBooking,
-  confirmPayment,
   ownerApproveBooking,
   ownerRejectBooking,
   cancelBooking,
@@ -17,7 +15,7 @@ import { useProfileStore } from '../../../store/profileStore';
 
 /**
  * BookingDetailScreen – menampilkan detail pemesanan dan aksi yang relevan
- *   • Player: dapat membatalkan saat status masih WAITING_CONFIRMATION, atau mengonfirmasi setelah booking dikonfirmasi owner.
+ *   • Player: dapat membatalkan saat status masih WAITING_CONFIRMATION.
  *   • Owner: dapat menyetujui atau menolak ketika status = WAITING_CONFIRMATION.
  *   • Admin: hanya melihat (tidak ada aksi khusus di layar ini).
  */
@@ -45,17 +43,6 @@ export default function BookingDetailScreen() {
   useEffect(() => {
     fetchDetail();
   }, [id]);
-
-  const handleConfirmPayment = async () => {
-    if (!booking) return;
-    try {
-      await confirmPayment(booking.id);
-      Alert.alert('Berhasil', 'Pembayaran dikonfirmasi');
-      fetchDetail();
-    } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Gagal mengkonfirmasi pembayaran');
-    }
-  };
 
   const handleOwnerApprove = async () => {
     if (!booking) return;
@@ -121,15 +108,12 @@ export default function BookingDetailScreen() {
 
       {/* Action Buttons based on role & status */}
       <View style={styles.actions}>
-        {isPlayer && booking.status === 'CONFIRMED' && (
-          <Button title="Konfirmasi Pembayaran" onPress={handleConfirmPayment} variant="primary" />
-        )}
         {isPlayer && booking.status === 'WAITING_CONFIRMATION' && (
           <Button title="Batalkan" onPress={handleCancel} variant="secondary" />
         )}
         {isOwner && booking.status === 'WAITING_CONFIRMATION' && (
           <>
-            <Button title="Setujui" onPress={handleOwnerApprove} variant="primary" />
+            <Button title="Terima" onPress={handleOwnerApprove} variant="primary" />
             <Button title="Tolak" onPress={handleOwnerReject} variant="secondary" />
           </>
         )}

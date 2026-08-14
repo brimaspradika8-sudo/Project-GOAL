@@ -17,7 +17,11 @@ class OnboardingController extends Controller
 
     public function checkUsername(Request $request): JsonResponse
     {
-        $username = $request->query('username', '');
+        $data = $request->validate([
+            'username' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        $username = $data['username'] ?? '';
 
         $reason = $this->profile->isUsernameValid($username);
         if ($reason) {

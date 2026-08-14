@@ -18,6 +18,7 @@ export interface Field {
   address?: string | null;
   description: string | null;
   price_per_hour: number | null;
+  session_duration_minutes: number | null;
   image_url: string | null;
   images?: FieldImage[];
   status: 'pending' | 'approved' | 'rejected';

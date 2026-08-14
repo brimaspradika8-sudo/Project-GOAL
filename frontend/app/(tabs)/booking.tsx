@@ -9,11 +9,10 @@ import {
   StatusBar,
   ActivityIndicator,
   RefreshControl,
-  Dimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
+import { SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
 import { SafeImage } from '../../components/SafeImage';
 import { FadeInView } from '../../components/FadeInView';
 import { useTheme } from '../../lib/theme';
@@ -21,8 +20,6 @@ import { useIsMobileWeb } from '../../lib/responsive';
 import { useBookingHistory } from '../../hooks/useBooking';
 import { type Booking, type BookingStatus } from '../../services/bookingService';
 import { SPORT_LABELS } from '../../lib/fieldValidation';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -67,15 +64,6 @@ function formatDateDisplay(d: string): string {
   if (!d) return '-';
   const date = new Date(d + 'T00:00:00');
   return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
-function formatDuration(minutes: number): string {
-  if (!minutes) return '-';
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h > 0 && m > 0) return `${h} jam ${m} menit`;
-  if (h > 0) return `${h} jam`;
-  return `${m} menit`;
 }
 
 // ─── Status Badge Component ───────────────────────────────────────────────────

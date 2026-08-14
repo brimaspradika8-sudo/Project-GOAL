@@ -18,7 +18,12 @@ class UserController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $users = $this->userService->listUsers($request->search, $request->role);
+        $data = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'role'   => ['nullable', 'string', UserRole::validationRule()],
+        ]);
+
+        $users = $this->userService->listUsers($data['search'] ?? null, $data['role'] ?? null);
 
         return $this->successResponse('Daftar pengguna berhasil dimuat.', $users);
     }

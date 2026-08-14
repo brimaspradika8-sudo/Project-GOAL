@@ -25,7 +25,7 @@ import { useIsMobileWeb } from '../lib/responsive';
 import type { Field } from '../store/fieldStore';
 import { useToastStore } from '../store/toastStore';
 import { SPORT_LABELS } from '../lib/fieldValidation';
-import { useBookingStore, MAX_BOOKING_SLOTS, slotDurationMinutes, sortSlots, isSlotPast } from '../store/bookingStore';
+import { useBookingStore, MAX_BOOKING_SLOTS } from '../store/bookingStore';
 import { useSlots, useNow } from '../hooks/useBooking';
 import { EmptyState, ErrorState } from '../components/common';
 
@@ -56,6 +56,14 @@ function formatDate(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${dd}`;
+}
+
+function addMinutesToTime(time: string, minutes: number): string {
+  const [h, m] = time.split(':').map(Number);
+  const total = h * 60 + m + minutes;
+  const nh = Math.floor(total / 60) % 24;
+  const nm = total % 60;
+  return `${String(nh).padStart(2, '0')}:${String(nm).padStart(2, '0')}`;
 }
 
 const SLOT_PALETTE: Partial<Record<string, { bg: string; border: string; text: string }>> = {
@@ -244,11 +252,12 @@ export default function VenueDetailScreen() {
 
     setSubmitting(true);
     try {
+      const durationMin = f.session_duration_minutes ?? 60;
       const slotsApi = selectedSlots.map((time) => {
-        const found = slotsData?.slots?.find(s => s.start_time === time);
+        const found = slotsData?.slots?.find((s) => s.start_time === time);
         return {
           start_time: time,
-          end_time: found?.end_time || '',
+          end_time: found?.end_time || addMinutesToTime(time, durationMin),
         };
       });
 
@@ -450,15 +459,21 @@ export default function VenueDetailScreen() {
   function renderBottomBar() {
     const ctaBtn = (
       <TouchableOpacity
-        style={[st.cta, !hasSlot && st.ctaDisabled]}
+        style={[st.cta, (!hasSlot || submitting) && st.ctaDisabled]}
         onPress={handleBookNow}
-        disabled={!hasSlot}
+        disabled={!hasSlot || submitting}
         activeOpacity={0.85}
       >
-        <MaterialIcons name="calendar-today" size={18} color={hasSlot ? WHITE : colors.textTertiary} />
-        <Text style={[st.ctaText, !hasSlot && { color: colors.textTertiary }]}>
-          {isApproved ? 'Pesan Sekarang' : 'Tidak tersedia'}
-        </Text>
+        {submitting ? (
+          <ActivityIndicator color={WHITE} size="small" />
+        ) : (
+          <>
+            <MaterialIcons name="calendar-today" size={18} color={hasSlot ? WHITE : colors.textTertiary} />
+            <Text style={[st.ctaText, !hasSlot && { color: colors.textTertiary }]}>
+              {isApproved ? 'Pesan Sekarang' : 'Tidak tersedia'}
+            </Text>
+          </>
+        )}
       </TouchableOpacity>
     );
 

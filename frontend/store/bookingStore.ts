@@ -54,7 +54,7 @@ export interface SlotToggleResult {
   reason?: 'max' | 'non-adjacent';
 }
 
-// ─── Booking flow state (create → payment → e-ticket) ─────────────────────────
+// ─── Booking flow state (create → payment confirmation) ───────────────────────
 export interface BookingFlowState {
   selectedField: Field | null;
   selectedDate: string | null;          // "YYYY-MM-DD"
