@@ -13,7 +13,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class BookingExpirationJob implements ShouldQueue
+class AutoCancelBooking implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -23,23 +23,20 @@ class BookingExpirationJob implements ShouldQueue
 
     public function handle(BookingStatusService $statusService): void
     {
-        Log::info('Booking expiration started', ['booking_id' => $this->bookingId]);
-
         $booking = Booking::with(['field:id,name,owner_id', 'user:id,name'])->find($this->bookingId);
 
         if (!$booking) {
-            Log::info('Booking not found for expiration', ['booking_id' => $this->bookingId]);
+            Log::info('AutoCancelBooking: booking not found', ['booking_id' => $this->bookingId]);
             return;
         }
 
-        // Only bookings waiting for owner confirmation may be expired by this job.
         if ($booking->status !== BookingStatus::WAITING_CONFIRMATION->value) {
-            Log::info('Booking not expired because status is not waiting confirmation', ['booking_id' => $booking->id, 'status' => $booking->status]);
+            Log::info('AutoCancelBooking: booking not waiting for confirmation', ['booking_id' => $booking->id, 'status' => $booking->status]);
             return;
         }
 
         if (!$booking->expired_at || $booking->expired_at->isFuture()) {
-            Log::info('Booking not expired because expired_at is not reached', ['booking_id' => $booking->id, 'expired_at' => $booking->expired_at]);
+            Log::info('AutoCancelBooking: deadline not reached', ['booking_id' => $booking->id, 'expired_at' => $booking->expired_at]);
             return;
         }
 
@@ -49,7 +46,7 @@ class BookingExpirationJob implements ShouldQueue
                 'cancel_reason' => 'Expired',
             ]);
         } catch (InvalidBookingStatusTransitionException $e) {
-            Log::info('Booking expiration skipped because transition is invalid', [
+            Log::info('AutoCancelBooking: transition skipped', [
                 'booking_id' => $booking->id,
                 'status' => $booking->status,
             ]);

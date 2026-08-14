@@ -11,7 +11,7 @@ use App\Exceptions\BookingConflictException;
 use App\Exceptions\InvalidBookingStatusException;
 use App\Exceptions\InvalidBookingStatusTransitionException;
 use App\Exceptions\UnauthorizedBookingActionException;
-use App\Jobs\BookingExpirationJob;
+use App\Jobs\AutoCancelBooking;
 use App\Models\Booking;
 use App\Models\BookingSlot;
 use App\Models\Field;
@@ -20,6 +20,7 @@ use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -64,9 +65,12 @@ class BookingService
             ]);
         }
 
-        $expiresAt = now()->addMinutes((int) config('booking.expiration_minutes', 15));
+        $minutesBefore = (int) config('booking.auto_cancel_minutes_before', 30);
+        $expiresAt = Carbon::parse($bookingDate . ' ' . $startTime)->subMinutes($minutesBefore);
 
-        $booking = DB::transaction(function () use ($user, $field, $data, $bookingDate, $startTime, $endTime, $duration, $totalPrice, $expiresAt, $slots) {
+        $runAt = $expiresAt->isPast() ? now() : $expiresAt;
+
+        $booking = DB::transaction(function () use ($user, $field, $data, $bookingDate, $startTime, $endTime, $duration, $totalPrice, $expiresAt, $runAt, $slots) {
             Field::whereKey($field->id)->lockForUpdate()->first();
 
             $this->assertNoConflict($field->id, $bookingDate, $slots);
@@ -84,7 +88,7 @@ class BookingService
                 'expired_at' => $expiresAt,
             ]);
 
-            BookingExpirationJob::dispatch($booking->id)->delay($expiresAt);
+            AutoCancelBooking::dispatch($booking->id)->delay($runAt);
 
             event(new BookingCreated($booking->load(['field.owner', 'user', 'slots'])));
 

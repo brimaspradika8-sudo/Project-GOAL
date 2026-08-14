@@ -17,7 +17,7 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
-      QUEUE_CONNECTION: redis
+      QUEUE_CONNECTION: database
       REDIS_HOST: redis
     depends_on:
       postgres:
@@ -36,7 +36,7 @@ services:
       RUN_MIGRATIONS: "false"
       DB_HOST: postgres
       DB_PORT: 5432
-      QUEUE_CONNECTION: redis
+      QUEUE_CONNECTION: database
       REDIS_HOST: redis
     volumes:
       - ./backend:/var/www
@@ -61,7 +61,7 @@ services:
       RUN_MIGRATIONS: "false"
       DB_HOST: postgres
       DB_PORT: 5432
-      QUEUE_CONNECTION: redis
+      QUEUE_CONNECTION: database
       REDIS_HOST: redis
     volumes:
       - ./backend:/var/www

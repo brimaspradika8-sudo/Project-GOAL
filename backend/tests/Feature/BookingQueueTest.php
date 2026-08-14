@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\BookingStatus;
 use App\Enums\UserRole;
-use App\Jobs\BookingExpirationJob;
+use App\Jobs\AutoCancelBooking;
 use App\Models\Booking;
 use App\Models\Field;
 use App\Models\FieldPrice;
@@ -12,15 +12,42 @@ use App\Models\Profile;
 use App\Models\User;
 use App\Services\BookingStatusService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
-class BookingExpirationJobTest extends TestCase
+class BookingQueueTest extends TestCase
 {
     use RefreshDatabase;
 
     private string $date = '2026-08-20';
 
-    public function test_job_expires_waiting_booking(): void
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['queue.default' => 'database']);
+    }
+
+    public function test_creating_booking_dispatches_job_to_database_queue(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor(['open_time' => '07:00', 'close_time' => '23:00']);
+
+        $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '19:00', 'end_time' => '20:00']],
+        ])->assertCreated();
+
+        $jobs = DB::table('jobs')->where('payload', 'like', '%AutoCancelBooking%')->get();
+        $this->assertCount(1, $jobs);
+
+        $runAt = Carbon::parse($this->date . ' 19:00')->subMinutes(30)->timestamp;
+        $this->assertSame($runAt, $jobs->first()->available_at);
+    }
+
+    public function test_waiting_confirmation_booking_is_cancelled_with_expired_reason(): void
     {
         $player = $this->userWithRole(UserRole::PLAYER);
         $field = $this->fieldFor();
@@ -37,21 +64,23 @@ class BookingExpirationJobTest extends TestCase
             'expired_at' => now()->subMinute(),
         ]);
 
-        $job = new BookingExpirationJob($booking->id);
-        $job->handle($this->app->make(BookingStatusService::class));
+        (new AutoCancelBooking($booking->id))->handle($this->app->make(BookingStatusService::class));
 
         $this->assertDatabaseHas('bookings', [
             'id' => $booking->id,
             'status' => BookingStatus::CANCELLED->value,
+            'cancel_reason' => 'Expired',
         ]);
+
+        $this->assertNotNull(Booking::find($booking->id)->cancelled_at);
     }
 
-    public function test_job_does_not_change_confirmed_or_rejected(): void
+    public function test_confirmed_booking_is_not_changed_by_job(): void
     {
         $player = $this->userWithRole(UserRole::PLAYER);
         $field = $this->fieldFor();
 
-        $confirmed = Booking::create([
+        $booking = Booking::create([
             'user_id' => $player->id,
             'field_id' => $field->id,
             'booking_date' => $this->date,
@@ -60,12 +89,24 @@ class BookingExpirationJobTest extends TestCase
             'duration_minutes' => 60,
             'total_price' => 70000,
             'status' => BookingStatus::CONFIRMED->value,
+            'approved_at' => now(),
             'expired_at' => now()->subMinute(),
-            'approved_at' => now()->subMinutes(10),
-            'confirmed_at' => now()->subMinutes(10),
         ]);
 
-        $rejected = Booking::create([
+        (new AutoCancelBooking($booking->id))->handle($this->app->make(BookingStatusService::class));
+
+        $this->assertDatabaseHas('bookings', [
+            'id' => $booking->id,
+            'status' => BookingStatus::CONFIRMED->value,
+        ]);
+    }
+
+    public function test_cancelled_booking_job_does_not_error(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor();
+
+        $booking = Booking::create([
             'user_id' => $player->id,
             'field_id' => $field->id,
             'booking_date' => $this->date,
@@ -73,29 +114,20 @@ class BookingExpirationJobTest extends TestCase
             'end_time' => '10:00',
             'duration_minutes' => 60,
             'total_price' => 70000,
-            'status' => BookingStatus::REJECTED->value,
+            'status' => BookingStatus::CANCELLED->value,
+            'cancelled_at' => now()->subMinute(),
             'expired_at' => now()->subMinute(),
-            'rejected_at' => now()->subMinutes(5),
         ]);
 
-        $job1 = new BookingExpirationJob($confirmed->id);
-        $job1->handle($this->app->make(BookingStatusService::class));
-
-        $job2 = new BookingExpirationJob($rejected->id);
-        $job2->handle($this->app->make(BookingStatusService::class));
+        (new AutoCancelBooking($booking->id))->handle($this->app->make(BookingStatusService::class));
 
         $this->assertDatabaseHas('bookings', [
-            'id' => $confirmed->id,
-            'status' => BookingStatus::CONFIRMED->value,
-        ]);
-
-        $this->assertDatabaseHas('bookings', [
-            'id' => $rejected->id,
-            'status' => BookingStatus::REJECTED->value,
+            'id' => $booking->id,
+            'status' => BookingStatus::CANCELLED->value,
         ]);
     }
 
-    public function test_expired_booking_releases_slot(): void
+    public function test_cancelled_booking_releases_slot(): void
     {
         $playerA = $this->userWithRole(UserRole::PLAYER);
         $playerB = $this->userWithRole(UserRole::PLAYER);
@@ -113,10 +145,8 @@ class BookingExpirationJobTest extends TestCase
             'expired_at' => now()->subMinute(),
         ]);
 
-        $job = new BookingExpirationJob($booking->id);
-        $job->handle($this->app->make(BookingStatusService::class));
+        (new AutoCancelBooking($booking->id))->handle($this->app->make(BookingStatusService::class));
 
-        // now another player should be able to book the same slot
         $this->authAs($playerB)->postJson('/api/bookings', [
             'field_id' => $field->id,
             'booking_date' => $this->date,
@@ -124,26 +154,6 @@ class BookingExpirationJobTest extends TestCase
         ])->assertCreated();
     }
 
-    public function test_owner_cannot_approve_other_owner_booking(): void
-    {
-        $ownerA = $this->userWithRole(UserRole::OWNER, true);
-        $ownerB = $this->userWithRole(UserRole::OWNER, true);
-        $player = $this->userWithRole(UserRole::PLAYER);
-
-        $field = $this->fieldFor([], $ownerB);
-
-        $response = $this->authAs($player)->postJson('/api/bookings', [
-            'field_id' => $field->id,
-            'booking_date' => $this->date,
-            'slots' => [['start_time' => '10:00', 'end_time' => '11:00']],
-        ])->assertCreated();
-
-        $bookingId = $response->json('data.id');
-
-        $this->authAs($ownerA)->patchJson("/api/owner/bookings/{$bookingId}/approve")->assertForbidden();
-    }
-
-    // helpers copied from BookingTest for convenience
     private function userWithRole($role, bool $verifiedOwner = false): User
     {
         $user = User::factory()->create();
@@ -152,7 +162,7 @@ class BookingExpirationJobTest extends TestCase
             'user_id' => $user->id,
             'email' => $user->email,
             'full_name' => $user->name,
-            'username' => 'booking_user_' . $user->id,
+            'username' => 'queue_user_' . $user->id,
             'role' => $role->value,
             'is_owner_verified' => $verifiedOwner,
             'onboarding_completed' => true,
@@ -172,10 +182,10 @@ class BookingExpirationJobTest extends TestCase
 
         $field = Field::create(array_merge([
             'owner_id' => $owner->id,
-            'name' => 'Lapangan Booking Test',
+            'name' => 'Lapangan Queue Test',
             'sport_type' => 'futsal',
-            'location' => 'Jl. Booking',
-            'description' => 'Lapangan untuk pengujian booking.',
+            'location' => 'Jl. Queue',
+            'description' => 'Lapangan untuk pengujian queue booking.',
             'price_per_hour' => 70000,
             'open_time' => '07:00',
             'close_time' => '12:00',

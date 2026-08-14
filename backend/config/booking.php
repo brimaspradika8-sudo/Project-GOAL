@@ -3,15 +3,15 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | Booking expiration window (minutes)
+    | Auto-cancel window before slot start (minutes)
     |--------------------------------------------------------------------------
     |
-    | WAITING_CONFIRMATION bookings expire after this many minutes.
-    | The BookingExpirationJob checks this window.
+    | A WAITING_CONFIRMATION booking is cancelled automatically this many
+    | minutes before the slot starts. The AutoCancelBooking job checks it.
     |
     */
 
-    'expiration_minutes' => (int) env('BOOKING_EXPIRATION_MINUTES', 15),
+    'auto_cancel_minutes_before' => (int) env('BOOKING_AUTO_CANCEL_MINUTES_BEFORE', 30),
 
     /*
     |--------------------------------------------------------------------------

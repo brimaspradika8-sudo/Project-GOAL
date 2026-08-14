@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\BookingExpirationJob;
+use App\Jobs\AutoCancelBooking;
 use App\Models\Booking;
 use App\Enums\BookingStatus;
 use Illuminate\Console\Command;
@@ -22,8 +22,8 @@ class ExpireBookings extends Command
             ->get();
 
         foreach ($bookings as $booking) {
-            Log::info('Dispatching booking expiration job', ['booking_id' => $booking->id]);
-            BookingExpirationJob::dispatch($booking->id);
+            Log::info('Dispatching auto cancel booking job', ['booking_id' => $booking->id]);
+            AutoCancelBooking::dispatch($booking->id);
         }
 
         $this->info('Dispatched expiration jobs for ' . $bookings->count() . ' booking(s).');

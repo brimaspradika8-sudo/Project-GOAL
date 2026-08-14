@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\BookingStatus;
 use App\Enums\UserRole;
-use App\Jobs\BookingExpirationJob;
+use App\Jobs\AutoCancelBooking;
 use App\Models\Booking;
 use App\Models\Field;
 use App\Models\FieldPrice;
@@ -58,7 +58,7 @@ class BookingTest extends TestCase
 
 
 
-    public function test_booking_expiration_is_fifteen_minutes_ahead(): void
+    public function test_booking_expires_thirty_minutes_before_slot(): void
     {
         $player = $this->userWithRole(UserRole::PLAYER);
         $field = $this->fieldFor();
@@ -70,11 +70,10 @@ class BookingTest extends TestCase
         ])->assertCreated();
 
         $booking = Booking::first();
-        $this->assertNotNull($booking->expired_at);
+        $expected = \Illuminate\Support\Carbon::parse($this->date . ' 07:00')->subMinutes(30);
         $this->assertTrue(
-            $booking->expired_at->greaterThan(now()->addMinutes(14))
-            && $booking->expired_at->lessThan(now()->addMinutes(16)),
-            'expired_at harus 15 menit di depan waktu pembuatan.'
+            $booking->expired_at->equalTo($expected),
+            'expired_at harus 30 menit sebelum slot mulai.'
         );
     }
 
@@ -696,7 +695,7 @@ class BookingTest extends TestCase
             'expired_at' => now()->subMinute(),
         ]);
 
-        (new BookingExpirationJob($booking->id))->handle(app(BookingStatusService::class));
+        (new AutoCancelBooking($booking->id))->handle(app(BookingStatusService::class));
 
         $this->assertDatabaseHas('bookings', [
             'id' => $booking->id,
@@ -722,7 +721,7 @@ class BookingTest extends TestCase
             'expired_at' => now()->subMinute(),
         ]);
 
-        (new BookingExpirationJob($booking->id))->handle(app(BookingStatusService::class));
+        (new AutoCancelBooking($booking->id))->handle(app(BookingStatusService::class));
 
         $this->assertDatabaseHas('bookings', [
             'id' => $booking->id,
@@ -826,7 +825,7 @@ class BookingTest extends TestCase
             'expired_at' => now()->subMinute(),
         ]);
 
-        (new BookingExpirationJob($booking->id))->handle(app(BookingStatusService::class));
+        (new AutoCancelBooking($booking->id))->handle(app(BookingStatusService::class));
 
         $this->assertDatabaseHas('notifications', [
             'user_id' => $player->id,
