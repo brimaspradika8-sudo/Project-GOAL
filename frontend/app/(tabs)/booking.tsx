@@ -13,231 +13,29 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
-import { SafeImage } from '../../components/SafeImage';
 import { FadeInView } from '../../components/FadeInView';
 import { useTheme } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
 import { useBookingHistory } from '../../hooks/useBooking';
-import { type Booking, type BookingStatus } from '../../services/bookingService';
-import { SPORT_LABELS } from '../../lib/fieldValidation';
+import { cancelBooking, type Booking, type BookingStatus } from '../../services/bookingService';
+import { BookingCard, formatDateDisplay, isCancelableBooking } from '../../components/booking';
+import ConfirmDialog from '../../components/shared/ConfirmDialog';
+import BulkActionBar from '../../components/shared/BulkActionBar';
+import { useToastStore } from '../../store/toastStore';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const PRIMARY = '#10B981';
-const PRIMARY_LIGHT = '#D1FAE5';
-const YELLOW = '#F59E0B';
-const YELLOW_LIGHT = '#FEF3C7';
-const RED = '#EF4444';
-const RED_LIGHT = '#FEE2E2';
-const GRAY = '#6B7280';
-const GRAY_LIGHT = '#F3F4F6';
-const WHITE = '#FFFFFF';
 
 type TabKey = 'aktif' | 'riwayat';
 
 const ACTIVE_STATUSES: BookingStatus[] = ['WAITING_CONFIRMATION', 'CONFIRMED'];
-const PAST_STATUSES: BookingStatus[] = ['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED'];
+const PAST_STATUSES: BookingStatus[] = ['COMPLETED', 'CANCELLED', 'REJECTED'];
 
-// ─── Status Badge Config ──────────────────────────────────────────────────────
-
-const STATUS_CONFIG: Record<BookingStatus, {
-  label: string;
-  dot: string;
-  bg: string;
-  text: string;
-}> = {
-  WAITING_CONFIRMATION: { label: 'Menunggu Konfirmasi', dot: '🟡', bg: YELLOW_LIGHT, text: YELLOW },
-  CONFIRMED:            { label: 'Dikonfirmasi',         dot: '🟢', bg: PRIMARY_LIGHT, text: PRIMARY },
-  COMPLETED:            { label: 'Selesai',              dot: '⚪', bg: GRAY_LIGHT,    text: GRAY },
-  REJECTED:             { label: 'Ditolak',              dot: '🔴', bg: RED_LIGHT,     text: RED },
-  CANCELLED:            { label: 'Dibatalkan',           dot: '🔴', bg: RED_LIGHT,     text: RED },
-  EXPIRED:              { label: 'Kadaluarsa',           dot: '🔴', bg: RED_LIGHT,     text: RED },
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatPrice(p: number): string {
-  return `Rp${p.toLocaleString('id-ID')}`;
-}
-
-function formatDateDisplay(d: string): string {
-  if (!d) return '-';
-  const date = new Date(d + 'T00:00:00');
-  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
-// ─── Status Badge Component ───────────────────────────────────────────────────
-
-function StatusBadge({ status, colors, resolved }: { status: BookingStatus, colors: any, resolved: any }) {
-  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.EXPIRED;
-  const badgeSt = makeBadgeSt(colors, resolved);
-  return (
-    <View style={[badgeSt.pill, { backgroundColor: cfg.bg }]}>
-      <Text style={badgeSt.dot}>{cfg.dot}</Text>
-      <Text style={[badgeSt.label, { color: cfg.text }]}>{cfg.label}</Text>
-    </View>
-  );
-}
-
-const makeBadgeSt = (colors: any, resolved: any) => StyleSheet.create({
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-  },
-  dot: { fontSize: 10 },
-  label: { fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', letterSpacing: 0.1 },
-});
-
-// ─── Booking Card ─────────────────────────────────────────────────────────────
-
-function BookingCard({
-  booking,
-  onPress,
-  colors,
-  resolved,
-}: {
-  booking: Booking;
-  onPress: () => void;
-  colors: any;
-  resolved: any;
-}) {
-  const cardSt = makeCardSt(colors, resolved);
-  const sportLabel = SPORT_LABELS[booking.field?.sport_type ?? ''] ?? (booking.field?.sport_type ?? '');
-  const imageUri = booking.field?.image_url ?? '';
-
-  return (
-    <TouchableOpacity
-      style={cardSt.wrapper}
-      onPress={onPress}
-      activeOpacity={0.82}
-    >
-      {/* ── Left: venue image ── */}
-      <View style={cardSt.imageWrap}>
-        <SafeImage
-          source={{ uri: imageUri }}
-          style={cardSt.image}
-          fallbackSize={32}
-        />
-      </View>
-
-      {/* ── Right: info ── */}
-      <View style={cardSt.body}>
-        {/* Status badge */}
-        <StatusBadge status={booking.status} colors={colors} resolved={resolved} />
-
-        {/* Venue name */}
-        <Text style={cardSt.fieldName} numberOfLines={1}>
-          {booking.field?.name ?? `Lapangan #${booking.field_id}`}
-        </Text>
-
-        {/* Sport type */}
-        {!!sportLabel && (
-          <Text style={cardSt.sport} numberOfLines={1}>{sportLabel}</Text>
-        )}
-
-        {/* Date & time */}
-        <View style={cardSt.metaCol}>
-          <View style={cardSt.metaRow}>
-            <Text style={cardSt.metaIcon}>📅</Text>
-            <Text style={cardSt.metaText}>{formatDateDisplay(booking.booking_date)}</Text>
-          </View>
-          <View style={cardSt.metaRow}>
-            <Text style={cardSt.metaIcon}>⏰</Text>
-            <Text style={cardSt.metaText}>{booking.start_time} – {booking.end_time}</Text>
-          </View>
-        </View>
-
-        {/* Footer: price + detail button */}
-        <View style={cardSt.footer}>
-          <Text style={cardSt.price}>{formatPrice(booking.total_price)}</Text>
-          <TouchableOpacity style={cardSt.detailBtn} onPress={onPress} activeOpacity={0.8}>
-            <Text style={cardSt.detailBtnText}>Lihat Detail</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-const makeCardSt = (colors: any, resolved: any) => StyleSheet.create({
-  wrapper: {
-    flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    marginBottom: 14,
-    overflow: 'hidden',
-    ...SHADOWS.md,
-  },
-  imageWrap: {
-    width: 110,
-    height: 'auto',
-  },
-  image: {
-    width: 110,
-    height: '100%',
-    minHeight: 150,
-  },
-  body: {
-    flex: 1,
-    padding: 14,
-    gap: 6,
-  },
-  fieldName: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.text,
-    marginTop: 2,
-  },
-  sport: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 12,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  metaCol: { gap: 3, marginTop: 2 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  metaIcon: { fontSize: 12 },
-  metaText: { fontFamily: FONT_FAMILY, fontSize: 12, color: colors.textSecondary, fontWeight: '500' },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 6,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.outline,
-  },
-  price: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 15,
-    fontWeight: '800',
-    color: PRIMARY,
-  },
-  detailBtn: {
-    borderWidth: 1.5,
-    borderColor: PRIMARY,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-  },
-  detailBtnText: {
-    fontFamily: FONT_FAMILY,
-    fontSize: 12,
-    fontWeight: '700',
-    color: PRIMARY,
-  },
-});
+const CANCEL_REASON = 'Dibatalkan oleh pengguna';
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
 
-function EmptyState({ tab, colors, resolved }: { tab: TabKey, colors: any, resolved: any }) {
-  const emptySt = makeEmptySt(colors, resolved);
+function EmptyState({ tab, colors }: { tab: TabKey, colors: any }) {
+  const emptySt = makeEmptySt(colors);
   const isActive = tab === 'aktif';
   return (
     <FadeInView>
@@ -246,7 +44,7 @@ function EmptyState({ tab, colors, resolved }: { tab: TabKey, colors: any, resol
           <MaterialIcons
             name={isActive ? 'event-busy' : 'history'}
             size={52}
-            color={PRIMARY}
+            color={colors.primary}
           />
         </View>
         <Text style={emptySt.title}>
@@ -263,7 +61,7 @@ function EmptyState({ tab, colors, resolved }: { tab: TabKey, colors: any, resol
             onPress={() => router.push('/(tabs)/fields')}
             activeOpacity={0.85}
           >
-            <MaterialIcons name="search" size={16} color={WHITE} />
+            <MaterialIcons name="search" size={16} color={colors.onPrimary} />
             <Text style={emptySt.btnText}>Cari Lapangan</Text>
           </TouchableOpacity>
         )}
@@ -272,7 +70,7 @@ function EmptyState({ tab, colors, resolved }: { tab: TabKey, colors: any, resol
   );
 }
 
-const makeEmptySt = (colors: any, resolved: any) => StyleSheet.create({
+const makeEmptySt = (colors: any) => StyleSheet.create({
   container: {
     alignItems: 'center',
     paddingVertical: 48,
@@ -283,7 +81,7 @@ const makeEmptySt = (colors: any, resolved: any) => StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: PRIMARY_LIGHT,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -306,7 +104,7 @@ const makeEmptySt = (colors: any, resolved: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: PRIMARY,
+    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -316,7 +114,7 @@ const makeEmptySt = (colors: any, resolved: any) => StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 14,
     fontWeight: '700',
-    color: WHITE,
+    color: colors.onPrimary,
   },
 });
 
@@ -327,24 +125,107 @@ export default function BookingTabScreen() {
   const st = makeStyles(colors, resolved);
   const isMobile = useIsMobileWeb();
   const { bookings, loading, refreshing, error, refresh } = useBookingHistory();
+  const showToast = useToastStore((s) => s.show);
   const [activeTab, setActiveTab] = useState<TabKey>('aktif');
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [confirmTarget, setConfirmTarget] = useState<Booking | null>(null);
+  const [bulkCancel, setBulkCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   useFocusEffect(useCallback(() => {
     refresh();
   }, [refresh]));
 
   const upcoming = bookings.filter(b => ACTIVE_STATUSES.includes(b.status));
-  const history  = bookings.filter(b => PAST_STATUSES.includes(b.status));
+  const history = bookings.filter(b => PAST_STATUSES.includes(b.status));
   const displayed = activeTab === 'aktif' ? upcoming : history;
+  const isHistoryTab = activeTab === 'riwayat';
+  const selectableIds = isHistoryTab ? history.map(b => b.id) : [];
+  const allSelected = selectableIds.length > 0 && selectableIds.every(id => selectedIds.has(id));
 
   function navigateToBooking(b: Booking) {
-    if (b.status === 'WAITING_CONFIRMATION') {
-      router.push({ pathname: '/booking/payment/[id]', params: { id: String(b.id) } });
-    } else if (b.status === 'CONFIRMED') {
-      router.push({ pathname: '/booking-success', params: { id: String(b.id) } });
+    if (selecting) return;
+    if (!b || !b.id) {
+      showToast({ type: 'error', title: 'Error Navigasi', description: 'ID booking tidak valid.' });
+      return;
     }
-    // COMPLETED, REJECTED, CANCELLED, EXPIRED — no navigation for now
+    router.push({ pathname: '/booking-detail/[id]', params: { id: String(b.id), booking_id: String(b.id) } });
   }
+
+  function enterSelect() {
+    if (!isHistoryTab) return;
+    setSelecting(true);
+    setSelectedIds(new Set());
+  }
+
+  function exitSelect() {
+    setSelecting(false);
+    setSelectedIds(new Set());
+  }
+
+  function toggleSelect(id: number) {
+    if (!isHistoryTab) return;
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (!isHistoryTab) return;
+    setSelectedIds(allSelected ? new Set() : new Set(selectableIds));
+  }
+
+  function openSingleCancel(b: Booking) {
+    setConfirmTarget(b);
+  }
+
+  function openBulkCancel() {
+    setBulkCancel(true);
+  }
+
+  async function performCancel(ids: number[]) {
+    setCancelling(true);
+    try {
+      if (ids.length > 1) {
+        const res = await bulkDeleteBookings(ids);
+        showToast({
+          type: 'success',
+          title: 'Booking Dihapus',
+          description: `${res.data?.deleted_count || ids.length} booking berhasil dihapus dari riwayat.`,
+        });
+      } else if (ids.length === 1) {
+        await cancelBooking(ids[0], CANCEL_REASON);
+        showToast({
+          type: 'success',
+          title: 'Booking Dibatalkan',
+          description: 'Booking berhasil dibatalkan.',
+        });
+      }
+    } catch (e: any) {
+      showToast({
+        type: 'error',
+        title: 'Gagal Menghapus Booking',
+        description: e?.message || 'Terjadi kesalahan saat menghapus booking.',
+      });
+    } finally {
+      setCancelling(false);
+      setConfirmTarget(null);
+      setBulkCancel(false);
+      exitSelect();
+      await refresh();
+    }
+  }
+
+  function handleTabChange(tab: TabKey) {
+    setActiveTab(tab);
+    if (selecting) exitSelect();
+  }
+
+  const hasSelectable = isHistoryTab && history.length > 0;
 
   return (
     <View style={[st.root, { backgroundColor: colors.background }]}>
@@ -356,25 +237,46 @@ export default function BookingTabScreen() {
           <Text style={st.headerTitle}>My Booking</Text>
           <Text style={st.headerSubtitle}>Lihat dan kelola semua booking kamu</Text>
         </View>
-        {/* A3: Sembunyikan CTA saat tab aktif kosong (mencegah duplikasi dengan EmptyState) */}
-        {!(displayed.length === 0 && activeTab === 'aktif') && (
+        {selecting && isHistoryTab ? (
           <TouchableOpacity
-            style={st.headerCta}
-            onPress={() => router.push('/(tabs)/fields')}
+            style={st.headerSelectBtn}
+            onPress={exitSelect}
             activeOpacity={0.85}
           >
-            <MaterialIcons name="add" size={18} color={WHITE} />
-            <Text style={st.headerCtaText}>Cari Lapangan</Text>
+            <MaterialIcons name="close" size={18} color={colors.primary} />
+            <Text style={st.headerSelectBtnText}>Batal</Text>
           </TouchableOpacity>
+        ) : (
+          <>
+            {hasSelectable && (
+              <TouchableOpacity
+                style={st.headerSelectBtn}
+                onPress={enterSelect}
+                activeOpacity={0.85}
+              >
+                <MaterialIcons name="checklist" size={18} color={colors.primary} />
+                <Text style={st.headerSelectBtnText}>Pilih</Text>
+              </TouchableOpacity>
+            )}
+            {!hasSelectable && !(displayed.length === 0 && activeTab === 'aktif') && (
+              <TouchableOpacity
+                style={st.headerCta}
+                onPress={() => router.push('/(tabs)/fields')}
+                activeOpacity={0.85}
+              >
+                <MaterialIcons name="add" size={18} color={colors.onPrimary} />
+                <Text style={st.headerCtaText}>Cari Lapangan</Text>
+              </TouchableOpacity>
+            )}
+          </>
         )}
       </View>
 
       {/* ── Tab Bar ── */}
       <View style={st.tabBarOuter}>
-        {/* A2: Wrapper agar tab bar sejajar dengan konten di desktop */}
         <View style={[
           st.tabBarConstraint,
-          !isMobile && { maxWidth: 720, alignSelf: 'center', width: '100%' },
+          !isMobile && { maxWidth: 1200, alignSelf: 'center', width: '100%' },
         ]}>
           <View style={st.tabBarInner}>
             {(['aktif', 'riwayat'] as TabKey[]).map(tab => {
@@ -384,7 +286,7 @@ export default function BookingTabScreen() {
                 <TouchableOpacity
                   key={tab}
                   style={[st.tabBtn, isActive && st.tabBtnActive]}
-                  onPress={() => setActiveTab(tab)}
+                  onPress={() => handleTabChange(tab)}
                   activeOpacity={0.8}
                 >
                   <Text style={[st.tabLabel, isActive && st.tabLabelActive]}>
@@ -392,7 +294,7 @@ export default function BookingTabScreen() {
                   </Text>
                   {count > 0 && (
                     <View style={[st.tabBadge, isActive ? st.tabBadgeActive : st.tabBadgeInactive]}>
-                      <Text style={[st.tabBadgeText, isActive ? { color: PRIMARY } : { color: GRAY }]}>
+                      <Text style={[st.tabBadgeText, isActive ? { color: colors.primary } : { color: colors.textSecondary }]}>
                         {count}
                       </Text>
                     </View>
@@ -404,21 +306,36 @@ export default function BookingTabScreen() {
         </View>
       </View>
 
+      {/* ── Bulk Action Bar (selection mode) ── */}
+      <BulkActionBar
+        count={selectedIds.size}
+        allSelected={allSelected}
+        onSelectAll={toggleSelectAll}
+        onClear={exitSelect}
+        loading={cancelling}
+        actions={[{
+          label: 'Batalkan',
+          icon: 'close',
+          color: colors.error,
+          onPress: openBulkCancel,
+        }]}
+      />
+
       {/* ── Content ── */}
       {loading ? (
         <View style={st.center}>
-          <ActivityIndicator size="large" color={PRIMARY} />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[st.loadingText, { color: colors.textSecondary }]}>Memuat booking...</Text>
         </View>
       ) : error ? (
         <View style={st.center}>
           <View style={st.errorIconWrap}>
-            <MaterialIcons name="wifi-off" size={40} color={RED} />
+            <MaterialIcons name="wifi-off" size={40} color={colors.error} />
           </View>
           <Text style={st.errorTitle}>Gagal memuat data</Text>
           <Text style={[st.errorMsg, { color: colors.textSecondary }]}>{error}</Text>
           <TouchableOpacity style={st.retryBtn} onPress={refresh} activeOpacity={0.85}>
-            <MaterialIcons name="refresh" size={16} color={WHITE} />
+            <MaterialIcons name="refresh" size={16} color={colors.onPrimary} />
             <Text style={st.retryText}>Coba Lagi</Text>
           </TouchableOpacity>
         </View>
@@ -427,19 +344,25 @@ export default function BookingTabScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             st.scrollContent,
-            !isMobile && { maxWidth: 720, alignSelf: 'center', width: '100%' },
+            !isMobile && { maxWidth: 1200, alignSelf: 'center', width: '100%' },
           ]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={refresh}
-              tintColor={PRIMARY}
-              colors={[PRIMARY]}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
             />
           }
         >
+          {selecting && hasCancelable && (
+            <Text style={[st.selectHint, { color: colors.textSecondary }]}>
+              Ketuk booking untuk memilih. Hanya booking berstatus Menunggu Konfirmasi yang dapat dipilih.
+            </Text>
+          )}
+
           {displayed.length === 0 ? (
-            <EmptyState tab={activeTab} colors={colors} resolved={resolved} />
+            <EmptyState tab={activeTab} colors={colors} />
           ) : (
             <FadeInView>
               {displayed.map((b, i) => (
@@ -447,8 +370,10 @@ export default function BookingTabScreen() {
                   key={b.id}
                   booking={b}
                   onPress={() => navigateToBooking(b)}
-                  colors={colors}
-                  resolved={resolved}
+                  selectable={selecting}
+                  selected={selectedIds.has(b.id)}
+                  onToggleSelect={() => toggleSelect(b.id)}
+                  onCancel={() => openSingleCancel(b)}
                 />
               ))}
             </FadeInView>
@@ -458,18 +383,44 @@ export default function BookingTabScreen() {
       )}
 
       {/* ── Floating CTA (mobile only) ── */}
-      {isMobile && !loading && !error && displayed.length > 0 && (
+      {isMobile && !loading && !error && !selecting && displayed.length > 0 && (
         <View style={st.floatingWrap} pointerEvents="box-none">
           <TouchableOpacity
             style={st.floatingBtn}
             onPress={() => router.push('/(tabs)/fields')}
             activeOpacity={0.9}
           >
-            <MaterialIcons name="search" size={20} color={WHITE} />
+            <MaterialIcons name="search" size={20} color={colors.onPrimary} />
             <Text style={st.floatingBtnText}>+ Cari Lapangan</Text>
           </TouchableOpacity>
         </View>
       )}
+
+      {/* ── Single cancel confirm ── */}
+      <ConfirmDialog
+        visible={!!confirmTarget}
+        title="Batalkan Booking?"
+        description={confirmTarget
+          ? `${confirmTarget.field?.name ?? `Lapangan #${confirmTarget.field_id}`} — ${formatDateDisplay(confirmTarget.booking_date)}, ${confirmTarget.start_time} – ${confirmTarget.end_time}`
+          : undefined}
+        destructive
+        confirmLabel="Ya, Batalkan"
+        loading={cancelling}
+        onConfirm={() => confirmTarget && performCancel([confirmTarget.id])}
+        onCancel={() => { if (!cancelling) setConfirmTarget(null); }}
+      />
+
+      {/* ── Bulk cancel confirm ── */}
+      <ConfirmDialog
+        visible={bulkCancel}
+        title={`Batalkan ${selectedIds.size} Booking?`}
+        description="Booking terpilih akan dibatalkan sekaligus. Tindakan ini tidak dapat dibatalkan."
+        destructive
+        confirmLabel="Ya, Batalkan"
+        loading={cancelling}
+        onConfirm={() => performCancel([...selectedIds])}
+        onCancel={() => { if (!cancelling) setBulkCancel(false); }}
+      />
     </View>
   );
 }
@@ -487,10 +438,8 @@ const makeStyles = (colors: any, resolved: any) => StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'ios' ? 58 : 44,
     paddingBottom: 16,
-    // A1: colors.card tidak ada di ThemeColors → pakai colors.surface
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    // A1: colors.border tidak ada di ThemeColors → pakai colors.outline
     borderBottomColor: colors.outline,
   },
   headerLeft: { gap: 2 },
@@ -511,7 +460,7 @@ const makeStyles = (colors: any, resolved: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: PRIMARY,
+    backgroundColor: colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 12,
@@ -520,24 +469,36 @@ const makeStyles = (colors: any, resolved: any) => StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 13,
     fontWeight: '700',
-    color: WHITE,
+    color: colors.onPrimary,
+  },
+  headerSelectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.primaryContainer,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+  },
+  headerSelectBtnText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
   },
 
   // Tab bar
   tabBarOuter: {
-    // A1: colors.card tidak ada → pakai colors.surface
     backgroundColor: colors.surface,
     paddingHorizontal: 20,
     paddingBottom: 14,
     borderBottomWidth: 1,
-    // A1: colors.border tidak ada → pakai colors.outline
     borderBottomColor: colors.outline,
   },
-  // A2: Container untuk constraint max-width tab bar di desktop
   tabBarConstraint: {},
   tabBarInner: {
     flexDirection: 'row',
-    backgroundColor: resolved === 'dark' ? colors.outline : '#F3F4F6',
+    backgroundColor: resolved === 'dark' ? colors.outline : colors.surfaceContainer,
     borderRadius: 12,
     padding: 4,
     gap: 4,
@@ -552,17 +513,17 @@ const makeStyles = (colors: any, resolved: any) => StyleSheet.create({
     borderRadius: 9,
   },
   tabBtnActive: {
-    backgroundColor: PRIMARY,
+    backgroundColor: colors.primary,
     ...SHADOWS.sm,
   },
   tabLabel: {
     fontFamily: FONT_FAMILY,
     fontSize: 13,
     fontWeight: '700',
-    color: GRAY,
+    color: colors.textSecondary,
   },
   tabLabelActive: {
-    color: WHITE,
+    color: colors.onPrimary,
   },
   tabBadge: {
     minWidth: 20,
@@ -576,7 +537,7 @@ const makeStyles = (colors: any, resolved: any) => StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.25)',
   },
   tabBadgeInactive: {
-    backgroundColor: resolved === 'dark' ? '#374151' : '#E5E7EB',
+    backgroundColor: colors.surfaceContainerHigh,
   },
   tabBadgeText: {
     fontFamily: FONT_FAMILY,
@@ -588,6 +549,13 @@ const makeStyles = (colors: any, resolved: any) => StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 20,
+  },
+  selectHint: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 14,
+    paddingHorizontal: 4,
   },
 
   // States
@@ -606,7 +574,7 @@ const makeStyles = (colors: any, resolved: any) => StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: RED_LIGHT,
+    backgroundColor: colors.errorContainer,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
@@ -627,7 +595,7 @@ const makeStyles = (colors: any, resolved: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: PRIMARY,
+    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 11,
     borderRadius: 12,
@@ -637,7 +605,7 @@ const makeStyles = (colors: any, resolved: any) => StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 14,
     fontWeight: '700',
-    color: WHITE,
+    color: colors.onPrimary,
   },
 
   // Floating button
@@ -652,7 +620,7 @@ const makeStyles = (colors: any, resolved: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: PRIMARY,
+    backgroundColor: colors.primary,
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 50,
@@ -662,6 +630,6 @@ const makeStyles = (colors: any, resolved: any) => StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 15,
     fontWeight: '700',
-    color: WHITE,
+    color: colors.onPrimary,
   },
 });

@@ -5,11 +5,13 @@ import { radius, shadows, spacing, typography } from '../theme';
 import { useTheme } from '../../lib/theme';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps {
   title: string;
   onPress?: (event: GestureResponderEvent) => void;
   variant?: ButtonVariant;
+  size?: ButtonSize;
   icon?: React.ComponentProps<typeof MaterialIcons>['name'];
   loading?: boolean;
   disabled?: boolean;
@@ -20,6 +22,7 @@ export default function Button({
   title,
   onPress,
   variant = 'primary',
+  size = 'md',
   icon,
   loading = false,
   disabled = false,
@@ -34,6 +37,20 @@ export default function Button({
     danger: { bg: colors.errorContainer, border: colors.error + '33', text: colors.error },
   }[variant];
 
+  const sizeStyle = {
+    sm: styles.sizeSm,
+    md: styles.sizeMd,
+    lg: styles.sizeLg,
+  }[size];
+
+  const textStyle = {
+    sm: styles.textSm,
+    md: styles.textMd,
+    lg: styles.textLg,
+  }[size];
+
+  const iconSize = size === 'sm' ? 16 : size === 'lg' ? 20 : 18;
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -41,6 +58,7 @@ export default function Button({
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
+        sizeStyle,
         { backgroundColor: palette.bg, borderColor: palette.border, opacity: isDisabled ? 0.58 : pressed ? 0.82 : 1 },
         variant === 'primary' && shadows.primary,
         style,
@@ -50,8 +68,8 @@ export default function Button({
         <ActivityIndicator size="small" color={palette.text} />
       ) : (
         <>
-          {icon ? <MaterialIcons name={icon} size={18} color={palette.text} /> : null}
-          <Text style={[styles.text, { color: palette.text }]} numberOfLines={1}>{title}</Text>
+          {icon ? <MaterialIcons name={icon} size={iconSize} color={palette.text} /> : null}
+          <Text style={[textStyle, { color: palette.text }]} numberOfLines={1}>{title}</Text>
         </>
       )}
     </Pressable>
@@ -60,16 +78,35 @@ export default function Button({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 48,
     borderRadius: radius.md,
     borderWidth: 1,
-    paddingHorizontal: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  text: {
+  sizeSm: {
+    minHeight: 38,
+    paddingHorizontal: spacing.md,
+  },
+  sizeMd: {
+    minHeight: 48,
+    paddingHorizontal: spacing.lg,
+  },
+  sizeLg: {
+    minHeight: 54,
+    paddingHorizontal: spacing.xl,
+  },
+  textSm: {
     ...typography.buttonMd,
+    fontSize: 12,
+  },
+  textMd: {
+    ...typography.buttonMd,
+    fontSize: 14,
+  },
+  textLg: {
+    ...typography.buttonLg,
+    fontSize: 16,
   },
 });

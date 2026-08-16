@@ -13,18 +13,17 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import * as Linking from 'expo-linking';
 import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../components/goalTheme';
 import { Skeleton } from '../components/Skeleton';
 import { FadeInView } from '../components/FadeInView';
-import { HeroCarousel, HorizontalDatePicker } from '../components/booking';
+import { HorizontalDatePicker } from '../components/booking';
+import { VenueHero, VenueInfo, VenueDescription } from '../components/venue';
 import { apiFetch } from '../lib/apiClient';
 import { useFavoriteStore } from '../store/favoriteStore';
 import { useTheme } from '../lib/theme';
 import { useIsMobileWeb } from '../lib/responsive';
 import type { Field } from '../store/fieldStore';
 import { useToastStore } from '../store/toastStore';
-import { SPORT_LABELS } from '../lib/fieldValidation';
 import { useBookingStore, MAX_BOOKING_SLOTS } from '../store/bookingStore';
 import { useSlots, useNow } from '../hooks/useBooking';
 import { EmptyState, ErrorState } from '../components/common';
@@ -44,11 +43,6 @@ const WHITE = '#FFFFFF';
 function formatRupiah(price: number | null): string {
   if (price == null) return 'Hubungi';
   return `Rp${price.toLocaleString('id-ID')}`;
-}
-
-function pricePerHourLabel(price: number | null): string {
-  if (price == null) return 'Hubungi';
-  return `Rp${price.toLocaleString('id-ID')}/jam`;
 }
 
 function formatDate(d: Date): string {
@@ -81,12 +75,9 @@ export default function VenueDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [descExpanded, setDescExpanded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { hydrate, isFavorite, toggleFavorite } = useFavoriteStore();
 
-  const setStoreField = useBookingStore((s) => s.setField);
-  const setBookingId = useBookingStore((s) => s.setBookingId);
   const createBookingRequest = useBookingStore((s) => s.create);
   
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -110,14 +101,13 @@ export default function VenueDetailScreen() {
         throw new Error('Lapangan tidak ditemukan');
       }
       setField(data as Field);
-      setStoreField(data as Field);
       setError(null);
     } catch (e: any) {
       setError(e?.message || 'Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
-  }, [id, setStoreField]);
+  }, [id]);
 
   useEffect(() => {
     if (!selectedDate) setSelectedDate(today);
@@ -268,7 +258,6 @@ export default function VenueDetailScreen() {
         payment_method: 'cash',
       });
 
-      setBookingId(booking.id);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace({ pathname: '/booking/payment/[id]', params: { id: String(booking.id) } });
     } catch (error: any) {
@@ -283,76 +272,19 @@ export default function VenueDetailScreen() {
     }
   }
 
-  function renderHero() {
-    return (
-      <View style={st.heroShell}>
-        <HeroCarousel images={images} height={isMobile ? 260 : 420} radius={28} sportIcon={sportIcon} />
-        <TouchableOpacity style={st.glassBtnLeft} onPress={() => router.back()} activeOpacity={0.8}>
-          <MaterialIcons name="arrow-back" size={isMobile ? 22 : 24} color={WHITE} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={st.glassBtnRight}
-          activeOpacity={0.8}
-          onPress={async () => {
-            const next = await toggleFavorite(f.id);
-            const title = next ? 'Ditambahkan ke favorit' : 'Dihapus dari favorit';
-            const description = next
-              ? `${f.name} masuk ke daftar lapangan favorit Anda.`
-              : `${f.name} sudah dihapus dari daftar favorit Anda.`;
-            useToastStore.getState().show({
-              type: next ? 'success' : 'info',
-              title,
-              description,
-              durationMs: 2500,
-            });
-          }}
-        >
-          <MaterialIcons name={liked ? 'favorite' : 'favorite-border'} size={isMobile ? 22 : 24} color={liked ? '#F87171' : WHITE} />
-        </TouchableOpacity>
-        {!isApproved && (
-          <View style={st.statusBadge}>
-            <Text style={st.statusBadgeText}>Menunggu Persetujuan</Text>
-          </View>
-        )}
-      </View>
-    );
-  }
-
-  function renderInfo() {
-    return (
-      <View style={st.infoCard}>
-        <Text style={st.venueName} numberOfLines={2} ellipsizeMode="tail">{f.name}</Text>
-        <View style={st.metaRow}>
-          <MaterialIcons name={sportIcon} size={isMobile ? 15 : 17} color={colors.primary} />
-          <Text style={st.metaText}>{SPORT_LABELS[f.sport_type] ?? f.sport_type}</Text>
-        </View>
-        <View style={st.metaRow}>
-          <MaterialIcons name="location-on" size={isMobile ? 15 : 17} color={colors.textTertiary} />
-          <Text style={[st.metaText, { flex: 1 }]} numberOfLines={1} ellipsizeMode="tail">{f.location}</Text>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => {
-              const q = encodeURIComponent(`${f.name} ${f.location}`);
-              Linking.openURL(`https://www.google.com/maps/search/${q}`);
-            }}
-          >
-            <Text style={st.mapLink}>Buka Maps</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={st.priceRow}>
-          <View>
-            <Text style={st.priceLabel}>Harga Sewa</Text>
-            <Text style={st.price}>{pricePerHourLabel(f.price_per_hour)}</Text>
-          </View>
-          {f.owner?.name ? (
-            <View style={st.ownerBlock}>
-              <Text style={st.ownerLabel}>Dikelola oleh</Text>
-              <Text style={st.ownerText} numberOfLines={1}>{f.owner.name}</Text>
-            </View>
-          ) : null}
-        </View>
-      </View>
-    );
+  function handleToggleFavorite() {
+    toggleFavorite(f.id).then((next) => {
+      const title = next ? 'Ditambahkan ke favorit' : 'Dihapus dari favorit';
+      const description = next
+        ? `${f.name} masuk ke daftar lapangan favorit Anda.`
+        : `${f.name} sudah dihapus dari daftar favorit Anda.`;
+      useToastStore.getState().show({
+        type: next ? 'success' : 'info',
+        title,
+        description,
+        durationMs: 2500,
+      });
+    });
   }
 
   function renderSlotSection() {
@@ -435,27 +367,6 @@ export default function VenueDetailScreen() {
     );
   }
 
-  function renderDescription() {
-    const desc = f.description?.trim();
-    const canExpand = !!desc && desc.length > 110;
-    return (
-      <View style={st.descCard}>
-        <Text style={st.descTitle}>Tentang Lapangan</Text>
-        <Text
-          style={st.descText}
-          numberOfLines={descExpanded ? undefined : 3}
-        >
-          {desc || 'Belum ada deskripsi'}
-        </Text>
-        {canExpand && (
-          <TouchableOpacity activeOpacity={0.7} onPress={() => setDescExpanded((v) => !v)} style={st.readMoreBtn}>
-            <Text style={st.readMoreText}>{descExpanded ? 'Tutup' : 'Lihat Selengkapnya'}</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    );
-  }
-
   function renderBottomBar() {
     const ctaBtn = (
       <TouchableOpacity
@@ -506,6 +417,71 @@ export default function VenueDetailScreen() {
     );
   }
 
+  // ── Desktop 2-column layout: gallery LEFT + info RIGHT ────────────────────
+  if (!isMobile) {
+    return (
+      <View style={st.container}>
+        <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />
+          }
+        >
+          <View style={st.desktopShell}>
+            {/* Back button for desktop */}
+            <View style={st.desktopTopBar}>
+              <TouchableOpacity style={st.desktopBackBtn} onPress={() => router.back()} activeOpacity={0.8}>
+                <MaterialIcons name="arrow-back" size={20} color={colors.text} />
+                <Text style={st.desktopBackText}>Kembali</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={st.desktopTwoCol}>
+              {/* LEFT — Sticky Image Gallery */}
+              <View style={st.desktopLeft}>
+                <View style={st.desktopGallerySticky}>
+                  <VenueHero
+                    images={images}
+                    sportIcon={sportIcon}
+                    isMobile={false}
+                    liked={liked}
+                    isApproved={isApproved}
+                    onBack={() => router.back()}
+                    onToggleFavorite={handleToggleFavorite}
+                  />
+                </View>
+              </View>
+
+              {/* RIGHT — Venue Info + Booking */}
+              <View style={st.desktopRight}>
+                <FadeInView slideUp={12} duration={320}>
+                  <VenueInfo field={f} sportIcon={sportIcon} isMobile={false} />
+                </FadeInView>
+
+                <FadeInView delay={60} duration={320}>
+                  {renderSlotSection()}
+                </FadeInView>
+
+                <FadeInView delay={120} duration={320}>
+                  <VenueDescription description={f.description} isMobile={false} />
+                </FadeInView>
+
+                <FadeInView delay={180} duration={320}>
+                  {renderBottomBar()}
+                </FadeInView>
+
+                <View style={{ height: 60 }} />
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  // ── Mobile layout: vertical stack ─────────────────────────────────────────
   return (
     <View style={st.container}>
       <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
@@ -517,11 +493,19 @@ export default function VenueDetailScreen() {
         }
       >
         <View style={st.scrollContent}>
-          {renderHero()}
+          <VenueHero
+            images={images}
+            sportIcon={sportIcon}
+            isMobile={isMobile}
+            liked={liked}
+            isApproved={isApproved}
+            onBack={() => router.back()}
+            onToggleFavorite={handleToggleFavorite}
+          />
 
           <View style={st.content}>
             <FadeInView slideUp={12} duration={320}>
-              {renderInfo()}
+              <VenueInfo field={f} sportIcon={sportIcon} isMobile={isMobile} />
             </FadeInView>
 
             <FadeInView delay={60} duration={320}>
@@ -529,21 +513,15 @@ export default function VenueDetailScreen() {
             </FadeInView>
 
             <FadeInView delay={120} duration={320}>
-              {renderDescription()}
+              <VenueDescription description={f.description} isMobile={isMobile} />
             </FadeInView>
 
-            {!isMobile && (
-              <FadeInView delay={180} duration={320}>
-                {renderBottomBar()}
-              </FadeInView>
-            )}
-
-            <View style={{ height: isMobile ? 140 : 60 }} />
+            <View style={{ height: 140 }} />
           </View>
         </View>
       </ScrollView>
 
-      {isMobile && renderBottomBar()}
+      {renderBottomBar()}
     </View>
   );
 }
@@ -622,126 +600,6 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isMobile: boo
     paddingTop: isMobile ? 20 : 36,
   },
 
-  // ── Hero + glass overlay ──────────────────────────────────────────────────
-  heroShell: {
-    position: 'relative',
-    width: '100%',
-  },
-  glassBtnLeft: {
-    position: 'absolute',
-    top: 14,
-    left: 14,
-    width: isMobile ? 40 : 44,
-    height: isMobile ? 40 : 44,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...(Platform.OS === 'web'
-      ? ({ backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' } as any)
-      : {}),
-  },
-  glassBtnRight: {
-    position: 'absolute',
-    top: 14,
-    right: 14,
-    width: isMobile ? 40 : 44,
-    height: isMobile ? 40 : 44,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...(Platform.OS === 'web'
-      ? ({ backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' } as any)
-      : {}),
-  },
-  statusBadge: {
-    position: 'absolute',
-    bottom: 14,
-    left: 14,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    backgroundColor: '#F59E0B',
-  },
-  statusBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    fontFamily: FONT_FAMILY,
-    color: WHITE,
-  },
-
-  // ── Detail card ───────────────────────────────────────────────────────────
-  infoCard: {
-    backgroundColor: colors.surfaceWhite,
-    borderRadius: 24,
-    padding: isMobile ? 24 : 28,
-    marginBottom: isMobile ? 20 : 28,
-    ...SHADOWS.sm,
-  },
-  venueName: {
-    fontFamily: FONT_FAMILY,
-    fontSize: isMobile ? 22 : 28,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 14,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  metaText: {
-    ...FONTS.bodyMd,
-    color: colors.textSecondary,
-    fontSize: isMobile ? undefined : 16,
-  },
-  mapLink: {
-    ...FONTS.labelMd,
-    color: colors.primary,
-    fontSize: isMobile ? undefined : 15,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.divider,
-    paddingTop: isMobile ? 14 : 16,
-    marginTop: isMobile ? 10 : 12,
-  },
-  priceLabel: {
-    ...FONTS.bodySm,
-    color: colors.textTertiary,
-    marginBottom: 2,
-  },
-  price: {
-    fontFamily: FONT_FAMILY,
-    fontSize: isMobile ? 20 : 24,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  ownerBlock: {
-    alignItems: 'flex-end',
-    flex: 1,
-  },
-  ownerLabel: {
-    ...FONTS.bodySm,
-    color: colors.textTertiary,
-    marginBottom: 2,
-  },
-  ownerText: {
-    ...FONTS.bodySm,
-    color: colors.textSecondary,
-    fontSize: isMobile ? undefined : 15,
-  },
-
   // ── Booking card ──────────────────────────────────────────────────────────
   bookingCard: {
     backgroundColor: colors.surfaceWhite,
@@ -802,33 +660,6 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isMobile: boo
   slotTime: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700' },
   slotHint: { fontFamily: FONT_FAMILY, fontSize: 10, marginTop: 2 },
 
-  // ── Description card ──────────────────────────────────────────────────────
-  descCard: {
-    backgroundColor: colors.surfaceWhite,
-    borderRadius: 24,
-    padding: isMobile ? 24 : 28,
-    ...SHADOWS.sm,
-  },
-  descTitle: {
-    ...FONTS.headlineSm,
-    color: colors.text,
-    marginBottom: 12,
-    fontSize: isMobile ? undefined : 22,
-  },
-  descText: {
-    ...FONTS.bodyMd,
-    color: colors.textSecondary,
-    lineHeight: 22,
-    fontSize: isMobile ? undefined : 16,
-  },
-  readMoreBtn: {
-    marginTop: 8,
-  },
-  readMoreText: {
-    ...FONTS.labelMd,
-    color: colors.primary,
-  },
-
   // ── Bottom bar / floating CTA ─────────────────────────────────────────────
   bottomBar: {
     position: 'absolute',
@@ -888,5 +719,57 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isMobile: boo
       : { shadowOpacity: 0, elevation: 0 }
     ),
   },
-  ctaText: { ...FONTS.buttonLg, color: WHITE },
+  ctaText: { ...FONTS.buttonLg, color: '#FFFFFF' },
+
+  // ── Desktop 2-column layout ───────────────────────────────────────────────
+  desktopShell: {
+    width: '100%',
+    maxWidth: 1280,
+    alignSelf: 'center',
+    paddingHorizontal: 32,
+    paddingBottom: 40,
+  },
+  desktopTopBar: {
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  desktopBackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: colors.surfaceWhite,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    ...SHADOWS.sm,
+  },
+  desktopBackText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  desktopTwoCol: {
+    flexDirection: 'row',
+    gap: 32,
+    alignItems: 'flex-start',
+  },
+  desktopLeft: {
+    flex: 1,
+    // position: sticky via web CSS — approximated with a fixed top offset
+  },
+  desktopGallerySticky: {
+    position: 'sticky' as any,
+    top: 24,
+    borderRadius: 24,
+    overflow: 'hidden',
+    ...SHADOWS.md,
+  },
+  desktopRight: {
+    flex: 1,
+    minWidth: 0,
+  },
 });

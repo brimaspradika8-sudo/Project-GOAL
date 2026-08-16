@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiFetch } from '../lib/apiClient';
 import { profileFromApi, type UserRole } from '../types/roles';
+import * as SecureStore from '../lib/secureStorage';
+import { TOKEN_KEY } from '../lib/auth';
 
 export interface Profile {
   id: number;
@@ -47,6 +49,10 @@ export const useProfileStore = create<ProfileState>((set) => ({
         await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(data));
         set({ profile: data, loading: false });
       } else {
+        if (res.status === 401 || res.status === 403) {
+          await AsyncStorage.removeItem(PROFILE_CACHE_KEY);
+          await SecureStore.deleteItemAsync(TOKEN_KEY);
+        }
         set({ profile: null, loading: false });
       }
     } catch {
@@ -59,6 +65,7 @@ export const useProfileStore = create<ProfileState>((set) => ({
 
   clearProfile: async () => {
     await AsyncStorage.removeItem(PROFILE_CACHE_KEY);
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
     set({ profile: null, loading: false });
   },
 }));

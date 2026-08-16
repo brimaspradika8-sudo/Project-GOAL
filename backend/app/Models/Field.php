@@ -76,6 +76,21 @@ class Field extends Model
         return $this->hasMany(FieldImage::class)->orderByDesc('is_primary')->orderBy('id');
     }
 
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(FieldSchedule::class)->orderBy('day_of_week');
+    }
+
+    public function holidays(): HasMany
+    {
+        return $this->hasMany(FieldHoliday::class)->orderBy('date');
+    }
+
+    public function blockedSlots(): HasMany
+    {
+        return $this->hasMany(FieldBlockedSlot::class)->orderBy('date')->orderBy('start_time');
+    }
+
     public function scopeApproved($query)
     {
         return $query->where('status', 'approved');

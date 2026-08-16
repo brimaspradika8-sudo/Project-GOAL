@@ -251,7 +251,7 @@ export default function OwnerRequestPage() {
 
 const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark') => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  list: { padding: SIZES.gutter, paddingBottom: 60 },
+  list: { padding: SIZES.gutter, paddingBottom: 60, maxWidth: 900, alignSelf: 'center', width: '100%' },
 
   headerRow: { flexDirection: 'row', marginBottom: 14 },
   countPill: {

@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  getAvailableSlots,
+  getSlots,
   getBooking,
   getBookingHistory,
-  getMyBookings,
   type SlotsResponse,
   type Booking,
-  type BookingStatus,
 } from '../services/bookingService';
 
 // ─── useNow ───────────────────────────────────────────────────────────────────
@@ -37,23 +35,30 @@ export function useSlots(fieldId: number | null, date: string): UseSlotsResult {
   const [slotsData, setSlotsData] = useState<SlotsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const cancelledRef = useRef(false);
 
   const fetch = useCallback(async () => {
     if (!fieldId || !date) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await getAvailableSlots(fieldId, date);
+      const data = await getSlots(fieldId, date);
+      if (cancelledRef.current) return;
       setSlotsData(data);
     } catch (e: any) {
+      if (cancelledRef.current) return;
       setError(e?.message || 'Gagal memuat slot waktu');
     } finally {
-      setLoading(false);
+      if (!cancelledRef.current) setLoading(false);
     }
   }, [fieldId, date]);
 
   useEffect(() => {
+    cancelledRef.current = false;
     fetch();
+    return () => {
+      cancelledRef.current = true;
+    };
   }, [fetch]);
 
   return { slotsData, loading, error, refetch: fetch };
@@ -72,78 +77,32 @@ export function useBookingDetail(bookingId: number | null): UseBookingDetailResu
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const cancelledRef = useRef(false);
 
   const fetch = useCallback(async () => {
     if (!bookingId) return;
     try {
       const res = await getBooking(bookingId);
+      if (cancelledRef.current) return;
       setBooking(res.data ?? (res as any));
       setError(null);
     } catch (e: any) {
+      if (cancelledRef.current) return;
       setError(e?.message || 'Gagal memuat data booking');
     } finally {
-      setLoading(false);
+      if (!cancelledRef.current) setLoading(false);
     }
   }, [bookingId]);
 
   useEffect(() => {
+    cancelledRef.current = false;
     fetch();
+    return () => {
+      cancelledRef.current = true;
+    };
   }, [fetch]);
 
   return { booking, loading, error, refetch: fetch };
-}
-
-// ─── useBookingPolling ────────────────────────────────────────────────────────
-// Polls GET /bookings/{id} every 5 seconds and calls onStatusChange when status transitions.
-
-interface UseBookingPollingOptions {
-  bookingId: number | null;
-  targetStatuses: BookingStatus[];
-  onStatusChange: (booking: Booking) => void;
-  interval?: number; // ms, default 5000
-  enabled?: boolean;
-}
-
-export function useBookingPolling({
-  bookingId,
-  targetStatuses,
-  onStatusChange,
-  interval = 5000,
-  enabled = true,
-}: UseBookingPollingOptions): { booking: Booking | null; error: string | null } {
-  const [booking, setBooking] = useState<Booking | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const onStatusChangeRef = useRef(onStatusChange);
-  onStatusChangeRef.current = onStatusChange;
-
-  useEffect(() => {
-    if (!bookingId || !enabled) return;
-
-    let cancelled = false;
-
-    const poll = async () => {
-      try {
-        const res = await getBooking(bookingId);
-        const b: Booking = res.data ?? (res as any);
-        if (cancelled) return;
-        setBooking(b);
-        if (targetStatuses.includes(b.status)) {
-          onStatusChangeRef.current(b);
-        }
-      } catch (e: any) {
-        if (!cancelled) setError(e?.message || 'Gagal memeriksa status booking');
-      }
-    };
-
-    poll(); // immediate first call
-    const timer = setInterval(poll, interval);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [bookingId, enabled, interval, targetStatuses]);
-
-  return { booking, error };
 }
 
 // ─── useBookingHistory ────────────────────────────────────────────────────────
@@ -161,6 +120,7 @@ export function useBookingHistory(): UseBookingHistoryResult {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const cancelledRef = useRef(false);
 
   const fetch = useCallback(async ({ isRefresh = false, silent = false } = {}) => {
     if (isRefresh) {
@@ -171,10 +131,13 @@ export function useBookingHistory(): UseBookingHistoryResult {
     setError(null);
     try {
       const res = await getBookingHistory();
+      if (cancelledRef.current) return;
       setBookings(res.data ?? []);
     } catch (e: any) {
+      if (cancelledRef.current) return;
       setError(e?.message || 'Gagal memuat riwayat booking');
     } finally {
+      if (cancelledRef.current) return;
       setLoading(false);
       setRefreshing(false);
     }
@@ -183,7 +146,11 @@ export function useBookingHistory(): UseBookingHistoryResult {
   const refresh = useCallback(() => fetch({ isRefresh: true }), [fetch]);
 
   useEffect(() => {
+    cancelledRef.current = false;
     fetch();
+    return () => {
+      cancelledRef.current = true;
+    };
   }, [fetch]);
 
   useEffect(() => {

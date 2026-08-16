@@ -82,7 +82,7 @@ export default function TopNavbar() {
             onPress={() => setNotifVisible(true)}
           >
             <MaterialIcons name="notifications-none" size={20} color={colors.onSurface} />
-            {unread > 0 ? <View style={styles.notifBadge} /> : null}
+            {unread > 0 ? <View style={[styles.notifBadge, { backgroundColor: colors.error }]} /> : null}
           </Pressable>
           <Pressable
             style={[styles.avatar, { backgroundColor: colors.primaryLight }]}
@@ -206,6 +206,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: '100%',
     width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
     paddingHorizontal: 24,
   },
   zoneLeft: {
@@ -272,7 +274,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#EF4444',
     borderWidth: 1,
     borderColor: '#FFFFFF',
   },

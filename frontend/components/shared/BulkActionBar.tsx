@@ -79,6 +79,9 @@ const makeStyles = (colors: ThemeColors) =>
       paddingHorizontal: SIZES.gutter,
       paddingBottom: SIZES.gutter,
       paddingTop: 6,
+      width: '100%',
+      maxWidth: 1240,
+      alignSelf: 'center',
     },
     bar: {
       flexDirection: 'row',

@@ -182,6 +182,7 @@ function RootLayoutInner() {
         <Stack.Screen name="(owner)" options={{ animation: 'fade' }} />
         <Stack.Screen name="(super-admin)" options={{ animation: 'fade' }} />
         <Stack.Screen name="venue-detail" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="booking/[id]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="booking/payment/[id]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="booking-success" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
       </Stack>

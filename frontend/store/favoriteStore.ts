@@ -9,6 +9,7 @@ interface FavoriteState {
   hydrate: () => Promise<void>;
   isFavorite: (fieldId: number) => boolean;
   toggleFavorite: (fieldId: number) => Promise<boolean>;
+  clear: () => void;
 }
 
 export const useFavoriteStore = create<FavoriteState>((set, get) => ({
@@ -41,5 +42,9 @@ export const useFavoriteStore = create<FavoriteState>((set, get) => ({
     await AsyncStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(next));
 
     return !exists;
+  },
+
+  clear: () => {
+    set({ favoriteIds: [], hydrated: false });
   },
 }));

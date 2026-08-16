@@ -25,8 +25,7 @@ import { getResponseData } from '../lib/api';
 import { apiFetch } from '../lib/apiClient';
 import { useProfileStore } from '../store/profileStore';
 import { useUsernameCheck } from '../hooks/useUsernameCheck';
-import * as SecureStore from '../lib/secureStorage';
-import { TOKEN_KEY } from '../lib/auth';
+import { logout } from '../lib/session';
 import { FONTS, SHADOWS } from '../components/goalTheme';
 import { mimeFromExt } from '../lib/fieldValidation';
 import AuthInput from '../components/AuthInput';
@@ -131,10 +130,7 @@ export default function OnboardingScreen() {
 
   async function handleSignOut() {
     try {
-      await apiFetch('/auth/logout', { method: 'POST' }).catch(() => {});
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-      useProfileStore.getState().clearProfile();
-      router.replace('/login');
+      await logout();
     } catch {}
   }
 

@@ -1,7 +1,10 @@
 // frontend/app/(owner)/booking/[id].tsx
 
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert, Text } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  View, StyleSheet, ScrollView, Alert, Text, Modal, TextInput,
+  TouchableOpacity, ActivityIndicator, Platform,
+} from 'react-native';
 import { Card, Button, Loading, ErrorState } from '../../../components/common';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -9,9 +12,117 @@ import {
   ownerApproveBooking,
   ownerRejectBooking,
   cancelBooking,
-  Booking,
+  type Booking,
 } from '../../../services/bookingService';
 import { useProfileStore } from '../../../store/profileStore';
+import { useTheme } from '../../../lib/theme';
+
+function RejectModal({
+  visible,
+  onClose,
+  onConfirm,
+  loading,
+  colors,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+  loading: boolean;
+  colors: ReturnType<typeof useTheme>['colors'];
+}) {
+  const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    if (!visible) setReason('');
+  }, [visible]);
+
+  return (
+    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
+      <View style={[mStyles.overlay]}>
+        <View style={[mStyles.sheet, { backgroundColor: colors.surfaceWhite ?? colors.surface }]}>
+          <Text style={[mStyles.title, { color: colors.text }]}>Tolak Booking</Text>
+          <Text style={[mStyles.subtitle, { color: colors.textSecondary }]}>
+            Berikan alasan penolakan (opsional) agar penyewa dapat memahami keputusan Anda.
+          </Text>
+          <TextInput
+            style={[mStyles.input, { borderColor: colors.outline ?? colors.divider, color: colors.text, backgroundColor: colors.surfaceContainer }]}
+            placeholder="Contoh: Lapangan sudah penuh di jam tersebut"
+            placeholderTextColor={colors.textTertiary}
+            value={reason}
+            onChangeText={setReason}
+            multiline
+            numberOfLines={3}
+          />
+          <View style={mStyles.btnRow}>
+            <TouchableOpacity
+              style={[mStyles.cancelBtn, { borderColor: colors.outline ?? colors.divider }]}
+              onPress={onClose}
+              activeOpacity={0.8}
+            >
+              <Text style={[mStyles.cancelBtnText, { color: colors.textSecondary }]}>Batal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[mStyles.confirmBtn, { backgroundColor: colors.error }]}
+              onPress={() => onConfirm(reason)}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={mStyles.confirmBtnText}>Tolak Booking</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const mStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 14,
+    textAlignVertical: 'top',
+    minHeight: 90,
+    marginBottom: 20,
+  },
+  btnRow: { flexDirection: 'row', gap: 12 },
+  cancelBtn: {
+    flex: 1, paddingVertical: 14, borderRadius: 12,
+    borderWidth: 1, alignItems: 'center',
+  },
+  cancelBtnText: { fontSize: 15, fontWeight: '600' },
+  confirmBtn: {
+    flex: 1, paddingVertical: 14, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  confirmBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+});
 
 /**
  * BookingDetailScreen – menampilkan detail pemesanan dan aksi yang relevan
@@ -24,12 +135,15 @@ export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const profile = useProfileStore((s) => s.profile);
+  const { colors } = useTheme();
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [rejectVisible, setRejectVisible] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
 
-  const fetchDetail = async () => {
+  const fetchDetail = useCallback(async () => {
     try {
       const res = await getBooking(Number(id));
       setBooking(res.data);
@@ -38,11 +152,11 @@ export default function BookingDetailScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     fetchDetail();
-  }, [id]);
+  }, [fetchDetail]);
 
   const handleOwnerApprove = async () => {
     if (!booking) return;
@@ -55,17 +169,19 @@ export default function BookingDetailScreen() {
     }
   };
 
-  const handleOwnerReject = async () => {
+  const handleOwnerRejectConfirm = async (reason: string) => {
     if (!booking) return;
-    Alert.prompt('Alasan Penolakan', 'Masukkan alasan penolakan (opsional)', async reason => {
-      try {
-        await ownerRejectBooking(booking.id, reason);
-        Alert.alert('Berhasil', 'Booking ditolak');
-        fetchDetail();
-      } catch (e: any) {
-        Alert.alert('Error', e.message ?? 'Gagal menolak booking');
-      }
-    });
+    setRejecting(true);
+    try {
+      await ownerRejectBooking(booking.id, reason);
+      setRejectVisible(false);
+      Alert.alert('Berhasil', 'Booking ditolak');
+      fetchDetail();
+    } catch (e: any) {
+      Alert.alert('Error', e.message ?? 'Gagal menolak booking');
+    } finally {
+      setRejecting(false);
+    }
   };
 
   const handleCancel = async () => {
@@ -95,30 +211,50 @@ export default function BookingDetailScreen() {
   const isPlayer = profile?.role === 'player' && booking.user_id === profile?.user_id;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Card style={styles.card}>
-        <Text style={styles.title}>Detail Booking</Text>
-        <Text>{`Lapangan: ${booking.field?.name ?? 'Tidak diketahui'}`}</Text>
-        <Text>{`Tanggal: ${booking.booking_date}`}</Text>
-        <Text>{`Jam: ${booking.start_time} – ${booking.end_time}`}</Text>
-        <Text>{`Durasi: ${booking.duration_minutes} menit`}</Text>
-        <Text>{`Total Harga: Rp ${booking.total_price?.toLocaleString()}`}</Text>
-        <Text style={[styles.status, { color: statusColor(booking.status) }]}>{booking.status}</Text>
-      </Card>
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Card style={styles.card}>
+          <Text style={[styles.title, { color: colors.text }]}>Detail Booking</Text>
+          <Text style={[styles.rowText, { color: colors.textSecondary }]}>
+            {`Lapangan: ${booking.field?.name ?? 'Tidak diketahui'}`}
+          </Text>
+          <Text style={[styles.rowText, { color: colors.textSecondary }]}>
+            {`Tanggal: ${booking.booking_date}`}
+          </Text>
+          <Text style={[styles.rowText, { color: colors.textSecondary }]}>
+            {`Jam: ${booking.start_time} – ${booking.end_time}`}
+          </Text>
+          <Text style={[styles.rowText, { color: colors.textSecondary }]}>
+            {`Durasi: ${booking.duration_minutes} menit`}
+          </Text>
+          <Text style={[styles.rowText, { color: colors.textSecondary }]}>
+            {`Total Harga: Rp ${booking.total_price?.toLocaleString()}`}
+          </Text>
+          <Text style={[styles.status, { color: statusColor(booking.status) }]}>{booking.status}</Text>
+        </Card>
 
-      {/* Action Buttons based on role & status */}
-      <View style={styles.actions}>
-        {isPlayer && booking.status === 'WAITING_CONFIRMATION' && (
-          <Button title="Batalkan" onPress={handleCancel} variant="secondary" />
-        )}
-        {isOwner && booking.status === 'WAITING_CONFIRMATION' && (
-          <>
-            <Button title="Terima" onPress={handleOwnerApprove} variant="primary" />
-            <Button title="Tolak" onPress={handleOwnerReject} variant="secondary" />
-          </>
-        )}
-      </View>
-    </ScrollView>
+        {/* Action Buttons based on role & status */}
+        <View style={styles.actions}>
+          {isPlayer && booking.status === 'WAITING_CONFIRMATION' && (
+            <Button title="Batalkan" onPress={handleCancel} variant="secondary" />
+          )}
+          {isOwner && booking.status === 'WAITING_CONFIRMATION' && (
+            <>
+              <Button title="Terima" onPress={handleOwnerApprove} variant="primary" />
+              <Button title="Tolak" onPress={() => setRejectVisible(true)} variant="secondary" />
+            </>
+          )}
+        </View>
+      </ScrollView>
+
+      <RejectModal
+        visible={rejectVisible}
+        onClose={() => setRejectVisible(false)}
+        onConfirm={handleOwnerRejectConfirm}
+        loading={rejecting}
+        colors={colors}
+      />
+    </View>
   );
 }
 
@@ -135,9 +271,11 @@ function statusColor(status: string): string {
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
   container: {
     padding: 16,
-    backgroundColor: '#f5f5f5',
   },
   card: {
     padding: 12,
@@ -147,6 +285,10 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     marginBottom: 8,
+  },
+  rowText: {
+    fontSize: 14,
+    marginBottom: 4,
   },
   status: {
     marginTop: 8,

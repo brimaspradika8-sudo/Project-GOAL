@@ -16,18 +16,10 @@ import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../components/goalTheme';
 import { useTheme } from '../lib/theme';
 import { useBookingDetail } from '../hooks/useBooking';
 import { SPORT_LABELS } from '../lib/fieldValidation';
+import { ErrorState } from '../components/common';
+import { formatPrice, formatDateDisplay } from '../components/booking';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatPrice(p: number): string {
-  return `Rp${p.toLocaleString('id-ID')}`;
-}
-
-function formatDateDisplay(d: string): string {
-  if (!d) return '-';
-  const date = new Date(d + 'T00:00:00');
-  return date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-}
 
 function formatDuration(minutes: number): string {
   const hours = minutes / 60;
@@ -137,13 +129,29 @@ export default function BookingSuccessScreen() {
   const { colors } = useTheme();
   const st = makeStyles(colors);
 
-  const { booking, loading } = useBookingDetail(bookingId);
+  const { booking, loading, error, refetch } = useBookingDetail(bookingId);
 
-  if (loading || !booking) {
+  if (loading) {
     return (
       <View style={st.centered}>
         <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
         <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (error || !booking) {
+    return (
+      <View style={st.centered}>
+        <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+        <ErrorState
+          title="Data booking gagal dimuat"
+          description={error ?? 'Booking tidak ditemukan.'}
+          onRetry={refetch}
+        />
+        <TouchableOpacity style={[st.primaryBtn, { backgroundColor: colors.primary, marginTop: 16 }]} onPress={() => router.replace('/(tabs)/booking')} activeOpacity={0.85}>
+          <Text style={[st.primaryBtnText, { color: colors.onPrimary }]}>Ke Daftar Booking</Text>
+        </TouchableOpacity>
       </View>
     );
   }

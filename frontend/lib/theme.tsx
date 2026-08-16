@@ -69,6 +69,7 @@ export interface ThemeColors {
   errorContainer: string;
   errorLight: string;
   onErrorContainer: string;
+  favorite: string;
   floodlight: string;
   inverseSurface: string;
   inverseOnSurface: string;
@@ -126,6 +127,7 @@ const LIGHT_COLORS: ThemeColors = {
   errorContainer: '#FEEBE9',
   errorLight: '#FFE6E1',
   onErrorContainer: '#410002',
+  favorite: '#EF4444',
   floodlight: '#FFC93C',
   inverseSurface: '#2C322F',
   inverseOnSurface: '#F3F7F4',
@@ -183,6 +185,7 @@ const DARK_COLORS: ThemeColors = {
   errorContainer: '#3B1A1A',
   errorLight: '#4A1F1F',
   onErrorContainer: '#FECACA',
+  favorite: '#F87171',
   floodlight: '#FBBF24',
   inverseSurface: '#E2E8F0',
   inverseOnSurface: '#1A2332',

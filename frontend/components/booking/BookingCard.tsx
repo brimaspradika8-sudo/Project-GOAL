@@ -75,25 +75,25 @@ export function BookingCard({
         </View>
       )}
 
-      <View style={st.body}>
-        <BookingStatusBadge status={booking.status} />
-        <Text style={st.fieldName} numberOfLines={1}>
-          {booking.field?.name ?? `Lapangan #${booking.field_id}`}
-        </Text>
-        {!!sportLabel && <Text style={st.sport} numberOfLines={1}>{sportLabel}</Text>}
+      {isMobile ? (
+        <View style={st.body}>
+          <BookingStatusBadge status={booking.status} reason={booking.cancel_reason} />
+          <Text style={st.fieldName} numberOfLines={1}>
+            {booking.field?.name ?? `Lapangan #${booking.field_id}`}
+          </Text>
+          {!!sportLabel && <Text style={st.sport} numberOfLines={1}>{sportLabel}</Text>}
 
-        <View style={st.metaCol}>
-          <View style={st.metaRow}>
-            <MaterialIcons name="event" size={13} color={colors.textTertiary} />
-            <Text style={st.metaText}>{formatDateDisplay(booking.booking_date)}</Text>
+          <View style={st.metaCol}>
+            <View style={st.metaRow}>
+              <MaterialIcons name="event" size={13} color={colors.textTertiary} />
+              <Text style={st.metaText}>{formatDateDisplay(booking.booking_date)}</Text>
+            </View>
+            <View style={st.metaRow}>
+              <MaterialIcons name="schedule" size={13} color={colors.textTertiary} />
+              <Text style={st.metaText}>{booking.start_time} – {booking.end_time}</Text>
+            </View>
           </View>
-          <View style={st.metaRow}>
-            <MaterialIcons name="schedule" size={13} color={colors.textTertiary} />
-            <Text style={st.metaText}>{booking.start_time} – {booking.end_time}</Text>
-          </View>
-        </View>
 
-        {isMobile ? (
           <View style={st.footer}>
             <Text style={st.price}>{formatPrice(booking.total_price)}</Text>
             {!inSelection && (
@@ -111,22 +111,49 @@ export function BookingCard({
               </View>
             )}
           </View>
-        ) : (
-          <View style={st.actionCol}>
+        </View>
+      ) : (
+        <View style={st.desktopBody}>
+          <View style={st.desktopDetailCol}>
+            <Text style={st.fieldName} numberOfLines={1}>
+              {booking.field?.name ?? `Lapangan #${booking.field_id}`}
+            </Text>
+            {!!sportLabel && <Text style={st.sport} numberOfLines={1}>{sportLabel}</Text>}
+            <View style={st.metaCol}>
+              <View style={st.metaRow}>
+                <MaterialIcons name="event" size={13} color={colors.textTertiary} />
+                <Text style={st.metaText}>{formatDateDisplay(booking.booking_date)}</Text>
+              </View>
+              <View style={st.metaRow}>
+                <MaterialIcons name="schedule" size={13} color={colors.textTertiary} />
+                <Text style={st.metaText}>{booking.start_time} – {booking.end_time}</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={st.desktopStatusCol}>
+            <BookingStatusBadge status={booking.status} reason={booking.cancel_reason} />
+          </View>
+
+          <View style={st.desktopActionCol}>
             <Text style={st.priceDesktop}>{formatPrice(booking.total_price)}</Text>
-            {!inSelection && cancelable && onCancel && (
-              <TouchableOpacity style={st.cancelBtn} onPress={onCancel} activeOpacity={0.8}>
-                <Text style={st.cancelBtnText}>Batal</Text>
-              </TouchableOpacity>
-            )}
-            {!inSelection && onPress && (
-              <TouchableOpacity style={st.detailBtn} onPress={onPress} activeOpacity={0.8}>
-                <Text style={st.detailBtnText}>Lihat Detail</Text>
-              </TouchableOpacity>
+            {!inSelection && (
+              <View style={st.desktopBtnRow}>
+                {cancelable && onCancel && (
+                  <TouchableOpacity style={st.cancelBtn} onPress={onCancel} activeOpacity={0.8}>
+                    <Text style={st.cancelBtnText}>Batal</Text>
+                  </TouchableOpacity>
+                )}
+                {onPress && (
+                  <TouchableOpacity style={st.detailBtn} onPress={onPress} activeOpacity={0.8}>
+                    <Text style={st.detailBtnText}>Lihat Detail</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
           </View>
-        )}
-      </View>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -174,6 +201,34 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isMobile: boo
     flex: 1,
     padding: 14,
     gap: 6,
+  },
+  desktopBody: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 16,
+  },
+  desktopDetailCol: {
+    flex: 1.5,
+    gap: 4,
+  },
+  desktopStatusCol: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  desktopActionCol: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: 6,
+    minWidth: 140,
+  },
+  desktopBtnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   fieldName: {
     fontFamily: FONT_FAMILY,

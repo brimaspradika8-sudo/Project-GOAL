@@ -26,5 +26,6 @@ return [
     'lock_statuses' => [
         'WAITING_CONFIRMATION',
         'CONFIRMED',
+        'PAID',
     ],
 ];

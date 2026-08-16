@@ -12,9 +12,16 @@ const STATUS_CONFIG: Record<BookingStatus, { label: string; bg: keyof ThemeColor
   CANCELLED: { label: 'Dibatalkan', bg: 'destructiveMuted', text: 'error' },
 };
 
-export function BookingStatusBadge({ status }: { status: BookingStatus }) {
+export function isExpiredReason(reason: string | null | undefined): boolean {
+  return typeof reason === 'string' && /expired|kadaluarsa|kedaluwarsa/i.test(reason);
+}
+
+export function BookingStatusBadge({ status, reason }: { status: BookingStatus; reason?: string | null }) {
   const { colors } = useTheme();
-  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.CANCELLED;
+  const expired = status === 'CANCELLED' && isExpiredReason(reason);
+  const cfg = expired
+    ? { label: 'Kadaluarsa', bg: 'surfaceContainerHigh' as keyof ThemeColors, text: 'textSecondary' as keyof ThemeColors }
+    : (STATUS_CONFIG[status] ?? STATUS_CONFIG.CANCELLED);
 
   return (
     <View style={[styles.pill, { backgroundColor: colors[cfg.bg] }]}>

@@ -1,14 +1,15 @@
 import { apiGet, apiSend, apiFetch } from '../lib/apiClient';
-import type { Field } from '../store/fieldStore';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type BookingStatus =
   | 'WAITING_CONFIRMATION'
   | 'CONFIRMED'
+  | 'PAID'
   | 'COMPLETED'
   | 'REJECTED'
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'EXPIRED';
 
 export interface BookingField {
   id: number;
@@ -76,6 +77,31 @@ export interface BookingHistoryResponse {
   pagination: { current_page: number; last_page: number; total: number };
 }
 
+export interface FieldScheduleItem {
+  id?: number;
+  field_id?: number;
+  day_of_week: number; // 0 = Sunday, 1 = Monday ... 6 = Saturday
+  open_time: string;   // "08:00"
+  close_time: string;  // "22:00"
+  is_closed: boolean;
+}
+
+export interface FieldHolidayItem {
+  id: number;
+  field_id: number;
+  date: string;
+  reason: string | null;
+}
+
+export interface FieldBlockedSlotItem {
+  id: number;
+  field_id: number;
+  date: string;
+  start_time: string;
+  end_time: string;
+  reason: string | null;
+}
+
 const emptyPagination = { current_page: 1, last_page: 1, total: 0 };
 
 function normalizeBookingListResponse(res: any): BookingHistoryResponse {
@@ -108,38 +134,7 @@ export async function getSlots(fieldId: number, date: string): Promise<SlotsResp
     throw { status: res.status, message: data?.message || 'Gagal memuat slot' };
   }
   const body = await res.json();
-  // Response is wrapped in { message, data: { slots, field_status, ... } }
   return body.data ?? body;
-}
-
-/**
- * Alias of getSlots for the booking create flow.
- * GET /lapangan/{id}/slots?tanggal=YYYY-MM-DD
- */
-export async function getAvailableSlots(fieldId: number, date: string): Promise<SlotsResponse> {
-  return getSlots(fieldId, date);
-}
-
-/**
- * Alias of getAvailableSlots — availability lookup for a field & date.
- * GET /lapangan/{id}/slots?tanggal=YYYY-MM-DD
- */
-export async function getAvailability(fieldId: number, date: string): Promise<SlotsResponse> {
-  return getAvailableSlots(fieldId, date);
-}
-
-/**
- * GET /fields/{id}
- * Fetch field detail for the booking create screen.
- */
-export async function getFieldDetail(fieldId: number): Promise<Field> {
-  const res = await apiFetch(`/fields/${fieldId}`, { skipToken: true });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw { status: res.status, message: data?.message || 'Gagal memuat detail lapangan' };
-  }
-  const body = await res.json();
-  return body?.data ?? body;
 }
 
 /**
@@ -159,14 +154,6 @@ export async function getBooking(id: number): Promise<{ data: Booking; message: 
 }
 
 /**
- * Alias of getBooking — booking detail lookup for payment / success screens.
- * GET /bookings/{id}
- */
-export async function getBookingDetail(id: number): Promise<{ data: Booking; message: string }> {
-  return getBooking(id);
-}
-
-/**
  * GET /bookings/history
  * Fetch user's booking history (all statuses).
  */
@@ -176,12 +163,11 @@ export async function getBookingHistory(page = 1): Promise<BookingHistoryRespons
 }
 
 /**
- * GET /bookings/my
- * Fetch user's active / upcoming bookings.
+ * DELETE /bookings/bulk
+ * Bulk delete user's bookings.
  */
-export async function getMyBookings(page = 1): Promise<BookingHistoryResponse> {
-  const res: any = await apiGet('/bookings/my', { params: { page } });
-  return normalizeBookingListResponse(res);
+export async function bulkDeleteBookings(bookingIds: number[]): Promise<{ message: string; data: { deleted_count: number } }> {
+  return apiSend('DELETE', '/bookings/bulk', { body: { booking_ids: bookingIds } });
 }
 
 /**
@@ -198,6 +184,14 @@ export async function cancelBooking(id: number, reason: string): Promise<{ data:
  */
 export async function ownerApproveBooking(id: number): Promise<{ data: Booking; message: string }> {
   return apiSend('PATCH', `/owner/bookings/${id}/approve`, {});
+}
+
+/**
+ * PATCH /owner/bookings/{id}/confirm-payment
+ * Owner confirms manual payment (transitions to PAID).
+ */
+export async function ownerConfirmPaymentBooking(id: number): Promise<{ data: Booking; message: string }> {
+  return apiSend('PATCH', `/owner/bookings/${id}/confirm-payment`, {});
 }
 
 /**
@@ -223,4 +217,41 @@ export async function ownerCompleteBooking(id: number): Promise<{ data: Booking;
 export async function getOwnerBookings(page = 1): Promise<BookingHistoryResponse> {
   const res: any = await apiGet('/owner/bookings', { params: { page } });
   return normalizeBookingListResponse(res);
+}
+
+// ─── Owner Schedule & Settings API ─────────────────────────────────────────────
+
+export async function getOwnerSchedules(fieldId: number): Promise<{ data: { schedules: FieldScheduleItem[] } }> {
+  return apiGet(`/owner/fields/${fieldId}/schedules`);
+}
+
+export async function updateOwnerSchedules(fieldId: number, schedules: FieldScheduleItem[]): Promise<{ message: string; data: { schedules: FieldScheduleItem[] } }> {
+  return apiSend('PUT', `/owner/fields/${fieldId}/schedules`, { body: { schedules } });
+}
+
+export async function getOwnerHolidays(fieldId: number): Promise<{ data: { holidays: FieldHolidayItem[] } }> {
+  return apiGet(`/owner/fields/${fieldId}/holidays`);
+}
+
+export async function addOwnerHoliday(fieldId: number, date: string, reason?: string): Promise<{ message: string; data: { holiday: FieldHolidayItem } }> {
+  return apiSend('POST', `/owner/fields/${fieldId}/holidays`, { body: { date, reason } });
+}
+
+export async function deleteOwnerHoliday(holidayId: number): Promise<{ message: string }> {
+  return apiSend('DELETE', `/owner/holidays/${holidayId}`, {});
+}
+
+export async function getOwnerBlockedSlots(fieldId: number): Promise<{ data: { blocked_slots: FieldBlockedSlotItem[] } }> {
+  return apiGet(`/owner/fields/${fieldId}/blocked-slots`);
+}
+
+export async function addOwnerBlockedSlot(
+  fieldId: number,
+  data: { date: string; start_time: string; end_time: string; reason?: string }
+): Promise<{ message: string; data: { blocked_slot: FieldBlockedSlotItem } }> {
+  return apiSend('POST', `/owner/fields/${fieldId}/blocked-slots`, { body: data });
+}
+
+export async function deleteOwnerBlockedSlot(blockedSlotId: number): Promise<{ message: string }> {
+  return apiSend('DELETE', `/owner/blocked-slots/${blockedSlotId}`, {});
 }

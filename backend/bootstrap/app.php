@@ -1,10 +1,20 @@
 <?php
 
+use App\Exceptions\BookingAlreadyExpiredException;
+use App\Exceptions\BookingAlreadyProcessedException;
+use App\Exceptions\BookingCannotBeCancelledException;
+use App\Exceptions\BookingConflictException;
+use App\Exceptions\InvalidBookingStatusException;
+use App\Exceptions\InvalidBookingStatusTransitionException;
+use App\Exceptions\UnauthorizedBookingActionException;
+use App\Http\Middleware\Authenticate;
+use App\Http\Middleware\RoleMiddleware;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Exceptions\NotFoundHttpException;
+use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
@@ -19,19 +29,19 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'role' => \App\Http\Middleware\RoleMiddleware::class,
-            'auth' => \App\Http\Middleware\Authenticate::class,
+            'role' => RoleMiddleware::class,
+            'auth' => Authenticate::class,
         ]);
         $middleware->api(prepend: [
-            \Illuminate\Http\Middleware\HandleCors::class,
+            HandleCors::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->renderable(function (\Throwable $e) {
+        $exceptions->renderable(function (Throwable $e) {
             $request = request();
             $isApi = str_starts_with($request->path(), 'api/') || $request->is('api/*');
 
-            if (!$isApi) {
+            if (! $isApi) {
                 return null;
             }
 
@@ -42,7 +52,7 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($e instanceof ValidationException) {
                 return response()->json([
                     'message' => 'Validasi gagal.',
-                    'errors'  => $e->errors(),
+                    'errors' => $e->errors(),
                 ], 422);
             }
 
@@ -60,6 +70,20 @@ return Application::configure(basePath: dirname(__DIR__))
 
             if ($e instanceof TooManyRequestsHttpException) {
                 return response()->json(['message' => 'Terlalu banyak permintaan. Coba lagi nanti.', 'errors' => []], 429);
+            }
+
+            if ($e instanceof UnauthorizedBookingActionException) {
+                return response()->json(['message' => 'Anda tidak memiliki akses untuk melakukan ini.', 'errors' => []], 403);
+            }
+
+            if ($e instanceof BookingCannotBeCancelledException
+                || $e instanceof BookingAlreadyProcessedException
+                || $e instanceof BookingAlreadyExpiredException
+                || $e instanceof InvalidBookingStatusException
+                || $e instanceof InvalidBookingStatusTransitionException
+                || $e instanceof BookingConflictException
+            ) {
+                return response()->json(['message' => $e->getMessage(), 'errors' => []], 409);
             }
 
             $status = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;

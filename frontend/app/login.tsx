@@ -17,6 +17,7 @@ import * as SecureStore from '../lib/secureStorage';
 import { TOKEN_KEY } from '../lib/auth';
 import { useProfileStore } from '../store/profileStore';
 import { fieldError } from '../lib/formValidation';
+import { resetAllStores } from '../lib/session';
 import { useBreakpoint } from '../lib/responsive';
 import AuthPromoPanel from '../components/AuthPromoPanel';
 import { FONT_FAMILY } from '../components/goalTheme';
@@ -130,6 +131,7 @@ export default function LoginScreen() {
         const profileData = profileFromApi<any>(await parseApiResponse(profileRes));
 
         if (profileRes.ok && profileData && isUserRole(profileData.role)) {
+          await resetAllStores();
           useProfileStore.setState({ profile: profileData, loading: false });
 
           if (profileData.onboarding_completed === false) {

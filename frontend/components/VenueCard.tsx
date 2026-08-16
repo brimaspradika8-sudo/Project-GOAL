@@ -90,7 +90,7 @@ export default function VenueCard({ field, onFavoriteToggle, isFavorite = false 
           <MaterialIcons
             name={isLiked ? 'favorite' : 'favorite-border'}
             size={20}
-            color={isLiked ? '#EF4444' : colors.textTertiary}
+            color={isLiked ? colors.favorite : colors.textTertiary}
           />
         </TouchableOpacity>
       </View>

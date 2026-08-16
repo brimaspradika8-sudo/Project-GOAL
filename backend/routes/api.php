@@ -7,6 +7,7 @@ use App\Http\Controllers\Field\FieldAvailabilityController;
 use App\Http\Controllers\Field\FieldController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Owner\FieldBookingConfigurationController;
+use App\Http\Controllers\Owner\FieldScheduleController;
 use App\Http\Controllers\Owner\OwnerRequestController;
 use App\Http\Controllers\Owner\SuperAdminOwnerController;
 use App\Http\Controllers\Profile\AvatarController;
@@ -65,6 +66,16 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
         Route::post('/owner/fields/{id}/images', [FieldController::class, 'storeImage'])->middleware('throttle:booking-sensitive');
         Route::patch('/owner/images/{imageId}/primary', [FieldController::class, 'setPrimaryImage']);
         Route::delete('/owner/images/{imageId}', [FieldController::class, 'destroyImage']);
+
+        // Schedules, Holidays, and Blocked Slots management
+        Route::get('/owner/fields/{id}/schedules', [FieldScheduleController::class, 'getSchedules']);
+        Route::put('/owner/fields/{id}/schedules', [FieldScheduleController::class, 'updateSchedules']);
+        Route::get('/owner/fields/{id}/holidays', [FieldScheduleController::class, 'getHolidays']);
+        Route::post('/owner/fields/{id}/holidays', [FieldScheduleController::class, 'storeHoliday']);
+        Route::delete('/owner/holidays/{id}', [FieldScheduleController::class, 'destroyHoliday']);
+        Route::get('/owner/fields/{id}/blocked-slots', [FieldScheduleController::class, 'getBlockedSlots']);
+        Route::post('/owner/fields/{id}/blocked-slots', [FieldScheduleController::class, 'storeBlockedSlot']);
+        Route::delete('/owner/blocked-slots/{id}', [FieldScheduleController::class, 'destroyBlockedSlot']);
     });
     // Fields - super admin only
     Route::middleware('role:super_admin')->group(function () {
@@ -97,6 +108,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::middleware('role:player')->group(function () {
         Route::post('/bookings', [BookingController::class, 'store'])->middleware('throttle:booking-sensitive');
         Route::post('/booking', [BookingController::class, 'store'])->middleware('throttle:booking-sensitive'); // alias untuk frontend compatibility
+        Route::delete('/bookings/bulk', [BookingController::class, 'bulkDestroy']);
         Route::get('/bookings/my', [BookingController::class, 'myBookings']);
         Route::get('/bookings/history', [BookingController::class, 'history']);
         Route::patch('/bookings/{id}/cancel', [BookingController::class, 'cancel'])->middleware('throttle:booking-sensitive');
@@ -107,6 +119,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
         Route::get('/owner/bookings', [BookingController::class, 'ownerIndex']);
         Route::get('/owner/fields/{id}/bookings', [BookingController::class, 'ownerFieldBookings']);
         Route::patch('/owner/bookings/{id}/approve', [BookingController::class, 'approve'])->middleware('throttle:booking-sensitive');
+        Route::patch('/owner/bookings/{id}/confirm-payment', [BookingController::class, 'confirmPayment'])->middleware('throttle:booking-sensitive');
         Route::patch('/owner/bookings/{id}/reject', [BookingController::class, 'reject'])->middleware('throttle:booking-sensitive');
         Route::patch('/owner/bookings/{id}/complete', [BookingController::class, 'complete'])->middleware('throttle:booking-sensitive');
     });

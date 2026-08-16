@@ -38,6 +38,12 @@ class BookingPolicy
             || $booking->field?->owner_id === $user->id;
     }
 
+    public function confirmPayment(User $user, Booking $booking): bool
+    {
+        return $this->isSuperAdmin($user)
+            || $booking->field?->owner_id === $user->id;
+    }
+
     private function isSuperAdmin(User $user): bool
     {
         return $user->profile?->role === Profile::ROLE_SUPER_ADMIN;

@@ -262,6 +262,42 @@ class BookingController extends Controller
         }
     }
 
+    public function confirmPayment(Request $request, int $id): JsonResponse
+    {
+        $booking = Booking::with('field')->find($id);
+
+        if (! $booking) {
+            return $this->errorResponse('Booking not found', [], 404);
+        }
+
+        try {
+            $this->authorizeBooking($request, 'confirmPayment', $booking);
+            $updated = $this->bookingService->confirmPayment($request->user(), $booking);
+
+            return $this->resourceResponse('Pembayaran booking berhasil dikonfirmasi.', new BookingResource($updated));
+        } catch (UnauthorizedBookingActionException $e) {
+            return $this->errorResponse('You do not have permission', [], 403);
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse('You do not have permission', [], 403);
+        } catch (InvalidBookingStatusException $e) {
+            return $this->errorResponse($e->getMessage(), [], 409);
+        }
+    }
+
+    public function bulkDestroy(Request $request): JsonResponse
+    {
+        $request->validate([
+            'booking_ids' => ['required', 'array', 'min:1'],
+            'booking_ids.*' => ['integer', 'exists:bookings,id'],
+        ]);
+
+        $count = $this->bookingService->bulkCancel($request->user(), $request->input('booking_ids'));
+
+        return $this->successResponse("{$count} booking berhasil dihapus dari riwayat.", [
+            'deleted_count' => $count,
+        ]);
+    }
+
     private function authorizeBooking(Request $request, string $ability, Booking $booking): void
     {
         $policy = app(BookingPolicy::class);

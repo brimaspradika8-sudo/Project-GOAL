@@ -118,6 +118,7 @@ export default function HomeScreen() {
 
   const styles = makeStyles(colors);
   const isDesktop = width >= 900;
+  const isWide = width >= 1024;
   const sports = profile?.sports ?? [];
   const userName = profile?.full_name || profile?.username || 'Pengguna';
   const isOwnerOrSuperAdmin = profile?.role === 'owner' || profile?.role === 'super_admin';
@@ -219,7 +220,7 @@ export default function HomeScreen() {
                   onPress={() => setActiveCategory(item.label)}
                 >
                   <View style={[styles.categoryIconWrap, isActive && styles.categoryIconWrapActive]}>
-                    <MaterialIcons name={item.icon} size={26} color={isActive ? '#ffffff' : colors.onSurfaceVariant} />
+                    <MaterialIcons name={item.icon} size={26} color={isActive ? colors.onPrimary : colors.onSurfaceVariant} />
                   </View>
                   <Text style={[styles.categoryLabel, isActive && styles.categoryLabelActive]}>{item.label}</Text>
                 </TouchableOpacity>
@@ -363,6 +364,7 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
+      {!isDesktop && (
       <TouchableOpacity
         style={styles.fab}
         activeOpacity={0.85}
@@ -375,8 +377,9 @@ export default function HomeScreen() {
           }
         }}
       >
-        <MaterialIcons name={isOwnerOrSuperAdmin ? 'add-business' : 'search'} size={26} color="#ffffff" />
+        <MaterialIcons name={isOwnerOrSuperAdmin ? 'add-business' : 'search'} size={26} color={colors.onPrimary} />
       </TouchableOpacity>
+      )}
       <NotificationCenter visible={notifVisible} onClose={() => setNotifVisible(false)} />
     </View>
   );
@@ -399,7 +402,7 @@ const makeStyles = (colors: any) => StyleSheet.create({
   },
   pageShell: {
     width: '100%',
-    maxWidth: 1120,
+    maxWidth: 1200,
     alignSelf: 'center',
   },
   topBarShell: {
@@ -450,9 +453,9 @@ const makeStyles = (colors: any) => StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 4.5,
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error,
     borderWidth: 1,
-    borderColor: '#FFFFFF',
+    borderColor: colors.surfaceWhite,
   },
   avatarBtn: {
     width: 40,
@@ -692,7 +695,7 @@ const makeStyles = (colors: any) => StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     fontFamily: FONT_FAMILY,
-    color: '#ffffff',
+    color: colors.onPrimary,
   },
   promoDots: {
     flexDirection: 'row',
@@ -721,7 +724,7 @@ const makeStyles = (colors: any) => StyleSheet.create({
     ...SHADOWS.md,
   },
   venueCardDesktop: {
-    width: 'calc(50% - 7px)' as any,
+    width: 'calc((100% - 28px) / 3)' as any,
   },
   venueGrid: {
     gap: 14,
@@ -754,7 +757,7 @@ const makeStyles = (colors: any) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     fontFamily: FONT_FAMILY,
-    color: '#ffffff',
+    color: colors.onPrimary,
   },
   venueInfo: {
     padding: 16,
@@ -903,7 +906,7 @@ const makeStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.primaryContainer,
     borderRadius: SIZES.borderRadiusLg,
     borderWidth: 1,
-    borderColor: 'rgba(30, 138, 76, 0.3)',
+    borderColor: colors.primary + '30',
     padding: 16,
     marginTop: 20,
     marginBottom: 4,
@@ -914,7 +917,7 @@ const makeStyles = (colors: any) => StyleSheet.create({
   },
   sparringBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.floodlight,
+    backgroundColor: colors.primary,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -924,7 +927,7 @@ const makeStyles = (colors: any) => StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 10,
     fontWeight: '800',
-    color: '#000000',
+    color: colors.onPrimary,
     letterSpacing: 0.5,
   },
   sparringTitle: {
@@ -949,7 +952,7 @@ const makeStyles = (colors: any) => StyleSheet.create({
     fontFamily: FONT_FAMILY,
     fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.onPrimary,
   },
   fab: {
     position: 'absolute',

@@ -8,11 +8,13 @@ use App\Jobs\AutoCancelBooking;
 use App\Models\Booking;
 use App\Models\Field;
 use App\Models\FieldPrice;
+use App\Models\Notification;
 use App\Models\Profile;
 use App\Models\User;
 use App\Services\BookingStatusService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\SendQueuedNotifications;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
@@ -56,8 +58,6 @@ class BookingTest extends TestCase
         ]);
     }
 
-
-
     public function test_booking_expires_thirty_minutes_before_slot(): void
     {
         $player = $this->userWithRole(UserRole::PLAYER);
@@ -70,7 +70,7 @@ class BookingTest extends TestCase
         ])->assertCreated();
 
         $booking = Booking::first();
-        $expected = \Illuminate\Support\Carbon::parse($this->date . ' 07:00')->subMinutes(30);
+        $expected = Carbon::parse($this->date.' 07:00')->subMinutes(30);
         $this->assertTrue(
             $booking->expired_at->equalTo($expected),
             'expired_at harus 30 menit sebelum slot mulai.'
@@ -678,6 +678,67 @@ class BookingTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_booking_ignores_user_id_from_payload(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $other = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor();
+
+        $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'user_id' => $other->id,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('bookings', ['user_id' => $player->id]);
+        $this->assertDatabaseMissing('bookings', ['user_id' => $other->id]);
+    }
+
+    public function test_booking_for_slot_past_expiry_deadline_is_rejected(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor([
+            'open_time' => '00:00',
+            'close_time' => '23:59',
+            'session_duration_minutes' => 60,
+            'buffer_duration_minutes' => 0,
+        ]);
+
+        $start = now()->startOfHour()->format('H:i');
+
+        $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => now()->format('Y-m-d'),
+            'slots' => [['start_time' => $start]],
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('slots');
+
+        $this->assertDatabaseCount('bookings', 0);
+    }
+
+    public function test_completing_booking_notifies_player(): void
+    {
+        $owner = $this->userWithRole(UserRole::OWNER, true);
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor([], $owner);
+
+        $bookingId = $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->json('data.id');
+
+        $this->authAs($owner)->patchJson("/api/owner/bookings/{$bookingId}/approve")->assertOk();
+
+        $this->authAs($owner)->patchJson("/api/owner/bookings/{$bookingId}/complete")->assertOk();
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $player->id,
+            'type' => 'booking_completed',
+        ]);
+    }
+
     public function test_expiration_job_marks_waiting_booking_as_expired(): void
     {
         $player = $this->userWithRole(UserRole::PLAYER);
@@ -845,7 +906,7 @@ class BookingTest extends TestCase
             'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
         ])->assertCreated();
 
-        $notificationId = \App\Models\Notification::where('user_id', $owner->id)->value('id');
+        $notificationId = Notification::where('user_id', $owner->id)->value('id');
 
         $this->authAs($player)->postJson("/api/notifications/{$notificationId}/read")
             ->assertNotFound();
@@ -935,7 +996,7 @@ class BookingTest extends TestCase
             'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
         ])->assertCreated();
 
-        $this->authAs($owner)->getJson('/api/owner/bookings?date=' . $this->date)
+        $this->authAs($owner)->getJson('/api/owner/bookings?date='.$this->date)
             ->assertOk()
             ->assertJsonCount(1, 'data.data')
             ->assertJsonPath('data.data.0.booking_date', $this->date);
@@ -960,7 +1021,7 @@ class BookingTest extends TestCase
             'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
         ])->assertCreated();
 
-        $this->authAs($owner)->getJson('/api/owner/bookings?field_id=' . $fieldA->id)
+        $this->authAs($owner)->getJson('/api/owner/bookings?field_id='.$fieldA->id)
             ->assertOk()
             ->assertJsonCount(1, 'data.data')
             ->assertJsonPath('data.data.0.field_id', $fieldA->id);
@@ -1028,7 +1089,7 @@ class BookingTest extends TestCase
             'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
         ])->assertCreated();
 
-        $this->authAs($superAdmin)->getJson('/api/admin/bookings?owner_id=' . $ownerA->id)
+        $this->authAs($superAdmin)->getJson('/api/admin/bookings?owner_id='.$ownerA->id)
             ->assertOk()
             ->assertJsonCount(1, 'data.data')
             ->assertJsonPath('data.data.0.field.owner_id', $ownerA->id);
@@ -1066,6 +1127,56 @@ class BookingTest extends TestCase
             ->assertJsonPath('data.user.id', $player->id);
     }
 
+    public function test_owner_can_confirm_payment(): void
+    {
+        $owner = $this->userWithRole(UserRole::OWNER, true);
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor([], $owner);
+
+        $bookingId = $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->json('data.id');
+
+        $this->authAs($owner)->patchJson("/api/owner/bookings/{$bookingId}/approve")->assertOk();
+
+        $this->authAs($owner)->patchJson("/api/owner/bookings/{$bookingId}/confirm-payment")
+            ->assertOk()
+            ->assertJsonPath('data.status', BookingStatus::PAID->value);
+
+        $this->assertDatabaseHas('bookings', [
+            'id' => $bookingId,
+            'status' => BookingStatus::PAID->value,
+        ]);
+    }
+
+    public function test_player_can_bulk_delete_bookings(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor();
+
+        $b1 = $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->json('data.id');
+
+        $b2 = $this->authAs($player)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '08:30', 'end_time' => '09:30']],
+        ])->json('data.id');
+
+        $this->authAs($player)->deleteJson('/api/bookings/bulk', [
+            'booking_ids' => [$b1, $b2],
+        ])->assertOk()
+            ->assertJsonPath('data.deleted_count', 2);
+
+        $this->assertDatabaseHas('bookings', ['id' => $b1, 'status' => BookingStatus::CANCELLED->value]);
+        $this->assertDatabaseHas('bookings', ['id' => $b2, 'status' => BookingStatus::CANCELLED->value]);
+    }
+
     private function userWithRole(UserRole $role, bool $verifiedOwner = false): User
     {
         $user = User::factory()->create();
@@ -1074,7 +1185,7 @@ class BookingTest extends TestCase
             'user_id' => $user->id,
             'email' => $user->email,
             'full_name' => $user->name,
-            'username' => 'booking_user_' . $user->id,
+            'username' => 'booking_user_'.$user->id,
             'role' => $role->value,
             'is_owner_verified' => $verifiedOwner,
             'onboarding_completed' => true,
@@ -1085,7 +1196,7 @@ class BookingTest extends TestCase
 
     private function authAs(User $user): self
     {
-        return $this->withHeader('Authorization', 'Bearer ' . $user->createToken('test-token')->plainTextToken);
+        return $this->withHeader('Authorization', 'Bearer '.$user->createToken('test-token')->plainTextToken);
     }
 
     private function fieldFor(array $overrides = [], ?User $owner = null): Field

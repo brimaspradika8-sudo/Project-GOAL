@@ -19,21 +19,12 @@ import PaymentCard from '../../../components/booking/PaymentCard';
 import { ErrorState, EmptyState, Loading } from '../../../components/common';
 import { SafeImage } from '../../../components/SafeImage';
 import { SPORT_LABELS } from '../../../lib/fieldValidation';
+import { formatPrice, formatDateDisplay } from '../../../components/booking';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatPrice(p: number): string {
-  return `Rp${p.toLocaleString('id-ID')}`;
-}
-
-function formatDateDisplay(d: string): string {
-  if (!d) return '-';
-  const date = new Date(d + 'T00:00:00');
-  return date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-}
-
 function isTerminal(status: Booking['status']): boolean {
-  return status === 'REJECTED' || status === 'CANCELLED' || status === 'EXPIRED';
+  return status === 'REJECTED' || status === 'CANCELLED';
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -142,18 +133,20 @@ export default function BookingPaymentScreen() {
 
       {/* Bottom Confirm Button */}
       <View style={st.bottomBar}>
-        <View>
-          <Text style={st.bottomLabel}>Total Bayar</Text>
-          <Text style={st.bottomAmount}>{formatPrice(booking.total_price)}</Text>
+        <View style={st.bottomBarInner}>
+          <View>
+            <Text style={st.bottomLabel}>Total Bayar</Text>
+            <Text style={st.bottomAmount}>{formatPrice(booking.total_price)}</Text>
+          </View>
+          <TouchableOpacity
+            style={st.payBtn}
+            onPress={handleConfirm}
+            activeOpacity={0.85}
+          >
+            <MaterialIcons name="check" size={20} color={colors.onPrimary} />
+            <Text style={st.payBtnText}>Konfirmasi Booking</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={st.payBtn}
-          onPress={handleConfirm}
-          activeOpacity={0.85}
-        >
-          <MaterialIcons name="check" size={20} color={colors.onPrimary} />
-          <Text style={st.payBtnText}>Konfirmasi Booking</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -209,11 +202,13 @@ function Header({ title }: { title: string }) {
   const st = makeStyles(colors);
   return (
     <View style={st.header}>
-      <TouchableOpacity style={st.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
-        <MaterialIcons name="arrow-back" size={22} color={colors.text} />
-      </TouchableOpacity>
-      <Text style={st.headerTitle}>{title}</Text>
-      <View style={{ width: 40 }} />
+      <View style={st.headerInner}>
+        <TouchableOpacity style={st.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
+          <MaterialIcons name="arrow-back" size={22} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={st.headerTitle}>{title}</Text>
+        <View style={{ width: 40 }} />
+      </View>
     </View>
   );
 }
@@ -224,12 +219,15 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   container: { flex: 1, backgroundColor: colors.background },
 
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: Platform.OS === 'ios' ? 56 : 44,
     paddingBottom: 12,
     backgroundColor: colors.background,
     borderBottomWidth: 1, borderBottomColor: colors.divider,
+  },
+  headerInner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    maxWidth: 700, width: '100%', alignSelf: 'center',
   },
   backBtn: {
     width: 40, height: 40, borderRadius: 12,
@@ -238,7 +236,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   },
   headerTitle: { ...FONTS.headlineSm, color: colors.text },
 
-  scrollContent: { paddingHorizontal: 20, paddingTop: 24, maxWidth: 480, alignSelf: 'center', width: '100%' },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 24, maxWidth: 700, alignSelf: 'center', width: '100%' },
 
   waitingSection: { alignItems: 'center', marginBottom: 24, paddingVertical: 16 },
   waitingIconWrap: { width: 84, height: 84, borderRadius: 42, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
@@ -285,13 +283,16 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
 
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.surfaceWhite,
     paddingHorizontal: 20,
     paddingTop: 14,
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     borderTopWidth: 1, borderTopColor: colors.divider,
     ...SHADOWS.xl,
+  },
+  bottomBarInner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    maxWidth: 700, width: '100%', alignSelf: 'center', gap: 12,
   },
   bottomLabel: { ...FONTS.bodySm, color: colors.textSecondary },
   bottomAmount: { fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: '700', color: colors.primary },

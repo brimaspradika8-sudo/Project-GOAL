@@ -18,6 +18,7 @@ import {
   type Booking,
 } from '../../services/bookingService';
 import { useIsMobileWeb } from '../../lib/responsive';
+import { ErrorState } from '../common';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -153,6 +154,7 @@ function BookingCard({
   statusCfg,
   onApprove,
   onReject,
+  onConfirmPayment,
   onComplete,
   loadingAction,
   colors,
@@ -162,6 +164,7 @@ function BookingCard({
   statusCfg: Record<string, StatusConfig>;
   onApprove: (id: number) => void;
   onReject: (b: Booking) => void;
+  onConfirmPayment: (id: number) => void;
   onComplete: (id: number) => void;
   loadingAction: number | null;
   colors: any;
@@ -181,7 +184,8 @@ function BookingCard({
 
   const isLoading = loadingAction === booking.id;
   const needsApproval = booking.status === 'WAITING_CONFIRMATION';
-  const needsComplete = booking.status === 'CONFIRMED';
+  const needsPaymentConfirm = booking.status === 'CONFIRMED';
+  const needsComplete = booking.status === 'PAID';
 
   return (
     <View style={[styles.card, { backgroundColor: cardSurface, borderColor: colors.outline ?? colors.divider }]}>
@@ -259,11 +263,29 @@ function BookingCard({
             ) : (
               <>
                 <MaterialIcons name="check" size={16} color="#fff" />
-                <Text style={[styles.actionBtnText, { color: '#fff' }]}>Terima</Text>
+                <Text style={[styles.actionBtnText, { color: '#fff' }]}>Terima Booking</Text>
               </>
             )}
           </TouchableOpacity>
         </View>
+      )}
+
+      {needsPaymentConfirm && (
+        <TouchableOpacity
+          style={[styles.cashBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+          onPress={() => onConfirmPayment(booking.id)}
+          disabled={isLoading}
+          activeOpacity={0.8}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <MaterialIcons name="payments" size={16} color="#fff" />
+              <Text style={[styles.cashBtnText, { color: '#fff' }]}>Konfirmasi Pembayaran</Text>
+            </>
+          )}
+        </TouchableOpacity>
       )}
 
       {needsComplete && (
@@ -298,6 +320,7 @@ export default function OwnerBookingsPage() {
   const statusCfg: Record<string, StatusConfig> = {
     WAITING_CONFIRMATION: { label: 'Menunggu Konfirmasi', bg: colors.floodlight + '22', color: colors.onWarning ?? '#B45309', icon: 'schedule' },
     CONFIRMED:            { label: 'Terkonfirmasi',       bg: colors.primaryContainer,  color: colors.primary,                 icon: 'verified' },
+    PAID:                 { label: 'Sudah Dibayar',       bg: colors.primaryContainer,  color: colors.primary,                 icon: 'payments' },
     COMPLETED:            { label: 'Selesai',             bg: colors.surfaceContainerHigh, color: colors.textSecondary,        icon: 'done-all' },
     REJECTED:             { label: 'Ditolak',             bg: colors.errorContainer,    color: colors.error,                   icon: 'cancel' },
     CANCELLED:            { label: 'Dibatalkan',          bg: colors.errorContainer,    color: colors.error,                   icon: 'cancel' },
@@ -308,16 +331,19 @@ export default function OwnerBookingsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingAction, setLoadingAction] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Reject modal state
   const [rejectTarget, setRejectTarget] = useState<Booking | null>(null);
   const [rejecting, setRejecting] = useState(false);
 
   const fetchBookings = useCallback(async () => {
+    setError(null);
     try {
       const data = await getOwnerBookings();
       setBookings(Array.isArray(data.data) ? data.data : []);
-    } catch {
+    } catch (e: any) {
+      setError(e?.message || 'Gagal memuat data booking');
       setBookings([]);
     } finally {
       setLoading(false);
@@ -338,10 +364,23 @@ export default function OwnerBookingsPage() {
     setLoadingAction(id);
     try {
       await ownerApproveBooking(id);
-      showToast({ type: 'success', title: 'Booking dikonfirmasi', description: 'Penyewa akan diberitahu bahwa booking dikonfirmasi.' });
+      showToast({ type: 'success', title: 'Booking diterima', description: 'Status booking berubah menjadi CONFIRMED.' });
       fetchBookings();
     } catch {
-      showToast({ type: 'error', title: 'Gagal menyetujui', description: 'Coba lagi nanti.' });
+      showToast({ type: 'error', title: 'Gagal menerima booking', description: 'Coba lagi nanti.' });
+    } finally {
+      setLoadingAction(null);
+    }
+  }, [fetchBookings, showToast]);
+
+  const handleConfirmPayment = useCallback(async (id: number) => {
+    setLoadingAction(id);
+    try {
+      await ownerConfirmPaymentBooking(id);
+      showToast({ type: 'success', title: 'Pembayaran dikonfirmasi', description: 'Status booking berubah menjadi PAID dan slot terkunci.' });
+      fetchBookings();
+    } catch {
+      showToast({ type: 'error', title: 'Gagal mengonfirmasi pembayaran', description: 'Coba lagi nanti.' });
     } finally {
       setLoadingAction(null);
     }
@@ -389,6 +428,8 @@ export default function OwnerBookingsPage() {
         <View style={st.loadingWrap}>
           <SkeletonCards count={3} />
         </View>
+      ) : error ? (
+        <ErrorState title="Booking gagal dimuat" description={error} onRetry={fetchBookings} />
       ) : (
         <ScrollView
           contentContainerStyle={[
@@ -423,6 +464,7 @@ export default function OwnerBookingsPage() {
                 statusCfg={statusCfg}
                 onApprove={handleApprove}
                 onReject={setRejectTarget}
+                onConfirmPayment={handleConfirmPayment}
                 onComplete={handleComplete}
                 loadingAction={loadingAction}
                 colors={colors}
