@@ -301,7 +301,10 @@ export default function RegisterScreen() {
 
   function renderButtonContent() {
     return loading ? (
-      <ActivityIndicator color={isDark ? colors.onPrimary : '#FFFFFF'} />
+      <View style={styles.buttonContent}>
+        <ActivityIndicator color={isDark ? colors.onPrimary : '#FFFFFF'} style={{ marginRight: 8 }} />
+        <Text style={[styles.buttonText, { color: isDark ? colors.onPrimary : '#FFFFFF' }]}>MEMPROSES...</Text>
+      </View>
     ) : (
       <View style={styles.buttonContent}>
         <Text style={[styles.buttonText, { color: isDark ? colors.onPrimary : '#FFFFFF' }]}>SIGN UP</Text>

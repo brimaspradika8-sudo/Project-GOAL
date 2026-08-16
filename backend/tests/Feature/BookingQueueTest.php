@@ -20,12 +20,13 @@ class BookingQueueTest extends TestCase
 {
     use RefreshDatabase;
 
-    private string $date = '2026-08-20';
+    private string $date;
 
     protected function setUp(): void
     {
         parent::setUp();
 
+        $this->date = Carbon::tomorrow()->format('Y-m-d');
         config(['queue.default' => 'database']);
     }
 
@@ -37,13 +38,13 @@ class BookingQueueTest extends TestCase
         $this->authAs($player)->postJson('/api/bookings', [
             'field_id' => $field->id,
             'booking_date' => $this->date,
-            'slots' => [['start_time' => '19:00', 'end_time' => '20:00']],
+            'slots' => [['start_time' => '08:00', 'end_time' => '09:00']],
         ])->assertCreated();
 
         $jobs = DB::table('jobs')->where('payload', 'like', '%AutoCancelBooking%')->get();
         $this->assertCount(1, $jobs);
 
-        $runAt = Carbon::parse($this->date . ' 19:00')->subMinutes(30)->timestamp;
+        $runAt = Carbon::parse($this->date . ' 08:00')->subMinutes(30)->timestamp;
         $this->assertSame($runAt, $jobs->first()->available_at);
     }
 
@@ -191,7 +192,7 @@ class BookingQueueTest extends TestCase
             'close_time' => '12:00',
             'session_duration_minutes' => 60,
             'buffer_duration_minutes' => 30,
-        ], array_diff_key($overrides, ['status' => 1])));
+        ], $overrides));
 
         $field->forceFill(['status' => $overrides['status'] ?? 'approved'])->save();
 

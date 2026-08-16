@@ -15,4 +15,14 @@ abstract class TestCase extends BaseTestCase
 
         return $app;
     }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+    }
+
+    protected function tearDown(): void
+    {
+        parent::tearDown();
+    }
 }

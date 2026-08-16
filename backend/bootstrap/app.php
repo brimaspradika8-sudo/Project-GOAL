@@ -39,7 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->renderable(function (Throwable $e) {
             $request = request();
-            $isApi = str_starts_with($request->path(), 'api/') || $request->is('api/*');
+            $isApi = str_starts_with(trim($request->path(), '/'), 'api') || $request->is('api/*') || $request->expectsJson();
 
             if (! $isApi) {
                 return null;

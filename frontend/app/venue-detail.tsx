@@ -376,7 +376,10 @@ export default function VenueDetailScreen() {
         activeOpacity={0.85}
       >
         {submitting ? (
-          <ActivityIndicator color={WHITE} size="small" />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <ActivityIndicator color={WHITE} size="small" />
+            <Text style={st.ctaText}>Memproses...</Text>
+          </View>
         ) : (
           <>
             <MaterialIcons name="calendar-today" size={18} color={hasSlot ? WHITE : colors.textTertiary} />

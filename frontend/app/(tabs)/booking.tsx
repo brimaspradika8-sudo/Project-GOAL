@@ -17,7 +17,7 @@ import { FadeInView } from '../../components/FadeInView';
 import { useTheme } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
 import { useBookingHistory } from '../../hooks/useBooking';
-import { cancelBooking, type Booking, type BookingStatus } from '../../services/bookingService';
+import { cancelBooking, bulkDeleteBookings, type Booking, type BookingStatus } from '../../services/bookingService';
 import { BookingCard, formatDateDisplay, isCancelableBooking } from '../../components/booking';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import BulkActionBar from '../../components/shared/BulkActionBar';
@@ -355,9 +355,9 @@ export default function BookingTabScreen() {
             />
           }
         >
-          {selecting && hasCancelable && (
+          {selecting && isHistoryTab && (
             <Text style={[st.selectHint, { color: colors.textSecondary }]}>
-              Ketuk booking untuk memilih. Hanya booking berstatus Menunggu Konfirmasi yang dapat dipilih.
+              Ketuk booking untuk memilih riwayat yang akan dihapus.
             </Text>
           )}
 

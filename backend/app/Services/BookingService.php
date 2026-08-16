@@ -63,9 +63,9 @@ class BookingService
             ]);
         }
 
-        $slots = $this->normalizeSlots($data['slots'], $field, $daySchedule);
-        $this->validateSlotsAgainstSchedule($field, $slots, $daySchedule);
-        $this->assertSlotsContiguous($field, $slots, $daySchedule);
+        $slots = $this->normalizeSlots($data['slots'], $field);
+        $this->validateSlotsAgainstSchedule($field, $slots);
+        $this->assertSlotsContiguous($field, $slots);
 
         // Pengecekan Blocked Slots
         foreach ($slots as $slot) {
@@ -126,7 +126,9 @@ class BookingService
                 'expired_at' => $expiresAt,
             ]);
 
-            AutoCancelBooking::dispatch($booking->id)->delay($runAt);
+            AutoCancelBooking::dispatch($booking->id)
+                ->delay($runAt)
+                ->afterCommit();
 
             event(new BookingCreated($booking->load(['field.owner', 'user', 'slots'])));
 
