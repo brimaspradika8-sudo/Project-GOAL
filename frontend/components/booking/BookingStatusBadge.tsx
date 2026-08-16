@@ -7,9 +7,11 @@ import type { BookingStatus } from '../../services/bookingService';
 const STATUS_CONFIG: Record<BookingStatus, { label: string; bg: keyof ThemeColors; text: keyof ThemeColors }> = {
   WAITING_CONFIRMATION: { label: 'Menunggu Konfirmasi', bg: 'warningMuted', text: 'warning' },
   CONFIRMED: { label: 'Dikonfirmasi', bg: 'primaryMuted', text: 'primary' },
+  PAID: { label: 'Pembayaran Terkonfirmasi', bg: 'successLight', text: 'success' },
   COMPLETED: { label: 'Selesai', bg: 'surfaceContainerHigh', text: 'textSecondary' },
   REJECTED: { label: 'Ditolak', bg: 'destructiveMuted', text: 'error' },
   CANCELLED: { label: 'Dibatalkan', bg: 'destructiveMuted', text: 'error' },
+  EXPIRED: { label: 'Kadaluarsa', bg: 'surfaceContainerHigh', text: 'textSecondary' },
 };
 
 export function isExpiredReason(reason: string | null | undefined): boolean {

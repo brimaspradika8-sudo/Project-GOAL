@@ -388,42 +388,56 @@ class BookingService
             throw new InvalidBookingStatusException('Booking harus berstatus terkonfirmasi sebelum pembayaran dikonfirmasi.');
         }
 
-        try {
-            $booking = $this->statusService->transition($booking, BookingStatus::PAID, [
-                'confirmed_at' => now(),
-                'confirmed_by' => $owner->id,
-            ]);
+        return DB::transaction(function () use ($owner, $booking) {
+            try {
+                $booking = $this->statusService->transition($booking, BookingStatus::PAID, [
+                    'confirmed_at' => now(),
+                    'confirmed_by' => $owner->id,
+                ]);
 
-            $this->logSecurityAction($owner, 'booking.payment_confirmed', $booking->id);
+                $this->logSecurityAction($owner, 'booking.payment_confirmed', $booking->id);
 
-            return $booking;
-        } catch (InvalidBookingStatusTransitionException $e) {
-            throw new InvalidBookingStatusException('Gagal mengonfirmasi pembayaran', 0, $e);
-        }
+                return $booking;
+            } catch (InvalidBookingStatusTransitionException $e) {
+                throw new InvalidBookingStatusException('Gagal mengonfirmasi pembayaran', 0, $e);
+            }
+        });
     }
 
     public function bulkCancel(User $user, array $bookingIds): int
     {
-        $bookings = Booking::whereIn('id', $bookingIds)
-            ->where('user_id', $user->id)
-            ->get();
+        $requestedBookings = Booking::whereIn('id', $bookingIds)->get();
 
-        $count = 0;
-        foreach ($bookings as $booking) {
-            if ($booking->status === BookingStatus::WAITING_CONFIRMATION->value) {
-                try {
-                    $this->statusService->transition($booking, BookingStatus::CANCELLED, [
-                        'cancelled_at' => now(),
-                        'cancel_reason' => 'Dibatalkan oleh pengguna',
-                    ]);
-                    $count++;
-                } catch (\Exception $e) {
-                    // silent fail for individual item
-                }
+        foreach ($requestedBookings as $b) {
+            if ($b->user_id !== $user->id) {
+                $this->logSecurityAction($user, 'unauthorized_attempt', $b->id, [
+                    'attempted_action' => 'booking.bulk_delete',
+                ]);
+                throw new AuthorizationException('Anda tidak memiliki izin untuk menghapus booking ini.');
             }
         }
 
-        return $count;
+        return DB::transaction(function () use ($requestedBookings) {
+            $count = 0;
+            foreach ($requestedBookings as $booking) {
+                if ($booking->status === BookingStatus::WAITING_CONFIRMATION->value) {
+                    try {
+                        $this->statusService->transition($booking, BookingStatus::CANCELLED, [
+                            'cancelled_at' => now(),
+                            'cancel_reason' => 'Dibatalkan oleh pengguna',
+                        ]);
+                        $count++;
+                    } catch (\Exception $e) {
+                        // proceed
+                    }
+                } else {
+                    $booking->delete();
+                    $count++;
+                }
+            }
+
+            return $count;
+        });
     }
 
     /**

@@ -1,10 +1,9 @@
-<?php
-
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Booking\BookingController;
 use App\Http\Controllers\Field\FieldAvailabilityController;
 use App\Http\Controllers\Field\FieldController;
+use App\Http\Controllers\HealthController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Owner\FieldBookingConfigurationController;
 use App\Http\Controllers\Owner\FieldScheduleController;
@@ -16,6 +15,9 @@ use App\Http\Controllers\Profile\ProfileController;
 use App\Http\Controllers\SuperAdmin\UserController;
 use App\Http\Controllers\UploadController;
 use Illuminate\Support\Facades\Route;
+
+// Health Check (public — untuk monitoring & uptime checks)
+Route::get('/health', [HealthController::class, 'check']);
 
 Route::middleware('throttle:auth-sensitive')->group(function () {
     Route::post('/auth/register', [AuthController::class, 'register']);
@@ -52,10 +54,11 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     // Owner upgrade request
     Route::post('/me/owner-request', [OwnerRequestController::class, 'store'])->middleware('throttle:5,1');
     Route::get('/me/owner-request', [OwnerRequestController::class, 'status']);
-    // Fields - owner's own list
-    Route::get('/fields/my/list', [FieldController::class, 'myFields']);
+    // Fields - owner's own list (hanya owner & super_admin)
+    // Di-move ke dalam group role:owner,super_admin di bawah
     // Fields - owner manages own fields
     Route::middleware('role:owner,super_admin')->group(function () {
+        Route::get('/fields/my/list', [FieldController::class, 'myFields']);
         Route::post('/fields', [FieldController::class, 'store']);
         Route::put('/fields/{id}', [FieldController::class, 'update']);
         Route::delete('/fields/{id}', [FieldController::class, 'destroy']);

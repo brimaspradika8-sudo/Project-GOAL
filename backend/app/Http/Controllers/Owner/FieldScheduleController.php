@@ -15,12 +15,7 @@ class FieldScheduleController extends Controller
 {
     private function canManageField(Request $request, Field $field): bool
     {
-        $user = $request->user();
-        if ($user->profile?->role === Profile::ROLE_SUPER_ADMIN) {
-            return true;
-        }
-
-        return $field->owner_id === $user->id;
+        return $request->user()->can('update', $field);
     }
 
     // --- Operational Schedules ---

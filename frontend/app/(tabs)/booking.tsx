@@ -27,8 +27,8 @@ import { useToastStore } from '../../store/toastStore';
 
 type TabKey = 'aktif' | 'riwayat';
 
-const ACTIVE_STATUSES: BookingStatus[] = ['WAITING_CONFIRMATION', 'CONFIRMED'];
-const PAST_STATUSES: BookingStatus[] = ['COMPLETED', 'CANCELLED', 'REJECTED'];
+const ACTIVE_STATUSES: BookingStatus[] = ['WAITING_CONFIRMATION', 'CONFIRMED', 'PAID'];
+const PAST_STATUSES: BookingStatus[] = ['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED'];
 
 const CANCEL_REASON = 'Dibatalkan oleh pengguna';
 

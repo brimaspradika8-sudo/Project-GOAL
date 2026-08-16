@@ -291,11 +291,15 @@ class BookingController extends Controller
             'booking_ids.*' => ['integer', 'exists:bookings,id'],
         ]);
 
-        $count = $this->bookingService->bulkCancel($request->user(), $request->input('booking_ids'));
+        try {
+            $count = $this->bookingService->bulkCancel($request->user(), $request->input('booking_ids'));
 
-        return $this->successResponse("{$count} booking berhasil dihapus dari riwayat.", [
-            'deleted_count' => $count,
-        ]);
+            return $this->successResponse("{$count} booking berhasil dihapus dari riwayat.", [
+                'deleted_count' => $count,
+            ]);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return $this->errorResponse('Anda tidak memiliki izin untuk menghapus booking ini.', [], 403);
+        }
     }
 
     private function authorizeBooking(Request $request, string $ability, Booking $booking): void

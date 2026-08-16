@@ -16,7 +16,7 @@ class FieldService
 {
     private string $cachePrefix = 'fields_';
 
-    private int $cacheTtl = 60;
+    private int $cacheTtl = 300; // 5 menit — cukup untuk production, cache di-invalidate saat field berubah
 
     public function __construct(
         private SupabaseStorageService $storage,

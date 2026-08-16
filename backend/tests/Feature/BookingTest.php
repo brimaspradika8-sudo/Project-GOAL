@@ -1177,6 +1177,47 @@ class BookingTest extends TestCase
         $this->assertDatabaseHas('bookings', ['id' => $b2, 'status' => BookingStatus::CANCELLED->value]);
     }
 
+    public function test_player_cannot_bulk_delete_other_players_booking(): void
+    {
+        $playerA = $this->userWithRole(UserRole::PLAYER);
+        $playerB = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor();
+
+        $bookingB = $this->authAs($playerB)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->json('data.id');
+
+        $this->authAs($playerA)->deleteJson('/api/bookings/bulk', [
+            'booking_ids' => [$bookingB],
+        ])->assertStatus(403);
+    }
+
+    public function test_paid_booking_locks_slot_for_other_users(): void
+    {
+        $owner = $this->userWithRole(UserRole::OWNER, true);
+        $playerA = $this->userWithRole(UserRole::PLAYER);
+        $playerB = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor([], $owner);
+
+        $bookingId = $this->authAs($playerA)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->json('data.id');
+
+        $this->authAs($owner)->patchJson("/api/owner/bookings/{$bookingId}/approve")->assertOk();
+        $this->authAs($owner)->patchJson("/api/owner/bookings/{$bookingId}/confirm-payment")->assertOk();
+
+        // Player B attempts to book overlapping slot -> must return 409 Conflict
+        $this->authAs($playerB)->postJson('/api/bookings', [
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'slots' => [['start_time' => '07:00', 'end_time' => '08:00']],
+        ])->assertStatus(409);
+    }
+
     private function userWithRole(UserRole $role, bool $verifiedOwner = false): User
     {
         $user = User::factory()->create();

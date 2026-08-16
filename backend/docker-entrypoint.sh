@@ -14,20 +14,24 @@ done
 
 echo "==> [GOAL] PostgreSQL siap."
 
-# Migrasi hanya dijalankan oleh service yang mengizinkan (app/scheduler default true)
+# Migrasi hanya dijalankan oleh service utama (app), bukan queue/scheduler
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
-    echo "==> [GOAL] Menjalankan migrasi..."
+    echo "==> [GOAL] Menjalankan migrasi database..."
     php artisan migrate --force
+    echo "==> [GOAL] Migrasi selesai."
 fi
 
-# Jika ada command override (queue:work, schedule:work, dsb), jalankan itu
+# Jika ada command override (queue:work, schedule:work, php-fpm, dsb), jalankan itu
 if [ $# -gt 0 ]; then
     exec "$@"
 fi
 
-echo "==> [GOAL] Membersihkan cache konfigurasi..."
+# Default: optimasi Laravel lalu jalankan PHP-FPM
+echo "==> [GOAL] Menjalankan Laravel optimization..."
 php artisan config:cache
 php artisan route:cache
+php artisan view:cache
+echo "==> [GOAL] Optimization selesai."
 
-echo "==> [GOAL] Menjalankan Laravel server pada 0.0.0.0:8000..."
-exec php artisan serve --host=0.0.0.0 --port=8000
+echo "==> [GOAL] Memulai PHP-FPM..."
+exec php-fpm
