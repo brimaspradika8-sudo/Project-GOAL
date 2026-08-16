@@ -1,0 +1,264 @@
+import React from 'react';
+import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { SHADOWS, FONT_FAMILY } from '../goalTheme';
+import { SafeImage } from '../SafeImage';
+import { useTheme } from '../../lib/theme';
+import { useIsMobileWeb } from '../../lib/responsive';
+import type { Booking, BookingStatus } from '../../services/bookingService';
+import { SPORT_LABELS } from '../../lib/fieldValidation';
+import { BookingStatusBadge } from './BookingStatusBadge';
+
+export function formatPrice(p: number): string {
+  return `Rp${p.toLocaleString('id-ID')}`;
+}
+
+export function formatDateDisplay(d: string): string {
+  if (!d) return '-';
+  const date = new Date(d + 'T00:00:00');
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+export function isCancelableBooking(status: BookingStatus): boolean {
+  return status === 'WAITING_CONFIRMATION';
+}
+
+interface BookingCardProps {
+  booking: Booking;
+  onPress?: () => void;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
+  onCancel?: () => void;
+}
+
+export function BookingCard({
+  booking,
+  onPress,
+  selectable = false,
+  selected = false,
+  onToggleSelect,
+  onCancel,
+}: BookingCardProps) {
+  const { colors } = useTheme();
+  const isMobile = useIsMobileWeb();
+  const st = makeStyles(colors, isMobile);
+
+  const sportLabel = SPORT_LABELS[booking.field?.sport_type ?? ''] ?? (booking.field?.sport_type ?? '');
+  const imageUri = booking.field?.image_url ?? '';
+  const cancelable = isCancelableBooking(booking.status);
+  const inSelection = selectable && cancelable;
+
+  const handlePress = () => {
+    if (selectable) {
+      if (cancelable) onToggleSelect?.();
+      return;
+    }
+    onPress?.();
+  };
+
+  return (
+    <Pressable
+      style={({ pressed }) => [st.card, pressed && st.cardPressed]}
+      onPress={handlePress}
+    >
+      {inSelection ? (
+        <View style={st.imageWrap}>
+          <SafeImage source={{ uri: imageUri }} style={st.image} fallbackSize={32} />
+          <View style={[st.checkbox, selected && st.checkboxChecked]}>
+            {selected ? <MaterialIcons name="check" size={14} color={colors.onPrimary} /> : null}
+          </View>
+        </View>
+      ) : (
+        <View style={st.imageWrap}>
+          <SafeImage source={{ uri: imageUri }} style={st.image} fallbackSize={32} />
+        </View>
+      )}
+
+      <View style={st.body}>
+        <BookingStatusBadge status={booking.status} />
+        <Text style={st.fieldName} numberOfLines={1}>
+          {booking.field?.name ?? `Lapangan #${booking.field_id}`}
+        </Text>
+        {!!sportLabel && <Text style={st.sport} numberOfLines={1}>{sportLabel}</Text>}
+
+        <View style={st.metaCol}>
+          <View style={st.metaRow}>
+            <MaterialIcons name="event" size={13} color={colors.textTertiary} />
+            <Text style={st.metaText}>{formatDateDisplay(booking.booking_date)}</Text>
+          </View>
+          <View style={st.metaRow}>
+            <MaterialIcons name="schedule" size={13} color={colors.textTertiary} />
+            <Text style={st.metaText}>{booking.start_time} – {booking.end_time}</Text>
+          </View>
+        </View>
+
+        {isMobile ? (
+          <View style={st.footer}>
+            <Text style={st.price}>{formatPrice(booking.total_price)}</Text>
+            {!inSelection && (
+              <View style={st.footerActions}>
+                {cancelable && onCancel && (
+                  <TouchableOpacity style={st.cancelBtn} onPress={onCancel} activeOpacity={0.8}>
+                    <Text style={st.cancelBtnText}>Batal</Text>
+                  </TouchableOpacity>
+                )}
+                {onPress && (
+                  <TouchableOpacity style={st.detailBtn} onPress={onPress} activeOpacity={0.8}>
+                    <Text style={st.detailBtnText}>Lihat Detail</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </View>
+        ) : (
+          <View style={st.actionCol}>
+            <Text style={st.priceDesktop}>{formatPrice(booking.total_price)}</Text>
+            {!inSelection && cancelable && onCancel && (
+              <TouchableOpacity style={st.cancelBtn} onPress={onCancel} activeOpacity={0.8}>
+                <Text style={st.cancelBtnText}>Batal</Text>
+              </TouchableOpacity>
+            )}
+            {!inSelection && onPress && (
+              <TouchableOpacity style={st.detailBtn} onPress={onPress} activeOpacity={0.8}>
+                <Text style={st.detailBtnText}>Lihat Detail</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isMobile: boolean) => StyleSheet.create({
+  card: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    marginBottom: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.divider,
+    ...SHADOWS.md,
+  },
+  cardPressed: {
+    opacity: 0.85,
+  },
+  imageWrap: {
+    width: isMobile ? 108 : 176,
+  },
+  image: {
+    width: isMobile ? 108 : 176,
+    height: '100%',
+    minHeight: isMobile ? 150 : 168,
+  },
+  checkbox: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    borderColor: colors.surfaceWhite,
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  body: {
+    flex: 1,
+    padding: 14,
+    gap: 6,
+  },
+  fieldName: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: 2,
+  },
+  sport: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  metaCol: { gap: 3, marginTop: 2 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metaText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.outline,
+    gap: 8,
+  },
+  footerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionCol: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: 8,
+    paddingRight: 14,
+    paddingLeft: 4,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.divider,
+  },
+  price: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  priceDesktop: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 17,
+    fontWeight: '800',
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  detailBtn: {
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    alignItems: 'center',
+  },
+  detailBtnText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  cancelBtn: {
+    borderWidth: 1.5,
+    borderColor: colors.error,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    alignItems: 'center',
+  },
+  cancelBtnText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.error,
+  },
+});

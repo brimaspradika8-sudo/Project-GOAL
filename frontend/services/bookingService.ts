@@ -8,8 +8,7 @@ export type BookingStatus =
   | 'CONFIRMED'
   | 'COMPLETED'
   | 'REJECTED'
-  | 'CANCELLED'
-  | 'EXPIRED';
+  | 'CANCELLED';
 
 export interface BookingField {
   id: number;
