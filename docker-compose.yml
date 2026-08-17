@@ -22,6 +22,7 @@ services:
       dockerfile: Dockerfile
     container_name: goal-backend
     restart: unless-stopped
+    entrypoint: ["sh", "/var/www/docker-entrypoint.sh"]
     volumes:
       - ./backend:/var/www
       - /var/www/vendor
@@ -46,6 +47,7 @@ services:
     image: goal-app
     container_name: goal-queue-worker
     restart: unless-stopped
+    entrypoint: ["sh", "/var/www/docker-entrypoint.sh"]
     command:
       - php
       - artisan
@@ -53,7 +55,7 @@ services:
       - --tries=3
       - --timeout=90
       - --backoff=3
-      - --max-time=3600   # restart tiap jam untuk cegah memory leak
+      - --max-time=3600
       - --sleep=3
     environment:
       RUN_MIGRATIONS: "false"
@@ -80,6 +82,7 @@ services:
     image: goal-app
     container_name: goal-scheduler
     restart: unless-stopped
+    entrypoint: ["sh", "/var/www/docker-entrypoint.sh"]
     command: [php, artisan, schedule:work]
     environment:
       RUN_MIGRATIONS: "false"
@@ -109,7 +112,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_DATABASE:-project_goal}
       POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD wajib diset di .env.docker}
+      POSTGRES_PASSWORD: BRIMAS0501
     ports:
       - "5432:5432"
     volumes:

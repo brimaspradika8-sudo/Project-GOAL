@@ -376,7 +376,7 @@ Loading placeholder untuk konten yang sedang dimuat:
 Otomatis deteksi environment:
 | Platform | Base URL |
 |----------|----------|
-| Web | `http://localhost:8000/api` |
+| Web | `http://172.19.192.179:8000/api` |
 | Android Emulator | `http://10.0.2.2:8000/api` |
 | iOS/Expo Go | Auto-detect Expo host IP |
 | Production | `EXPO_PUBLIC_API_URL` env var |

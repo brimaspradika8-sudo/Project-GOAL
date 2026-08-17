@@ -12,6 +12,7 @@ import { useTheme } from '../../lib/theme';
 import { useToastStore } from '../../store/toastStore';
 import {
   ownerApproveBooking,
+  ownerConfirmPaymentBooking,
   ownerRejectBooking,
   ownerCompleteBooking,
   getOwnerBookings,

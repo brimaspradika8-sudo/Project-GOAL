@@ -1,13 +1,18 @@
 #!/bin/sh
-set -e
 
 echo "==> [GOAL] Menunggu PostgreSQL siap..."
 
-# Pastikan konfigurasi memakai environment container, bukan cache dari host.
-php artisan config:clear >/dev/null
+# Bersihkan cache config lama (jangan pakai set -e — biarkan lanjut walau cache gagal)
+php artisan config:clear >/dev/null 2>&1 || true
 
-# Tunggu sampai Laravel dapat membaca status migration dari PostgreSQL.
-until php artisan migrate:status >/dev/null 2>&1; do
+# Tunggu sampai PostgreSQL benar-benar siap — cek TCP socket langsung ke service DB.
+until php -r '
+$host = getenv("DB_HOST") ?: "127.0.0.1";
+$port = (int) (getenv("DB_PORT") ?: 5432);
+$socket = @fsockopen($host, $port, $errno, $errstr, 2);
+if ($socket === false) { exit(1); }
+ fclose($socket);
+' >/dev/null 2>&1; do
     echo "    PostgreSQL belum siap, menunggu 2 detik..."
     sleep 2
 done
@@ -28,9 +33,9 @@ fi
 
 # Default: optimasi Laravel lalu jalankan PHP-FPM
 echo "==> [GOAL] Menjalankan Laravel optimization..."
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+php artisan config:cache || true
+php artisan route:cache || true
+php artisan view:cache || true
 echo "==> [GOAL] Optimization selesai."
 
 echo "==> [GOAL] Memulai PHP-FPM..."

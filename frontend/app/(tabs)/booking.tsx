@@ -18,7 +18,7 @@ import { useTheme } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
 import { useBookingHistory } from '../../hooks/useBooking';
 import { cancelBooking, bulkDeleteBookings, type Booking, type BookingStatus } from '../../services/bookingService';
-import { BookingCard, formatDateDisplay, isCancelableBooking } from '../../components/booking';
+import { BookingCard, formatDateDisplay } from '../../components/booking';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import BulkActionBar from '../../components/shared/BulkActionBar';
 import { useToastStore } from '../../store/toastStore';

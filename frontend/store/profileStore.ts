@@ -4,6 +4,7 @@ import { apiFetch } from '../lib/apiClient';
 import { profileFromApi, type UserRole } from '../types/roles';
 import * as SecureStore from '../lib/secureStorage';
 import { TOKEN_KEY } from '../lib/auth';
+import { router } from 'expo-router';
 
 export interface Profile {
   id: number;
@@ -52,6 +53,9 @@ export const useProfileStore = create<ProfileState>((set) => ({
         if (res.status === 401 || res.status === 403) {
           await AsyncStorage.removeItem(PROFILE_CACHE_KEY);
           await SecureStore.deleteItemAsync(TOKEN_KEY);
+          set({ profile: null, loading: false });
+          router.replace('/login');
+          return;
         }
         set({ profile: null, loading: false });
       }

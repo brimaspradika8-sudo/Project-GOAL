@@ -2,16 +2,18 @@
 
 $isProduction = config('app.env') === 'production';
 
-$origins = $isProduction
-    ? array_filter(array_map('trim', explode(',', env('FRONTEND_URL', ''))))
-    : [
-        'http://localhost:8081',
-        'http://localhost:19006',
-        'http://localhost:8000',
-        'http://127.0.0.1:8000',
-        'http://127.0.0.1:8081',
-        'http://172.19.192.179:8000',
-    ];
+$origins = array_values(array_filter(array_map('trim', explode(',', env('FRONTEND_URL', ''))))) ?: [
+    'http://localhost:8081',
+    'http://localhost:8082',
+    'http://localhost:19006',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://127.0.0.1:8081',
+    'http://127.0.0.1:8082',
+    'http://172.19.192.179:8000',
+    'http://172.19.192.179:8081',
+    'http://172.19.192.179:8082',
+];
 
 return [
     'paths' => ['api/*'],

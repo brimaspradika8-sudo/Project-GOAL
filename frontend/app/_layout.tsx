@@ -7,7 +7,7 @@ import 'react-native-reanimated';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import LoadingScreen from '../components/LoadingScreen';
+import LoadingScreen, { type BootStep } from '../components/LoadingScreen';
 import SplashScreen from '../components/SplashScreen';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 
@@ -96,7 +96,8 @@ function RootLayoutInner() {
   }, [fontsLoaded, fontError]);
   const [showSplash, setShowSplash] = useState(Platform.OS !== 'web');
   const [booting, setBooting] = useState(true);
-  const [loadingMessage, setLoadingMessage] = useState('Memuat...');
+  const [bootError, setBootError] = useState<string | null>(null);
+  const [bootStep, setBootStep] = useState<BootStep>('auth_check');
   const bootRef = useRef(false);
 
   const onSplashFinish = useCallback(() => {
@@ -104,57 +105,66 @@ function RootLayoutInner() {
     setShowSplash(false);
   }, []);
 
-  useEffect(() => {
-    if (showSplash || !themeReady || bootRef.current) return;
-    bootRef.current = true;
+  const initialize = useCallback(async () => {
+    setBooting(true);
+    setBootError(null);
+    setBootStep('auth_check');
 
-    const initialize = async () => {
-      setLoadingMessage('Memeriksa sesi');
-
+    try {
       const storedToken = await SecureStore.getItemAsync(TOKEN_KEY);
 
-      if (storedToken) {
-        setLoadingMessage('Memeriksa data profil');
-
-        let { profile, unauthorized } = await fetchProfile(storedToken);
-
-        if (!profile && !unauthorized) {
-          setLoadingMessage('Koneksi terputus. Mencoba ulang...');
-          await new Promise((r) => setTimeout(r, 1500));
-          ({ profile, unauthorized } = await fetchProfile(storedToken));
+      if (!storedToken) {
+        useProfileStore.getState().clearProfile();
+        if (!isAuthRoute) {
+          router.replace('/login');
         }
+        setBooting(false);
+        return;
+      }
 
-        if (profile) {
-          useProfileStore.setState({ profile, loading: false });
+      setBootStep('profile_fetch');
+      let { profile, unauthorized } = await fetchProfile(storedToken);
 
-          if (isAuthRoute) {
-          } else if (profile.onboarding_completed === false) {
+      if (!profile && !unauthorized) {
+        setBootError('Tidak dapat terhubung ke server. Periksa jaringan Anda lalu coba lagi.');
+        setBooting(false);
+        return;
+      }
+
+      if (profile) {
+        useProfileStore.setState({ profile, loading: false });
+
+        setBootStep('app_ready');
+
+        if (!isAuthRoute) {
+          if (profile.onboarding_completed === false) {
             router.replace('/onboarding');
           } else {
             router.replace(routeForRole(profile.role));
           }
-        } else {
-          if (unauthorized) {
-            await SecureStore.deleteItemAsync(TOKEN_KEY);
-            useProfileStore.getState().clearProfile();
-          }
-          if (!isAuthRoute) {
-            router.replace('/login');
-          }
         }
       } else {
+        if (unauthorized) {
+          await SecureStore.deleteItemAsync(TOKEN_KEY);
+          useProfileStore.getState().clearProfile();
+        }
         if (!isAuthRoute) {
           router.replace('/login');
         }
-        useProfileStore.getState().clearProfile();
       }
 
-      setLoadingMessage('Memuat...');
-      setTimeout(() => setBooting(false), 150);
-    };
+      setTimeout(() => setBooting(false), 120);
+    } catch {
+      setBootError('Tidak dapat terhubung ke server. Periksa jaringan Anda lalu coba lagi.');
+      setBooting(false);
+    }
+  }, [isAuthRoute]);
 
+  useEffect(() => {
+    if (showSplash || !themeReady || bootRef.current) return;
+    bootRef.current = true;
     initialize();
-  }, [showSplash, themeReady, isAuthRoute]);
+  }, [showSplash, themeReady, initialize]);
 
   if (shouldBlockForFonts && !fontsLoaded && !fontsFallback && !fontError) {
     return null;
@@ -186,12 +196,12 @@ function RootLayoutInner() {
         <Stack.Screen name="booking/payment/[id]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="booking-success" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
       </Stack>
-      {(showSplash || booting) && (
+      {(showSplash || booting || bootError) && (
         <View style={styles.loadingOverlay}>
           {showSplash ? (
             <SplashScreen onFinish={onSplashFinish} />
           ) : (
-            <LoadingScreen message={loadingMessage} />
+            <LoadingScreen currentStep={bootStep} error={bootError} onRetry={initialize} />
           )}
         </View>
       )}

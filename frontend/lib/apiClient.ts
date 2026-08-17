@@ -1,6 +1,8 @@
 import { API_BASE_URL, DEFAULT_HEADERS } from './api';
 import { TOKEN_KEY } from './auth';
 import * as SecureStore from './secureStorage';
+import { useProfileStore } from '../store/profileStore';
+import { router } from 'expo-router';
 
 export interface ApiRequestOptions extends Omit<RequestInit, 'body' | 'headers'> {
   params?: Record<string, string | number | boolean | undefined | null>;
@@ -20,6 +22,22 @@ export class ApiError extends Error {
     this.name = 'ApiError';
     this.status = status;
     this.data = data;
+  }
+}
+
+let handling401 = false;
+
+async function handle401() {
+  if (handling401) return;
+  handling401 = true;
+  try {
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    useProfileStore.getState().clearProfile();
+    router.replace('/login');
+  } catch {
+    // redirect best-effort
+  } finally {
+    setTimeout(() => { handling401 = false; }, 2000);
   }
 }
 
@@ -81,6 +99,9 @@ export async function apiFetch(path: string, options: ApiRequestOptions = {}): P
 
 export async function apiGet<T = any>(path: string, options?: ApiRequestOptions): Promise<T> {
   const res = await apiFetch(path, options);
+  if (res.status === 401) {
+    handle401();
+  }
   if (!res.ok) {
     throw new ApiError(res.status, await parseJson(res));
   }
@@ -89,6 +110,9 @@ export async function apiGet<T = any>(path: string, options?: ApiRequestOptions)
 
 export async function apiSend<T = any>(method: 'POST' | 'PUT' | 'DELETE' | 'PATCH', path: string, options?: ApiRequestOptions): Promise<T> {
   const res = await apiFetch(path, { ...options, method });
+  if (res.status === 401) {
+    handle401();
+  }
   const data = await parseJson(res);
   if (!res.ok) {
     throw new ApiError(res.status, data);

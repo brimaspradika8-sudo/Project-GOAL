@@ -25,7 +25,7 @@ export default function TabLayout() {
       router.replace('/login');
     }
   }, [profile, profileLoading, router]);
-
+  
   return (
     <View style={isWeb ? styles.webContainer : undefined}>
       {isWeb && <TopNavbar />}

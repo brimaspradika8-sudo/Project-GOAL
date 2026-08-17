@@ -122,10 +122,10 @@ export function useBookingHistory(): UseBookingHistoryResult {
   const [error, setError] = useState<string | null>(null);
   const cancelledRef = useRef(false);
 
-  const fetch = useCallback(async ({ isRefresh = false, silent = false } = {}) => {
+  const fetch = useCallback(async ({ isRefresh = false } = {}) => {
     if (isRefresh) {
       setRefreshing(true);
-    } else if (!silent) {
+    } else {
       setLoading(true);
     }
     setError(null);
@@ -151,14 +151,6 @@ export function useBookingHistory(): UseBookingHistoryResult {
     return () => {
       cancelledRef.current = true;
     };
-  }, [fetch]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      fetch({ silent: true });
-    }, 10000);
-
-    return () => clearInterval(timer);
   }, [fetch]);
 
   return {

@@ -118,7 +118,6 @@ export default function HomeScreen() {
 
   const styles = makeStyles(colors);
   const isDesktop = width >= 900;
-  const isWide = width >= 1024;
   const sports = profile?.sports ?? [];
   const userName = profile?.full_name || profile?.username || 'Pengguna';
   const isOwnerOrSuperAdmin = profile?.role === 'owner' || profile?.role === 'super_admin';

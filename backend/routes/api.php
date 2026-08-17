@@ -1,3 +1,5 @@
+<?php
+
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Booking\BookingController;

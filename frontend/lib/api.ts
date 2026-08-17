@@ -25,7 +25,8 @@ function getWebHost(): string | null {
 export function getApiBaseUrl() {
   const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
   if (configuredUrl) {
-    return trimTrailingSlash(configuredUrl);
+    const trimmed = trimTrailingSlash(configuredUrl);
+    return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
   }
 
   if (Platform.OS === 'web') {
@@ -41,8 +42,7 @@ export function getApiBaseUrl() {
     return `http://${expoHost}:8000/api`;
   }
 
-  // Android emulator loopback to the host machine
-  return 'http://10.0.2.2:8000/api';
+  return 'http://localhost:8000/api';
 }
 
 export const API_BASE_URL = getApiBaseUrl();
