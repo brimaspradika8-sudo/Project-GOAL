@@ -191,7 +191,7 @@ export async function ownerApproveBooking(id: number): Promise<{ data: Booking; 
  * Owner confirms manual payment (transitions to PAID).
  */
 export async function ownerConfirmPaymentBooking(id: number): Promise<{ data: Booking; message: string }> {
-  return apiSend('PATCH', `/owner/bookings/${id}/confirm-payment`, {});
+  return apiSend('PATCH', `/owner/bookings/${id}/set-paid`, {});
 }
 
 /**

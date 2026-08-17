@@ -6,7 +6,7 @@ abstract class Controller
 {
     protected function resourceResponse(string $message, mixed $resource, int $status = 200)
     {
-        $data = method_exists($resource, 'resolve')
+        $data = is_object($resource) && method_exists($resource, 'resolve')
             ? $resource->resolve(request())
             : $resource;
 

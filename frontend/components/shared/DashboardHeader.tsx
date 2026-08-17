@@ -128,9 +128,10 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   },
   content: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     zIndex: 1,
+    gap: 8,
   },
   backBtn: {
     width: 44,
@@ -144,19 +145,22 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   },
   textGroup: {
     flex: 1,
+    flexShrink: 1,
   },
   title: {
     ...FONTS.headlineMd,
   },
   subtitle: {
-    ...FONTS.bodyMd,
-    marginTop: 4,
+    ...FONTS.bodySm,
+    marginTop: 2,
   },
   rightSlot: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginLeft: 12,
+    marginLeft: 8,
+    flexShrink: 0,
+    paddingTop: 2,
   },
   notifBtn: {
     width: 38,

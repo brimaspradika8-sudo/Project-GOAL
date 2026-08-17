@@ -125,13 +125,13 @@ export default function LoginScreen() {
       }
 
       if (data?.token) {
+        await resetAllStores();
         await SecureStore.setItemAsync(TOKEN_KEY, data.token);
 
         const profileRes = await apiFetch('/me', { token: data.token });
         const profileData = profileFromApi<any>(await parseApiResponse(profileRes));
 
         if (profileRes.ok && profileData && isUserRole(profileData.role)) {
-          await resetAllStores();
           useProfileStore.setState({ profile: profileData, loading: false });
 
           if (profileData.onboarding_completed === false) {

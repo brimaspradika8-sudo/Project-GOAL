@@ -253,6 +253,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isMobile: boo
   },
   footer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 6,

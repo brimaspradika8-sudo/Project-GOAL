@@ -128,13 +128,13 @@ export default function BookingPaymentScreen() {
           </Text>
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* Bottom Confirm Button */}
       <View style={st.bottomBar}>
         <View style={st.bottomBarInner}>
-          <View>
+          <View style={st.bottomLabelWrap}>
             <Text style={st.bottomLabel}>Total Bayar</Text>
             <Text style={st.bottomAmount}>{formatPrice(booking.total_price)}</Text>
           </View>
@@ -291,17 +291,18 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     ...SHADOWS.xl,
   },
   bottomBarInner: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between',
     maxWidth: 700, width: '100%', alignSelf: 'center', gap: 12,
   },
+  bottomLabelWrap: { flexShrink: 1 },
   bottomLabel: { ...FONTS.bodySm, color: colors.textSecondary },
   bottomAmount: { fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: '700', color: colors.primary },
   payBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: colors.primary,
     borderRadius: SIZES.borderRadius,
-    paddingHorizontal: 24, paddingVertical: 14,
-    minWidth: 190, justifyContent: 'center',
+    paddingHorizontal: 20, paddingVertical: 14,
+    minWidth: 0, flexShrink: 0, justifyContent: 'center',
     ...SHADOWS.primary,
   },
   payBtnText: { ...FONTS.buttonLg, color: colors.onPrimary },
