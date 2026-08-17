@@ -359,8 +359,8 @@ class BookingService
             throw new UnauthorizedBookingActionException('You do not have permission');
         }
 
-        if ($booking->status !== BookingStatus::CONFIRMED->value) {
-            throw new InvalidBookingStatusException('Booking must be confirmed before completion');
+        if (!in_array($booking->status, [BookingStatus::CONFIRMED->value, BookingStatus::PAID->value])) {
+            throw new InvalidBookingStatusException('Booking must be confirmed or paid before completion');
         }
 
         try {

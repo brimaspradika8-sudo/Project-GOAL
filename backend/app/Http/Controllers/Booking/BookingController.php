@@ -274,13 +274,20 @@ class BookingController extends Controller
             $this->authorizeBooking($request, 'confirmPayment', $booking);
             $updated = $this->bookingService->confirmPayment($request->user(), $booking);
 
+            \Illuminate\Support\Facades\Log::info("ConfirmPayment Success", ["booking_id" => $id]);
             return $this->resourceResponse('Pembayaran booking berhasil dikonfirmasi.', new BookingResource($updated));
         } catch (UnauthorizedBookingActionException $e) {
+            \Illuminate\Support\Facades\Log::error("ConfirmPayment Unauthorized", ["booking_id" => $id]);
             return $this->errorResponse('You do not have permission', [], 403);
         } catch (AuthorizationException $e) {
+            \Illuminate\Support\Facades\Log::error("ConfirmPayment Auth Exception", ["booking_id" => $id]);
             return $this->errorResponse('You do not have permission', [], 403);
         } catch (InvalidBookingStatusException $e) {
+            \Illuminate\Support\Facades\Log::error("ConfirmPayment Invalid Status", ["booking_id" => $id, "msg" => $e->getMessage()]);
             return $this->errorResponse($e->getMessage(), [], 409);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("ConfirmPayment Error", ["booking_id" => $id, "msg" => $e->getMessage()]);
+            throw $e;
         }
     }
 

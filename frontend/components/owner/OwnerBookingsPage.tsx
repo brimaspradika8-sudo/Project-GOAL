@@ -380,8 +380,8 @@ export default function OwnerBookingsPage() {
       await ownerConfirmPaymentBooking(id);
       showToast({ type: 'success', title: 'Pembayaran dikonfirmasi', description: 'Status booking berubah menjadi PAID dan slot terkunci.' });
       fetchBookings();
-    } catch {
-      showToast({ type: 'error', title: 'Gagal mengonfirmasi pembayaran', description: 'Coba lagi nanti.' });
+    } catch (e: any) {
+      showToast({ type: 'error', title: 'Gagal mengonfirmasi pembayaran', description: e?.message || 'Coba lagi nanti.' });
     } finally {
       setLoadingAction(null);
     }
@@ -563,18 +563,18 @@ const styles = StyleSheet.create({
 
   scheduleGrid: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: 12, padding: 16, marginBottom: 14,
-    borderWidth: 1, flexWrap: 'wrap', gap: 8,
+    borderRadius: 12, padding: 14, marginBottom: 14,
+    borderWidth: 1, flexWrap: 'wrap', gap: 6,
+    justifyContent: 'space-between',
   },
-  scheduleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  scheduleText: { fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '500' },
-  scheduleDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', marginHorizontal: 4 },
+  scheduleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  scheduleText: { fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '500' },
+  scheduleDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', marginHorizontal: 2 },
   pricePill: {
-    marginLeft: 'auto',
-    paddingHorizontal: 14, paddingVertical: 8,
+    paddingHorizontal: 12, paddingVertical: 7,
     borderRadius: 12, borderWidth: 1.2,
   },
-  priceText: { fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '800' },
+  priceText: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '800' },
 
   // Action buttons
   actionRow: { flexDirection: 'row', gap: 12, marginTop: 4 },

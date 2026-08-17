@@ -124,7 +124,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
         Route::get('/owner/bookings', [BookingController::class, 'ownerIndex']);
         Route::get('/owner/fields/{id}/bookings', [BookingController::class, 'ownerFieldBookings']);
         Route::patch('/owner/bookings/{id}/approve', [BookingController::class, 'approve'])->middleware('throttle:booking-sensitive');
-        Route::patch('/owner/bookings/{id}/confirm-payment', [BookingController::class, 'confirmPayment'])->middleware('throttle:booking-sensitive');
+        Route::patch('/owner/bookings/{id}/set-paid', [BookingController::class, 'confirmPayment'])->middleware('throttle:booking-sensitive');
         Route::patch('/owner/bookings/{id}/reject', [BookingController::class, 'reject'])->middleware('throttle:booking-sensitive');
         Route::patch('/owner/bookings/{id}/complete', [BookingController::class, 'complete'])->middleware('throttle:booking-sensitive');
     });

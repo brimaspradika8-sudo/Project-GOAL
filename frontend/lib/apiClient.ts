@@ -81,7 +81,7 @@ export async function apiFetch(path: string, options: ApiRequestOptions = {}): P
   const timer = setTimeout(() => controller.abort(), timeout);
 
   try {
-    return await fetch(url.toString(), {
+    const response = await fetch(url.toString(), {
       ...rest,
       headers: finalHeaders,
       body:
@@ -92,6 +92,18 @@ export async function apiFetch(path: string, options: ApiRequestOptions = {}): P
             : JSON.stringify(body),
       signal: controller.signal,
     });
+
+    if (response.status === 401 && !url.pathname.includes('/auth/login') && !url.pathname.includes('/auth/register')) {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+      const { useProfileStore } = require('../store/profileStore');
+      useProfileStore.getState().clearProfile();
+      if (typeof window !== 'undefined') {
+        const { router } = require('expo-router');
+        router.replace('/login');
+      }
+    }
+
+    return response;
   } finally {
     clearTimeout(timer);
   }
