@@ -17,8 +17,15 @@ class ExpireBookings extends Command
     public function handle(): int
     {
         $bookings = Booking::where('status', BookingStatus::WAITING_CONFIRMATION->value)
-            ->whereNotNull('expired_at')
-            ->where('expired_at', '<=', now())
+            ->where(function ($query) {
+                $query->where(function ($q) {
+                    $q->whereNotNull('expired_at')
+                      ->where('expired_at', '<=', now());
+                })->orWhere(function ($q) {
+                    $q->whereNotNull('payment_expired_at')
+                      ->where('payment_expired_at', '<=', now());
+                });
+            })
             ->get();
 
         foreach ($bookings as $booking) {

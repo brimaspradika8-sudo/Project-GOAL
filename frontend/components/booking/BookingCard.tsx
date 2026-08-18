@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SHADOWS, FONT_FAMILY } from '../goalTheme';
@@ -29,6 +29,7 @@ interface BookingCardProps {
   selectable?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  onDoubleClick?: () => void;
   onCancel?: () => void;
 }
 
@@ -38,6 +39,7 @@ export function BookingCard({
   selectable = false,
   selected = false,
   onToggleSelect,
+  onDoubleClick,
   onCancel,
 }: BookingCardProps) {
   const { colors } = useTheme();
@@ -47,13 +49,22 @@ export function BookingCard({
   const sportLabel = SPORT_LABELS[booking.field?.sport_type ?? ''] ?? (booking.field?.sport_type ?? '');
   const imageUri = booking.field?.image_url ?? '';
   const cancelable = isCancelableBooking(booking.status);
-  const inSelection = selectable && cancelable;
+  const inSelection = selectable;
+
+  const lastPressRef = useRef(0);
 
   const handlePress = () => {
     if (selectable) {
-      if (cancelable) onToggleSelect?.();
+      onToggleSelect?.();
       return;
     }
+    const now = Date.now();
+    if (now - lastPressRef.current < 300) {
+      lastPressRef.current = 0;
+      onDoubleClick?.();
+      return;
+    }
+    lastPressRef.current = now;
     onPress?.();
   };
 

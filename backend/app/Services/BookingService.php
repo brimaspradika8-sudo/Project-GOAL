@@ -36,7 +36,7 @@ class BookingService
 
     public function create(User $user, array $data): Booking
     {
-        $field = Field::approved()->with('owner:id,name')->find($data['field_id']);
+        $field = Field::approved()->with('owner:id,name', 'prices')->find($data['field_id']);
 
         if (! $field) {
             throw ValidationException::withMessages([
@@ -107,8 +107,9 @@ class BookingService
         }
 
         $runAt = $expiresAt;
+        $paymentExpiredAt = Carbon::now()->addMinutes(30);
 
-        $booking = DB::transaction(function () use ($user, $field, $data, $bookingDate, $startTime, $endTime, $duration, $totalPrice, $expiresAt, $runAt, $slots) {
+        $booking = DB::transaction(function () use ($user, $field, $data, $bookingDate, $startTime, $endTime, $duration, $totalPrice, $expiresAt, $paymentExpiredAt, $runAt, $slots) {
             Field::whereKey($field->id)->lockForUpdate()->first();
 
             $this->assertNoConflict($field->id, $bookingDate, $slots);
@@ -124,10 +125,15 @@ class BookingService
                 'payment_method' => $data['payment_method'] ?? 'cash',
                 'status' => BookingStatus::WAITING_CONFIRMATION->value,
                 'expired_at' => $expiresAt,
+                'payment_expired_at' => $paymentExpiredAt,
             ]);
 
             AutoCancelBooking::dispatch($booking->id)
                 ->delay($runAt)
+                ->afterCommit();
+
+            AutoCancelBooking::dispatch($booking->id)
+                ->delay($paymentExpiredAt)
                 ->afterCommit();
 
             event(new BookingCreated($booking->load(['field.owner', 'user', 'slots'])));

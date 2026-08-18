@@ -75,6 +75,7 @@ export default function OwnerBookingSettingsPage() {
   const [holidayForm, setHolidayForm] = useState({ date: '', reason: '' });
   const [holidaySaving, setHolidaySaving] = useState(false);
   const [deleteHolidayTarget, setDeleteHolidayTarget] = useState<FieldHolidayItem | null>(null);
+  const [confirmHolidaySave, setConfirmHolidaySave] = useState(false);
 
   // Blocked slots state
   const [blockedSlots, setBlockedSlots] = useState<FieldBlockedSlotItem[]>([]);
@@ -82,6 +83,10 @@ export default function OwnerBookingSettingsPage() {
   const [blockedSlotForm, setBlockedSlotForm] = useState({ date: '', start_time: '14:00', end_time: '17:00', reason: '' });
   const [blockedSlotSaving, setBlockedSlotSaving] = useState(false);
   const [deleteBlockedSlotTarget, setDeleteBlockedSlotTarget] = useState<FieldBlockedSlotItem | null>(null);
+  const [confirmBlockedSlotSave, setConfirmBlockedSlotSave] = useState(false);
+
+  // Price confirm state
+  const [confirmPriceSave, setConfirmPriceSave] = useState(false);
 
   const selectedField = useMemo(
     () => fields.find((field) => field.id === selectedId) ?? fields[0] ?? null,
@@ -98,13 +103,13 @@ export default function OwnerBookingSettingsPage() {
   const loadHolidaysAndBlocked = useCallback(async (fieldId: number) => {
     try {
       const [holRes, blkRes] = await Promise.all([
-        getOwnerHolidays(fieldId).catch(() => ({ data: { holidays: [] } })),
-        getOwnerBlockedSlots(fieldId).catch(() => ({ data: { blocked_slots: [] } })),
+        getOwnerHolidays(fieldId),
+        getOwnerBlockedSlots(fieldId),
       ]);
       setHolidays(holRes.data?.holidays ?? []);
       setBlockedSlots(blkRes.data?.blocked_slots ?? []);
     } catch {
-      // silent fail fallback
+      useToastStore.getState().show({ type: 'error', title: 'Gagal', description: 'Gagal memuat data hari libur atau blocked slot.' });
     }
   }, []);
 
@@ -189,8 +194,13 @@ export default function OwnerBookingSettingsPage() {
 
   const savePrice = async () => {
     if (!priceModal) return;
+    setConfirmPriceSave(true);
+  };
+
+  const confirmSavePrice = async () => {
+    if (!priceModal) return;
     setPriceSaving(true);
-    setPriceError(null);
+    setConfirmPriceSave(false);
     const body = {
       start_time: priceForm.start_time,
       end_time: priceForm.end_time,
@@ -238,7 +248,13 @@ export default function OwnerBookingSettingsPage() {
   // Holiday handlers
   const handleAddHoliday = async () => {
     if (!selectedField || !holidayForm.date) return;
+    setConfirmHolidaySave(true);
+  };
+
+  const confirmAddHoliday = async () => {
+    if (!selectedField || !holidayForm.date) return;
     setHolidaySaving(true);
+    setConfirmHolidaySave(false);
     try {
       await addOwnerHoliday(selectedField.id, holidayForm.date, holidayForm.reason);
       useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Hari libur berhasil ditambahkan.' });
@@ -267,7 +283,13 @@ export default function OwnerBookingSettingsPage() {
   // Blocked slot handlers
   const handleAddBlockedSlot = async () => {
     if (!selectedField || !blockedSlotForm.date || !blockedSlotForm.start_time || !blockedSlotForm.end_time) return;
+    setConfirmBlockedSlotSave(true);
+  };
+
+  const confirmAddBlockedSlot = async () => {
+    if (!selectedField || !blockedSlotForm.date || !blockedSlotForm.start_time || !blockedSlotForm.end_time) return;
     setBlockedSlotSaving(true);
+    setConfirmBlockedSlotSave(false);
     try {
       await addOwnerBlockedSlot(selectedField.id, blockedSlotForm);
       useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Blocked slot berhasil ditambahkan.' });
@@ -622,6 +644,33 @@ export default function OwnerBookingSettingsPage() {
         confirmLabel="Hapus"
         onConfirm={handleDeleteBlockedSlot}
         onCancel={() => setDeleteBlockedSlotTarget(null)}
+      />
+
+      <ConfirmDialog
+        visible={confirmHolidaySave}
+        title="Simpan Hari Libur?"
+        description={holidayForm.date ? `Tanggal: ${holidayForm.date}${holidayForm.reason ? `\nAlasan: ${holidayForm.reason}` : ''}` : ''}
+        confirmLabel="Simpan"
+        onConfirm={confirmAddHoliday}
+        onCancel={() => setConfirmHolidaySave(false)}
+      />
+
+      <ConfirmDialog
+        visible={confirmBlockedSlotSave}
+        title="Simpan Blocked Slot?"
+        description={blockedSlotForm.date ? `Tanggal: ${blockedSlotForm.date}\nJam: ${blockedSlotForm.start_time} - ${blockedSlotForm.end_time}${blockedSlotForm.reason ? `\nAlasan: ${blockedSlotForm.reason}` : ''}` : ''}
+        confirmLabel="Simpan"
+        onConfirm={confirmAddBlockedSlot}
+        onCancel={() => setConfirmBlockedSlotSave(false)}
+      />
+
+      <ConfirmDialog
+        visible={confirmPriceSave}
+        title={priceModal?.price ? 'Update Harga?' : 'Simpan Harga?'}
+        description={`${priceForm.start_time} - ${priceForm.end_time}\nHarga: Rp${Number(priceForm.price.replace(/\D/g, '') || 0).toLocaleString('id-ID')}`}
+        confirmLabel="Simpan"
+        onConfirm={confirmSavePrice}
+        onCancel={() => setConfirmPriceSave(false)}
       />
     </View>
   );

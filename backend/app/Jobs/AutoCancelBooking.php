@@ -35,15 +35,24 @@ class AutoCancelBooking implements ShouldQueue
             return;
         }
 
-        if (!$booking->expired_at || $booking->expired_at->isFuture()) {
-            Log::info('AutoCancelBooking: deadline not reached', ['booking_id' => $booking->id, 'expired_at' => $booking->expired_at]);
+        $paymentExpired = $booking->payment_expired_at && !$booking->payment_expired_at->isFuture();
+        $slotExpired = $booking->expired_at && !$booking->expired_at->isFuture();
+
+        if (!$paymentExpired && !$slotExpired) {
+            Log::info('AutoCancelBooking: deadline not reached', [
+                'booking_id' => $booking->id,
+                'payment_expired_at' => $booking->payment_expired_at,
+                'expired_at' => $booking->expired_at,
+            ]);
             return;
         }
+
+        $reason = $paymentExpired ? 'PAYMENT_TIMEOUT' : 'Expired';
 
         try {
             $statusService->transition($booking, BookingStatus::CANCELLED, [
                 'cancelled_at' => now(),
-                'cancel_reason' => 'Expired',
+                'cancel_reason' => $reason,
             ]);
         } catch (InvalidBookingStatusTransitionException $e) {
             Log::info('AutoCancelBooking: transition skipped', [

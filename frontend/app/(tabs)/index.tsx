@@ -62,8 +62,8 @@ export default function HomeScreen() {
   const { refresh: refreshNotifications, unreadCount } = useNotificationStore();
 
   useEffect(() => {
-    if (!profile) fetchProfile();
-  }, [profile, fetchProfile]);
+    if (!profile && !profileLoading) fetchProfile();
+  }, [profile, profileLoading, fetchProfile]);
 
   const fetchPopularFields = useCallback(async () => {
     try {

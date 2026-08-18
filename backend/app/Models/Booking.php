@@ -33,6 +33,7 @@ class Booking extends Model
         'payment_method',
         'status',
         'expired_at',
+        'payment_expired_at',
         'approved_at',
         'rejected_at',
         'rejection_reason',
@@ -44,13 +45,14 @@ class Booking extends Model
     ];
 
     protected $casts = [
-        'booking_date' => 'date:Y-m-d',
-        'expired_at'   => 'datetime',
-        'approved_at'  => 'datetime',
-        'rejected_at'  => 'datetime',
-        'cancelled_at' => 'datetime',
-        'confirmed_at' => 'datetime',
-        'completed_at' => 'datetime',
+        'booking_date'      => 'date:Y-m-d',
+        'expired_at'        => 'datetime',
+        'payment_expired_at'=> 'datetime',
+        'approved_at'       => 'datetime',
+        'rejected_at'       => 'datetime',
+        'cancelled_at'      => 'datetime',
+        'confirmed_at'      => 'datetime',
+        'completed_at'      => 'datetime',
     ];
 
     public function user(): BelongsTo

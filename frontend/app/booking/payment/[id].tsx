@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -20,6 +20,7 @@ import { ErrorState, EmptyState, Loading } from '../../../components/common';
 import { SafeImage } from '../../../components/SafeImage';
 import { SPORT_LABELS } from '../../../lib/fieldValidation';
 import { formatPrice, formatDateDisplay } from '../../../components/booking';
+import CountdownTimer from '../../../components/shared/CountdownTimer';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,17 @@ export default function BookingPaymentScreen() {
       router.replace({ pathname: '/booking-success', params: { id: String(bookingId) } });
     }
   }, [booking?.status, bookingId]);
+
+  // Already expired → redirect back.
+  useEffect(() => {
+    if (booking?.payment_expired_at && new Date(booking.payment_expired_at).getTime() <= Date.now()) {
+      router.replace('/(tabs)/booking');
+    }
+  }, [booking?.payment_expired_at]);
+
+  const handleExpired = useCallback(() => {
+    router.replace('/(tabs)/booking');
+  }, []);
 
   const handleConfirm = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -98,6 +110,7 @@ export default function BookingPaymentScreen() {
       <ScrollView contentContainerStyle={st.scrollContent} showsVerticalScrollIndicator={false}>
 
         <View style={st.waitingSection}>
+          <CountdownTimer expiresAt={booking.payment_expired_at} onExpired={handleExpired} />
           <View style={[st.waitingIconWrap, { backgroundColor: colors.floodlight + '20' }]}>
             <MaterialIcons name="schedule" size={40} color={colors.floodlight} />
           </View>

@@ -1,76 +1,22 @@
-import React, { useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Pressable, useWindowDimensions, Animated } from 'react-native';
+import React from 'react';
+import { StyleSheet, Text, View, Pressable, useWindowDimensions } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../lib/theme';
+import { FONT_FAMILY } from './goalTheme';
 
 export type BootStep = 'auth_check' | 'profile_fetch' | 'app_ready';
 
-const STEPS: { key: BootStep; label: string }[] = [
-  { key: 'auth_check', label: 'Memeriksa autentikasi' },
-  { key: 'profile_fetch', label: 'Memuat profil pengguna' },
-  { key: 'app_ready', label: 'Menyiapkan data aplikasi' },
-];
+const STEP_PERCENT: Record<BootStep, number> = {
+  auth_check: 33,
+  profile_fetch: 67,
+  app_ready: 100,
+};
 
-function StepIndicator({ status, colors }: { status: 'done' | 'active' | 'pending'; colors: any }) {
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (status !== 'active') return;
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 0.3, duration: 700, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [status, pulseAnim]);
-
-  const size = 20;
-
-  if (status === 'done') {
-    return (
-      <View style={[styles.stepIcon, { width: size, height: size, borderRadius: size / 2, backgroundColor: colors.primary }]}>
-        <MaterialIcons name="check" size={13} color={colors.onPrimary} />
-      </View>
-    );
-  }
-
-  if (status === 'active') {
-    return (
-      <Animated.View
-        style={[
-          styles.stepIcon,
-          {
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            borderWidth: 2.5,
-            borderColor: colors.primary,
-            backgroundColor: 'transparent',
-            opacity: pulseAnim,
-          },
-        ]}
-      />
-    );
-  }
-
-  return (
-    <View
-      style={[
-        styles.stepIcon,
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          borderWidth: 2,
-          borderColor: colors.borderSubtle,
-          backgroundColor: 'transparent',
-        },
-      ]}
-    />
-  );
-}
+const STEP_LABEL: Record<BootStep, string> = {
+  auth_check: 'Memeriksa autentikasi',
+  profile_fetch: 'Memuat profil pengguna',
+  app_ready: 'Menyiapkan data aplikasi',
+};
 
 type LoadingScreenProps = {
   currentStep?: BootStep | null;
@@ -83,7 +29,8 @@ export default function LoadingScreen({ currentStep = 'auth_check', error = null
   const { colors } = useTheme();
   const glowSize = Math.min(320, width * 0.85);
 
-  const activeIndex = currentStep ? STEPS.findIndex((s) => s.key === currentStep) : -1;
+  const pct = currentStep ? STEP_PERCENT[currentStep] : 0;
+  const label = currentStep ? STEP_LABEL[currentStep] : '';
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -95,7 +42,7 @@ export default function LoadingScreen({ currentStep = 'auth_check', error = null
         <Text style={[styles.logoSub, { color: colors.textTertiary }]}>Game Organizer & Arena League</Text>
       </View>
 
-      <View style={[styles.loaderCard, { borderColor: colors.borderSubtle, backgroundColor: colors.bgElevated }]}>
+      <View style={[styles.card, { borderColor: colors.borderSubtle, backgroundColor: colors.bgElevated }]}>
         {error ? (
           <>
             <View style={[styles.errorIconWrap, { backgroundColor: `${colors.error}15` }]}>
@@ -114,31 +61,24 @@ export default function LoadingScreen({ currentStep = 'auth_check', error = null
           </>
         ) : (
           <>
-            <Text style={[styles.stepsTitle, { color: colors.textPrimary }]}>Memuat aplikasi</Text>
-            <View style={styles.stepsList}>
-              {STEPS.map((step, idx) => {
-                let status: 'done' | 'active' | 'pending' = 'pending';
-                if (activeIndex >= 0) {
-                  if (idx < activeIndex) status = 'done';
-                  else if (idx === activeIndex) status = 'active';
-                }
-                return (
-                  <View key={step.key} style={styles.stepRow}>
-                    <StepIndicator status={status} colors={colors} />
-                    <Text
-                      style={[
-                        styles.stepLabel,
-                        {
-                          color: status === 'done' ? colors.textPrimary : status === 'active' ? colors.textPrimary : colors.textTertiary,
-                          fontWeight: status === 'active' ? '700' : '500',
-                        },
-                      ]}
-                    >
-                      {step.label}
-                    </Text>
-                  </View>
-                );
-              })}
+            <Text style={[styles.title, { color: colors.textPrimary }]}>Memuat aplikasi</Text>
+
+            <View style={styles.barSection}>
+              <View style={[styles.track, { backgroundColor: colors.borderSubtle }]}>
+                <View
+                  style={[
+                    styles.fill,
+                    {
+                      backgroundColor: colors.primary,
+                      width: `${pct}%` as any,
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.barFooter}>
+                <Text style={[styles.pctText, { color: colors.primary }]}>{pct}%</Text>
+                <Text style={[styles.stepText, { color: colors.textSecondary }]}>{label}</Text>
+              </View>
             </View>
           </>
         )}
@@ -172,6 +112,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 44,
+    fontFamily: FONT_FAMILY,
     fontStyle: 'italic',
     fontWeight: '900',
     letterSpacing: 2,
@@ -179,13 +120,14 @@ const styles = StyleSheet.create({
   },
   logoSub: {
     fontSize: 11,
+    fontFamily: FONT_FAMILY,
     fontWeight: '700',
     letterSpacing: 1.8,
     marginTop: 2,
     textTransform: 'uppercase',
     textAlign: 'center',
   },
-  loaderCard: {
+  card: {
     width: '100%',
     maxWidth: 560,
     alignItems: 'center',
@@ -196,30 +138,42 @@ const styles = StyleSheet.create({
     paddingVertical: 30,
     paddingHorizontal: 28,
   },
-  stepsTitle: {
+  title: {
+    fontFamily: FONT_FAMILY,
     fontSize: 14,
     fontWeight: '800',
     letterSpacing: 1.1,
     textTransform: 'uppercase',
-    marginBottom: 20,
+    marginBottom: 24,
     textAlign: 'center',
   },
-  stepsList: {
-    alignSelf: 'stretch',
-    gap: 14,
+  barSection: {
+    width: '100%',
   },
-  stepRow: {
+  track: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  fill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  barFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
+    marginTop: 10,
   },
-  stepIcon: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepLabel: {
+  pctText: {
+    fontFamily: FONT_FAMILY,
     fontSize: 13,
-    letterSpacing: 0.3,
+    fontWeight: '800',
+  },
+  stepText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    fontWeight: '500',
   },
   errorIconWrap: {
     width: 56,
@@ -230,11 +184,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   errorTitle: {
+    fontFamily: FONT_FAMILY,
     fontSize: 16,
     fontWeight: '800',
     textAlign: 'center',
   },
   errorDesc: {
+    fontFamily: FONT_FAMILY,
     fontSize: 12.5,
     textAlign: 'center',
     lineHeight: 19,
@@ -250,6 +206,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   retryText: {
+    fontFamily: FONT_FAMILY,
     fontSize: 13,
     fontWeight: '800',
     letterSpacing: 0.6,

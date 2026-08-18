@@ -35,6 +35,12 @@ export const useProfileStore = create<ProfileState>((set) => ({
   loading: true,
 
   fetchProfile: async () => {
+    const stored = await SecureStore.getItemAsync(TOKEN_KEY);
+    if (!stored) {
+      set({ profile: null, loading: false });
+      return;
+    }
+
     const cached = await AsyncStorage.getItem(PROFILE_CACHE_KEY);
     if (cached) {
       try {

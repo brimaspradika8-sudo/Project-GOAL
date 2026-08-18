@@ -7,6 +7,10 @@ use App\Enums\SlotStatus;
 use App\Models\Booking;
 use App\Models\BookingSlot;
 use App\Models\Field;
+use App\Models\FieldBlockedSlot;
+use App\Models\FieldHoliday;
+use App\Models\FieldSchedule;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class AvailabilityService
@@ -47,12 +51,28 @@ class AvailabilityService
         $isToday = $date === now()->toDateString();
         $currentTime = now()->format('H:i');
 
+        // Check if the entire date is closed
+        $isHoliday = FieldHoliday::where('field_id', $field->id)->where('date', $date)->exists();
+        $dayOfWeek = Carbon::parse($date)->dayOfWeek;
+        $daySchedule = FieldSchedule::where('field_id', $field->id)->where('day_of_week', $dayOfWeek)->first();
+        $isClosedDay = $daySchedule && $daySchedule->is_closed;
+
+        // Pre-fetch blocked slots for this date
+        $blockedRanges = FieldBlockedSlot::where('field_id', $field->id)
+            ->where('date', $date)
+            ->get(['start_time', 'end_time'])
+            ->map(fn ($b) => [
+                'start' => $this->normalizeTime((string) $b->start_time),
+                'end' => $this->normalizeTime((string) $b->end_time),
+            ])
+            ->all();
+
         $slots = collect($this->slotGenerator->generate($openTime, $closeTime, $sessionMinutes, $bufferMinutes))
             ->map(fn (array $slot) => [
                 'start_time' => $slot['start_time'],
                 'end_time' => $slot['end_time'],
                 'price' => $this->pricing->priceForSlot($field, $slot['start_time'], $slot['end_time'], $prices),
-                'status' => $this->statusFor($slot, $field, $bookedRanges, $isToday, $currentTime)->value,
+                'status' => $this->statusFor($slot, $field, $bookedRanges, $isToday, $currentTime, $isHoliday || $isClosedDay, $blockedRanges)->value,
             ])
             ->values()
             ->all();
@@ -138,11 +158,16 @@ class AvailabilityService
     /**
      * @param  array{start_time: string, end_time: string}  $slot
      * @param  array<int, array{start: string, end: string}>  $bookedRanges
+     * @param  array<int, array{start: string, end: string}>  $blockedRanges
      */
-    private function statusFor(array $slot, Field $field, array $bookedRanges, bool $isToday = false, string $currentTime = ''): SlotStatus
+    private function statusFor(array $slot, Field $field, array $bookedRanges, bool $isToday = false, string $currentTime = '', bool $isFullyClosed = false, array $blockedRanges = []): SlotStatus
     {
         $slotStart = $this->slotGenerator->toMinutes($slot['start_time']);
         $slotEnd = $this->slotGenerator->toMinutes($slot['end_time']);
+
+        if ($isFullyClosed) {
+            return SlotStatus::CLOSED;
+        }
 
         if ($slotStart < $this->slotGenerator->toMinutes(substr((string) $field->open_time, 0, 5))
             || $slotEnd > $this->slotGenerator->toMinutes(substr((string) $field->close_time, 0, 5))) {
@@ -151,6 +176,15 @@ class AvailabilityService
 
         if ($isToday && $currentTime && $slotEnd <= $this->slotGenerator->toMinutes($currentTime)) {
             return SlotStatus::CLOSED;
+        }
+
+        foreach ($blockedRanges as $range) {
+            $blockedStart = $this->slotGenerator->toMinutes($range['start']);
+            $blockedEnd = $this->slotGenerator->toMinutes($range['end']);
+
+            if ($slotStart < $blockedEnd && $slotEnd > $blockedStart) {
+                return SlotStatus::CLOSED;
+            }
         }
 
         $bufferMinutes = $field->buffer_duration_minutes ?? 0;

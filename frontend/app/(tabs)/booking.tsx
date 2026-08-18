@@ -201,8 +201,8 @@ export default function BookingTabScreen() {
         await cancelBooking(ids[0], CANCEL_REASON);
         showToast({
           type: 'success',
-          title: 'Booking Dibatalkan',
-          description: 'Booking berhasil dibatalkan.',
+          title: 'Booking Dihapus',
+          description: 'Booking berhasil dihapus dari riwayat.',
         });
       }
     } catch (e: any) {
@@ -238,14 +238,26 @@ export default function BookingTabScreen() {
           <Text style={st.headerSubtitle}>Lihat dan kelola semua booking kamu</Text>
         </View>
         {selecting && isHistoryTab ? (
-          <TouchableOpacity
-            style={st.headerSelectBtn}
-            onPress={exitSelect}
-            activeOpacity={0.85}
-          >
-            <MaterialIcons name="close" size={18} color={colors.primary} />
-            <Text style={st.headerSelectBtnText}>Batal</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              style={st.headerSelectBtn}
+              onPress={exitSelect}
+              activeOpacity={0.85}
+            >
+              <MaterialIcons name="close" size={18} color={colors.primary} />
+              <Text style={st.headerSelectBtnText}>Batal</Text>
+            </TouchableOpacity>
+            {history.length > 0 && (
+              <TouchableOpacity
+                style={[st.headerSelectBtn, allSelected && { backgroundColor: colors.primaryContainer }]}
+                onPress={toggleSelectAll}
+                activeOpacity={0.85}
+              >
+                <MaterialIcons name={allSelected ? 'deselect' : 'select-all'} size={18} color={allSelected ? colors.primary : colors.primary} />
+                <Text style={[st.headerSelectBtnText, allSelected && { color: colors.primary }]}>{allSelected ? 'Batal Pilih' : 'Pilih Semua'}</Text>
+              </TouchableOpacity>
+            )}
+          </>
         ) : (
           <>
             {hasSelectable && (
@@ -314,8 +326,8 @@ export default function BookingTabScreen() {
         onClear={exitSelect}
         loading={cancelling}
         actions={[{
-          label: 'Batalkan',
-          icon: 'close',
+          label: 'Hapus',
+          icon: 'delete',
           color: colors.error,
           onPress: openBulkCancel,
         }]}
@@ -373,6 +385,7 @@ export default function BookingTabScreen() {
                   selectable={selecting}
                   selected={selectedIds.has(b.id)}
                   onToggleSelect={() => toggleSelect(b.id)}
+                  onDoubleClick={isHistoryTab ? () => { enterSelect(); toggleSelect(b.id); } : undefined}
                   onCancel={() => openSingleCancel(b)}
                 />
               ))}
@@ -399,12 +412,12 @@ export default function BookingTabScreen() {
       {/* ── Single cancel confirm ── */}
       <ConfirmDialog
         visible={!!confirmTarget}
-        title="Batalkan Booking?"
+        title="Hapus Booking?"
         description={confirmTarget
           ? `${confirmTarget.field?.name ?? `Lapangan #${confirmTarget.field_id}`} — ${formatDateDisplay(confirmTarget.booking_date)}, ${confirmTarget.start_time} – ${confirmTarget.end_time}`
           : undefined}
         destructive
-        confirmLabel="Ya, Batalkan"
+        confirmLabel="Ya, Hapus"
         loading={cancelling}
         onConfirm={() => confirmTarget && performCancel([confirmTarget.id])}
         onCancel={() => { if (!cancelling) setConfirmTarget(null); }}
@@ -413,10 +426,10 @@ export default function BookingTabScreen() {
       {/* ── Bulk cancel confirm ── */}
       <ConfirmDialog
         visible={bulkCancel}
-        title={`Batalkan ${selectedIds.size} Booking?`}
-        description="Booking terpilih akan dibatalkan sekaligus. Tindakan ini tidak dapat dibatalkan."
+        title={`Hapus ${selectedIds.size} Booking?`}
+        description="Booking terpilih akan dihapus dari riwayat. Tindakan ini tidak dapat dibatalkan."
         destructive
-        confirmLabel="Ya, Batalkan"
+        confirmLabel="Ya, Hapus"
         loading={cancelling}
         onConfirm={() => performCancel([...selectedIds])}
         onCancel={() => { if (!cancelling) setBulkCancel(false); }}

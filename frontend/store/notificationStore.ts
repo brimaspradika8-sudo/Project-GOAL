@@ -111,7 +111,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       if (res.ok) {
         set({ items: [] });
         const data = await res.json().catch(() => ({}));
-        return Number(data?.deleted ?? 0);
+        return Number(data?.data?.deleted ?? 0);
       }
       return 0;
     } catch {

@@ -34,6 +34,7 @@ export interface Booking {
   payment_method: string;
   status: BookingStatus;
   expired_at: string | null;
+  payment_expired_at: string | null;
   approved_at: string | null;
   rejected_at: string | null;
   rejection_reason: string | null;
