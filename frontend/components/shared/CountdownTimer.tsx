@@ -53,7 +53,7 @@ export default function CountdownTimer({ expiresAt, onExpired }: CountdownTimerP
   const isCritical = remaining > 0 && remaining <= 60;
   const color = getColor(remaining);
   const label = getLabel(remaining);
-  const BOOKING_WINDOW = 30 * 60;
+  const BOOKING_WINDOW = 20;
   const progress = isExpired ? 0 : Math.min(1, remaining / BOOKING_WINDOW);
   const strokeOffset = CIRCUMFERENCE * (1 - progress);
 

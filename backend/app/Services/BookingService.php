@@ -107,7 +107,7 @@ class BookingService
         }
 
         $runAt = $expiresAt;
-        $paymentExpiredAt = Carbon::now()->addMinutes(30);
+        $paymentExpiredAt = Carbon::now()->addSeconds(20);
 
         $booking = DB::transaction(function () use ($user, $field, $data, $bookingDate, $startTime, $endTime, $duration, $totalPrice, $expiresAt, $paymentExpiredAt, $runAt, $slots) {
             Field::whereKey($field->id)->lockForUpdate()->first();

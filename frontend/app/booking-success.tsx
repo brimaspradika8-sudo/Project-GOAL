@@ -184,19 +184,6 @@ export default function BookingSuccessScreen() {
           </Text>
         </View>
 
-        {/* Status Card */}
-        <View style={[st.statusCard, { backgroundColor: colors.floodlight + '12', borderColor: colors.floodlight + '40' }]}>
-          <View style={[st.statusIconWrap, { backgroundColor: colors.floodlight + '20' }]}>
-            <MaterialIcons name="schedule" size={22} color={colors.onWarning ?? '#B45309'} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[st.statusTitle, { color: colors.onWarning ?? '#B45309', fontWeight: '700' }]}>Menunggu Persetujuan Owner</Text>
-            <Text style={[st.statusDesc, { color: colors.textSecondary, marginTop: 3 }]}>
-              Pemilik lapangan akan segera merespons permintaan Anda.
-            </Text>
-          </View>
-        </View>
-
         {/* Booking Summary */}
         <View style={st.summaryCard}>
           <View style={st.summaryHeader}>
