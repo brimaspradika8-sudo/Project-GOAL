@@ -27,7 +27,7 @@ import { useToastStore } from '../../store/toastStore';
 
 type TabKey = 'aktif' | 'riwayat';
 
-const ACTIVE_STATUSES: BookingStatus[] = ['CONFIRMED', 'PAID'];
+const ACTIVE_STATUSES: BookingStatus[] = ['WAITING_CONFIRMATION', 'CONFIRMED', 'PAID'];
 const PAST_STATUSES: BookingStatus[] = ['COMPLETED', 'CANCELLED', 'REJECTED', 'EXPIRED'];
 
 const CANCEL_REASON = 'Dibatalkan oleh pengguna';
@@ -190,7 +190,7 @@ export default function BookingTabScreen() {
   async function performCancel(ids: number[]) {
     setCancelling(true);
     try {
-      if (ids.length > 1) {
+      if (isHistoryTab || ids.length > 1) {
         const res = await bulkDeleteBookings(ids);
         showToast({
           type: 'success',
@@ -201,8 +201,8 @@ export default function BookingTabScreen() {
         await cancelBooking(ids[0], CANCEL_REASON);
         showToast({
           type: 'success',
-          title: 'Booking Dihapus',
-          description: 'Booking berhasil dihapus dari riwayat.',
+          title: 'Booking Dibatalkan',
+          description: 'Booking berhasil dibatalkan.',
         });
       }
     } catch (e: any) {
