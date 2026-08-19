@@ -23,7 +23,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { getResponseData } from '../lib/api';
 import { apiFetch } from '../lib/apiClient';
-import { profileFromApi, routeForRole } from '../types/roles';
 import { useProfileStore } from '../store/profileStore';
 import { useUsernameCheck } from '../hooks/useUsernameCheck';
 import { logout } from '../lib/session';
@@ -32,6 +31,8 @@ import { mimeFromExt } from '../lib/fieldValidation';
 import AuthInput from '../components/AuthInput';
 import AlertBox from '../components/shared/AlertBox';
 import { useTheme } from '../lib/theme';
+import { profileFromApi } from '../types/roles';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SPORTS = [
   { id: 'futsal', label: 'Futsal', icon: 'sports-soccer' as const },
@@ -128,7 +129,8 @@ export default function OnboardingScreen() {
   function toggleSport(id: string) {
     setSelectedSports((prev) => prev.includes(id) ? prev.filter((sport) => sport !== id) : [...prev, id]);
   }
-  async function handleSignOut() {
+
+  async function handleSignOut() {
     try {
       await logout();
     } catch {}
@@ -173,10 +175,9 @@ export default function OnboardingScreen() {
         return;
       }
 
-      const json = await res.json();
-      const profile = profileFromApi(json);
+      const profile = await res.json();
       useProfileStore.setState({ profile, loading: false });
-      router.replace(routeForRole(profile?.role ?? 'player'));
+      router.replace('/(tabs)');
     } catch {
       if (mountedRef.current) setSubmitError('Gagal terhubung ke server. Silakan coba lagi.');
     } finally {

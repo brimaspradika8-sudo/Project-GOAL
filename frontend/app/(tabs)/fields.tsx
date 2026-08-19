@@ -46,17 +46,13 @@ export default function FieldsScreen() {
   const [sort, setSort] = useState<NonNullable<FieldFilters['sort']>>('latest');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
-  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
-  const carouselScrollRef = useRef<ScrollView>(null);
-
   const debouncedSearch = useDebounce(search, 150);
   const debouncedMinPrice = useDebounce(minPrice, 400);
   const debouncedMaxPrice = useDebounce(maxPrice, 400);
   const { fields, loading, loadingMore, meta, fetchFields, fetchMore, refreshFields } = useFieldStore();
   const [refreshing, setRefreshing] = useState(false);
   const { colors } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = makeStyles(colors);
   const filterAnimation = useRef(new Animated.Value(0)).current;
 
   const isDesktop = width >= 900;
@@ -96,156 +92,115 @@ export default function FieldsScreen() {
 
   const hasMore = meta ? meta.current_page < meta.last_page : false;
 
-  const resetAllFilters = useCallback(() => {
-    setSearch('');
-    setActiveFilter('Semua');
-    setMinPrice('');
-    setMaxPrice('');
-    setSort('latest');
-  }, []);
+  const renderHeader = () => (
+    <>
+      <Text style={styles.title}>Lapangan</Text>
+      <Text style={styles.subtitle}>Cari lapangan yang cocok, lalu saring hasilnya dengan cepat.</Text>
 
-  const renderFooter = useCallback(() => {
+      <View style={styles.resultRow}>
+        <Text style={styles.resultText}>
+          {loading && fields.length === 0 ? 'Memuat data...' : `${fields.length} lapangan ditemukan`}
+        </Text>
+        {hasActiveFilters ? (
+          <TouchableOpacity
+            onPress={() => {
+              setSearch('');
+              setActiveFilter('Semua');
+              setMinPrice('');
+              setMaxPrice('');
+              setSort('latest');
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.resetText}>Reset filter</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
+      <View style={styles.searchActionsRow}>
+        <View style={[styles.searchBar, styles.searchBarInRow]}>
+          <MaterialIcons name="search" size={20} color={colors.textTertiary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Cari nama lapangan"
+            placeholderTextColor={colors.textTertiary}
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <MaterialIcons name="close" size={18} color={colors.textTertiary} />
+            </TouchableOpacity>
+          )}
+          {loading && fields.length > 0 && <ActivityIndicator size="small" color={colors.primary} />}
+        </View>
+        <TouchableOpacity
+          style={[styles.filterButton, isFilterOpen && styles.filterButtonActive]}
+          onPress={() => setIsFilterOpen((current) => !current)}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Buka filter harga dan urutan"
+        >
+          <MaterialIcons name="tune" size={19} color={isFilterOpen ? colors.primary : colors.textSecondary} />
+          <Text style={[styles.filterButtonText, isFilterOpen && styles.filterButtonTextActive]}>Filter</Text>
+          {hasAdvancedFilters && <View style={styles.filterBadge} />}
+        </TouchableOpacity>
+      </View>
+
+      <Animated.View
+        style={[
+          styles.advancedFilterPanel,
+          {
+            maxHeight: filterAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, 150] }),
+            opacity: filterAnimation,
+            marginBottom: filterAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, 14] }),
+          },
+        ]}
+      >
+        <View style={styles.priceRow}>
+          <Text style={styles.filterLabel}>Harga per jam</Text>
+          <TextInput style={styles.priceInput} placeholder="Min" placeholderTextColor={colors.textTertiary} keyboardType="numeric" value={minPrice} onChangeText={setMinPrice} />
+          <Text style={styles.priceSeparator}>-</Text>
+          <TextInput style={styles.priceInput} placeholder="Maks" placeholderTextColor={colors.textTertiary} keyboardType="numeric" value={maxPrice} onChangeText={setMaxPrice} />
+        </View>
+        <TouchableOpacity style={styles.sortSelector} onPress={() => setIsSortModalOpen(true)} activeOpacity={0.8}>
+          <Text style={styles.filterLabel}>Urutkan</Text>
+          <View style={styles.sortSelectorValue}>
+            <Text style={styles.sortSelectorText}>{SORT_OPTIONS.find((option) => option.key === sort)?.label}</Text>
+            <MaterialIcons name="expand-more" size={20} color={colors.textSecondary} />
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+
+      <FlatList
+        horizontal
+        data={FILTERS}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipScroll}
+        style={styles.chipScrollWrapper}
+        keyExtractor={(item) => item}
+        renderItem={({ item: filter }) => {
+          const isActive = activeFilter === filter;
+          return (
+            <TouchableOpacity
+              style={[styles.chip, isActive && styles.chipActive]}
+              activeOpacity={0.75}
+              onPress={() => setActiveFilter(filter)}
+            >
+              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{filter}</Text>
+            </TouchableOpacity>
+          );
+        }}
+      />
+    </>
+  );
+
+  const renderFooter = () => {
     if (!loadingMore) return null;
     return (
       <View style={styles.footerLoader}>
         <ActivityIndicator size="small" color={colors.primary} />
         <Text style={styles.footerText}>Memuat lebih banyak...</Text>
-      </View>
-    );
-  }, [loadingMore, styles, colors]);
-
-  const renderEmpty = useCallback(() => {
-    if (loading && !refreshing && fields.length === 0) {
-      return (
-        <View style={styles.loadingWrap}>
-          <GridLoader />
-        </View>
-      );
-    }
-    return (
-      <View style={styles.emptyState}>
-        <MaterialIcons name="search-off" size={48} color={colors.textTertiary} />
-        <Text style={styles.emptyTitle}>Belum ada lapangan yang cocok</Text>
-        <Text style={styles.emptyDesc}>Coba ubah kata kunci atau longgarkan filter harga.</Text>
-      </View>
-    );
-  }, [loading, refreshing, fields, styles, colors]);
-
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
-
-      {/* ── Header (OUTSIDE FlatList — TextInput is safe here) ── */}
-      <View style={[styles.headerWrap, isDesktop && styles.headerWrapDesktop]}>
-        <Text style={styles.title}>Lapangan</Text>
-        <Text style={styles.subtitle}>Cari lapangan yang cocok, lalu saring hasilnya dengan cepat.</Text>
-
-        <View style={styles.resultRow}>
-          <Text style={styles.resultText}>
-            {loading && fields.length === 0 ? 'Memuat data...' : `${fields.length} lapangan ditemukan`}
-          </Text>
-          <View style={styles.modeToggleGroup}>
-            <TouchableOpacity
-              style={[styles.modeToggleBtn, viewMode === 'grid' && styles.modeToggleBtnActive]}
-              onPress={() => setViewMode('grid')}
-              activeOpacity={0.8}
-            >
-              <MaterialIcons name="grid-view" size={16} color={viewMode === 'grid' ? colors.primary : colors.textTertiary} />
-              <Text style={[styles.modeToggleText, viewMode === 'grid' && styles.modeToggleTextActive]}>Daftar</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.modeToggleBtn, viewMode === 'map' && styles.modeToggleBtnActive]}
-              onPress={() => setViewMode('map')}
-              activeOpacity={0.8}
-            >
-              <MaterialIcons name="map" size={16} color={viewMode === 'map' ? colors.primary : colors.textTertiary} />
-              <Text style={[styles.modeToggleText, viewMode === 'map' && styles.modeToggleTextActive]}>Peta</Text>
-            </TouchableOpacity>
-
-            {hasActiveFilters ? (
-              <TouchableOpacity onPress={resetAllFilters} activeOpacity={0.8} style={{ marginLeft: 8 }}>
-                <Text style={styles.resetText}>Reset</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-        </View>
-
-        <View style={styles.searchActionsRow}>
-          <View style={[styles.searchBar, styles.searchBarInRow]}>
-            <MaterialIcons name="search" size={20} color={colors.textTertiary} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Cari nama lapangan"
-              placeholderTextColor={colors.textTertiary}
-              value={search}
-              onChangeText={setSearch}
-            />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <MaterialIcons name="close" size={18} color={colors.textTertiary} />
-              </TouchableOpacity>
-            )}
-            {loading && fields.length > 0 && <ActivityIndicator size="small" color={colors.primary} />}
-          </View>
-          <TouchableOpacity
-            style={[styles.filterButton, isFilterOpen && styles.filterButtonActive]}
-            onPress={() => setIsFilterOpen((current) => !current)}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel="Buka filter harga dan urutan"
-          >
-            <MaterialIcons name="tune" size={19} color={isFilterOpen ? colors.primary : colors.textSecondary} />
-            <Text style={[styles.filterButtonText, isFilterOpen && styles.filterButtonTextActive]}>Filter</Text>
-            {hasAdvancedFilters && <View style={styles.filterBadge} />}
-          </TouchableOpacity>
-        </View>
-
-        <Animated.View
-          style={[
-            styles.advancedFilterPanel,
-            {
-              maxHeight: filterAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, 150] }),
-              opacity: filterAnimation,
-              marginBottom: filterAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, 14] }),
-            },
-          ]}
-        >
-          <View style={styles.priceRow}>
-            <Text style={styles.filterLabel}>Harga per jam</Text>
-            <TextInput style={styles.priceInput} placeholder="Min" placeholderTextColor={colors.textTertiary} keyboardType="numeric" value={minPrice} onChangeText={setMinPrice} />
-            <Text style={styles.priceSeparator}>-</Text>
-            <TextInput style={styles.priceInput} placeholder="Maks" placeholderTextColor={colors.textTertiary} keyboardType="numeric" value={maxPrice} onChangeText={setMaxPrice} />
-          </View>
-          <TouchableOpacity style={styles.sortSelector} onPress={() => setIsSortModalOpen(true)} activeOpacity={0.8}>
-            <Text style={styles.filterLabel}>Urutkan</Text>
-            <View style={styles.sortSelectorValue}>
-              <Text style={styles.sortSelectorText}>{SORT_OPTIONS.find((option) => option.key === sort)?.label}</Text>
-              <MaterialIcons name="expand-more" size={20} color={colors.textSecondary} />
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
-
-        <FlatList
-          horizontal
-          data={FILTERS}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipScroll}
-          style={styles.chipScrollWrapper}
-          keyExtractor={(item) => item}
-          renderItem={({ item: filter }) => {
-            const isActive = activeFilter === filter;
-            return (
-              <TouchableOpacity
-                style={[styles.chip, isActive && styles.chipActive]}
-                activeOpacity={0.75}
-                onPress={() => setActiveFilter(filter)}
-              >
-                <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{filter}</Text>
-              </TouchableOpacity>
-            );
-          }}
-        />
       </View>
 
       {/* ── View Body (Grid vs Interactive Map View) ── */}
@@ -296,39 +251,49 @@ export default function FieldsScreen() {
             </ScrollView>
           </View>
         </View>
-      ) : (
-        /* ── Cards Grid View ── */
-        <FlatList
-          key={numColumns}
-          data={fields}
-          numColumns={numColumns}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => (
-            numColumns > 1
-              ? <View style={styles.gridCell}><VenueCard field={item} /></View>
-              : <VenueCard field={item} />
-          )}
-          columnWrapperStyle={numColumns > 1 ? styles.gridRow : undefined}
-          ListFooterComponent={renderFooter}
-          ListEmptyComponent={renderEmpty}
-          contentContainerStyle={[styles.cardsContent, isDesktop && styles.cardsContentDesktop]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-            />
-          }
-          onEndReached={() => {
-            if (hasMore) fetchMore();
-          }}
-          onEndReachedThreshold={0.4}
-        />
-      )}
+      );
+    }
+    return (
+      <View style={styles.emptyState}>
+        <MaterialIcons name="search-off" size={48} color={colors.textTertiary} />
+        <Text style={styles.emptyTitle}>Belum ada lapangan yang cocok</Text>
+        <Text style={styles.emptyDesc}>Coba ubah kata kunci atau longgarkan filter harga.</Text>
+      </View>
+    );
+  };
 
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
+      <FlatList
+        key={String(numColumns)}
+        data={fields}
+        numColumns={numColumns}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={({ item }) => (
+          numColumns > 1
+            ? <View style={styles.gridCell}><VenueCard field={item} /></View>
+            : <VenueCard field={item} />
+        )}
+        columnWrapperStyle={numColumns > 1 ? styles.gridRow : undefined}
+        ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmpty}
+        contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+        onEndReached={() => {
+          if (hasMore) fetchMore();
+        }}
+        onEndReachedThreshold={0.4}
+      />
       <Modal visible={isSortModalOpen} transparent animationType="slide" onRequestClose={() => setIsSortModalOpen(false)}>
         <View style={styles.modalOverlay}>
           <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={() => setIsSortModalOpen(false)} />
@@ -527,7 +492,7 @@ const makeStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   filterLabel: {
     ...FONTS.labelMd,
@@ -545,6 +510,21 @@ const makeStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     color: colors.text,
     ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
+  },
+  priceInputError: {
+    borderColor: colors.error,
+  },
+  priceErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+  },
+  priceErrorText: {
+    ...FONTS.bodySm,
+    fontSize: 12,
+    color: colors.error,
+    flexShrink: 1,
   },
   priceSeparator: {
     color: colors.textTertiary,

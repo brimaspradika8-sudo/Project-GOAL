@@ -96,10 +96,12 @@ export default function ProfileScreen() {
     try {
       const res = await apiFetch('/me/owner-request');
       if (!res.ok) return;
-      const data = await res.json();
-      if (data && data.status) {
-        setOwnerStatus(data.status);
-        setOwnerRequestData(data);
+      const json = await res.json();
+      // Response format: { success, message, data: { status, ... } | null }
+      const ownerData = json?.data ?? null;
+      if (ownerData && ownerData.status) {
+        setOwnerStatus(ownerData.status);
+        setOwnerRequestData(ownerData);
       } else {
         setOwnerStatus('none');
       }

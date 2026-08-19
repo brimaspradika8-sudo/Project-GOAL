@@ -122,20 +122,23 @@ export function useBookingHistory(): UseBookingHistoryResult {
   const [error, setError] = useState<string | null>(null);
   const cancelledRef = useRef(false);
 
-  const fetch = useCallback(async ({ isRefresh = false } = {}) => {
-    if (isRefresh) {
+  const fetch = useCallback(async ({ isRefresh = false, silent = false } = {}) => {
+    if (silent) {
+      // background polling: don't toggle loading/refreshing indicators
+    } else if (isRefresh) {
       setRefreshing(true);
     } else {
       setLoading(true);
     }
-    setError(null);
+    if (!silent) setError(null);
     try {
       const res = await getBookingHistory();
       if (cancelledRef.current) return;
       setBookings(res.data ?? []);
+      if (silent) setError(null);
     } catch (e: any) {
       if (cancelledRef.current) return;
-      setError(e?.message || 'Gagal memuat riwayat booking');
+      if (!silent) setError(e?.message || 'Gagal memuat riwayat booking');
     } finally {
       if (cancelledRef.current) return;
       setLoading(false);
@@ -148,8 +151,12 @@ export function useBookingHistory(): UseBookingHistoryResult {
   useEffect(() => {
     cancelledRef.current = false;
     fetch();
+    const interval = setInterval(() => {
+      fetch({ silent: true });
+    }, 10000);
     return () => {
       cancelledRef.current = true;
+      clearInterval(interval);
     };
   }, [fetch]);
 

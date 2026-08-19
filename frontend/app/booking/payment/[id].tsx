@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -10,10 +10,12 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../../../components/goalTheme';
 import { useTheme } from '../../../lib/theme';
 import { useBookingDetail } from '../../../hooks/useBooking';
-import type { Booking } from '../../../services/bookingService';
+import { cancelBooking, type Booking } from '../../../services/bookingService';
+import { useToastStore } from '../../../store/toastStore';
 import PaymentCard from '../../../components/booking/PaymentCard';
 import { ErrorState, EmptyState, Loading } from '../../../components/common';
 import { SafeImage } from '../../../components/SafeImage';
@@ -34,6 +36,8 @@ export default function BookingPaymentScreen() {
   const bookingId = Number(id);
   const { colors } = useTheme();
   const st = makeStyles(colors);
+  const showToast = useToastStore((s) => s.show);
+  const isExpiringRef = useRef(false);
 
   const { booking, loading, error, refetch } = useBookingDetail(bookingId);
 
@@ -51,20 +55,33 @@ export default function BookingPaymentScreen() {
     return () => clearInterval(interval);
   }, [booking, refetch]);
 
-  // Already expired → redirect to venue detail.
-  useEffect(() => {
-    if (booking?.payment_expired_at && new Date(booking.payment_expired_at).getTime() <= Date.now()) {
-      router.replace({ pathname: '/venue-detail', params: { id: String(booking.field_id) } });
-    }
-  }, [booking?.payment_expired_at, booking?.field_id]);
+  const handleConfirm = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.replace({ pathname: '/booking-success', params: { id: String(bookingId) } });
+  };
 
-  const handleExpired = useCallback(() => {
+  const handleExpired = useCallback(async () => {
+    if (isExpiringRef.current) return;
+    isExpiringRef.current = true;
+
+    try {
+      if (bookingId) {
+        await cancelBooking(bookingId, 'Waktu pembayaran telah habis');
+      }
+    } catch {}
+
+    showToast({
+      type: 'info',
+      title: 'Waktu Habis',
+      description: 'Waktu pembayaran telah habis. Booking dibatalkan otomatis.',
+    });
+
     if (booking?.field_id) {
       router.replace({ pathname: '/venue-detail', params: { id: String(booking.field_id) } });
     } else {
       router.replace('/(tabs)/booking');
     }
-  }, [booking?.field_id]);
+  }, [bookingId, booking?.field_id, showToast]);
 
   if (loading) {
     return (
@@ -146,8 +163,26 @@ export default function BookingPaymentScreen() {
           </Text>
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* Bottom Confirm Button */}
+      <View style={st.bottomBar}>
+        <View style={st.bottomBarInner}>
+          <View style={st.bottomLabelWrap}>
+            <Text style={st.bottomLabel}>Total Bayar</Text>
+            <Text style={st.bottomAmount}>{formatPrice(booking.total_price)}</Text>
+          </View>
+          <TouchableOpacity
+            style={st.payBtn}
+            onPress={handleConfirm}
+            activeOpacity={0.85}
+          >
+            <MaterialIcons name="check" size={20} color={colors.onPrimary} />
+            <Text style={st.payBtnText}>Konfirmasi Booking</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 
@@ -280,4 +315,30 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     borderRadius: SIZES.borderRadius, padding: 14, marginBottom: 20,
   },
   noteText: { ...FONTS.bodySm, color: colors.textSecondary, flex: 1, lineHeight: 18 },
+
+  bottomBar: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: colors.surfaceWhite,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    borderTopWidth: 1, borderTopColor: colors.divider,
+    ...SHADOWS.xl,
+  },
+  bottomBarInner: {
+    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between',
+    maxWidth: 700, width: '100%', alignSelf: 'center', gap: 12,
+  },
+  bottomLabelWrap: { flexShrink: 1 },
+  bottomLabel: { ...FONTS.bodySm, color: colors.textSecondary },
+  bottomAmount: { fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: '700', color: colors.primary },
+  payBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: colors.primary,
+    borderRadius: SIZES.borderRadius,
+    paddingHorizontal: 20, paddingVertical: 14,
+    minWidth: 0, flexShrink: 0, justifyContent: 'center',
+    ...SHADOWS.primary,
+  },
+  payBtnText: { ...FONTS.buttonLg, color: colors.onPrimary },
 });

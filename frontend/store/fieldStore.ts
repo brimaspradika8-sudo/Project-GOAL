@@ -145,6 +145,8 @@ function normalizeFieldsResponse(body: unknown): { data: Field[]; meta: Paginati
   };
 }
 
+let currentFieldAbortController: AbortController | null = null;
+
 export const useFieldStore = create<FieldState>((set, get) => ({
   fields: [],
   meta: null,
@@ -155,6 +157,12 @@ export const useFieldStore = create<FieldState>((set, get) => ({
   _fetchGen: 0,
 
   fetchFields: async (sport?: string, search?: string, filters: FieldFilters = {}) => {
+    if (currentFieldAbortController) {
+      currentFieldAbortController.abort();
+    }
+    const controller = new AbortController();
+    currentFieldAbortController = controller;
+
     const gen = Date.now();
     const cacheKey = FIELDS_CACHE_KEY + JSON.stringify({ sport: sport ?? 'all', search: search ?? '', filters });
 
@@ -170,6 +178,7 @@ export const useFieldStore = create<FieldState>((set, get) => ({
 
     try {
       const res = await apiFetch('/fields', {
+        signal: controller.signal,
         params: {
           ...(sport && sport !== 'Semua' ? { sport } : {}),
           ...(search ? { search } : {}),
@@ -184,7 +193,7 @@ export const useFieldStore = create<FieldState>((set, get) => ({
       const normalized = normalizeFieldsResponse(body);
 
       const state = get();
-      if (state._fetchGen !== gen) return;
+      if (state._fetchGen !== gen || controller.signal.aborted) return;
 
       await AsyncStorage.setItem(cacheKey, JSON.stringify(body));
 
@@ -195,13 +204,18 @@ export const useFieldStore = create<FieldState>((set, get) => ({
         _fetchGen: gen,
         lastParams: { sport, search, filters },
       });
-    } catch (e) {
+    } catch (e: any) {
+      if (e?.name === 'AbortError' || controller.signal.aborted) return;
       const state = get();
       if (state._fetchGen !== gen) return;
 
       const hasCache = !!await AsyncStorage.getItem(cacheKey);
       if (!hasCache) {
         set({ error: parseErrorMessage(e), loading: false });
+      }
+    } finally {
+      if (currentFieldAbortController === controller) {
+        currentFieldAbortController = null;
       }
     }
   },

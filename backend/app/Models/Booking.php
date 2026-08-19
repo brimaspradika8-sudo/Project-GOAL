@@ -81,7 +81,17 @@ class Booking extends Model
      */
     public function scopeLockingSlot(Builder $query): Builder
     {
-        return $query->whereIn('status', (array) config('booking.lock_statuses', []));
+        return $query->whereIn('status', (array) config('booking.lock_statuses', []))
+            ->where(function ($q) {
+                $q->where('status', '!=', \App\Enums\BookingStatus::WAITING_CONFIRMATION->value)
+                  ->orWhere(function ($sub) {
+                      $sub->where(function ($p) {
+                          $p->whereNull('payment_expired_at')->orWhere('payment_expired_at', '>', now());
+                      })->where(function ($e) {
+                          $e->whereNull('expired_at')->orWhere('expired_at', '>', now());
+                      });
+                  });
+            });
     }
 
     /**

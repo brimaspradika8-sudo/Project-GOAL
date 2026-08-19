@@ -6,14 +6,14 @@ import { useDebouncedValue } from './useDebouncedValue';
 
 export type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid' | 'error';
 
-const checkCache = new Map<string, 'available' | 'taken'>();
-
 export function useUsernameCheck(rawUsername: string): UsernameStatus {
   // Debounce lebih panjang agar request tidak terus di-abort saat user mengetik
   const debouncedUsername = useDebouncedValue(rawUsername, 600);
   const [status, setStatus] = useState<UsernameStatus>('idle');
   const abortRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
+  // FIX: Cache dipindah ke dalam hook (per-instance) supaya tidak nyangkut antar sesi
+  const checkCache = useRef<Map<string, 'available' | 'taken'>>(new Map());
 
   useEffect(() => {
     return () => {
@@ -40,7 +40,7 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
   useEffect(() => {
     if (debouncedUsername.length < 3) return;
 
-    const cached = checkCache.get(debouncedUsername.toLowerCase());
+    const cached = checkCache.current.get(debouncedUsername.toLowerCase());
     if (cached) {
       setStatus(cached);
       return;
@@ -75,11 +75,19 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
           }
         );
 
-        if (!res.ok) throw new Error('Network error');
+        const json = await res.json().catch(() => null);
 
-        const json = await res.json();
-        const result = json.available ? 'available' : 'taken';
-        checkCache.set(debouncedUsername.toLowerCase(), result);
+        if (!res.ok || json === null) {
+          if (mountedRef.current) setStatus('error');
+          return;
+        }
+
+        const result: 'available' | 'taken' = json?.data?.available ? 'available' : 'taken';
+        // FIX: Hanya cache 'available', tidak cache 'taken'
+        // supaya username yang baru dibebaskan bisa dicek ulang ke API
+        if (result === 'available') {
+          checkCache.current.set(debouncedUsername.toLowerCase(), result);
+        }
         if (mountedRef.current) {
           setStatus(result);
         }
