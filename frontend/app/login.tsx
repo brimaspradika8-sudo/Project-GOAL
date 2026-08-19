@@ -134,7 +134,7 @@ export default function LoginScreen() {
         if (profileRes.ok && profileData && isUserRole(profileData.role)) {
           useProfileStore.setState({ profile: profileData, loading: false });
 
-          if (profileData.onboarding_completed === false) {
+          if (profileData.role === 'player' && profileData.onboarding_completed === false) {
             router.replace('/onboarding');
           } else {
             router.replace(routeForRole(profileData.role));

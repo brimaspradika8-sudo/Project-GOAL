@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $superAdmin = $this->user('Super Admin', 'superadmin@goal.test', UserRole::SUPER_ADMIN);
+        $superAdminBrimas = $this->user('Brimas Pradika', 'brimas.pradika14@smk.belajar.id', UserRole::SUPER_ADMIN, false, 'Admin123');
         $owner = $this->user('Goal Owner', 'owner@goal.test', UserRole::OWNER, true);
         $player = $this->user('Goal Player', 'player@goal.test', UserRole::PLAYER);
 
@@ -42,11 +43,11 @@ class DatabaseSeeder extends Seeder
         $player->profile()->update(['onboarding_completed' => true]);
     }
 
-    private function user(string $name, string $email, UserRole $role, bool $verifiedOwner = false): User
+    private function user(string $name, string $email, UserRole $role, bool $verifiedOwner = false, string $password = 'Password123!'): User
     {
         $user = User::updateOrCreate(
             ['email' => $email],
-            ['name' => $name, 'password' => Hash::make('Password123!'), 'email_verified_at' => now()]
+            ['name' => $name, 'password' => Hash::make($password), 'email_verified_at' => now()]
         );
 
         Profile::updateOrCreate(

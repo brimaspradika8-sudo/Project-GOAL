@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
   RefreshControl, TextInput, Image, Modal,
@@ -20,6 +20,7 @@ import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useDebounce } from '../../hooks/useDebounce';
 import { fieldError } from '../../lib/formValidation';
+import { useIsMobileWeb } from '../../lib/responsive';
 import {
   SPORT_OPTIONS, SPORT_MAP, SPORT_LABELS,
   type FieldFormErrors, type FieldFormData,
@@ -41,7 +42,8 @@ const EMPTY_TOUCHED: FieldTouched = { name: false, sport_type: false, price_per_
 
 export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean } = {}) {
   const { colors } = useTheme();
-  const st = makeStyles(colors);
+  const isMobile = useIsMobileWeb();
+  const st = useMemo(() => makeStyles(colors, isMobile), [colors, isMobile]);
 
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -647,10 +649,10 @@ function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboar
 
 // ── Styles ──
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
 
-  searchWrap: { paddingHorizontal: SIZES.gutter, marginBottom: 10 },
+  searchWrap: { paddingHorizontal: SIZES.gutter, marginBottom: 10, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10,
@@ -664,6 +666,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     gap: 8,
     paddingHorizontal: SIZES.gutter,
     marginBottom: 12,
+    ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
   },
   chip: {
     flexDirection: 'row',
@@ -682,12 +685,13 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: SIZES.gutter,
     marginBottom: 10,
+    ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
   },
   resultText: { ...FONTS.labelMd, fontSize: 12 },
   resultResetBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   resultReset: { ...FONTS.labelMd, fontSize: 12, fontWeight: '700' },
 
-  list: { padding: SIZES.gutter, paddingBottom: 24 },
+  list: { padding: SIZES.gutter, paddingBottom: 24, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
   scroll: { flex: 1 },
 
   checkbox: { padding: 4, alignSelf: 'flex-start', marginBottom: 6 },

@@ -18,6 +18,7 @@ import AlertBox from '../shared/AlertBox';
 import AnimatedDeleteButton from '../shared/AnimatedDeleteButton';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
+import { useIsMobileWeb } from '../../lib/responsive';
 import { fieldError } from '../../lib/formValidation';
 import {
   SPORT_OPTIONS, SPORT_MAP,
@@ -53,11 +54,13 @@ const EMPTY_TOUCHED: FieldTouched = { name: false, sport_type: false, price_per_
 
 export default function OwnerFieldsPage() {
   const { colors } = useTheme();
-  const st = makeStyles(colors);
-  const STATUS_CFG = getStatusCfg(colors);
+  const isMobile = useIsMobileWeb();
+  const st = React.useMemo(() => makeStyles(colors, isMobile), [colors, isMobile]);
+  const STATUS_CFG = React.useMemo(() => getStatusCfg(colors), [colors]);
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch] = useState('');
 
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState(EMPTY_FORM);
@@ -551,6 +554,9 @@ export default function OwnerFieldsPage() {
 
   const activeCount = fields.filter(f => f.status === 'approved').length;
   const pendingCount = fields.filter(f => f.status === 'pending').length;
+  const filteredFields = search.trim()
+    ? fields.filter(f => f.name.toLowerCase().includes(search.trim().toLowerCase()))
+    : fields;
 
   if (loading) {
     return (
@@ -574,6 +580,22 @@ export default function OwnerFieldsPage() {
             </TouchableOpacity>
           }
         />
+
+        <View style={st.searchBar}>
+          <MaterialIcons name="search" size={20} color={colors.textTertiary} />
+          <TextInput
+            style={st.searchInput}
+            placeholder="Cari nama lapangan..."
+            placeholderTextColor={colors.textTertiary}
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <MaterialIcons name="close" size={18} color={colors.textTertiary} />
+            </TouchableOpacity>
+          )}
+        </View>
 
         <View style={st.statsRow}>
           <View style={st.statItem}>
@@ -609,8 +631,17 @@ export default function OwnerFieldsPage() {
                 <Text style={st.emptyAddText}>Tambah Lapangan Pertama</Text>
               </TouchableOpacity>
             </View>
+          ) : filteredFields.length === 0 ? (
+            <View style={st.emptyWrap}>
+              <View style={st.emptyIcon}>
+                <MaterialIcons name="search-off" size={40} color={colors.textTertiary} />
+              </View>
+              <Text style={st.emptyTitle}>Tidak ditemukan</Text>
+              <Text style={st.emptyDesc}>Tidak ada lapangan yang cocok dengan pencarian &quot;{search}&quot;.</Text>
+            </View>
           ) : (
-            fields.map((f: any) => {
+            <View style={st.cardGrid}>
+              {filteredFields.map((f: any) => {
               const status = STATUS_CFG[f.status] || STATUS_CFG.pending;
               const img = f.image_url || IMG_PLACEHOLDER;
               const priceStr = f.price_per_hour
@@ -666,7 +697,8 @@ export default function OwnerFieldsPage() {
                   </View>
                 </View>
               );
-            })
+            })}
+            </View>
           )}
         </ScrollView>
       </View>
@@ -1115,7 +1147,7 @@ function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboar
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
 
   headerAddBtn: {
@@ -1125,6 +1157,20 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     ...SHADOWS.xs,
   },
 
+  searchBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: colors.surfaceContainerLow,
+    marginHorizontal: SIZES.gutter, marginTop: 12,
+    borderRadius: 12, borderWidth: 1, borderColor: colors.outline,
+    paddingHorizontal: 14, minHeight: 44,
+    ...(isMobile ? {} : { maxWidth: 1100, alignSelf: 'center', width: '100%' }),
+  },
+  searchInput: {
+    flex: 1, color: colors.text, ...FONTS.bodyMd,
+    padding: 0,
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
+  },
+
   statsRow: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.surface,
@@ -1132,13 +1178,15 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     borderRadius: SIZES.borderRadius, borderWidth: 1,
     borderColor: colors.outline, paddingVertical: 8, paddingHorizontal: 16,
     ...SHADOWS.xs,
+    ...(isMobile ? {} : { maxWidth: 1100, alignSelf: 'center', width: '100%' }),
   },
   statItem: { flex: 1, alignItems: 'center' },
   statNum: { ...FONTS.headlineSm, color: colors.text },
   statLabel: { ...FONTS.bodySm, color: colors.textSecondary, marginTop: 2 },
   statDivider: { width: 1, height: 28, backgroundColor: colors.outline },
 
-  contentList: { padding: SIZES.gutter, paddingBottom: 60 },
+  contentList: { padding: SIZES.gutter, paddingBottom: 60, ...(isMobile ? {} : { maxWidth: 1100, alignSelf: 'center', width: '100%' }) },
+  cardGrid: isMobile ? {} : { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
   emptyWrap: { alignItems: 'center', marginTop: 60, gap: 12 },
   emptyIcon: {
     width: 80, height: 80, borderRadius: 24,
@@ -1156,9 +1204,10 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   emptyAddText: { ...FONTS.titleSm, color: colors.onPrimary },
 
   card: {
-    backgroundColor: colors.surface, borderRadius: 20, marginBottom: 16,
+    backgroundColor: colors.surface, borderRadius: 20, marginBottom: isMobile ? 16 : 0,
     borderWidth: 1, borderColor: colors.outline,
     ...SHADOWS.sm,
+    ...(isMobile ? {} : { flex: 1, minWidth: 300 }),
   },
   cardImgWrap: { borderTopLeftRadius: 19, borderTopRightRadius: 19, overflow: 'hidden' },
   cardImg: { width: '100%', height: 160 },

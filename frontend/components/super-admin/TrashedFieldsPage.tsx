@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
   RefreshControl,
@@ -13,10 +13,12 @@ import SelectCheckbox from '../shared/SelectCheckbox';
 import BulkActionBar from '../shared/BulkActionBar';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme } from '../../lib/theme';
+import { useIsMobileWeb } from '../../lib/responsive';
 
 export default function TrashedFieldsPage() {
   const { colors, resolved } = useTheme();
-  const st = makeStyles(colors, resolved);
+  const isMobile = useIsMobileWeb();
+  const st = useMemo(() => makeStyles(colors, resolved, isMobile), [colors, resolved, isMobile]);
   const cardSurface = colors.surface;
   const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
   const [fields, setFields] = useState<any[]>([]);
@@ -291,9 +293,9 @@ export default function TrashedFieldsPage() {
   );
 }
 
-const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark') => StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark', isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  container: { padding: SIZES.gutter, paddingBottom: 24 },
+  container: { padding: SIZES.gutter, paddingBottom: 24, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
   scroll: { flex: 1 },
 
   checkbox: { marginRight: 10, justifyContent: 'center', alignItems: 'center' },

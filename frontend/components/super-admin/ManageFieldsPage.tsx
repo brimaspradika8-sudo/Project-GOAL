@@ -9,12 +9,14 @@ import ActiveFieldsPage from './ActiveFieldsPage';
 import PendingFieldsPage from './PendingFieldsPage';
 import TrashedFieldsPage from './TrashedFieldsPage';
 import { useTheme, type ThemeColors } from '../../lib/theme';
+import { useIsMobileWeb } from '../../lib/responsive';
 
 type Tab = 'active' | 'pending' | 'trashed';
 
 export default function ManageFieldsPage() {
   const { colors } = useTheme();
-  const st = makeStyles(colors);
+  const isMobile = useIsMobileWeb();
+  const st = makeStyles(colors, isMobile);
   const params = useLocalSearchParams<{ tab?: string }>();
   const tabParam = params.tab;
 
@@ -130,7 +132,7 @@ export default function ManageFieldsPage() {
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1 },
 
   tabRow: {

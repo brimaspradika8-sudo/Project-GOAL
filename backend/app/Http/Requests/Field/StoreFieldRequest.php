@@ -17,7 +17,7 @@ class StoreFieldRequest extends FormRequest
     {
         $rules = [
             'name'            => 'required|string|min:5|max:50',
-            'sport_type'      => ['required', 'string', 'max:50', Rule::in(SportType::values())],
+            'sport_type'      => ['required', 'string', 'max:50', Rule::exists('sports', 'slug')->where('is_active', true)],
             'location'        => 'nullable|string|max:255',
             'description'     => 'nullable|string|min:10|max:1000',
             'price_per_hour'  => ['nullable', 'numeric', 'min:0'],

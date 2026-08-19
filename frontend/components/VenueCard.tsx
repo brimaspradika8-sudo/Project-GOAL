@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { SIZES, SHADOWS, FONT_FAMILY } from './goalTheme';
@@ -8,6 +8,7 @@ import { SPORT_LABELS } from '../lib/fieldValidation';
 import { useTheme } from '../lib/theme';
 import { useToastStore } from '../store/toastStore';
 import { useFavoriteStore } from '../store/favoriteStore';
+import { formatCurrency } from '../lib/format';
 
 import type { Field } from '../store/fieldStore';
 
@@ -20,11 +21,6 @@ const SPORT_ICONS: Record<string, string> = {
   tennis: 'sports-tennis',
   other: 'sports',
 };
-
-function formatPrice(price: number | null): string {
-  if (price == null) return 'Hubungi';
-  return `Rp${price.toLocaleString('id-ID')}`;
-}
 
 interface VenueCardProps {
   field: Field;
@@ -42,6 +38,15 @@ export default function VenueCard({ field, onFavoriteToggle, isFavorite = false 
   const { hydrate, isFavorite: checkFavorite, toggleFavorite } = useFavoriteStore();
   const isLiked = checkFavorite(field.id) || isFavorite;
 
+  const [activeImgIndex, setActiveImgIndex] = useState(0);
+
+  const images = useMemo(() => {
+    if (field.images && field.images.length > 0) {
+      return field.images.map((img) => img.image_path).filter(Boolean);
+    }
+    return field.image_url ? [field.image_url] : [];
+  }, [field]);
+
   useEffect(() => {
     hydrate().catch(() => {});
   }, [hydrate]);
@@ -53,8 +58,30 @@ export default function VenueCard({ field, onFavoriteToggle, isFavorite = false 
       onPress={() => router.push({ pathname: '/venue-detail', params: { id: String(field.id) } })}
     >
       <View style={st.imageWrap}>
-        {hasImage ? (
-          <SafeImage source={{ uri: field.image_url! }} style={st.image} resizeMode="cover" fallbackSize={32} />
+        {images.length > 0 ? (
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={(e) => {
+              const contentOffset = e.nativeEvent.contentOffset.x;
+              const layoutWidth = e.nativeEvent.layoutMeasurement.width;
+              if (layoutWidth > 0) {
+                const index = Math.round(contentOffset / layoutWidth);
+                if (index !== activeImgIndex && index >= 0 && index < images.length) {
+                  setActiveImgIndex(index);
+                }
+              }
+            }}
+            scrollEventThrottle={16}
+            style={st.imageScroll}
+          >
+            {images.map((url, idx) => (
+              <View key={`${url}-${idx}`} style={st.imageSlide}>
+                <SafeImage source={{ uri: url }} style={st.image} resizeMode="cover" fallbackSize={32} />
+              </View>
+            ))}
+          </ScrollView>
         ) : (
           <View style={st.imagePlaceholder}>
             <MaterialIcons name={sportIcon} size={40} color={colors.primary} />
@@ -65,6 +92,26 @@ export default function VenueCard({ field, onFavoriteToggle, isFavorite = false 
         <View style={st.sportPill}>
           <Text style={st.sportPillText}>{sportLabel}</Text>
         </View>
+
+        {images.length > 1 && (
+          <View style={st.imageBadge}>
+            <MaterialIcons name="photo-camera" size={12} color="#FFF" />
+            <Text style={st.imageBadgeText}>
+              {activeImgIndex + 1}/{images.length}
+            </Text>
+          </View>
+        )}
+
+        {images.length > 1 && (
+          <View style={st.dotsContainer}>
+            {images.map((_, i) => (
+              <View
+                key={i}
+                style={[st.dot, i === activeImgIndex ? st.dotActive : st.dotInactive]}
+              />
+            ))}
+          </View>
+        )}
 
         <TouchableOpacity
           style={st.favoriteBtn}
@@ -108,7 +155,7 @@ export default function VenueCard({ field, onFavoriteToggle, isFavorite = false 
           <View>
             <Text style={st.priceLabel}>Mulai dari</Text>
             <View style={st.priceValueRow}>
-              <Text style={st.price}>{formatPrice(field.price_per_hour)}</Text>
+              <Text style={st.price}>{formatCurrency(field.price_per_hour)}</Text>
               <Text style={st.priceUnit}>/jam</Text>
             </View>
           </View>
@@ -151,6 +198,14 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   imageWrap: {
     height: 146,
     position: 'relative',
+    backgroundColor: colors.surfaceContainer,
+  },
+  imageScroll: {
+    flex: 1,
+  },
+  imageSlide: {
+    width: 280,
+    height: 146,
   },
   image: {
     width: '100%',
@@ -168,6 +223,47 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     fontFamily: FONT_FAMILY,
     fontSize: 12,
     color: colors.textTertiary,
+  },
+  imageBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 50,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  imageBadgeText: {
+    color: '#FFF',
+    fontFamily: FONT_FAMILY,
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  dotsContainer: {
+    position: 'absolute',
+    bottom: 8,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  dot: {
+    height: 5,
+    borderRadius: 2.5,
+  },
+  dotActive: {
+    width: 12,
+    backgroundColor: colors.primary,
+  },
+  dotInactive: {
+    width: 5,
+    backgroundColor: 'rgba(255,255,255,0.6)',
   },
   sportPill: {
     position: 'absolute',

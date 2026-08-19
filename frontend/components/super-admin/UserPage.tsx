@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
   TextInput, RefreshControl,
@@ -21,6 +21,7 @@ import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { fieldError } from '../../lib/formValidation';
 import { USER_ROLES, type UserRole } from '../../types/roles';
+import { useIsMobileWeb } from '../../lib/responsive';
 
 const getRoleConfig = (colors: ThemeColors): Record<string, { label: string; color: string; bg: string }> => ({
   player:      { label: 'Pemain',      color: colors.textSecondary, bg: colors.surfaceContainerHigh },
@@ -40,7 +41,8 @@ const EMPTY_EDIT   = { name: '', email: '', password: '' };
 
 export default function UserPage() {
   const { colors } = useTheme();
-  const st = makeStyles(colors);
+  const isMobile = useIsMobileWeb();
+  const st = useMemo(() => makeStyles(colors, isMobile), [colors, isMobile]);
   const ROLE_CONFIG = getRoleConfig(colors);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -698,9 +700,9 @@ function FormField({ label, icon, value, onChangeText, onBlur, keyboardType, aut
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  searchWrap: { paddingHorizontal: SIZES.gutter, paddingTop: 14, paddingBottom: 4 },
+  searchWrap: { paddingHorizontal: SIZES.gutter, paddingTop: 14, paddingBottom: 4, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: colors.surface, borderRadius: 14,
@@ -713,7 +715,7 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   searchInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}) },
 
-  tabRow: { flexDirection: 'row', gap: 10, marginHorizontal: SIZES.gutter, marginTop: 10, marginBottom: 4 },
+  tabRow: { flexDirection: 'row', gap: 10, marginHorizontal: SIZES.gutter, marginTop: 10, marginBottom: 4, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
   tab: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 7, paddingVertical: 11, borderRadius: 12,
@@ -734,10 +736,11 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.surfaceContainer, borderRadius: 12,
     borderWidth: 1.5, borderColor: colors.primary + '50',
     paddingVertical: 12, marginHorizontal: SIZES.gutter, marginTop: 10,
+    ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
   },
   addBtnText: { ...FONTS.titleSm, color: colors.primary },
 
-  list: { padding: SIZES.gutter, paddingBottom: 24 },
+  list: { padding: SIZES.gutter, paddingBottom: 24, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
   scroll: { flex: 1 },
 
   checkbox: { marginRight: 10, justifyContent: 'center', alignItems: 'center' },

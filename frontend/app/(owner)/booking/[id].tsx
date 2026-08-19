@@ -16,6 +16,7 @@ import {
 } from '../../../services/bookingService';
 import { useProfileStore } from '../../../store/profileStore';
 import { useTheme } from '../../../lib/theme';
+import { useIsMobileWeb } from '../../../lib/responsive';
 
 function RejectModal({
   visible,
@@ -136,6 +137,7 @@ export default function BookingDetailScreen() {
   const router = useRouter();
   const profile = useProfileStore((s) => s.profile);
   const { colors } = useTheme();
+  const isMobile = useIsMobileWeb();
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -207,34 +209,35 @@ export default function BookingDetailScreen() {
   if (error) return <ErrorState description={error} onRetry={fetchDetail} />;
   if (!booking) return null;
 
+  const st = makeStyles(isMobile);
   const isOwner = profile?.role === 'owner' && booking.field?.owner_id === profile?.user_id;
   const isPlayer = profile?.role === 'player' && booking.user_id === profile?.user_id;
 
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Card style={styles.card}>
-          <Text style={[styles.title, { color: colors.text }]}>Detail Booking</Text>
-          <Text style={[styles.rowText, { color: colors.textSecondary }]}>
+    <View style={[st.screen, { backgroundColor: colors.background }]}>
+      <ScrollView contentContainerStyle={st.container}>
+        <Card style={st.card}>
+          <Text style={[st.title, { color: colors.text }]}>Detail Booking</Text>
+          <Text style={[st.rowText, { color: colors.textSecondary }]}>
             {`Lapangan: ${booking.field?.name ?? 'Tidak diketahui'}`}
           </Text>
-          <Text style={[styles.rowText, { color: colors.textSecondary }]}>
+          <Text style={[st.rowText, { color: colors.textSecondary }]}>
             {`Tanggal: ${booking.booking_date}`}
           </Text>
-          <Text style={[styles.rowText, { color: colors.textSecondary }]}>
+          <Text style={[st.rowText, { color: colors.textSecondary }]}>
             {`Jam: ${booking.start_time} – ${booking.end_time}`}
           </Text>
-          <Text style={[styles.rowText, { color: colors.textSecondary }]}>
+          <Text style={[st.rowText, { color: colors.textSecondary }]}>
             {`Durasi: ${booking.duration_minutes} menit`}
           </Text>
-          <Text style={[styles.rowText, { color: colors.textSecondary }]}>
+          <Text style={[st.rowText, { color: colors.textSecondary }]}>
             {`Total Harga: Rp ${booking.total_price?.toLocaleString()}`}
           </Text>
-          <Text style={[styles.status, { color: statusColor(booking.status) }]}>{booking.status}</Text>
+          <Text style={[st.status, { color: statusColor(booking.status) }]}>{booking.status}</Text>
         </Card>
 
         {/* Action Buttons based on role & status */}
-        <View style={styles.actions}>
+        <View style={st.actions}>
           {isPlayer && booking.status === 'WAITING_CONFIRMATION' && (
             <Button title="Batalkan" onPress={handleCancel} variant="secondary" />
           )}
@@ -270,12 +273,13 @@ function statusColor(status: string): string {
   return map[status] ?? '#000';
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (isMobile: boolean) => StyleSheet.create({
   screen: {
     flex: 1,
   },
   container: {
     padding: 16,
+    ...(isMobile ? {} : { maxWidth: 700, alignSelf: 'center', width: '100%', paddingTop: 32 }),
   },
   card: {
     padding: 12,

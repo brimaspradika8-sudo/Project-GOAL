@@ -12,6 +12,7 @@ import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme } from '../../lib/theme';
 import { logout } from '../../lib/session';
+import { useIsMobileWeb } from '../../lib/responsive';
 
 const ROLE_LABEL: Record<string, string> = {
   super_admin: 'Super Admin',
@@ -20,7 +21,8 @@ const ROLE_LABEL: Record<string, string> = {
 export default function SuperAdminProfilePage() {
   const { profile } = useProfileStore();
   const { colors, resolved } = useTheme();
-  const st = makeStyles(colors, resolved);
+  const isMobile = useIsMobileWeb();
+  const st = makeStyles(colors, resolved, isMobile);
   const role = profile?.role ?? 'super_admin';
   const initials = (profile?.full_name || profile?.username || 'A').charAt(0).toUpperCase();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -124,9 +126,9 @@ export default function SuperAdminProfilePage() {
   );
 }
 
-const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark') => StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark', isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  content: { padding: SIZES.padding, paddingBottom: 120 },
+  content: { padding: SIZES.padding, paddingBottom: 120, ...(isMobile ? {} : { maxWidth: 600, alignSelf: 'center', width: '100%' }) },
 
   avatarCard: {
     flexDirection: 'row',

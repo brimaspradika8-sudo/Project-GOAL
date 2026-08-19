@@ -15,6 +15,10 @@ export interface Field {
   name: string;
   sport_type: string;
   location: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  rating?: number;
+  reviews_count?: number;
   address?: string | null;
   description: string | null;
   price_per_hour: number | null;
@@ -61,16 +65,83 @@ function parseErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Terjadi kesalahan';
 }
 
+const MOCK_COORDS = [
+  { lat: -6.2186, lng: 106.8024 }, // GBK Senayan
+  { lat: -6.2245, lng: 106.8089 }, // SCBD
+  { lat: -6.2375, lng: 106.8521 }, // Tebet
+  { lat: -6.1754, lng: 106.8272 }, // Monas / Gambir
+  { lat: -6.2615, lng: 106.8106 }, // Kemang
+  { lat: -6.3016, lng: 106.6534 }, // BSD City
+  { lat: -6.2443, lng: 106.9248 }, // Bekasi
+  { lat: -6.9175, lng: 107.6191 }, // Bandung
+];
+
+const MOCK_SPORT_IMAGES: Record<string, string[]> = {
+  futsal: [
+    'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1551958219-acbc608c6377?q=80&w=800&auto=format&fit=crop',
+  ],
+  basketball: [
+    'https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1519861531473-9200262188bf?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1504450758481-7338eba7524a?q=80&w=800&auto=format&fit=crop',
+  ],
+  badminton: [
+    'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1617083934555-ac7d4fed8814?q=80&w=800&auto=format&fit=crop',
+  ],
+  default: [
+    'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1529900748604-07564a03e7a6?q=80&w=800&auto=format&fit=crop',
+  ],
+};
+
 function normalizeFieldsResponse(body: unknown): { data: Field[]; meta: PaginationMeta | null } {
   if (!body || typeof body !== 'object') {
     return { data: [], meta: null };
   }
 
   const payload = body as { data?: unknown; meta?: unknown };
+  const rawList = Array.isArray(payload.data) ? (payload.data as Field[]) : [];
+
+  const enrichedData: Field[] = rawList.map((item, idx) => {
+    const coords = MOCK_COORDS[idx % MOCK_COORDS.length];
+    const sportKey = item.sport_type?.toLowerCase() || 'futsal';
+    const fallbackList = MOCK_SPORT_IMAGES[sportKey] || MOCK_SPORT_IMAGES.default;
+
+    let images: FieldImage[] = item.images && item.images.length > 0 ? item.images : [];
+
+    if (images.length === 0) {
+      const primaryUrl = item.image_url || fallbackList[0];
+      images = [
+        { id: item.id * 10 + 1, field_id: item.id, image_path: primaryUrl, is_primary: true },
+        ...fallbackList.slice(1).map((url, i) => ({
+          id: item.id * 10 + i + 2,
+          field_id: item.id,
+          image_path: url,
+          is_primary: false,
+        })),
+      ];
+    }
+
+    return {
+      ...item,
+      latitude: item.latitude ?? coords.lat,
+      longitude: item.longitude ?? coords.lng,
+      rating: item.rating ?? Number((4.5 + ((item.id % 5) * 0.1)).toFixed(1)),
+      reviews_count: item.reviews_count ?? (12 + item.id * 7),
+      image_url: item.image_url || images[0]?.image_path || fallbackList[0],
+      images,
+    };
+  });
 
   return {
-    data: Array.isArray(payload.data) ? payload.data as Field[] : [],
-    meta: payload.meta && typeof payload.meta === 'object' ? payload.meta as PaginationMeta : null,
+    data: enrichedData,
+    meta: payload.meta && typeof payload.meta === 'object' ? (payload.meta as PaginationMeta) : null,
   };
 }
 

@@ -78,7 +78,11 @@ export async function apiFetch(path: string, options: ApiRequestOptions = {}): P
   }
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
+  const timeoutError = new DOMException(
+    `Permintaan melebihi batas waktu (${timeout / 1000}s). Periksa koneksi jaringan Anda.`,
+    'TimeoutError'
+  );
+  const timer = setTimeout(() => controller.abort(timeoutError), timeout);
 
   try {
     const response = await fetch(url.toString(), {
@@ -104,6 +108,13 @@ export async function apiFetch(path: string, options: ApiRequestOptions = {}): P
     }
 
     return response;
+  } catch (err: unknown) {
+    // Normalize abort/timeout errors into a readable message
+    if (err instanceof DOMException && (err.name === 'AbortError' || err.name === 'TimeoutError')) {
+      throw new Error(err.message || `Permintaan melebihi batas waktu (${timeout / 1000}s). Periksa koneksi jaringan Anda.`);
+    }
+    // Re-throw other errors as-is
+    throw err;
   } finally {
     clearTimeout(timer);
   }

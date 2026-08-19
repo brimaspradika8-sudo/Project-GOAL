@@ -137,7 +137,7 @@ function RootLayoutInner() {
         setBootStep('app_ready');
 
         if (!isAuthRoute) {
-          if (profile.onboarding_completed === false) {
+          if (profile.role === 'player' && profile.onboarding_completed === false) {
             router.replace('/onboarding');
           } else {
             router.replace(routeForRole(profile.role));

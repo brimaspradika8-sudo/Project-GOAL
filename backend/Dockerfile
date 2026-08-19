@@ -7,11 +7,12 @@ RUN apt-get update && apt-get install -y \
     curl \
     libpq-dev \
     libzip-dev \
+    libicu-dev \
     zip \
     unzip \
     && pecl install redis \
     && docker-php-ext-enable redis \
-    && docker-php-ext-install pdo pdo_pgsql zip pcntl \
+    && docker-php-ext-install pdo pdo_pgsql zip pcntl intl \
     && rm -rf /var/lib/apt/lists/*
 
 # PHP-FPM: tuning untuk production

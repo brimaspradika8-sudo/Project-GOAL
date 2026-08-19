@@ -19,6 +19,7 @@ import type { Field } from '../../store/fieldStore';
 import { useTheme } from '../../lib/theme';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
+import { formatCurrency } from '../../lib/format';
 
 const DEFAULT_IMAGES: Record<string, string> = {
   futsal: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
@@ -26,11 +27,6 @@ const DEFAULT_IMAGES: Record<string, string> = {
   badminton: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?q=80&w=800&auto=format&fit=crop',
   default: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
 };
-
-function formatPrice(price: number | null): string {
-  if (price == null) return 'Hubungi';
-  return `Rp${price.toLocaleString('id-ID')}`;
-}
 
 export default function MyFieldsScreen() {
   const [fields, setFields] = useState<Field[]>([]);
@@ -155,7 +151,7 @@ export default function MyFieldsScreen() {
         <View style={st.cardBody}>
           <View style={st.cardHeader}>
             <Text style={st.cardName} numberOfLines={1}>{item.name}</Text>
-            <Text style={st.cardPrice}>{formatPrice(item.price_per_hour)}/jam</Text>
+            <Text style={st.cardPrice}>{formatCurrency(item.price_per_hour)}/jam</Text>
           </View>
           <View style={st.cardLocationRow}>
             <MaterialIcons name="location-on" size={14} color={colors.textTertiary} />

@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { getResponseData } from '../lib/api';
 import { apiFetch } from '../lib/apiClient';
+import { profileFromApi, routeForRole } from '../types/roles';
 import { useProfileStore } from '../store/profileStore';
 import { useUsernameCheck } from '../hooks/useUsernameCheck';
 import { logout } from '../lib/session';
@@ -127,8 +128,7 @@ export default function OnboardingScreen() {
   function toggleSport(id: string) {
     setSelectedSports((prev) => prev.includes(id) ? prev.filter((sport) => sport !== id) : [...prev, id]);
   }
-
-  async function handleSignOut() {
+  async function handleSignOut() {
     try {
       await logout();
     } catch {}
@@ -173,9 +173,10 @@ export default function OnboardingScreen() {
         return;
       }
 
-      const profile = await res.json();
+      const json = await res.json();
+      const profile = profileFromApi(json);
       useProfileStore.setState({ profile, loading: false });
-      router.replace('/(tabs)');
+      router.replace(routeForRole(profile?.role ?? 'player'));
     } catch {
       if (mountedRef.current) setSubmitError('Gagal terhubung ke server. Silakan coba lagi.');
     } finally {
@@ -208,7 +209,6 @@ export default function OnboardingScreen() {
       return { url: null, error: 'Gagal terhubung ke server upload.' };
     }
   };
-
   const pickAvatarFromGallery = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();

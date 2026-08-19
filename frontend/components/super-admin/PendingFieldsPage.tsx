@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
   RefreshControl, Modal, TextInput,
@@ -16,10 +16,12 @@ import SelectCheckbox from '../shared/SelectCheckbox';
 import BulkActionBar from '../shared/BulkActionBar';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme } from '../../lib/theme';
+import { useIsMobileWeb } from '../../lib/responsive';
 
 export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean } = {}) {
   const { colors, resolved } = useTheme();
-  const st = makeStyles(colors, resolved);
+  const isMobile = useIsMobileWeb();
+  const st = useMemo(() => makeStyles(colors, resolved, isMobile), [colors, resolved, isMobile]);
   const cardSurface = colors.surface;
   const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
   const [fields, setFields] = useState<any[]>([]);
@@ -374,9 +376,9 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
   );
 }
 
-const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark') => StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark', isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  list: { padding: SIZES.gutter, paddingBottom: 24 },
+  list: { padding: SIZES.gutter, paddingBottom: 24, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
   scroll: { flex: 1 },
 
   checkbox: { padding: 4 },
@@ -436,7 +438,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'li
   rejectBtnText: { ...FONTS.titleSm },
   disabledBtn: { opacity: 0.6 },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
+  modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', padding: 24 },
   rejectModal: {
     borderRadius: 20,
     padding: 22,

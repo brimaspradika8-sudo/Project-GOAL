@@ -11,12 +11,14 @@ import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme } from '../../lib/theme';
+import { useIsMobileWeb } from '../../lib/responsive';
 import { logout } from '../../lib/session';
 
 export default function OwnerProfilePage() {
   const { profile } = useProfileStore();
   const { colors, resolved } = useTheme();
-  const st = makeStyles(colors, resolved);
+  const isMobile = useIsMobileWeb();
+  const st = React.useMemo(() => makeStyles(colors, resolved, isMobile), [colors, resolved, isMobile]);
   const initials = (profile?.full_name || profile?.username || 'O').charAt(0).toUpperCase();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
@@ -120,9 +122,9 @@ export default function OwnerProfilePage() {
   );
 }
 
-const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark') => StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark', isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  content: { padding: SIZES.padding, paddingBottom: 60 },
+  content: { padding: SIZES.padding, paddingBottom: 60, ...(isMobile ? {} : { maxWidth: 600, alignSelf: 'center', width: '100%' }) },
 
   avatarCard: {
     flexDirection: 'row',

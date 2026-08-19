@@ -14,10 +14,12 @@ import DashboardHeader from '../shared/DashboardHeader';
 import ConfirmDialog from '../shared/ConfirmDialog';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme } from '../../lib/theme';
+import { useIsMobileWeb } from '../../lib/responsive';
 
 export default function OwnerRequestPage() {
   const { colors, resolved } = useTheme();
-  const st = makeStyles(colors, resolved);
+  const isMobile = useIsMobileWeb();
+  const st = makeStyles(colors, resolved, isMobile);
   const cardSurface = colors.surface;
   const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
   const [requests, setRequests] = useState<any[]>([]);
@@ -249,7 +251,7 @@ export default function OwnerRequestPage() {
   );
 }
 
-const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark') => StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark', isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   list: { padding: SIZES.gutter, paddingBottom: 60, maxWidth: 900, alignSelf: 'center', width: '100%' },
 
@@ -309,7 +311,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'li
   disabledBtn: { opacity: 0.6 },
 
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
+  modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', padding: 24 },
   modal: {
     backgroundColor: colors.surface, borderRadius: 20, padding: 22,
     borderWidth: 1, borderColor: colors.outline, ...SHADOWS.lg,

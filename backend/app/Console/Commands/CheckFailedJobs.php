@@ -23,13 +23,15 @@ class CheckFailedJobs extends Command
 
         Log::warning("[GOAL] Terdapat {$count} failed job(s). Jalankan 'php artisan queue:retry all' untuk mengulang.");
 
+        $rows = DB::table('failed_jobs')
+            ->select('id', 'connection', 'queue', DB::raw('substring(payload, 1, 120) as payload'))
+            ->limit(10)
+            ->get()
+            ->map(fn($row) => (array) $row);
+
         $this->table(
             ['id', 'connection', 'queue', 'payload'],
-            DB::table('failed_jobs')
-                ->select('id', 'connection', 'queue', DB::raw('substring(payload, 1, 120) as payload'))
-                ->limit(10)
-                ->get()
-                ->toArray()
+            $rows
         );
 
         return self::SUCCESS;

@@ -8,10 +8,9 @@ import { useIsMobileWeb } from '../../lib/responsive';
 import type { Booking, BookingStatus } from '../../services/bookingService';
 import { SPORT_LABELS } from '../../lib/fieldValidation';
 import { BookingStatusBadge } from './BookingStatusBadge';
+import { formatCurrency } from '../../lib/format';
 
-export function formatPrice(p: number): string {
-  return `Rp${p.toLocaleString('id-ID')}`;
-}
+export const formatPrice = formatCurrency;
 
 export function formatDateDisplay(d: string): string {
   if (!d) return '-';

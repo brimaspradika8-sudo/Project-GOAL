@@ -20,6 +20,7 @@ import {
 } from '../../services/bookingService';
 import { useIsMobileWeb } from '../../lib/responsive';
 import { ErrorState } from '../common';
+import { formatCurrency } from '../../lib/format';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -31,11 +32,6 @@ interface StatusConfig {
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatPrice(price: number | null | undefined): string {
-  if (price == null) return '-';
-  return `Rp${Number(price).toLocaleString('id-ID')}`;
-}
 
 function formatDateShort(d: string): string {
   if (!d) return '-';
@@ -175,7 +171,7 @@ function BookingCard({
   const cardSurface = colors.surface;
 
   const status = statusCfg[booking.status] ?? statusCfg['WAITING_CONFIRMATION'];
-  const priceStr = formatPrice(booking.total_price);
+  const priceStr = formatCurrency(booking.total_price);
   const fieldName = booking.field?.name ?? `Field #${booking.field_id}`;
   const renterName = booking.user?.name ?? '-';
   const bookingDate = booking.booking_date ?? '-';
@@ -314,9 +310,9 @@ function BookingCard({
 
 export default function OwnerBookingsPage() {
   const { colors, resolved } = useTheme();
-  const st = makeStyles(colors, resolved);
   const showToast = useToastStore((s) => s.show);
   const isMobile = useIsMobileWeb();
+  const st = React.useMemo(() => makeStyles(colors, resolved, isMobile), [colors, resolved, isMobile]);
 
   const statusCfg: Record<string, StatusConfig> = {
     WAITING_CONFIRMATION: { label: 'Menunggu Konfirmasi', bg: colors.floodlight + '22', color: colors.onWarning ?? '#B45309', icon: 'schedule' },
@@ -491,7 +487,7 @@ export default function OwnerBookingsPage() {
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
 
-const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark') =>
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark', isMobile: boolean) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
 

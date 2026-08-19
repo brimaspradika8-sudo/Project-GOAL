@@ -65,7 +65,7 @@ export default function AdminTabLayout() {
     { href: '/(super-admin)/owner-requests', label: 'Pengajuan Owner', icon: 'inventory' },
     ...(isSuperAdmin ? [
       { href: '/(super-admin)/manage-fields', label: 'Kelola Lapangan', icon: 'stadium' },
-      { href: '/(super-admin)/audit-logs', label: 'Audit Log', icon: 'history' },
+      { href: '/(super-admin)/sports', label: 'Olahraga', icon: 'sports-soccer' },
     ] : []),
     { href: '/(super-admin)/profile', label: 'Profile', icon: 'person' },
   ];
@@ -129,10 +129,12 @@ export default function AdminTabLayout() {
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
             <Tabs.Screen
-              name="audit-logs"
+              name="sports"
               options={{
-                title: 'Audit Log',
-                tabBarIcon: ({ color }) => <MaterialIcons name="history" size={24} color={color} />,
+                title: 'Olahraga',
+                tabBarIcon: ({ color }) => (
+                  <MaterialIcons name="sports-soccer" size={24} color={color} />
+                ),
                 href: isSuperAdmin ? undefined : null,
               }}
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
@@ -210,10 +212,12 @@ export default function AdminTabLayout() {
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
             <Tabs.Screen
-              name="audit-logs"
+              name="sports"
               options={{
-                title: 'Audit Log',
-                tabBarIcon: ({ color }) => <MaterialIcons name="history" size={24} color={color} />,
+                title: 'Olahraga',
+                tabBarIcon: ({ color }) => (
+                  <MaterialIcons name="sports-soccer" size={24} color={color} />
+                ),
                 href: isSuperAdmin ? undefined : null,
               }}
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
@@ -279,6 +283,17 @@ export default function AdminTabLayout() {
           href: isSuperAdmin ? undefined : null,
           tabBarBadge: isSuperAdmin ? manageFieldsBadge : undefined,
           tabBarBadgeStyle: isSuperAdmin && manageFieldsBadge ? styles.badge : undefined,
+        }}
+        listeners={{ tabPress: () => Haptics.selectionAsync() }}
+      />
+      <Tabs.Screen
+        name="sports"
+        options={{
+          title: 'Olahraga',
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="sports-soccer" size={24} color={color} />
+          ),
+          href: isSuperAdmin ? undefined : null,
         }}
         listeners={{ tabPress: () => Haptics.selectionAsync() }}
       />

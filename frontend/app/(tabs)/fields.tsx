@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TextInput,
   FlatList,
+  ScrollView,
   Platform,
   StatusBar,
   TouchableOpacity,
@@ -13,6 +14,8 @@ import {
   RefreshControl,
   ActivityIndicator,
   useWindowDimensions,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
@@ -22,7 +25,10 @@ import { GridLoader } from '../../components/Skeleton';
 import { useDebounce } from '../../hooks/useDebounce';
 import { useTheme } from '../../lib/theme';
 import VenueCard from '../../components/VenueCard';
+import InteractiveVenueMap from '../../components/venue/InteractiveVenueMap';
+import VenueCarouselCard from '../../components/venue/VenueCarouselCard';
 import { SPORT_OPTIONS, SPORT_MAP } from '../../lib/fieldValidation';
+import type { Field } from '../../store/fieldStore';
 
 const FILTERS = ['Semua', ...SPORT_OPTIONS];
 const SORT_OPTIONS: { key: NonNullable<FieldFilters['sort']>; label: string }[] = [
@@ -40,13 +46,17 @@ export default function FieldsScreen() {
   const [sort, setSort] = useState<NonNullable<FieldFilters['sort']>>('latest');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
+  const carouselScrollRef = useRef<ScrollView>(null);
+
   const debouncedSearch = useDebounce(search, 150);
   const debouncedMinPrice = useDebounce(minPrice, 400);
   const debouncedMaxPrice = useDebounce(maxPrice, 400);
   const { fields, loading, loadingMore, meta, fetchFields, fetchMore, refreshFields } = useFieldStore();
   const [refreshing, setRefreshing] = useState(false);
   const { colors } = useTheme();
-  const styles = makeStyles(colors);
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const filterAnimation = useRef(new Animated.Value(0)).current;
 
   const isDesktop = width >= 900;
@@ -86,110 +96,15 @@ export default function FieldsScreen() {
 
   const hasMore = meta ? meta.current_page < meta.last_page : false;
 
-  const renderHeader = () => (
-    <>
-      <Text style={styles.title}>Lapangan</Text>
-      <Text style={styles.subtitle}>Cari lapangan yang cocok, lalu saring hasilnya dengan cepat.</Text>
+  const resetAllFilters = useCallback(() => {
+    setSearch('');
+    setActiveFilter('Semua');
+    setMinPrice('');
+    setMaxPrice('');
+    setSort('latest');
+  }, []);
 
-      <View style={styles.resultRow}>
-        <Text style={styles.resultText}>
-          {loading && fields.length === 0 ? 'Memuat data...' : `${fields.length} lapangan ditemukan`}
-        </Text>
-        {hasActiveFilters ? (
-          <TouchableOpacity
-            onPress={() => {
-              setSearch('');
-              setActiveFilter('Semua');
-              setMinPrice('');
-              setMaxPrice('');
-              setSort('latest');
-            }}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.resetText}>Reset filter</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
-
-      <View style={styles.searchActionsRow}>
-        <View style={[styles.searchBar, styles.searchBarInRow]}>
-          <MaterialIcons name="search" size={20} color={colors.textTertiary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Cari nama lapangan"
-            placeholderTextColor={colors.textTertiary}
-            value={search}
-            onChangeText={setSearch}
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <MaterialIcons name="close" size={18} color={colors.textTertiary} />
-            </TouchableOpacity>
-          )}
-          {loading && fields.length > 0 && <ActivityIndicator size="small" color={colors.primary} />}
-        </View>
-        <TouchableOpacity
-          style={[styles.filterButton, isFilterOpen && styles.filterButtonActive]}
-          onPress={() => setIsFilterOpen((current) => !current)}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel="Buka filter harga dan urutan"
-        >
-          <MaterialIcons name="tune" size={19} color={isFilterOpen ? colors.primary : colors.textSecondary} />
-          <Text style={[styles.filterButtonText, isFilterOpen && styles.filterButtonTextActive]}>Filter</Text>
-          {hasAdvancedFilters && <View style={styles.filterBadge} />}
-        </TouchableOpacity>
-      </View>
-
-      <Animated.View
-        style={[
-          styles.advancedFilterPanel,
-          {
-            maxHeight: filterAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, 150] }),
-            opacity: filterAnimation,
-            marginBottom: filterAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, 14] }),
-          },
-        ]}
-      >
-        <View style={styles.priceRow}>
-          <Text style={styles.filterLabel}>Harga per jam</Text>
-          <TextInput style={styles.priceInput} placeholder="Min" placeholderTextColor={colors.textTertiary} keyboardType="numeric" value={minPrice} onChangeText={setMinPrice} />
-          <Text style={styles.priceSeparator}>-</Text>
-          <TextInput style={styles.priceInput} placeholder="Maks" placeholderTextColor={colors.textTertiary} keyboardType="numeric" value={maxPrice} onChangeText={setMaxPrice} />
-        </View>
-        <TouchableOpacity style={styles.sortSelector} onPress={() => setIsSortModalOpen(true)} activeOpacity={0.8}>
-          <Text style={styles.filterLabel}>Urutkan</Text>
-          <View style={styles.sortSelectorValue}>
-            <Text style={styles.sortSelectorText}>{SORT_OPTIONS.find((option) => option.key === sort)?.label}</Text>
-            <MaterialIcons name="expand-more" size={20} color={colors.textSecondary} />
-          </View>
-        </TouchableOpacity>
-      </Animated.View>
-
-      <FlatList
-        horizontal
-        data={FILTERS}
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipScroll}
-        style={styles.chipScrollWrapper}
-        keyExtractor={(item) => item}
-        renderItem={({ item: filter }) => {
-          const isActive = activeFilter === filter;
-          return (
-            <TouchableOpacity
-              style={[styles.chip, isActive && styles.chipActive]}
-              activeOpacity={0.75}
-              onPress={() => setActiveFilter(filter)}
-            >
-              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{filter}</Text>
-            </TouchableOpacity>
-          );
-        }}
-      />
-    </>
-  );
-
-  const renderFooter = () => {
+  const renderFooter = useCallback(() => {
     if (!loadingMore) return null;
     return (
       <View style={styles.footerLoader}>
@@ -197,9 +112,9 @@ export default function FieldsScreen() {
         <Text style={styles.footerText}>Memuat lebih banyak...</Text>
       </View>
     );
-  };
+  }, [loadingMore, styles, colors]);
 
-  const renderEmpty = () => {
+  const renderEmpty = useCallback(() => {
     if (loading && !refreshing && fields.length === 0) {
       return (
         <View style={styles.loadingWrap}>
@@ -214,40 +129,206 @@ export default function FieldsScreen() {
         <Text style={styles.emptyDesc}>Coba ubah kata kunci atau longgarkan filter harga.</Text>
       </View>
     );
-  };
+  }, [loading, refreshing, fields, styles, colors]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={colors.background === '#F8FAFC' ? 'dark-content' : 'light-content'} backgroundColor={colors.background} />
-      <FlatList
-        key={String(numColumns)}
-        data={fields}
-        numColumns={numColumns}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => (
-          numColumns > 1
-            ? <View style={styles.gridCell}><VenueCard field={item} /></View>
-            : <VenueCard field={item} />
-        )}
-        columnWrapperStyle={numColumns > 1 ? styles.gridRow : undefined}
-        ListHeaderComponent={renderHeader}
-        ListFooterComponent={renderFooter}
-        ListEmptyComponent={renderEmpty}
-        contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-        onEndReached={() => {
-          if (hasMore) fetchMore();
-        }}
-        onEndReachedThreshold={0.4}
-      />
+
+      {/* ── Header (OUTSIDE FlatList — TextInput is safe here) ── */}
+      <View style={[styles.headerWrap, isDesktop && styles.headerWrapDesktop]}>
+        <Text style={styles.title}>Lapangan</Text>
+        <Text style={styles.subtitle}>Cari lapangan yang cocok, lalu saring hasilnya dengan cepat.</Text>
+
+        <View style={styles.resultRow}>
+          <Text style={styles.resultText}>
+            {loading && fields.length === 0 ? 'Memuat data...' : `${fields.length} lapangan ditemukan`}
+          </Text>
+          <View style={styles.modeToggleGroup}>
+            <TouchableOpacity
+              style={[styles.modeToggleBtn, viewMode === 'grid' && styles.modeToggleBtnActive]}
+              onPress={() => setViewMode('grid')}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="grid-view" size={16} color={viewMode === 'grid' ? colors.primary : colors.textTertiary} />
+              <Text style={[styles.modeToggleText, viewMode === 'grid' && styles.modeToggleTextActive]}>Daftar</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modeToggleBtn, viewMode === 'map' && styles.modeToggleBtnActive]}
+              onPress={() => setViewMode('map')}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="map" size={16} color={viewMode === 'map' ? colors.primary : colors.textTertiary} />
+              <Text style={[styles.modeToggleText, viewMode === 'map' && styles.modeToggleTextActive]}>Peta</Text>
+            </TouchableOpacity>
+
+            {hasActiveFilters ? (
+              <TouchableOpacity onPress={resetAllFilters} activeOpacity={0.8} style={{ marginLeft: 8 }}>
+                <Text style={styles.resetText}>Reset</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
+
+        <View style={styles.searchActionsRow}>
+          <View style={[styles.searchBar, styles.searchBarInRow]}>
+            <MaterialIcons name="search" size={20} color={colors.textTertiary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Cari nama lapangan"
+              placeholderTextColor={colors.textTertiary}
+              value={search}
+              onChangeText={setSearch}
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <MaterialIcons name="close" size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+            )}
+            {loading && fields.length > 0 && <ActivityIndicator size="small" color={colors.primary} />}
+          </View>
+          <TouchableOpacity
+            style={[styles.filterButton, isFilterOpen && styles.filterButtonActive]}
+            onPress={() => setIsFilterOpen((current) => !current)}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Buka filter harga dan urutan"
+          >
+            <MaterialIcons name="tune" size={19} color={isFilterOpen ? colors.primary : colors.textSecondary} />
+            <Text style={[styles.filterButtonText, isFilterOpen && styles.filterButtonTextActive]}>Filter</Text>
+            {hasAdvancedFilters && <View style={styles.filterBadge} />}
+          </TouchableOpacity>
+        </View>
+
+        <Animated.View
+          style={[
+            styles.advancedFilterPanel,
+            {
+              maxHeight: filterAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, 150] }),
+              opacity: filterAnimation,
+              marginBottom: filterAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, 14] }),
+            },
+          ]}
+        >
+          <View style={styles.priceRow}>
+            <Text style={styles.filterLabel}>Harga per jam</Text>
+            <TextInput style={styles.priceInput} placeholder="Min" placeholderTextColor={colors.textTertiary} keyboardType="numeric" value={minPrice} onChangeText={setMinPrice} />
+            <Text style={styles.priceSeparator}>-</Text>
+            <TextInput style={styles.priceInput} placeholder="Maks" placeholderTextColor={colors.textTertiary} keyboardType="numeric" value={maxPrice} onChangeText={setMaxPrice} />
+          </View>
+          <TouchableOpacity style={styles.sortSelector} onPress={() => setIsSortModalOpen(true)} activeOpacity={0.8}>
+            <Text style={styles.filterLabel}>Urutkan</Text>
+            <View style={styles.sortSelectorValue}>
+              <Text style={styles.sortSelectorText}>{SORT_OPTIONS.find((option) => option.key === sort)?.label}</Text>
+              <MaterialIcons name="expand-more" size={20} color={colors.textSecondary} />
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
+
+        <FlatList
+          horizontal
+          data={FILTERS}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipScroll}
+          style={styles.chipScrollWrapper}
+          keyExtractor={(item) => item}
+          renderItem={({ item: filter }) => {
+            const isActive = activeFilter === filter;
+            return (
+              <TouchableOpacity
+                style={[styles.chip, isActive && styles.chipActive]}
+                activeOpacity={0.75}
+                onPress={() => setActiveFilter(filter)}
+              >
+                <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{filter}</Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </View>
+
+      {/* ── View Body (Grid vs Interactive Map View) ── */}
+      {viewMode === 'map' ? (
+        <View style={[styles.mapViewContainer, isDesktop && styles.cardsContentDesktop]}>
+          <View style={styles.mapWrap}>
+            <InteractiveVenueMap
+              fields={fields}
+              selectedFieldId={selectedFieldId}
+              onSelectField={(field) => {
+                setSelectedFieldId(field.id);
+                const idx = fields.findIndex((f) => f.id === field.id);
+                if (idx >= 0 && carouselScrollRef.current) {
+                  const cardW = isDesktop ? 320 : width * 0.82;
+                  carouselScrollRef.current.scrollTo({ x: idx * (cardW + 12), animated: true });
+                }
+              }}
+            />
+          </View>
+
+          {/* ── Bottom Sheet Horizontal Venue Carousel ── */}
+          <View style={styles.carouselContainer}>
+            <ScrollView
+              ref={carouselScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.carouselScrollContent}
+              decelerationRate="fast"
+              snapToInterval={(isDesktop ? 320 : width * 0.82) + 12}
+              snapToAlignment="center"
+              onMomentumScrollEnd={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+                const contentOffset = e.nativeEvent.contentOffset.x;
+                const cardW = (isDesktop ? 320 : width * 0.82) + 12;
+                const index = Math.round(contentOffset / cardW);
+                if (index >= 0 && index < fields.length) {
+                  setSelectedFieldId(fields[index].id);
+                }
+              }}
+            >
+              {fields.map((field) => (
+                <VenueCarouselCard
+                  key={field.id}
+                  field={field}
+                  isSelected={field.id === selectedFieldId}
+                  onPress={() => setSelectedFieldId(field.id)}
+                />
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      ) : (
+        /* ── Cards Grid View ── */
+        <FlatList
+          key={numColumns}
+          data={fields}
+          numColumns={numColumns}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => (
+            numColumns > 1
+              ? <View style={styles.gridCell}><VenueCard field={item} /></View>
+              : <VenueCard field={item} />
+          )}
+          columnWrapperStyle={numColumns > 1 ? styles.gridRow : undefined}
+          ListFooterComponent={renderFooter}
+          ListEmptyComponent={renderEmpty}
+          contentContainerStyle={[styles.cardsContent, isDesktop && styles.cardsContentDesktop]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+          onEndReached={() => {
+            if (hasMore) fetchMore();
+          }}
+          onEndReachedThreshold={0.4}
+        />
+      )}
+
       <Modal visible={isSortModalOpen} transparent animationType="slide" onRequestClose={() => setIsSortModalOpen(false)}>
         <View style={styles.modalOverlay}>
           <TouchableOpacity style={StyleSheet.absoluteFillObject} onPress={() => setIsSortModalOpen(false)} />
@@ -283,18 +364,31 @@ const makeStyles = (colors: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  scrollContent: {
+
+  // ── Header (outside FlatList) ──
+  headerWrap: {
     paddingTop: Platform.OS === 'ios' ? 60 : 48,
     paddingHorizontal: 20,
-    paddingBottom: 20,
+  },
+  headerWrapDesktop: {
     maxWidth: 1120,
     alignSelf: 'center',
     width: '100%',
-  },
-  scrollContentDesktop: {
-    maxWidth: 1120,
     paddingHorizontal: 24,
   },
+
+  // ── Cards content ──
+  cardsContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  cardsContentDesktop: {
+    maxWidth: 1120,
+    alignSelf: 'center',
+    width: '100%',
+    paddingHorizontal: 24,
+  },
+
   loadingWrap: {
     paddingTop: 8,
   },
@@ -399,7 +493,8 @@ const makeStyles = (colors: any) => StyleSheet.create({
     flex: 1,
     ...FONTS.bodyMd,
     color: colors.text,
-    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
+    padding: 0,
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any, height: 22 } : {}),
   },
   chipScrollWrapper: {
     marginBottom: 20,
@@ -484,25 +579,6 @@ const makeStyles = (colors: any) => StyleSheet.create({
     ...FONTS.labelMd,
     color: colors.text,
   },
-  sortChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: SIZES.borderRadiusFull,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.outline,
-  },
-  sortChipActive: {
-    backgroundColor: colors.primaryContainer,
-    borderColor: colors.primary,
-  },
-  sortChipText: {
-    ...FONTS.labelMd,
-    color: colors.textSecondary,
-  },
-  sortChipTextActive: {
-    color: colors.primary,
-  },
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
@@ -548,114 +624,6 @@ const makeStyles = (colors: any) => StyleSheet.create({
     color: colors.primary,
     fontWeight: '700',
   },
-  venueCard: {
-    backgroundColor: colors.surface,
-    borderRadius: SIZES.borderRadiusLg,
-    borderWidth: 1,
-    borderColor: colors.outline,
-    marginBottom: 16,
-    overflow: 'hidden',
-    ...SHADOWS.md,
-  },
-  venueImage: {
-    height: 130,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  venueImageBg: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
-  },
-  venueImageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-  },
-  venueBody: {
-    padding: 16,
-  },
-  venueHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  venueName: {
-    ...FONTS.headlineSm,
-    fontSize: 15,
-    color: colors.text,
-    flex: 1,
-    marginRight: 10,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-  },
-  badgeAvailable: {
-    backgroundColor: colors.primaryContainer,
-  },
-  badgeFull: {
-    backgroundColor: colors.errorContainer,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  dotAvailable: {
-    backgroundColor: colors.primary,
-  },
-  dotFull: {
-    backgroundColor: colors.error,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '600',
-    fontFamily: FONT_FAMILY,
-  },
-  textAvailable: {
-    color: colors.primary,
-  },
-  textFull: {
-    color: colors.error,
-  },
-  venueLocationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 6,
-  },
-  venueLocation: {
-    ...FONTS.bodySm,
-    color: colors.textSecondary,
-  },
-  venuePrice: {
-    ...FONTS.headlineSm,
-    fontSize: 15,
-    color: colors.primary,
-    marginBottom: 10,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  featureTag: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: colors.surfaceContainer,
-  },
-  featureTagText: {
-    ...FONTS.labelMd,
-    fontSize: 11,
-    color: colors.textSecondary,
-  },
   footerLoader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -682,50 +650,59 @@ const makeStyles = (colors: any) => StyleSheet.create({
     color: colors.textTertiary,
     textAlign: 'center',
   },
-  bottomSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  sectionTitleRow: {
-    marginTop: 8,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.textTertiary,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 14,
-  },
-  emptyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: SIZES.borderRadiusLg,
-    borderWidth: 1,
-    borderColor: colors.outline,
-    padding: 32,
+  modeToggleGroup: {
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: colors.surfaceContainer,
+    borderRadius: SIZES.borderRadius,
+    padding: 3,
+    gap: 2,
+  },
+  modeToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: SIZES.borderRadiusSm,
+  },
+  modeToggleBtnActive: {
+    backgroundColor: colors.surfaceWhite,
     ...SHADOWS.sm,
   },
-  emptyIconBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: colors.surfaceContainerLow,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
+  modeToggleText: {
+    ...FONTS.labelSm,
+    fontSize: 12,
+    color: colors.textTertiary,
   },
-  favTitle: {
-    ...FONTS.headlineSm,
-    fontSize: 15,
-    color: colors.text,
-    marginBottom: 6,
-    textAlign: 'center',
+  modeToggleTextActive: {
+    color: colors.primary,
+    fontWeight: '700',
   },
-  favDesc: {
-    ...FONTS.bodySm,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 18,
+  mapViewContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    position: 'relative',
+    minHeight: 450,
+  },
+  mapWrap: {
+    flex: 1,
+    marginBottom: 12,
+    borderRadius: SIZES.borderRadiusLg,
+    overflow: 'hidden',
+    minHeight: 280,
+  },
+  carouselContainer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  carouselScrollContent: {
+    gap: 12,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
   },
 });

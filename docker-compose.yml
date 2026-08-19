@@ -22,10 +22,9 @@ services:
       dockerfile: Dockerfile
     container_name: goal-backend
     restart: unless-stopped
-    entrypoint: ["sh", "/var/www/docker-entrypoint.sh"]
+    entrypoint: ["/bin/sh", "/var/www/docker-entrypoint.sh"]
     volumes:
       - ./backend:/var/www
-      - /var/www/vendor
       - ./backend/.env.docker:/var/www/.env
     env_file:
       - ./backend/.env.docker
@@ -41,6 +40,7 @@ services:
         condition: service_started
     networks:
       - goal-network
+
 
   # ── Queue Worker ──────────────────────────────────────────────────────────
   queue-worker:
@@ -65,7 +65,6 @@ services:
       REDIS_HOST: redis
     volumes:
       - ./backend:/var/www
-      - /var/www/vendor
       - ./backend/.env.docker:/var/www/.env
     env_file:
       - ./backend/.env.docker
@@ -92,7 +91,6 @@ services:
       REDIS_HOST: redis
     volumes:
       - ./backend:/var/www
-      - /var/www/vendor
       - ./backend/.env.docker:/var/www/.env
     env_file:
       - ./backend/.env.docker

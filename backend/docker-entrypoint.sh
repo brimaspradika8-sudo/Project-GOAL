@@ -2,10 +2,7 @@
 
 echo "==> [GOAL] Menunggu PostgreSQL siap..."
 
-# Bersihkan cache config lama (jangan pakai set -e — biarkan lanjut walau cache gagal)
-php artisan config:clear >/dev/null 2>&1 || true
-
-# Tunggu sampai PostgreSQL benar-benar siap — cek TCP socket langsung ke service DB.
+# Tunggu sampai PostgreSQL benar-benar siap
 until php -r '
 $host = getenv("DB_HOST") ?: "127.0.0.1";
 $port = (int) (getenv("DB_PORT") ?: 5432);
@@ -19,6 +16,11 @@ done
 
 echo "==> [GOAL] PostgreSQL siap."
 
+# Bersihkan cache lama & regenerate
+rm -f bootstrap/cache/packages.php 2>/dev/null || true
+php artisan config:clear >/dev/null 2>&1 || true
+php artisan package:discover --ansi >/dev/null 2>&1 || true
+
 # Migrasi hanya dijalankan oleh service utama (app), bukan queue/scheduler
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
     echo "==> [GOAL] Menjalankan migrasi database..."
@@ -26,17 +28,19 @@ if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
     echo "==> [GOAL] Migrasi selesai."
 fi
 
+# Dalam development, selalu bersihkan cache agar perubahan .env/routes langsung aktif
+echo "==> [GOAL] Membersihkan cache Laravel..."
+php artisan config:clear || true
+php artisan route:clear  || true
+php artisan view:clear   || true
+php artisan cache:clear  || true
+echo "==> [GOAL] Cleanup cache selesai."
+
 # Jika ada command override (queue:work, schedule:work, php-fpm, dsb), jalankan itu
 if [ $# -gt 0 ]; then
     exec "$@"
 fi
 
-# Default: optimasi Laravel lalu jalankan PHP-FPM
-echo "==> [GOAL] Menjalankan Laravel optimization..."
-php artisan config:cache || true
-php artisan route:cache || true
-php artisan view:cache || true
-echo "==> [GOAL] Optimization selesai."
-
 echo "==> [GOAL] Memulai PHP-FPM..."
 exec php-fpm
+

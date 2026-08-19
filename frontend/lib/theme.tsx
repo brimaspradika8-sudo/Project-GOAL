@@ -76,6 +76,7 @@ export interface ThemeColors {
   divider: string;
   shadow: string;
   shadowDark: string;
+  overlay: string;
   warmWhite: string;
   cardBg: string;
 }
@@ -134,6 +135,7 @@ const LIGHT_COLORS: ThemeColors = {
   divider: '#E2E9E4',
   shadow: 'rgba(0,0,0,0.06)',
   shadowDark: 'rgba(0,0,0,0.10)',
+  overlay: 'rgba(0,0,0,0.50)',
   warmWhite: '#FFFFFF',
   cardBg: '#FFFFFF',
 };
@@ -192,6 +194,7 @@ const DARK_COLORS: ThemeColors = {
   divider: '#2C3948',
   shadow: 'rgba(0,0,0,0.40)',
   shadowDark: 'rgba(0,0,0,0.60)',
+  overlay: 'rgba(0,0,0,0.60)',
   warmWhite: '#1C2635',
   cardBg: '#151F2B',
 };

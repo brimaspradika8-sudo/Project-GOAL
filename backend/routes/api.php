@@ -36,6 +36,7 @@ Route::middleware('throttle:60,1')->group(function () {
     Route::get('/fields/{id}/availability', [FieldAvailabilityController::class, 'show']);
     Route::get('/lapangan/{id}/slots', [FieldAvailabilityController::class, 'show']);
     Route::get('/me/onboarding/check-username', [OnboardingController::class, 'checkUsername']);
+    Route::get('/sports', [\App\Http\Controllers\SportController::class, 'index']);
 });
 // Protected (Sanctum + rate limit)
 Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
@@ -108,8 +109,14 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
         Route::put('/super-admin/users/{id}', [UserController::class, 'update']);
         Route::put('/super-admin/users/{id}/role', [UserController::class, 'updateRole']);
         Route::delete('/super-admin/users/{id}', [UserController::class, 'destroy']);
+
+        // Sports management - super_admin only
+        Route::get('/super-admin/sports', [\App\Http\Controllers\SportController::class, 'index']);
+        Route::post('/super-admin/sports', [\App\Http\Controllers\SportController::class, 'store']);
+        Route::put('/super-admin/sports/{id}', [\App\Http\Controllers\SportController::class, 'update']);
+        Route::delete('/super-admin/sports/{id}', [\App\Http\Controllers\SportController::class, 'destroy']);
     });
-    // Bookings (Sprint 3) - player
+    // Bookings - player
     Route::middleware('role:player')->group(function () {
         Route::post('/bookings', [BookingController::class, 'store'])->middleware('throttle:booking-sensitive');
         Route::post('/booking', [BookingController::class, 'store'])->middleware('throttle:booking-sensitive'); // alias untuk frontend compatibility

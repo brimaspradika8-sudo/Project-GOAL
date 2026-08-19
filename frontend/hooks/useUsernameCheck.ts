@@ -9,24 +9,32 @@ export type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'inva
 const checkCache = new Map<string, 'available' | 'taken'>();
 
 export function useUsernameCheck(rawUsername: string): UsernameStatus {
-  const debouncedUsername = useDebouncedValue(rawUsername, 350);
+  // Debounce lebih panjang agar request tidak terus di-abort saat user mengetik
+  const debouncedUsername = useDebouncedValue(rawUsername, 600);
   const [status, setStatus] = useState<UsernameStatus>('idle');
   const abortRef = useRef<AbortController | null>(null);
   const mountedRef = useRef(true);
 
   useEffect(() => {
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+      // Batalkan request yang sedang berjalan saat unmount
+      abortRef.current?.abort();
+    };
   }, []);
 
+  // Update status sinkron saat user masih mengetik (sebelum debounce)
   useEffect(() => {
-    if (rawUsername.length > 0 && rawUsername.length < 3) {
-      setStatus('invalid');
-      return;
-    }
     if (rawUsername.length === 0) {
       setStatus('idle');
       return;
     }
+    if (rawUsername.length > 0 && rawUsername.length < 3) {
+      setStatus('invalid');
+      return;
+    }
+    // Saat user masih mengetik (belum debounced), tunjukkan 'checking'
+    setStatus('checking');
   }, [rawUsername]);
 
   useEffect(() => {
@@ -38,10 +46,17 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
       return;
     }
 
-    if (abortRef.current) abortRef.current.abort();
+    // Batalkan request sebelumnya
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
     const controller = new AbortController();
     abortRef.current = controller;
-    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    // Timeout 8 detik (lebih longgar dari default)
+    const timeoutId = setTimeout(() => {
+      controller.abort(new DOMException('Username check timeout', 'TimeoutError'));
+    }, 8000);
 
     const checkUsername = async () => {
       if (!mountedRef.current) return;
@@ -52,7 +67,10 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
         const res = await fetch(
           `${API_BASE_URL}/me/onboarding/check-username?username=${encodeURIComponent(debouncedUsername)}`,
           {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            headers: {
+              Accept: 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
             signal: controller.signal,
           }
         );
@@ -66,21 +84,25 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
           setStatus(result);
         }
       } catch (e: any) {
-        if (e?.name !== 'AbortError' && mountedRef.current) {
+        // Abaikan error yang disebabkan oleh abort (bukan error nyata)
+        const isAbort = e?.name === 'AbortError' || e?.name === 'TimeoutError';
+        if (!isAbort && mountedRef.current) {
           setStatus('error');
         }
+        // Jika abort, biarkan status 'checking' digantikan request berikutnya
       } finally {
-        clearTimeout(timeout);
+        clearTimeout(timeoutId);
       }
     };
 
     checkUsername();
 
     return () => {
-      clearTimeout(timeout);
+      clearTimeout(timeoutId);
       controller.abort();
     };
   }, [debouncedUsername]);
 
   return status;
 }
+
