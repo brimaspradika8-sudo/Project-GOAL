@@ -57,7 +57,8 @@ export default function HomeScreen() {
   const [activeCategory, setActiveCategory] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
   const [notifVisible, setNotifVisible] = useState(false);
-  const debouncedSearch = useDebounce(searchQuery, 150);
+  const debouncedSearch = useDebounce(searchQuery, 500);
+  const isSearching = fieldsLoading || (searchQuery.trim() !== debouncedSearch.trim());
   const { colors } = useTheme();
   const { refresh: refreshNotifications, unreadCount } = useNotificationStore();
 
@@ -99,8 +100,16 @@ export default function HomeScreen() {
       lastSearchRef.current = debouncedSearch;
       const sport = getSportFilter(activeCategory);
       fetchFields(sport, debouncedSearch || undefined);
+    }, [activeCategory, debouncedSearch, fetchFields])
+  );
+
+  // Refetch popular fields on focus too, but decoupled from the search
+  // debounce - popular fields never take a search param, so it shouldn't
+  // re-fire every time the user types.
+  useFocusEffect(
+    useCallback(() => {
       fetchPopularFields().catch(() => {});
-    }, [activeCategory, debouncedSearch, fetchFields, fetchPopularFields])
+    }, [fetchPopularFields])
   );
 
   const onRefresh = async () => {
@@ -197,13 +206,13 @@ export default function HomeScreen() {
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
+          {isSearching && (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: searchQuery.length > 0 ? 6 : 0 }} />
+          )}
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <MaterialIcons name="close" size={18} color={colors.textTertiary} />
             </TouchableOpacity>
-          )}
-          {fieldsLoading && fields.length > 0 && (
-            <ActivityIndicator size="small" color={colors.primary} />
           )}
         </View>
 

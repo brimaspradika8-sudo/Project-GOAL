@@ -10,7 +10,6 @@ use App\Http\Resources\FieldResource;
 use App\Models\Field;
 use App\Models\FieldImage;
 use App\Models\Profile;
-use App\Models\SuperAdminAuditLog;
 use App\Policies\FieldPolicy;
 use App\Services\FieldService;
 use App\Services\SupabaseStorageService;
@@ -173,16 +172,6 @@ class FieldController extends Controller
 
         $this->fieldService->invalidateCache();
 
-        SuperAdminAuditLog::create([
-            'actor_id' => $request->user()->id,
-            'action' => 'field.'.$request->status,
-            'target_type' => 'field',
-            'target_id' => $field->id,
-            'metadata' => ['reason' => $request->reason],
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]);
-
         $field->makeVisible(['rejection_reason', 'approved_by']);
 
         return $this->resourceResponse('Status lapangan berhasil diperbarui.', new FieldResource($field));
@@ -208,15 +197,6 @@ class FieldController extends Controller
 
         $this->fieldService->invalidateCache();
 
-        SuperAdminAuditLog::create([
-            'actor_id' => request()->user()->id,
-            'action' => 'field.restored',
-            'target_type' => 'field',
-            'target_id' => $id,
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-        ]);
-
         return $this->successResponse('Lapangan berhasil dipulihkan.');
     }
 
@@ -229,15 +209,6 @@ class FieldController extends Controller
         }
 
         $this->fieldService->invalidateCache();
-
-        SuperAdminAuditLog::create([
-            'actor_id' => request()->user()->id,
-            'action' => 'field.force_deleted',
-            'target_type' => 'field',
-            'target_id' => $id,
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
-        ]);
 
         return $this->successResponse('Lapangan berhasil dihapus permanen.');
     }
@@ -370,14 +341,6 @@ class FieldController extends Controller
         $count = $this->fieldService->approveBatch($data['ids'], $request->user(), $data['status'], $data['reason'] ?? null);
 
         $this->fieldService->invalidateCache();
-
-        SuperAdminAuditLog::create([
-            'actor_id' => $request->user()->id,
-            'action' => 'field.bulk_'.$data['status'],
-            'metadata' => ['ids' => $data['ids'], 'processed' => $count],
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]);
 
         $verb = $data['status'] === 'approved' ? 'disetujui' : 'ditolak';
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -31,81 +31,66 @@ const SORT_OPTIONS: { key: NonNullable<FieldFilters['sort']>; label: string }[] 
   { key: 'price_desc', label: 'Termahal' },
 ];
 
-export default function FieldsScreen() {
-  const { width } = useWindowDimensions();
-  const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState('Semua');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [sort, setSort] = useState<NonNullable<FieldFilters['sort']>>('latest');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isSortModalOpen, setIsSortModalOpen] = useState(false);
-  const debouncedSearch = useDebounce(search, 150);
-  const debouncedMinPrice = useDebounce(minPrice, 400);
-  const debouncedMaxPrice = useDebounce(maxPrice, 400);
-  const { fields, loading, loadingMore, meta, fetchFields, fetchMore, refreshFields } = useFieldStore();
-  const [refreshing, setRefreshing] = useState(false);
-  const { colors } = useTheme();
-  const styles = makeStyles(colors);
-  const filterAnimation = useRef(new Animated.Value(0)).current;
+const MAX_PRICE_DIGITS = 8; // caps input at 99,999,999 - well above any realistic per-hour rate
 
-  const isDesktop = width >= 900;
-  const numColumns = isDesktop ? (width >= 1200 ? 3 : 2) : 1;
-  const hasActiveFilters = activeFilter !== 'Semua' || search.trim().length > 0 || minPrice.trim().length > 0 || maxPrice.trim().length > 0 || sort !== 'latest';
-  const hasAdvancedFilters = minPrice.trim().length > 0 || maxPrice.trim().length > 0 || sort !== 'latest';
+// Strips anything that isn't a digit, so pasted/typed text can never contain
+// letters or symbols regardless of platform (keyboardType="numeric" only
+// changes the on-screen keyboard on native and has no effect on web).
+function sanitizeDigits(value: string): string {
+  return value.replace(/[^0-9]/g, '').slice(0, MAX_PRICE_DIGITS);
+}
 
-  useEffect(() => {
-    Animated.timing(filterAnimation, {
-      toValue: isFilterOpen ? 1 : 0,
-      duration: 220,
-      useNativeDriver: false,
-    }).start();
-  }, [filterAnimation, isFilterOpen]);
+// Extracted as a stable, module-level component so FlatList keeps the same
+// component identity across re-renders. Previously this was an inline
+// function (recreated every render) passed to ListHeaderComponent, which
+// made FlatList unmount + remount the whole header - including the
+// search/price TextInputs - on every keystroke, causing focus loss after
+// a single character typed.
+interface HeaderProps {
+  colors: any;
+  styles: ReturnType<typeof makeStyles>;
+  loading: boolean;
+  isSearching: boolean;
+  fieldsCount: number;
+  hasActiveFilters: boolean;
+  onReset: () => void;
+  search: string;
+  onSearchChange: (v: string) => void;
+  onClearSearch: () => void;
+  isFilterOpen: boolean;
+  onToggleFilter: () => void;
+  hasAdvancedFilters: boolean;
+  filterAnimation: Animated.Value;
+  minPrice: string;
+  onMinPriceChange: (v: string) => void;
+  maxPrice: string;
+  onMaxPriceChange: (v: string) => void;
+  priceError: string | null;
+  sortLabel: string;
+  onOpenSortModal: () => void;
+  activeFilter: string;
+  onFilterChange: (f: string) => void;
+}
 
-  const lastFetchRef = useRef(debouncedSearch);
-
-  useEffect(() => {
-    lastFetchRef.current = debouncedSearch;
-    const sport = activeFilter === 'Semua' ? undefined : SPORT_MAP[activeFilter] || activeFilter.toLowerCase();
-    fetchFields(sport, debouncedSearch || undefined, { minPrice: debouncedMinPrice, maxPrice: debouncedMaxPrice, sort });
-  }, [activeFilter, debouncedSearch, debouncedMinPrice, debouncedMaxPrice, fetchFields, sort]);
-
-  useFocusEffect(
-    useCallback(() => {
-      lastFetchRef.current = debouncedSearch;
-      const sport = activeFilter === 'Semua' ? undefined : SPORT_MAP[activeFilter] || activeFilter.toLowerCase();
-      fetchFields(sport, debouncedSearch || undefined, { minPrice: debouncedMinPrice, maxPrice: debouncedMaxPrice, sort });
-    }, [activeFilter, debouncedSearch, debouncedMinPrice, debouncedMaxPrice, fetchFields, sort])
-  );
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await refreshFields();
-    setRefreshing(false);
-  }, [refreshFields]);
-
-  const hasMore = meta ? meta.current_page < meta.last_page : false;
-
-  const renderHeader = () => (
+const Header = React.memo(function Header({
+  colors, styles, loading, isSearching, fieldsCount, hasActiveFilters, onReset,
+  search, onSearchChange, onClearSearch,
+  isFilterOpen, onToggleFilter, hasAdvancedFilters, filterAnimation,
+  minPrice, onMinPriceChange, maxPrice, onMaxPriceChange, priceError,
+  sortLabel, onOpenSortModal,
+  activeFilter, onFilterChange,
+}: HeaderProps) {
+  return (
     <>
       <Text style={styles.title}>Lapangan</Text>
       <Text style={styles.subtitle}>Cari lapangan yang cocok, lalu saring hasilnya dengan cepat.</Text>
 
       <View style={styles.resultRow}>
         <Text style={styles.resultText}>
-          {loading && fields.length === 0 ? 'Memuat data...' : `${fields.length} lapangan ditemukan`}
+          {loading && fieldsCount === 0 ? 'Memuat data...' : `${fieldsCount} lapangan ditemukan`}
         </Text>
         {hasActiveFilters ? (
-          <TouchableOpacity
-            onPress={() => {
-              setSearch('');
-              setActiveFilter('Semua');
-              setMinPrice('');
-              setMaxPrice('');
-              setSort('latest');
-            }}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity onPress={onReset} activeOpacity={0.8}>
             <Text style={styles.resetText}>Reset filter</Text>
           </TouchableOpacity>
         ) : null}
@@ -119,18 +104,21 @@ export default function FieldsScreen() {
             placeholder="Cari nama lapangan"
             placeholderTextColor={colors.textTertiary}
             value={search}
-            onChangeText={setSearch}
+            onChangeText={onSearchChange}
+            autoCorrect={false}
           />
+          {isSearching && (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: search.length > 0 ? 6 : 0 }} />
+          )}
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity onPress={onClearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <MaterialIcons name="close" size={18} color={colors.textTertiary} />
             </TouchableOpacity>
           )}
-          {loading && fields.length > 0 && <ActivityIndicator size="small" color={colors.primary} />}
         </View>
         <TouchableOpacity
           style={[styles.filterButton, isFilterOpen && styles.filterButtonActive]}
-          onPress={() => setIsFilterOpen((current) => !current)}
+          onPress={onToggleFilter}
           activeOpacity={0.8}
           accessibilityRole="button"
           accessibilityLabel="Buka filter harga dan urutan"
@@ -145,7 +133,7 @@ export default function FieldsScreen() {
         style={[
           styles.advancedFilterPanel,
           {
-            maxHeight: filterAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, 150] }),
+            maxHeight: filterAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, 190] }),
             opacity: filterAnimation,
             marginBottom: filterAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, 14] }),
           },
@@ -153,14 +141,38 @@ export default function FieldsScreen() {
       >
         <View style={styles.priceRow}>
           <Text style={styles.filterLabel}>Harga per jam</Text>
-          <TextInput style={styles.priceInput} placeholder="Min" placeholderTextColor={colors.textTertiary} keyboardType="numeric" value={minPrice} onChangeText={setMinPrice} />
+          <TextInput
+            style={[styles.priceInput, priceError && styles.priceInputError]}
+            placeholder="Min"
+            placeholderTextColor={colors.textTertiary}
+            keyboardType="numeric"
+            inputMode="numeric"
+            maxLength={MAX_PRICE_DIGITS}
+            value={minPrice}
+            onChangeText={onMinPriceChange}
+          />
           <Text style={styles.priceSeparator}>-</Text>
-          <TextInput style={styles.priceInput} placeholder="Maks" placeholderTextColor={colors.textTertiary} keyboardType="numeric" value={maxPrice} onChangeText={setMaxPrice} />
+          <TextInput
+            style={[styles.priceInput, priceError && styles.priceInputError]}
+            placeholder="Maks"
+            placeholderTextColor={colors.textTertiary}
+            keyboardType="numeric"
+            inputMode="numeric"
+            maxLength={MAX_PRICE_DIGITS}
+            value={maxPrice}
+            onChangeText={onMaxPriceChange}
+          />
         </View>
-        <TouchableOpacity style={styles.sortSelector} onPress={() => setIsSortModalOpen(true)} activeOpacity={0.8}>
+        {priceError ? (
+          <View style={styles.priceErrorRow}>
+            <MaterialIcons name="error-outline" size={14} color={colors.error} />
+            <Text style={styles.priceErrorText}>{priceError}</Text>
+          </View>
+        ) : null}
+        <TouchableOpacity style={styles.sortSelector} onPress={onOpenSortModal} activeOpacity={0.8}>
           <Text style={styles.filterLabel}>Urutkan</Text>
           <View style={styles.sortSelectorValue}>
-            <Text style={styles.sortSelectorText}>{SORT_OPTIONS.find((option) => option.key === sort)?.label}</Text>
+            <Text style={styles.sortSelectorText}>{sortLabel}</Text>
             <MaterialIcons name="expand-more" size={20} color={colors.textSecondary} />
           </View>
         </TouchableOpacity>
@@ -179,7 +191,7 @@ export default function FieldsScreen() {
             <TouchableOpacity
               style={[styles.chip, isActive && styles.chipActive]}
               activeOpacity={0.75}
-              onPress={() => setActiveFilter(filter)}
+              onPress={() => onFilterChange(filter)}
             >
               <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{filter}</Text>
             </TouchableOpacity>
@@ -188,6 +200,101 @@ export default function FieldsScreen() {
       />
     </>
   );
+});
+
+export default function FieldsScreen() {
+  const { width } = useWindowDimensions();
+  const [search, setSearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState('Semua');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [sort, setSort] = useState<NonNullable<FieldFilters['sort']>>('latest');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isSortModalOpen, setIsSortModalOpen] = useState(false);
+  const debouncedSearch = useDebounce(search, 500);
+  const debouncedMinPrice = useDebounce(minPrice, 400);
+  const debouncedMaxPrice = useDebounce(maxPrice, 400);
+  const { fields, loading, loadingMore, meta, fetchFields, fetchMore, refreshFields } = useFieldStore();
+  const isSearching = loading || (search.trim() !== debouncedSearch.trim());
+  const [refreshing, setRefreshing] = useState(false);
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
+  const filterAnimation = useRef(new Animated.Value(0)).current;
+
+  const isDesktop = width >= 900;
+  const numColumns = isDesktop ? (width >= 1200 ? 3 : 2) : 1;
+  const hasActiveFilters = activeFilter !== 'Semua' || search.trim().length > 0 || minPrice.trim().length > 0 || maxPrice.trim().length > 0 || sort !== 'latest';
+  const hasAdvancedFilters = minPrice.trim().length > 0 || maxPrice.trim().length > 0 || sort !== 'latest';
+
+  // Validate the price range as the user types. A non-null message means
+  // the range is currently invalid, in which case we skip sending
+  // min/max price to the API rather than silently sending a nonsensical
+  // filter (e.g. min greater than max, which the backend can't satisfy).
+  const priceError = useMemo(() => {
+    if (!minPrice || !maxPrice) return null;
+    const min = Number(minPrice);
+    const max = Number(maxPrice);
+    if (Number.isFinite(min) && Number.isFinite(max) && min > max) {
+      return 'Harga minimal tidak boleh lebih besar dari maksimal';
+    }
+    return null;
+  }, [minPrice, maxPrice]);
+
+  useEffect(() => {
+    Animated.timing(filterAnimation, {
+      toValue: isFilterOpen ? 1 : 0,
+      duration: 220,
+      useNativeDriver: false,
+    }).start();
+  }, [filterAnimation, isFilterOpen]);
+
+  const lastFetchRef = useRef(debouncedSearch);
+
+  useEffect(() => {
+    lastFetchRef.current = debouncedSearch;
+    const sport = activeFilter === 'Semua' ? undefined : SPORT_MAP[activeFilter] || activeFilter.toLowerCase();
+    const invalidRange = !!debouncedMinPrice && !!debouncedMaxPrice && Number(debouncedMinPrice) > Number(debouncedMaxPrice);
+    fetchFields(sport, debouncedSearch || undefined, {
+      minPrice: invalidRange ? undefined : debouncedMinPrice,
+      maxPrice: invalidRange ? undefined : debouncedMaxPrice,
+      sort,
+    });
+  }, [activeFilter, debouncedSearch, debouncedMinPrice, debouncedMaxPrice, fetchFields, sort]);
+
+  useFocusEffect(
+    useCallback(() => {
+      lastFetchRef.current = debouncedSearch;
+      const sport = activeFilter === 'Semua' ? undefined : SPORT_MAP[activeFilter] || activeFilter.toLowerCase();
+      const invalidRange = !!debouncedMinPrice && !!debouncedMaxPrice && Number(debouncedMinPrice) > Number(debouncedMaxPrice);
+      fetchFields(sport, debouncedSearch || undefined, {
+        minPrice: invalidRange ? undefined : debouncedMinPrice,
+        maxPrice: invalidRange ? undefined : debouncedMaxPrice,
+        sort,
+      });
+    }, [activeFilter, debouncedSearch, debouncedMinPrice, debouncedMaxPrice, fetchFields, sort])
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshFields();
+    setRefreshing(false);
+  }, [refreshFields]);
+
+  const hasMore = meta ? meta.current_page < meta.last_page : false;
+
+  const handleReset = useCallback(() => {
+    setSearch('');
+    setActiveFilter('Semua');
+    setMinPrice('');
+    setMaxPrice('');
+    setSort('latest');
+  }, []);
+
+  const handleClearSearch = useCallback(() => setSearch(''), []);
+  const handleToggleFilter = useCallback(() => setIsFilterOpen((current) => !current), []);
+  const handleOpenSortModal = useCallback(() => setIsSortModalOpen(true), []);
+  const handleMinPriceChange = useCallback((v: string) => setMinPrice(sanitizeDigits(v)), []);
+  const handleMaxPriceChange = useCallback((v: string) => setMaxPrice(sanitizeDigits(v)), []);
 
   const renderFooter = () => {
     if (!loadingMore) return null;
@@ -230,7 +337,33 @@ export default function FieldsScreen() {
             : <VenueCard field={item} />
         )}
         columnWrapperStyle={numColumns > 1 ? styles.gridRow : undefined}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={
+          <Header
+            colors={colors}
+            styles={styles}
+            loading={loading}
+            isSearching={isSearching}
+            fieldsCount={fields.length}
+            hasActiveFilters={hasActiveFilters}
+            onReset={handleReset}
+            search={search}
+            onSearchChange={setSearch}
+            onClearSearch={handleClearSearch}
+            isFilterOpen={isFilterOpen}
+            onToggleFilter={handleToggleFilter}
+            hasAdvancedFilters={hasAdvancedFilters}
+            filterAnimation={filterAnimation}
+            minPrice={minPrice}
+            onMinPriceChange={handleMinPriceChange}
+            maxPrice={maxPrice}
+            onMaxPriceChange={handleMaxPriceChange}
+            priceError={priceError}
+            sortLabel={SORT_OPTIONS.find((option) => option.key === sort)?.label ?? ''}
+            onOpenSortModal={handleOpenSortModal}
+            activeFilter={activeFilter}
+            onFilterChange={setActiveFilter}
+          />
+        }
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
         contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
@@ -432,7 +565,7 @@ const makeStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   filterLabel: {
     ...FONTS.labelMd,
@@ -450,6 +583,21 @@ const makeStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.surface,
     color: colors.text,
     ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
+  },
+  priceInputError: {
+    borderColor: colors.error,
+  },
+  priceErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+  },
+  priceErrorText: {
+    ...FONTS.bodySm,
+    fontSize: 12,
+    color: colors.error,
+    flexShrink: 1,
   },
   priceSeparator: {
     color: colors.textTertiary,

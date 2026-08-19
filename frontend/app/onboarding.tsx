@@ -23,7 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { getResponseData } from '../lib/api';
 import { apiFetch } from '../lib/apiClient';
-import { useProfileStore } from '../store/profileStore';
+import { useProfileStore, type Profile } from '../store/profileStore';
 import { useUsernameCheck } from '../hooks/useUsernameCheck';
 import { logout } from '../lib/session';
 import { FONTS, SHADOWS } from '../components/goalTheme';
@@ -31,6 +31,8 @@ import { mimeFromExt } from '../lib/fieldValidation';
 import AuthInput from '../components/AuthInput';
 import AlertBox from '../components/shared/AlertBox';
 import { useTheme } from '../lib/theme';
+import { profileFromApi } from '../types/roles';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SPORTS = [
   { id: 'futsal', label: 'Futsal', icon: 'sports-soccer' as const },
@@ -173,8 +175,10 @@ export default function OnboardingScreen() {
         return;
       }
 
-      const profile = await res.json();
-      useProfileStore.setState({ profile, loading: false });
+      const rawJson = await res.json();
+      const parsedProfile = profileFromApi<Profile>(rawJson);
+      await AsyncStorage.setItem('cached_profile', JSON.stringify(parsedProfile));
+      useProfileStore.setState({ profile: parsedProfile, loading: false });
       router.replace('/(tabs)');
     } catch {
       if (mountedRef.current) setSubmitError('Gagal terhubung ke server. Silakan coba lagi.');

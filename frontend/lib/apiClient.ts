@@ -50,7 +50,7 @@ async function parseJson(res: Response): Promise<any> {
 }
 
 export async function apiFetch(path: string, options: ApiRequestOptions = {}): Promise<Response> {
-  const { params, body, token, timeout = 20000, skipToken, headers, ...rest } = options;
+  const { params, body, token, timeout = 20000, skipToken, headers, signal, ...rest } = options;
 
   const base = API_BASE_URL.endsWith('/') ? API_BASE_URL : `${API_BASE_URL}/`;
   const url = new URL(path.startsWith('http') ? path : `${base}${path.replace(/^\//, '')}`);
@@ -79,6 +79,14 @@ export async function apiFetch(path: string, options: ApiRequestOptions = {}): P
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
+
+  if (signal) {
+    if (signal.aborted) {
+      controller.abort();
+    } else {
+      signal.addEventListener('abort', () => controller.abort(), { once: true });
+    }
+  }
 
   try {
     const response = await fetch(url.toString(), {
