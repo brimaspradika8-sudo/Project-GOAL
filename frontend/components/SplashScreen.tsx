@@ -29,7 +29,9 @@ const s = StyleSheet.create({
     fontWeight: '900',
     color: '#fff',
     letterSpacing: 4,
-    textShadow: '0px 0px 18px #4be277',
+    textShadowColor: '#4be277',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 18,
   },
   tag: {
     fontSize: 13,

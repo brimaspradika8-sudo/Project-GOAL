@@ -202,57 +202,11 @@ export default function FieldsScreen() {
         <ActivityIndicator size="small" color={colors.primary} />
         <Text style={styles.footerText}>Memuat lebih banyak...</Text>
       </View>
+    );
+  };
 
-      {/* ── View Body (Grid vs Interactive Map View) ── */}
-      {viewMode === 'map' ? (
-        <View style={[styles.mapViewContainer, isDesktop && styles.cardsContentDesktop]}>
-          <View style={styles.mapWrap}>
-            <InteractiveVenueMap
-              fields={fields}
-              selectedFieldId={selectedFieldId}
-              onSelectField={(field) => {
-                setSelectedFieldId(field.id);
-                const idx = fields.findIndex((f) => f.id === field.id);
-                if (idx >= 0 && carouselScrollRef.current) {
-                  const cardW = isDesktop ? 320 : width * 0.82;
-                  carouselScrollRef.current.scrollTo({ x: idx * (cardW + 12), animated: true });
-                }
-              }}
-            />
-          </View>
-
-          {/* ── Bottom Sheet Horizontal Venue Carousel ── */}
-          <View style={styles.carouselContainer}>
-            <ScrollView
-              ref={carouselScrollRef}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.carouselScrollContent}
-              decelerationRate="fast"
-              snapToInterval={(isDesktop ? 320 : width * 0.82) + 12}
-              snapToAlignment="center"
-              onMomentumScrollEnd={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-                const contentOffset = e.nativeEvent.contentOffset.x;
-                const cardW = (isDesktop ? 320 : width * 0.82) + 12;
-                const index = Math.round(contentOffset / cardW);
-                if (index >= 0 && index < fields.length) {
-                  setSelectedFieldId(fields[index].id);
-                }
-              }}
-            >
-              {fields.map((field) => (
-                <VenueCarouselCard
-                  key={field.id}
-                  field={field}
-                  isSelected={field.id === selectedFieldId}
-                  onPress={() => setSelectedFieldId(field.id)}
-                />
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      );
-    }
+  const renderEmpty = () => {
+    if (loading) return <GridLoader />;
     return (
       <View style={styles.emptyState}>
         <MaterialIcons name="search-off" size={48} color={colors.textTertiary} />
@@ -279,7 +233,7 @@ export default function FieldsScreen() {
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
         ListEmptyComponent={renderEmpty}
-        contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}
+        contentContainerStyle={[styles.cardsContent, isDesktop && styles.cardsContentDesktop]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl

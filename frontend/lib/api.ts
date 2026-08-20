@@ -29,20 +29,7 @@ export function getApiBaseUrl() {
     return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
   }
 
-  if (Platform.OS === 'web') {
-    const host = getWebHost();
-    if (host) {
-      return `http://${host}:8000/api`;
-    }
-    return 'http://localhost:8000/api';
-  }
-
-  const expoHost = getExpoHost();
-  if (expoHost) {
-    return `http://${expoHost}:8000/api`;
-  }
-
-  return 'http://localhost:8000/api';
+  return 'http://172.19.192.179:8000/api';
 }
 
 export const API_BASE_URL = getApiBaseUrl();

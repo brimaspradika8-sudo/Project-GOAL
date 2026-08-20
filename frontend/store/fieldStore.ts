@@ -21,6 +21,8 @@ export interface Field {
   reviews_count?: number;
   address?: string | null;
   description: string | null;
+  open_time?: string | null;
+  close_time?: string | null;
   price_per_hour: number | null;
   session_duration_minutes: number | null;
   image_url: string | null;

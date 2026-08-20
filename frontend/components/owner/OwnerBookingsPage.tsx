@@ -5,6 +5,7 @@ import {
   Platform,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../goalTheme';
 import DashboardHeader from '../shared/DashboardHeader';
 import { SkeletonCards } from '../Skeleton';
@@ -419,6 +420,23 @@ export default function OwnerBookingsPage() {
         title="Daftar Booking"
         subtitle="Pantau dan kelola jadwal lapangan Anda"
         showBack={false}
+        right={
+          <TouchableOpacity
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              backgroundColor: 'rgba(255,255,255,0.18)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+            activeOpacity={0.8}
+            onPress={() => router.push('/(owner)/booking-settings')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <MaterialIcons name="settings" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
       />
 
       {loading ? (

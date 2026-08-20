@@ -16,13 +16,18 @@ import { useToastStore } from '../../store/toastStore';
 import { useTheme } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
 
-export default function OwnerRequestPage() {
+type ModeTab = 'pending' | 'history';
+
+export default function OwnerRequestPage({ hideHeader = false }: { hideHeader?: boolean }) {
   const { colors, resolved } = useTheme();
   const isMobile = useIsMobileWeb();
   const st = makeStyles(colors, resolved, isMobile);
   const cardSurface = colors.surface;
   const softSurface = resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow;
+
+  const [activeTab, setActiveTab] = useState<ModeTab>('pending');
   const [requests, setRequests] = useState<any[]>([]);
+  const [historyItems, setHistoryItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rejectModal, setRejectModal] = useState<{ id: number; visible: boolean }>({ id: 0, visible: false });
@@ -32,9 +37,22 @@ export default function OwnerRequestPage() {
 
   const fetchRequests = useCallback(async () => {
     try {
-      const res = await apiFetch('/owner-requests/pending');
-      const data = await res.json();
-      setRequests(data?.data ?? []);
+      const [res, historyRes] = await Promise.allSettled([
+        apiFetch('/owner-requests/pending'),
+        apiFetch('/super-admin/users'),
+      ]);
+
+      if (res.status === 'fulfilled' && res.value.ok) {
+        const data = await res.value.json();
+        setRequests(data?.data ?? []);
+      }
+
+      if (historyRes.status === 'fulfilled' && historyRes.value.ok) {
+        const hData = await historyRes.value.json();
+        const allUsers = hData?.data?.data ?? hData?.data ?? [];
+        const ownerUsers = allUsers.filter((u: any) => u.profile?.role === 'owner');
+        setHistoryItems(ownerUsers);
+      }
     } catch {
       useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Gagal memuat pengajuan.' });
     } finally {
@@ -100,7 +118,7 @@ export default function OwnerRequestPage() {
   if (loading) {
     return (
       <View style={[st.screen, { backgroundColor: colors.background }]}>
-        <DashboardHeader title="Pengajuan Owner" subtitle="Review permohonan owner baru" showBack={false} />
+        {!hideHeader && <DashboardHeader title="Pengajuan Owner" subtitle="Review permohonan owner baru" showBack={false} />}
         <SkeletonCards count={3} />
       </View>
     );
@@ -109,86 +127,148 @@ export default function OwnerRequestPage() {
   return (
     <>
       <View style={[st.screen, { backgroundColor: colors.background }]}>
-        <DashboardHeader title="Pengajuan Owner" subtitle="Review permohonan owner baru" showBack={false} />
+        {!hideHeader && <DashboardHeader title="Pengajuan Owner" subtitle="Review permohonan owner baru" showBack={false} />}
+
+        <View style={st.subTabRow}>
+          <TouchableOpacity
+            style={[st.subTab, activeTab === 'pending' && st.subTabActive]}
+            onPress={() => setActiveTab('pending')}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name="pending-actions" size={15} color={activeTab === 'pending' ? colors.primary : colors.textTertiary} />
+            <Text style={[st.subTabLabel, activeTab === 'pending' && st.subTabLabelActive]}>Pending ({requests.length})</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[st.subTab, activeTab === 'history' && st.subTabActive]}
+            onPress={() => setActiveTab('history')}
+            activeOpacity={0.8}
+          >
+            <MaterialIcons name="history" size={15} color={activeTab === 'history' ? colors.primary : colors.textTertiary} />
+            <Text style={[st.subTabLabel, activeTab === 'history' && st.subTabLabelActive]}>Riwayat Owner ({historyItems.length})</Text>
+          </TouchableOpacity>
+        </View>
 
         <ScrollView
           contentContainerStyle={st.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
           showsVerticalScrollIndicator={false}
         >
-          {/* Count pill */}
-          {requests.length > 0 && (
-            <View style={st.headerRow}>
-              <View style={[st.countPill, { backgroundColor: colors.floodlight + '20', borderColor: colors.floodlight + '50' }]}>
-                <MaterialIcons name="pending-actions" size={12} color={colors.floodlight} />
-                <Text style={[st.countText, { color: colors.warning }]}>{requests.length} menunggu review</Text>
-              </View>
-            </View>
-          )}
-
-          {requests.length === 0 ? (
-            <View style={st.emptyWrap}>
-              <View style={[st.emptyIconWrap, { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outline }]}>
-                <MaterialIcons name="inventory" size={40} color={colors.textTertiary} />
-              </View>
-              <Text style={[st.emptyTitle, { color: colors.text }]}>Semua Beres!</Text>
-              <Text style={[st.emptyDesc, { color: colors.textSecondary }]}>Tidak ada pengajuan yang menunggu.</Text>
-            </View>
-          ) : (
-            requests.map((r: any) => (
-              <View key={r.id} style={[st.card, { backgroundColor: cardSurface, borderColor: colors.outline }]}>
-                {/* Card header */}
-                <View style={st.cardTop}>
-                  <View style={[st.businessIconWrap, { backgroundColor: colors.floodlight + '20', borderColor: colors.floodlight + '40' }]}>
-                    <MaterialIcons name="store" size={20} color={colors.floodlight} />
+          {activeTab === 'pending' ? (
+            <>
+              {requests.length > 0 && (
+                <View style={st.headerRow}>
+                  <View style={[st.countPill, { backgroundColor: colors.floodlight + '20', borderColor: colors.floodlight + '50' }]}>
+                    <MaterialIcons name="pending-actions" size={12} color={colors.floodlight} />
+                    <Text style={[st.countText, { color: colors.warning }]}>{requests.length} menunggu review</Text>
                   </View>
-                  <View style={st.cardTopInfo}>
-                    <Text style={[st.businessName, { color: colors.text }]} numberOfLines={1}>{r.business_name}</Text>
-                    <View style={st.pendingBadge}>
-                      <View style={st.pulseDot} />
-                      <Text style={[st.pendingText, { color: colors.warning }]}>Menunggu</Text>
+                </View>
+              )}
+
+              {requests.length === 0 ? (
+                <View style={st.emptyWrap}>
+                  <View style={[st.emptyIconWrap, { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outline }]}>
+                    <MaterialIcons name="inventory" size={40} color={colors.textTertiary} />
+                  </View>
+                  <Text style={[st.emptyTitle, { color: colors.text }]}>Semua Beres!</Text>
+                  <Text style={[st.emptyDesc, { color: colors.textSecondary }]}>Tidak ada pengajuan yang menunggu.</Text>
+                </View>
+              ) : (
+                requests.map((r: any) => (
+                  <View key={r.id} style={[st.card, { backgroundColor: cardSurface, borderColor: colors.outline }]}>
+                    <View style={st.cardTop}>
+                      <View style={[st.businessIconWrap, { backgroundColor: colors.floodlight + '20', borderColor: colors.floodlight + '40' }]}>
+                        <MaterialIcons name="store" size={20} color={colors.floodlight} />
+                      </View>
+                      <View style={st.cardTopInfo}>
+                        <Text style={[st.businessName, { color: colors.text }]} numberOfLines={1}>{r.business_name || r.name}</Text>
+                        <View style={st.pendingBadge}>
+                          <View style={st.pulseDot} />
+                          <Text style={[st.pendingText, { color: colors.warning }]}>Menunggu Review</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={[st.divider, { backgroundColor: colors.outline }]} />
+
+                    {[
+                      { icon: 'person', label: r.name },
+                      { icon: 'mail', label: r.email },
+                      { icon: 'location-on', label: r.address || 'Alamat tidak diisi' },
+                      { icon: 'phone', label: r.phone || 'No. telp tidak diisi' },
+                    ].map((row, i) => (
+                      <View key={i} style={st.detailRow}>
+                        <MaterialIcons name={row.icon as any} size={14} color={colors.textSecondary} />
+                        <Text style={[st.detailText, { color: colors.textSecondary }]} numberOfLines={1}>{row.label}</Text>
+                      </View>
+                    ))}
+
+                    <View style={st.actions}>
+                      <TouchableOpacity
+                        style={[st.approveBtn, submitting && st.disabledBtn]}
+                        onPress={() => handleApprove(r.id, r.name)}
+                        activeOpacity={0.8}
+                        disabled={submitting}
+                      >
+                        <MaterialIcons name="check-circle" size={16} color={colors.onPrimary} />
+                        <Text style={st.approveBtnText}>Setujui</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[st.rejectBtn, submitting && st.disabledBtn]}
+                        onPress={() => setRejectModal({ id: r.id, visible: true })}
+                        activeOpacity={0.8}
+                        disabled={submitting}
+                      >
+                        <MaterialIcons name="cancel" size={16} color={colors.error} />
+                        <Text style={st.rejectBtnText}>Tolak</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
-                </View>
-
-                <View style={[st.divider, { backgroundColor: colors.outline }]} />
-
-                {/* Detail rows */}
-                {[
-                  { icon: 'person', label: r.name },
-                  { icon: 'mail', label: r.email },
-                  { icon: 'location-on', label: r.address },
-                  { icon: 'phone', label: r.phone },
-                ].map((row, i) => (
-                  <View key={i} style={st.detailRow}>
-                    <MaterialIcons name={row.icon as any} size={14} color={colors.textSecondary} />
-                    <Text style={[st.detailText, { color: colors.textSecondary }]} numberOfLines={1}>{row.label}</Text>
+                ))
+              )}
+            </>
+          ) : (
+            <>
+              {historyItems.length === 0 ? (
+                <View style={st.emptyWrap}>
+                  <View style={[st.emptyIconWrap, { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outline }]}>
+                    <MaterialIcons name="history" size={40} color={colors.textTertiary} />
                   </View>
-                ))}
-
-                {/* Actions */}
-                <View style={st.actions}>
-                  <TouchableOpacity
-                    style={[st.approveBtn, submitting && st.disabledBtn]}
-                    onPress={() => handleApprove(r.id, r.name)}
-                    activeOpacity={0.8}
-                    disabled={submitting}
-                  >
-                    <MaterialIcons name="check-circle" size={16} color={colors.onPrimary} />
-                    <Text style={st.approveBtnText}>Setujui</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[st.rejectBtn, submitting && st.disabledBtn]}
-                    onPress={() => setRejectModal({ id: r.id, visible: true })}
-                    activeOpacity={0.8}
-                    disabled={submitting}
-                  >
-                    <MaterialIcons name="cancel" size={16} color={colors.error} />
-                    <Text style={st.rejectBtnText}>Tolak</Text>
-                  </TouchableOpacity>
+                  <Text style={[st.emptyTitle, { color: colors.text }]}>Belum Ada Riwayat</Text>
+                  <Text style={[st.emptyDesc, { color: colors.textSecondary }]}>Belum ada riwayat pengajuan yang terverifikasi.</Text>
                 </View>
-              </View>
-            ))
+              ) : (
+                historyItems.map((h: any) => (
+                  <View key={h.id} style={[st.card, { backgroundColor: cardSurface, borderColor: colors.outline }]}>
+                    <View style={st.cardTop}>
+                      <View style={[st.businessIconWrap, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '40' }]}>
+                        <MaterialIcons name="verified-user" size={20} color={colors.primary} />
+                      </View>
+                      <View style={st.cardTopInfo}>
+                        <Text style={[st.businessName, { color: colors.text }]} numberOfLines={1}>{h.name}</Text>
+                        <View style={st.pendingBadge}>
+                          <MaterialIcons name="check-circle" size={12} color={colors.primary} />
+                          <Text style={[st.pendingText, { color: colors.primary }]}>Disetujui / Terverifikasi</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={[st.divider, { backgroundColor: colors.outline }]} />
+
+                    {[
+                      { icon: 'person', label: h.name },
+                      { icon: 'mail', label: h.email },
+                      { icon: 'shield', label: 'Role: Owner (Terverifikasi)' },
+                    ].map((row, i) => (
+                      <View key={i} style={st.detailRow}>
+                        <MaterialIcons name={row.icon as any} size={14} color={colors.textSecondary} />
+                        <Text style={[st.detailText, { color: colors.textSecondary }]} numberOfLines={1}>{row.label}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))
+              )}
+            </>
           )}
         </ScrollView>
       </View>
@@ -253,6 +333,41 @@ export default function OwnerRequestPage() {
 
 const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark', isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
+  subTabRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: SIZES.gutter,
+    marginTop: 10,
+    marginBottom: 6,
+    maxWidth: 900,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  subTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.outline,
+  },
+  subTabActive: {
+    backgroundColor: colors.primaryContainer,
+    borderColor: colors.primary + '60',
+  },
+  subTabLabel: {
+    ...FONTS.labelMd,
+    color: colors.textTertiary,
+    fontWeight: '600',
+  },
+  subTabLabelActive: {
+    color: colors.primary,
+    fontWeight: '800',
+  },
   list: { padding: SIZES.gutter, paddingBottom: 60, maxWidth: 900, alignSelf: 'center', width: '100%' },
 
   headerRow: { flexDirection: 'row', marginBottom: 14 },

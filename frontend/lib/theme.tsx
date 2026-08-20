@@ -239,15 +239,14 @@ export function useTheme() {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemScheme = useSystemColorScheme();
   const [mode, setModeState] = useState<ThemeMode>(() => readStoredThemeSync() ?? 'auto');
-  const [ready, setReady] = useState(() => readStoredThemeSync() !== null);
+  const [ready, setReady] = useState(true);
 
   useEffect(() => {
     AsyncStorage.getItem(THEME_KEY).then(stored => {
       if (stored === 'light' || stored === 'dark' || stored === 'auto') {
         setModeState(stored);
       }
-      setReady(true);
-    });
+    }).catch(() => {});
   }, []);
 
   const setMode = useCallback((m: ThemeMode) => {
@@ -270,13 +269,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ mode, resolved, colors, ready, setMode, toggleTheme }),
-    [mode, resolved, colors, ready, setMode, toggleTheme],
+    () => ({ mode, resolved, colors, ready: true, setMode, toggleTheme }),
+    [mode, resolved, colors, setMode, toggleTheme],
   );
 
   return (
     <ThemeContext.Provider value={value}>
-      {ready ? children : null}
+      {children}
     </ThemeContext.Provider>
   );
 }

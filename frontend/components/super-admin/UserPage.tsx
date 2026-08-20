@@ -22,6 +22,7 @@ import { useTheme, type ThemeColors } from '../../lib/theme';
 import { fieldError } from '../../lib/formValidation';
 import { USER_ROLES, type UserRole } from '../../types/roles';
 import { useIsMobileWeb } from '../../lib/responsive';
+import OwnerRequestPage from './OwnerRequestPage';
 
 const getRoleConfig = (colors: ThemeColors): Record<string, { label: string; color: string; bg: string }> => ({
   player:      { label: 'Pemain',      color: colors.textSecondary, bg: colors.surfaceContainerHigh },
@@ -91,11 +92,24 @@ export default function UserPage() {
   const loggedInUserId = useProfileStore((state) => state.profile?.user_id);
   const isSuperAdmin = loggedInUserRole === USER_ROLES.SUPER_ADMIN;
 
+  const [requestCount, setRequestCount] = useState<number>(0);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+
   const fetchUsers = useCallback(async (q?: string) => {
     try {
-      const res = await apiFetch('/super-admin/users', { params: { search: q } });
-      const data = await res.json();
-      setUsers(data?.data?.data ?? data?.data ?? []);
+      const [res, reqRes] = await Promise.allSettled([
+        apiFetch('/super-admin/users', { params: { search: q } }),
+        apiFetch('/owner-requests/pending'),
+      ]);
+
+      if (res.status === 'fulfilled' && res.value.ok) {
+        const data = await res.value.json();
+        setUsers(data?.data?.data ?? data?.data ?? []);
+      }
+      if (reqRes.status === 'fulfilled' && reqRes.value.ok) {
+        const reqData = await reqRes.value.json();
+        setRequestCount((reqData?.data ?? []).length);
+      }
     } catch {
       useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Gagal memuat data pengguna.' });
     } finally {
@@ -290,15 +304,19 @@ export default function UserPage() {
     }
   };
 
-  // ── Filter ──────────────────────────────────────────────
+  const [roleFilter, setRoleFilter] = useState<'all' | 'player' | 'owner' | 'super_admin'>('all');
+
   const filteredUsers = users.filter(u => {
     const role = u.profile?.role || USER_ROLES.PLAYER;
-    if (activeTab === 'owner') return role === USER_ROLES.OWNER;
-    return role !== USER_ROLES.OWNER;
+    if (activeTab === 'owner' && role !== USER_ROLES.OWNER) return false;
+    if (activeTab === 'user' && role === USER_ROLES.OWNER) return false;
+    if (roleFilter !== 'all' && role !== roleFilter) return false;
+    return true;
   });
 
   const ownerCount = users.filter(u => (u.profile?.role || USER_ROLES.PLAYER) === USER_ROLES.OWNER).length;
   const userCount  = users.filter(u => (u.profile?.role || USER_ROLES.PLAYER) !== USER_ROLES.OWNER).length;
+  const totalCount = users.length;
 
   if (loading) {
     return (
@@ -312,7 +330,71 @@ export default function UserPage() {
   return (
     <>
       <View style={st.screen}>
-        <DashboardHeader title="Kelola Pengguna" subtitle="Manajemen user & owner" showBack={false} />
+        <DashboardHeader
+          title="Kelola Pengguna"
+          subtitle="Manajemen user & owner"
+          showBack={false}
+          right={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <TouchableOpacity
+                style={st.requestHeaderBtn}
+                activeOpacity={0.8}
+                onPress={openCreate}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel="Tambah Pengguna Baru"
+              >
+                <MaterialIcons name="person-add" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={st.requestHeaderBtn}
+                activeOpacity={0.8}
+                onPress={() => setIsRequestModalOpen(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel="Pengajuan Owner & Riwayat"
+              >
+                <MaterialIcons name="inventory" size={20} color="#FFFFFF" />
+                {requestCount > 0 && <View style={st.notifBadgeDot} />}
+              </TouchableOpacity>
+            </View>
+          }
+        />
+
+        {/* ── STAT CARDS ── */}
+        <View style={st.statCardsRow}>
+          <View style={[st.statCard, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
+            <View style={[st.statIconWrap, { backgroundColor: colors.primaryContainer }]}>
+              <MaterialIcons name="group" size={18} color={colors.primary} />
+            </View>
+            <View>
+              <Text style={[st.statValue, { color: colors.text }]}>{totalCount}</Text>
+              <Text style={[st.statLabel, { color: colors.textSecondary }]}>Total Pengguna</Text>
+            </View>
+          </View>
+
+          <View style={[st.statCard, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
+            <View style={[st.statIconWrap, { backgroundColor: '#10B98115' }]}>
+              <MaterialIcons name="store" size={18} color="#10B981" />
+            </View>
+            <View>
+              <Text style={[st.statValue, { color: colors.text }]}>{ownerCount}</Text>
+              <Text style={[st.statLabel, { color: colors.textSecondary }]}>Owner Aktif</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[st.statCard, { backgroundColor: colors.surface, borderColor: colors.outline }]}
+            onPress={() => setIsRequestModalOpen(true)}
+            activeOpacity={0.85}
+          >
+            <View style={[st.statIconWrap, { backgroundColor: '#F59E0B15' }]}>
+              <MaterialIcons name="pending-actions" size={18} color="#F59E0B" />
+            </View>
+            <View>
+              <Text style={[st.statValue, { color: colors.text }]}>{requestCount}</Text>
+              <Text style={[st.statLabel, { color: colors.textSecondary }]}>Pengajuan Pending</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
 
         <View style={st.searchWrap}>
           <View style={[st.searchBox, focused && st.searchBoxFocused]}>
@@ -332,6 +414,25 @@ export default function UserPage() {
               </TouchableOpacity>
             )}
           </View>
+        </View>
+
+        {/* ── QUICK FILTER CHIPS ── */}
+        <View style={st.filterChipsRow}>
+          {[
+            { key: 'all', label: 'Semua' },
+            { key: 'player', label: 'Pemain' },
+            { key: 'owner', label: 'Owner' },
+            { key: 'super_admin', label: 'Super Admin' },
+          ].map(chip => (
+            <TouchableOpacity
+              key={chip.key}
+              style={[st.filterChip, roleFilter === chip.key && st.filterChipActive]}
+              onPress={() => setRoleFilter(chip.key as any)}
+              activeOpacity={0.75}
+            >
+              <Text style={[st.filterChipText, roleFilter === chip.key && st.filterChipTextActive]}>{chip.label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <View style={st.tabRow}>
@@ -657,6 +758,38 @@ export default function UserPage() {
         confirmLabel="Ya, Hapus"
         onConfirm={confirmBulkDelete}
       />
+
+      {/* ── OWNER REQUESTS & HISTORY MODAL ── */}
+      <Modal
+        visible={isRequestModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsRequestModalOpen(false)}
+      >
+        <KeyboardAvoidingView style={st.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setIsRequestModalOpen(false)} />
+          <View style={st.requestSheet}>
+            <View style={st.modalHandle} />
+            <View style={st.modalHeaderRow}>
+              <View style={st.modalTitleGroup}>
+                <MaterialIcons name="inventory" size={22} color={colors.primary} />
+                <Text style={[st.sheetTitle, { color: colors.text }]}>Pengajuan Owner & Riwayat</Text>
+              </View>
+              <TouchableOpacity
+                style={st.modalCloseBtn}
+                activeOpacity={0.7}
+                onPress={() => setIsRequestModalOpen(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <MaterialIcons name="close" size={18} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <View style={{ flex: 1 }}>
+              <OwnerRequestPage hideHeader />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </>
   );
 }
@@ -702,6 +835,132 @@ function FormField({ label, icon, value, onChangeText, onBlur, keyboardType, aut
 
 const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
+  statCardsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: SIZES.gutter,
+    marginTop: 14,
+    marginBottom: 4,
+    ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
+  },
+  statCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    ...SHADOWS.xs,
+  },
+  statIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statValue: {
+    ...FONTS.titleLg,
+    fontSize: 18,
+    fontWeight: '800',
+    lineHeight: 22,
+  },
+  statLabel: {
+    ...FONTS.labelSm,
+    fontSize: 11,
+  },
+
+  filterChipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: SIZES.gutter,
+    marginTop: 8,
+    marginBottom: 4,
+    flexWrap: 'wrap',
+    ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.outline,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterChipText: {
+    ...FONTS.labelSm,
+    color: colors.textSecondary,
+  },
+  filterChipTextActive: {
+    color: colors.onPrimary,
+    fontWeight: '700',
+  },
+  requestHeaderBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notifBadgeDot: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: '#EF4444',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.outline,
+    alignSelf: 'center',
+    marginBottom: 14,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    width: '100%',
+  },
+  modalTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceContainerHigh,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.outline,
+  },
+  requestSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    maxHeight: '90%',
+    maxWidth: 720,
+    width: '100%',
+    alignSelf: 'center',
+    flex: 1,
+  },
   searchWrap: { paddingHorizontal: SIZES.gutter, paddingTop: 14, paddingBottom: 4, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 10,

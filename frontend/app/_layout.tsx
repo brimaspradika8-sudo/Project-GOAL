@@ -10,7 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import LoadingScreen, { type BootStep } from '../components/LoadingScreen';
 import SplashScreen from '../components/SplashScreen';
 import { ErrorBoundary } from '../components/ErrorBoundary';
-
+import { MaterialIcons } from '@expo/vector-icons';
 import { apiFetch } from '../lib/apiClient';
 import { useProfileStore } from '../store/profileStore';
 import { ThemeProvider, useTheme } from '../lib/theme';
@@ -85,7 +85,7 @@ function RootLayoutInner() {
     'Inter': require('../assets/fonts/Inter-Regular.ttf'),
     'Inter_500': require('../assets/fonts/Inter-SemiBold.ttf'),
     'Inter_700': require('../assets/fonts/Inter-Bold.ttf'),
-    'material': require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.ttf'),
+    ...MaterialIcons.font,
   });
   const [fontsFallback, setFontsFallback] = useState(false);
 

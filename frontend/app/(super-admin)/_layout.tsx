@@ -62,12 +62,10 @@ export default function AdminTabLayout() {
 
   const sidebarItems: SidebarItem[] = [
     { href: '/(super-admin)/users', label: 'Kelola Pengguna', icon: 'people-alt' },
-    { href: '/(super-admin)/owner-requests', label: 'Pengajuan Owner', icon: 'inventory' },
     ...(isSuperAdmin ? [
       { href: '/(super-admin)/manage-fields', label: 'Kelola Lapangan', icon: 'stadium' },
-      { href: '/(super-admin)/audit-logs', label: 'Audit Log', icon: 'history' },
     ] : []),
-    { href: '/(super-admin)/profile', label: 'Profile', icon: 'person' },
+    { href: '/(super-admin)/profile', label: 'Profil', icon: 'person' },
   ];
 
   const activeRoute = sidebarItems.find((item) => isSidebarRouteActive(pathname, item.href))?.href || '/(super-admin)/users';
@@ -100,20 +98,16 @@ export default function AdminTabLayout() {
                 tabBarIcon: ({ color }) => (
                   <MaterialIcons name="people-alt" size={24} color={color} />
                 ),
+                tabBarBadge: ownerRequestBadge,
+                tabBarBadgeStyle: ownerRequestBadge ? styles.badge : undefined,
               }}
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
             <Tabs.Screen
               name="owner-requests"
               options={{
-                title: 'Pengajuan',
-                tabBarIcon: ({ color }) => (
-                  <MaterialIcons name="inventory" size={24} color={color} />
-                ),
-                tabBarBadge: ownerRequestBadge,
-                tabBarBadgeStyle: ownerRequestBadge ? styles.badge : undefined,
+                href: null,
               }}
-              listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
             <Tabs.Screen
               name="manage-fields"
@@ -131,11 +125,14 @@ export default function AdminTabLayout() {
             <Tabs.Screen
               name="audit-logs"
               options={{
-                title: 'Audit Log',
-                tabBarIcon: ({ color }) => <MaterialIcons name="history" size={24} color={color} />,
-                href: isSuperAdmin ? undefined : null,
+                href: null,
               }}
-              listeners={{ tabPress: () => Haptics.selectionAsync() }}
+            />
+            <Tabs.Screen
+              name="help-center"
+              options={{
+                href: null,
+              }}
             />
             <Tabs.Screen
               name="profile"
@@ -181,20 +178,16 @@ export default function AdminTabLayout() {
                 tabBarIcon: ({ color }) => (
                   <MaterialIcons name="people-alt" size={24} color={color} />
                 ),
+                tabBarBadge: ownerRequestBadge,
+                tabBarBadgeStyle: ownerRequestBadge ? styles.badge : undefined,
               }}
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
             <Tabs.Screen
               name="owner-requests"
               options={{
-                title: 'Pengajuan',
-                tabBarIcon: ({ color }) => (
-                  <MaterialIcons name="inventory" size={24} color={color} />
-                ),
-                tabBarBadge: ownerRequestBadge,
-                tabBarBadgeStyle: ownerRequestBadge ? styles.badge : undefined,
+                href: null,
               }}
-              listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
             <Tabs.Screen
               name="manage-fields"
@@ -212,9 +205,16 @@ export default function AdminTabLayout() {
             <Tabs.Screen
               name="audit-logs"
               options={{
-                title: 'Audit Log',
-                tabBarIcon: ({ color }) => <MaterialIcons name="history" size={24} color={color} />,
-                href: isSuperAdmin ? undefined : null,
+                href: null,
+              }}
+            />
+            <Tabs.Screen
+              name="help-center"
+              options={{
+                title: 'Pusat Bantuan',
+                tabBarIcon: ({ color }) => (
+                  <MaterialIcons name="help-outline" size={24} color={color} />
+                ),
               }}
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
@@ -254,20 +254,16 @@ export default function AdminTabLayout() {
           tabBarIcon: ({ color }) => (
             <MaterialIcons name="people-alt" size={24} color={color} />
           ),
+          tabBarBadge: ownerRequestBadge,
+          tabBarBadgeStyle: ownerRequestBadge ? styles.badge : undefined,
         }}
         listeners={{ tabPress: () => Haptics.selectionAsync() }}
       />
       <Tabs.Screen
         name="owner-requests"
         options={{
-          title: 'Pengajuan',
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons name="inventory" size={24} color={color} />
-          ),
-          tabBarBadge: ownerRequestBadge,
-          tabBarBadgeStyle: ownerRequestBadge ? styles.badge : undefined,
+          href: null,
         }}
-        listeners={{ tabPress: () => Haptics.selectionAsync() }}
       />
       <Tabs.Screen
         name="manage-fields"

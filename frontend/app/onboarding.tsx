@@ -120,7 +120,8 @@ export default function OnboardingScreen() {
     return () => anim.stop();
   }, [pulseAnim]);
 
-  const canCompleteUsername = usernameStatus === 'available' && username.trim().length >= 3 && termsAccepted;
+  const isUsernameFormatValid = /^[a-zA-Z0-9_]{3,20}$/.test(username.trim());
+  const canCompleteUsername = isUsernameFormatValid && usernameStatus !== 'taken' && usernameStatus !== 'invalid' && termsAccepted;
   const canCompleteRegion = !!selectedProvince && !!region;
   const canCompleteSports = selectedSports.length > 0;
   const canGoNext = step === 1 ? canCompleteUsername && canCompleteRegion : canCompleteSports;
