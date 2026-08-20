@@ -348,7 +348,7 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
     paddingHorizontal: SIZES.gutter,
     marginTop: 16,
     marginBottom: 8,
-    ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
+    ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }),
   },
   statCard: {
     flex: 1,
@@ -403,7 +403,7 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
     borderWidth: 1,
     borderColor: colors.outline,
     ...SHADOWS.xs,
-    ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
+    ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }),
   },
   tab: {
     flex: 1,

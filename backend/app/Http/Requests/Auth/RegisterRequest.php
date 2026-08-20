@@ -15,8 +15,8 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'                  => 'required|string|max:255',
-            'email'                 => 'required|email|unique:users,email',
+            'name'                  => 'required|string|min:3|max:50',
+            'email'                 => 'required|email|max:255|unique:users,email',
             'password'              => ['required', 'string', PasswordRule::min(8)->mixedCase()->numbers(), 'confirmed'],
             'password_confirmation' => 'required|string',
         ];
@@ -26,8 +26,11 @@ class RegisterRequest extends FormRequest
     {
         return [
             'name.required'                 => 'Nama wajib diisi.',
+            'name.min'                      => 'Nama minimal 3 karakter.',
+            'name.max'                      => 'Nama tidak boleh lebih dari 50 karakter.',
             'email.required'                => 'Email wajib diisi.',
             'email.email'                   => 'Format email tidak valid.',
+            'email.max'                     => 'Email tidak boleh lebih dari 255 karakter.',
             'email.unique'                  => 'Email sudah terdaftar.',
             'password.required'             => 'Kata sandi wajib diisi.',
             'password.min'                  => 'Kata sandi minimal 8 karakter dengan huruf besar dan angka.',

@@ -295,12 +295,25 @@ export default function TrashedFieldsPage() {
 
 const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark', isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  container: { padding: SIZES.gutter, paddingBottom: 24, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
+  container: {
+    padding: SIZES.gutter,
+    paddingBottom: 24,
+    ...(isMobile
+      ? {}
+      : {
+          maxWidth: 1200,
+          alignSelf: 'center',
+          width: '100%',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 16,
+        }),
+  },
   scroll: { flex: 1 },
 
   checkbox: { marginRight: 10, justifyContent: 'center', alignItems: 'center' },
 
-  emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 100 },
+  emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 100, width: '100%' },
   emptyIconWrap: {
     width: 80, height: 80, borderRadius: 24, backgroundColor: colors.surfaceContainerHigh,
     justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.outline, marginBottom: 4,
@@ -308,7 +321,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'li
   emptyTitle: { ...FONTS.titleLg, color: colors.text },
   emptyDesc: { ...FONTS.bodyMd, color: colors.textSecondary },
 
-  headerRow: { marginBottom: 14 },
+  headerRow: { marginBottom: 14, width: '100%' },
   countPill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: colors.errorContainer, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5,
@@ -320,6 +333,14 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'li
   card: {
     backgroundColor: colors.surface, borderRadius: 18, padding: 16, marginBottom: 12,
     borderWidth: 1, borderColor: colors.outline, ...SHADOWS.sm,
+    ...(isMobile
+      ? { width: '100%' }
+      : {
+          width: 'calc(33.333% - 11px)' as any,
+          minWidth: 320,
+          maxWidth: 380,
+          marginBottom: 0,
+        }),
   },
   cardMain: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   fieldIconWrap: {

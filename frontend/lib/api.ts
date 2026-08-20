@@ -29,7 +29,12 @@ export function getApiBaseUrl() {
     return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
   }
 
-  return 'http://172.19.192.179:8000/api';
+  const host = getExpoHost() || getWebHost();
+  if (host) {
+    return `http://${host}:8000/api`;
+  }
+
+  return 'http://192.168.1.5:8000/api';
 }
 
 export const API_BASE_URL = getApiBaseUrl();

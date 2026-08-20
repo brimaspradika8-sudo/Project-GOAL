@@ -682,7 +682,7 @@ function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboar
 const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
 
-  searchWrap: { paddingHorizontal: SIZES.gutter, marginBottom: 10, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
+  searchWrap: { paddingHorizontal: SIZES.gutter, marginBottom: 10, ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }) },
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10,
@@ -696,7 +696,7 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
     gap: 8,
     paddingHorizontal: SIZES.gutter,
     marginBottom: 12,
-    ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
+    ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }),
   },
   chip: {
     flexDirection: 'row',
@@ -715,13 +715,26 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
     justifyContent: 'space-between',
     paddingHorizontal: SIZES.gutter,
     marginBottom: 10,
-    ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
+    ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }),
   },
   resultText: { ...FONTS.labelMd, fontSize: 12 },
   resultResetBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   resultReset: { ...FONTS.labelMd, fontSize: 12, fontWeight: '700' },
 
-  list: { padding: SIZES.gutter, paddingBottom: 24, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
+  list: {
+    padding: SIZES.gutter,
+    paddingBottom: 24,
+    ...(isMobile
+      ? {}
+      : {
+          maxWidth: 1200,
+          alignSelf: 'center',
+          width: '100%',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 16,
+        }),
+  },
   scroll: { flex: 1 },
 
   checkbox: { padding: 4, alignSelf: 'flex-start', marginBottom: 6 },
@@ -758,7 +771,7 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
     letterSpacing: 0.5,
   },
 
-  emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12 },
+  emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12, width: '100%' },
   emptyIconWrap: {
     width: 80, height: 80, borderRadius: 24,
     justifyContent: 'center', alignItems: 'center',
@@ -770,8 +783,16 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
   card: {
     borderRadius: 20, marginBottom: 16,
     borderWidth: 1, ...SHADOWS.sm, overflow: 'hidden',
+    ...(isMobile
+      ? { width: '100%' }
+      : {
+          width: 'calc(33.333% - 11px)' as any,
+          minWidth: 320,
+          maxWidth: 380,
+          marginBottom: 0,
+        }),
   },
-  cardImgWrap: { height: 200, position: 'relative', overflow: 'hidden', backgroundColor: colors.surfaceContainerLow },
+  cardImgWrap: { aspectRatio: 16 / 9, height: undefined, position: 'relative', overflow: 'hidden', backgroundColor: colors.surfaceContainerLow },
   cardImg: { width: '100%', height: '100%' },
   cardBody: { padding: 16 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },

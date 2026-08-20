@@ -1,17 +1,18 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { FONT_FAMILY } from '../goalTheme';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import type { BookingStatus } from '../../services/bookingService';
 
-const STATUS_CONFIG: Record<BookingStatus, { label: string; bg: keyof ThemeColors; text: keyof ThemeColors }> = {
-  WAITING_CONFIRMATION: { label: 'Menunggu Konfirmasi', bg: 'warningMuted', text: 'warning' },
-  CONFIRMED: { label: 'Dikonfirmasi', bg: 'primaryMuted', text: 'primary' },
-  PAID: { label: 'Pembayaran Terkonfirmasi', bg: 'successLight', text: 'success' },
-  COMPLETED: { label: 'Selesai', bg: 'surfaceContainerHigh', text: 'textSecondary' },
-  REJECTED: { label: 'Ditolak', bg: 'destructiveMuted', text: 'error' },
-  CANCELLED: { label: 'Dibatalkan', bg: 'destructiveMuted', text: 'error' },
-  EXPIRED: { label: 'Kadaluarsa', bg: 'surfaceContainerHigh', text: 'textSecondary' },
+const STATUS_CONFIG: Record<BookingStatus, { label: string; icon: string; bg: keyof ThemeColors; text: keyof ThemeColors }> = {
+  WAITING_CONFIRMATION: { label: 'Menunggu Pembayaran', icon: 'schedule', bg: 'warningMuted', text: 'warning' },
+  CONFIRMED: { label: 'Siap Main (Dikonfirmasi)', icon: 'check-circle', bg: 'primaryMuted', text: 'primary' },
+  PAID: { label: 'Pembayaran Terkonfirmasi', icon: 'verified', bg: 'successLight', text: 'success' },
+  COMPLETED: { label: 'Selesai', icon: 'task-alt', bg: 'surfaceContainerHigh', text: 'textSecondary' },
+  REJECTED: { label: 'Ditolak', icon: 'cancel', bg: 'destructiveMuted', text: 'error' },
+  CANCELLED: { label: 'Dibatalkan', icon: 'block', bg: 'destructiveMuted', text: 'error' },
+  EXPIRED: { label: 'Kadaluarsa', icon: 'timer-off', bg: 'surfaceContainerHigh', text: 'textSecondary' },
 };
 
 export function isExpiredReason(reason: string | null | undefined): boolean {
@@ -22,12 +23,12 @@ export function BookingStatusBadge({ status, reason }: { status: BookingStatus; 
   const { colors } = useTheme();
   const expired = status === 'CANCELLED' && isExpiredReason(reason);
   const cfg = expired
-    ? { label: 'Kadaluarsa', bg: 'surfaceContainerHigh' as keyof ThemeColors, text: 'textSecondary' as keyof ThemeColors }
+    ? { label: 'Kadaluarsa', icon: 'timer-off', bg: 'surfaceContainerHigh' as keyof ThemeColors, text: 'textSecondary' as keyof ThemeColors }
     : (STATUS_CONFIG[status] ?? STATUS_CONFIG.CANCELLED);
 
   return (
     <View style={[styles.pill, { backgroundColor: colors[cfg.bg] }]}>
-      <View style={[styles.dot, { backgroundColor: colors[cfg.text] }]} />
+      <MaterialIcons name={cfg.icon as any} size={13} color={colors[cfg.text]} />
       <Text style={[styles.label, { color: colors[cfg.text] }]}>{cfg.label}</Text>
     </View>
   );

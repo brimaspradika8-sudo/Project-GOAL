@@ -378,12 +378,25 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
 
 const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark', isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  list: { padding: SIZES.gutter, paddingBottom: 24, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
+  list: {
+    padding: SIZES.gutter,
+    paddingBottom: 24,
+    ...(isMobile
+      ? {}
+      : {
+          maxWidth: 1200,
+          alignSelf: 'center',
+          width: '100%',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 16,
+        }),
+  },
   scroll: { flex: 1 },
 
   checkbox: { padding: 4 },
 
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, width: '100%' },
   countPill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: colors.warningMuted, borderRadius: 20,
@@ -392,7 +405,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'li
   },
   countText: { ...FONTS.labelSm, color: colors.onWarning },
 
-  emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12 },
+  emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12, width: '100%' },
   emptyIconWrap: {
     width: 80, height: 80, borderRadius: 24,
     backgroundColor: colors.primaryContainer,
@@ -405,6 +418,14 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'li
   card: {
     backgroundColor: colors.surface, borderRadius: 18, padding: 16, marginBottom: 12,
     borderWidth: 1, borderColor: colors.outline, ...SHADOWS.sm,
+    ...(isMobile
+      ? { width: '100%' }
+      : {
+          width: 'calc(33.333% - 11px)' as any,
+          minWidth: 320,
+          maxWidth: 380,
+          marginBottom: 0,
+        }),
   },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   fieldIconWrap: {

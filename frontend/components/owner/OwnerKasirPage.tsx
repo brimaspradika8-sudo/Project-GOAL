@@ -99,8 +99,8 @@ function ReceiptModal({
         <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 28, width: '100%', maxWidth: 400 }}>
           {/* Header */}
           <View style={{ alignItems: 'center', marginBottom: 20 }}>
-            <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#D1FAE5', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
-              <MaterialIcons name="check-circle" size={32} color="#10B981" />
+            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#D1FAE5', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
+              <MaterialIcons name="task-alt" size={36} color="#10B981" />
             </View>
             <Text style={{ fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 4 }}>
               Transaksi Berhasil!
@@ -347,8 +347,8 @@ function RecentTransactions({ colors }: { colors: ThemeColors }) {
                 gap: 12,
               }}
             >
-              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: colors.primaryContainer, justifyContent: 'center', alignItems: 'center' }}>
-                <MaterialIcons name="receipt" size={20} color={colors.primary} />
+              <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: colors.primaryContainer, justifyContent: 'center', alignItems: 'center' }}>
+                <MaterialIcons name="receipt-long" size={22} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700', color: colors.text }} numberOfLines={1}>
@@ -515,7 +515,7 @@ export default function OwnerKasirPage() {
           <View style={[st.leftCol, !isMobile && { flex: 1.2 }]}>
 
             {/* Section: Pilih Lapangan */}
-            <SectionCard title="Pilih Lapangan" icon="stadium" colors={colors}>
+            <SectionCard title="Pilih Lapangan" icon="sports-soccer" colors={colors}>
               {loadingFields ? (
                 <ActivityIndicator color={colors.primary} />
               ) : fields.length === 0 ? (
@@ -542,7 +542,7 @@ export default function OwnerKasirPage() {
                           minWidth: 100,
                         }}
                       >
-                        <MaterialIcons name="stadium" size={18} color={isActive ? colors.primary : colors.textSecondary} />
+                        <MaterialIcons name="sports-soccer" size={20} color={isActive ? colors.primary : colors.textSecondary} />
                         <Text
                           style={{
                             fontFamily: FONT_FAMILY,
@@ -568,7 +568,7 @@ export default function OwnerKasirPage() {
             </SectionCard>
 
             {/* Section: Pilih Tanggal — sama persis dengan venue-detail */}
-            <SectionCard title="Tanggal Bermain" icon="event" colors={colors}>
+            <SectionCard title="Tanggal Bermain" icon="calendar-today" colors={colors}>
               <HorizontalDatePicker
                 value={date}
                 onChange={(iso) => setDate(iso)}
@@ -578,7 +578,7 @@ export default function OwnerKasirPage() {
             </SectionCard>
 
             {/* Section: Pilih Slot Jam — sama persis dengan venue-detail */}
-            <SectionCard title="Pilih Slot Jam" icon="schedule" colors={colors}>
+            <SectionCard title="Pilih Slot Jam" icon="access-time" colors={colors}>
               {/* Legend */}
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surfaceContainerLow, borderRadius: 12, padding: 10, marginBottom: 14 }}>
                 {[
@@ -625,7 +625,7 @@ export default function OwnerKasirPage() {
                         {s.start_time}–{s.end_time}
                       </Text>
                       <TouchableOpacity onPress={() => handleToggleSlot(s)}>
-                        <MaterialIcons name="close" size={14} color={colors.primary} />
+                        <MaterialIcons name="cancel" size={15} color={colors.primary} />
                       </TouchableOpacity>
                     </View>
                   ))}
@@ -634,7 +634,7 @@ export default function OwnerKasirPage() {
             </SectionCard>
 
             {/* Section: Data Pelanggan */}
-            <SectionCard title="Data Pelanggan (Walk-in)" icon="person" colors={colors}>
+            <SectionCard title="Data Pelanggan (Walk-in)" icon="badge" colors={colors}>
               <Text style={[st.inputLabel, { color: colors.textSecondary }]}>Nama Pelanggan *</Text>
               <TextInput
                 value={customerName}
@@ -671,18 +671,18 @@ export default function OwnerKasirPage() {
           <View style={[st.rightCol, !isMobile && { flex: 0.8 }]}>
 
             {/* Order Summary */}
-            <SectionCard title="Ringkasan Pesanan" icon="shopping-cart" colors={colors}>
+            <SectionCard title="Ringkasan Pesanan" icon="receipt-long" colors={colors}>
               {selectedField ? (
                 <>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    <MaterialIcons name="stadium" size={16} color={colors.primary} />
+                    <MaterialIcons name="sports-soccer" size={16} color={colors.primary} />
                     <Text style={{ fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '700', color: colors.text, flex: 1 }}>
                       {selectedField.name}
                     </Text>
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                    <MaterialIcons name="event" size={14} color={colors.textSecondary} />
+                    <MaterialIcons name="calendar-today" size={14} color={colors.textSecondary} />
                     <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, color: colors.textSecondary }}>
                       {formatDateDisplay(date)}
                     </Text>
@@ -690,8 +690,8 @@ export default function OwnerKasirPage() {
 
                   {selectedSlots.length === 0 ? (
                     <View style={{ backgroundColor: colors.surfaceContainerLow, borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                      <MaterialIcons name="touch-app" size={24} color={colors.textTertiary} />
-                      <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, color: colors.textSecondary, marginTop: 8, textAlign: 'center' }}>
+                      <MaterialIcons name="touch-app" size={28} color={colors.textTertiary} />
+                      <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, color: colors.textSecondary, marginTop: 10, textAlign: 'center' }}>
                         Pilih slot jam dari grid di kiri
                       </Text>
                     </View>
@@ -710,7 +710,7 @@ export default function OwnerKasirPage() {
                           }}
                         >
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <MaterialIcons name="schedule" size={14} color={colors.primary} />
+                            <MaterialIcons name="access-time" size={15} color={colors.primary} />
                             <Text style={{ fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '600', color: colors.text }}>
                               {s.start_time} – {s.end_time}
                             </Text>
@@ -742,9 +742,9 @@ export default function OwnerKasirPage() {
 
                   {/* Payment method badge */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#D1FAE5', borderRadius: 10, padding: 10, marginBottom: 16 }}>
-                    <MaterialIcons name="payments" size={18} color="#059669" />
+                    <MaterialIcons name="attach-money" size={20} color="#059669" />
                     <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', color: '#059669' }}>
-                      Cash · Bayar di Kasir
+                      Cash · Bayar Tunai di Tempat
                     </Text>
                   </View>
 
@@ -769,7 +769,7 @@ export default function OwnerKasirPage() {
                       <ActivityIndicator color="#fff" />
                     ) : (
                       <>
-                        <MaterialIcons name="point-of-sale" size={20} color="#fff" />
+                        <MaterialIcons name="point-of-sale" size={22} color="#fff" />
                         <Text style={{ fontFamily: FONT_FAMILY, fontSize: 16, fontWeight: '800', color: '#fff' }}>
                           Proses Transaksi
                         </Text>
@@ -779,7 +779,9 @@ export default function OwnerKasirPage() {
                 </>
               ) : (
                 <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-                  <MaterialIcons name="stadium" size={32} color={colors.textTertiary} />
+                  <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: colors.surfaceContainerLow, justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
+                    <MaterialIcons name="sports-soccer" size={28} color={colors.textTertiary} />
+                  </View>
                   <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, color: colors.textSecondary, marginTop: 8 }}>
                     Pilih lapangan terlebih dahulu
                   </Text>
@@ -788,7 +790,7 @@ export default function OwnerKasirPage() {
             </SectionCard>
 
             {/* Recent Transactions */}
-            <SectionCard title="Transaksi Terakhir" icon="history" colors={colors}>
+            <SectionCard title="Transaksi Terakhir" icon="history-edu" colors={colors}>
               <RecentTransactions key={txRefreshKey} colors={colors} />
             </SectionCard>
           </View>
@@ -833,8 +835,8 @@ function SectionCard({
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.primaryContainer, justifyContent: 'center', alignItems: 'center' }}>
-          <MaterialIcons name={icon as any} size={17} color={colors.primary} />
+        <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: colors.primaryContainer, justifyContent: 'center', alignItems: 'center' }}>
+          <MaterialIcons name={icon as any} size={18} color={colors.primary} />
         </View>
         <Text style={{ fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '800', color: colors.text }}>
           {title}

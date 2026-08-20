@@ -88,6 +88,16 @@ export function BookingCard({
       {isMobile ? (
         <View style={st.body}>
           <BookingStatusBadge status={booking.status} reason={booking.cancel_reason} />
+
+          {booking.status === 'WAITING_CONFIRMATION' && !!booking.payment_expired_at && (
+            <View style={[st.countdownBox, { backgroundColor: colors.warningMuted }]}>
+              <MaterialIcons name="timer" size={13} color={colors.warning} />
+              <Text style={[st.countdownText, { color: colors.warning }]}>
+                Batas waktu bayar: {new Date(booking.payment_expired_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+            </View>
+          )}
+
           <Text style={st.fieldName} numberOfLines={1}>
             {booking.field?.name ?? `Lapangan #${booking.field_id}`}
           </Text>
@@ -95,17 +105,20 @@ export function BookingCard({
 
           <View style={st.metaCol}>
             <View style={st.metaRow}>
-              <MaterialIcons name="event" size={13} color={colors.textTertiary} />
-              <Text style={st.metaText}>{formatDateDisplay(booking.booking_date)}</Text>
+              <MaterialIcons name="event" size={13} color={colors.primary} />
+              <Text style={st.metaTextBold}>{formatDateDisplay(booking.booking_date)}</Text>
             </View>
             <View style={st.metaRow}>
-              <MaterialIcons name="schedule" size={13} color={colors.textTertiary} />
-              <Text style={st.metaText}>{booking.start_time} – {booking.end_time}</Text>
+              <MaterialIcons name="schedule" size={13} color={colors.primary} />
+              <Text style={st.metaTextBold}>{booking.start_time} – {booking.end_time}</Text>
             </View>
           </View>
 
           <View style={st.footer}>
-            <Text style={st.price}>{formatPrice(booking.total_price)}</Text>
+            <View style={st.priceWrap}>
+              <Text style={st.priceLabel}>Total Bayar</Text>
+              <Text style={st.price}>{formatPrice(booking.total_price)}</Text>
+            </View>
             {!inSelection && (
               <View style={st.footerActions}>
                 {cancelable && onCancel && (
@@ -114,8 +127,19 @@ export function BookingCard({
                   </TouchableOpacity>
                 )}
                 {onPress && (
-                  <TouchableOpacity style={st.detailBtn} onPress={onPress} activeOpacity={0.8}>
-                    <Text style={st.detailBtnText}>Lihat Detail</Text>
+                  <TouchableOpacity
+                    style={[st.detailBtn, booking.status === 'WAITING_CONFIRMATION' && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                    onPress={onPress}
+                    activeOpacity={0.8}
+                  >
+                    <MaterialIcons
+                      name={booking.status === 'WAITING_CONFIRMATION' ? 'payment' : 'qr-code-2'}
+                      size={14}
+                      color={booking.status === 'WAITING_CONFIRMATION' ? colors.onPrimary : colors.primary}
+                    />
+                    <Text style={[st.detailBtnText, booking.status === 'WAITING_CONFIRMATION' && { color: colors.onPrimary }]}>
+                      {booking.status === 'WAITING_CONFIRMATION' ? 'Bayar Now' : 'E-Tiket'}
+                    </Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -300,12 +324,45 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isMobile: boo
     marginBottom: 4,
   },
   detailBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     borderWidth: 1.5,
     borderColor: colors.primary,
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingVertical: 6,
     alignItems: 'center',
+  },
+  countdownBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginTop: 2,
+    alignSelf: 'flex-start',
+  },
+  countdownText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  metaTextBold: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 12,
+    color: colors.text,
+    fontWeight: '600',
+  },
+  priceWrap: {
+    gap: 1,
+  },
+  priceLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 10,
+    color: colors.textTertiary,
+    fontWeight: '500',
   },
   detailBtnText: {
     fontFamily: FONT_FAMILY,

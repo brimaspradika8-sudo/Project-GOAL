@@ -474,7 +474,7 @@ export default function UserPage() {
 
         <ScrollView
           style={st.scroll}
-          contentContainerStyle={st.list}
+          contentContainerStyle={st.gridList}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
           showsVerticalScrollIndicator={false}
         >
@@ -841,7 +841,7 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
     paddingHorizontal: SIZES.gutter,
     marginTop: 14,
     marginBottom: 4,
-    ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
+    ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }),
   },
   statCard: {
     flex: 1,
@@ -878,7 +878,7 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
     marginTop: 8,
     marginBottom: 4,
     flexWrap: 'wrap',
-    ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
+    ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }),
   },
   filterChip: {
     paddingHorizontal: 12,
@@ -961,7 +961,7 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
     alignSelf: 'center',
     flex: 1,
   },
-  searchWrap: { paddingHorizontal: SIZES.gutter, paddingTop: 14, paddingBottom: 4, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
+  searchWrap: { paddingHorizontal: SIZES.gutter, paddingTop: 14, paddingBottom: 4, ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }) },
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: colors.surface, borderRadius: 14,
@@ -974,7 +974,7 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
   },
   searchInput: { flex: 1, color: colors.text, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}) },
 
-  tabRow: { flexDirection: 'row', gap: 10, marginHorizontal: SIZES.gutter, marginTop: 10, marginBottom: 4, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
+  tabRow: { flexDirection: 'row', gap: 10, marginHorizontal: SIZES.gutter, marginTop: 10, marginBottom: 4, ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }) },
   tab: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 7, paddingVertical: 11, borderRadius: 12,
@@ -995,16 +995,30 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
     backgroundColor: colors.surfaceContainer, borderRadius: 12,
     borderWidth: 1.5, borderColor: colors.primary + '50',
     paddingVertical: 12, marginHorizontal: SIZES.gutter, marginTop: 10,
-    ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
+    ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }),
   },
   addBtnText: { ...FONTS.titleSm, color: colors.primary },
 
-  list: { padding: SIZES.gutter, paddingBottom: 24, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
+  gridList: {
+    padding: SIZES.gutter,
+    paddingBottom: 24,
+    ...(isMobile
+      ? {}
+      : {
+          maxWidth: 1200,
+          alignSelf: 'center',
+          width: '100%',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 16,
+        }),
+  },
+  list: { padding: SIZES.gutter, paddingBottom: 24, ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }) },
   scroll: { flex: 1 },
 
   checkbox: { marginRight: 10, justifyContent: 'center', alignItems: 'center' },
 
-  emptyWrap: { alignItems: 'center', marginTop: 60, gap: 12 },
+  emptyWrap: { alignItems: 'center', marginTop: 60, gap: 12, width: '100%' },
   emptyIcon: {
     width: 80, height: 80, borderRadius: 24,
     backgroundColor: colors.surfaceContainerHigh,
@@ -1024,6 +1038,14 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
     backgroundColor: colors.surface, borderRadius: 16, padding: 14, marginBottom: 10,
     borderWidth: 1, borderColor: colors.outline,
     ...SHADOWS.xs,
+    ...(isMobile
+      ? { width: '100%' }
+      : {
+          width: 'calc(33.333% - 11px)' as any,
+          minWidth: 320,
+          maxWidth: 400,
+          marginBottom: 0,
+        }),
   },
   cardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   avatar: { width: 46, height: 46, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 13 },

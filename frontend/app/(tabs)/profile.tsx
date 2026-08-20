@@ -22,7 +22,7 @@ import { getResponseData } from '../../lib/api';
 import { apiFetch } from '../../lib/apiClient';
 import * as ImagePicker from 'expo-image-picker';
 import { mimeFromExt } from '../../lib/fieldValidation';
-import { SIZES, FONTS, SHADOWS } from '../../components/goalTheme';
+import { SIZES, FONTS, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
 import AuthInput from '../../components/AuthInput';
 import { useTheme } from '../../lib/theme';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
@@ -417,57 +417,86 @@ export default function ProfileScreen() {
           <Text style={styles.pageTitle}>Profil</Text>
 
           <View style={[styles.profileGrid, isDesktop && styles.profileGridDesktop]}>
-            {/* ===== KOLOM KIRI: Profil + OLAHRAGA + Owner Card ===== */}
+            {/* ===== KOLOM KIRI: Profil + Stat Strip + Olahraga + Owner Card ===== */}
             <View style={[styles.profileColumn, isDesktop && { flex: 1 }]}>
-              <View style={styles.profileCard}>
-                <TouchableOpacity style={styles.avatarWrap} onPress={changeAvatar} activeOpacity={0.85}>
-                  <Image
-                    source={{ uri: profile?.avatar_url || 'https://api.dicebear.com/7.x/bottts/png?seed=goal&backgroundColor=ffffff&textColor=00A651' }}
-                    style={styles.avatar}
-                  />
-                  <View style={styles.avatarEditBadge}>
-                    {avatarUploading ? (
-                      <ActivityIndicator size="small" color="#ffffff" />
-                    ) : (
-                      <MaterialIcons name="photo-camera" size={14} color="#ffffff" />
+              <View style={styles.heroCard}>
+                <View style={styles.avatarRingWrap}>
+                  <TouchableOpacity style={styles.avatarWrap} onPress={changeAvatar} activeOpacity={0.85}>
+                    <Image
+                      source={{ uri: profile?.avatar_url || 'https://api.dicebear.com/7.x/bottts/png?seed=goal&backgroundColor=ffffff&textColor=00A651' }}
+                      style={styles.avatar}
+                    />
+                    <View style={styles.avatarEditBadge}>
+                      {avatarUploading ? (
+                        <ActivityIndicator size="small" color="#ffffff" />
+                      ) : (
+                        <MaterialIcons name="photo-camera" size={14} color="#ffffff" />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.profileInfo}>
+                  <View style={styles.nameRow}>
+                    <Text style={styles.profileName} numberOfLines={1} ellipsizeMode="tail">
+                      {profile?.full_name ?? profile?.username ?? 'Pengguna'}
+                    </Text>
+                    {profile?.role && (
+                      <View style={styles.roleBadge}>
+                        <MaterialIcons
+                          name={profile.role === 'super_admin' ? 'shield' : profile.role === 'owner' ? 'store' : 'sports-soccer'}
+                          size={12}
+                          color={colors.primary}
+                        />
+                        <Text style={styles.roleBadgeText}>
+                          {profile.role === 'super_admin' ? 'SUPER ADMIN' : profile.role === 'owner' ? 'OWNER' : 'PLAYER'}
+                        </Text>
+                      </View>
                     )}
                   </View>
-                </TouchableOpacity>
-                <View style={styles.profileInfo}>
-                  <Text style={styles.profileName} numberOfLines={1} ellipsizeMode="tail">
-                    {profile?.full_name ?? profile?.username ?? 'Pengguna'}
-                  </Text>
+
                   {profile?.username ? (
                     <Text style={styles.profileHandle} numberOfLines={1} ellipsizeMode="tail">
                       @{profile.username}
                     </Text>
                   ) : null}
+
                   <View style={styles.locationRow}>
-                    <MaterialIcons name="location-on" size={14} color={colors.textSecondary} />
+                    <MaterialIcons name="location-on" size={14} color={colors.primary} />
                     <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">
-                      {profile?.region ?? 'Belum diatur'}
+                      {profile?.region ?? 'Lokasi Belum Diatur'}
                     </Text>
                   </View>
                 </View>
+
                 <TouchableOpacity style={styles.editButton} activeOpacity={0.8} onPress={() => router.push('/onboarding')}>
                   <MaterialIcons name="edit" size={16} color={colors.onPrimary} />
+                  <Text style={styles.editButtonText}>Edit Profil</Text>
                 </TouchableOpacity>
               </View>
 
-              {profile?.role && (
-                <View style={styles.roleBadge}>
-                  <MaterialIcons
-                    name={profile.role === 'super_admin' ? 'shield' : profile.role === 'owner' ? 'store' : 'person'}
-                    size={14}
-                    color={colors.primary}
-                  />
-                  <Text style={styles.roleBadgeText}>
-                    {profile.role === 'super_admin' ? 'SUPER ADMIN' : profile.role === 'owner' ? 'OWNER' : 'PLAYER'}
-                  </Text>
+              {/* Member Stat Strip */}
+              <View style={styles.statStrip}>
+                <View style={styles.statItem}>
+                  <MaterialIcons name="emoji-events" size={18} color={colors.primary} />
+                  <Text style={styles.statVal}>Active</Text>
+                  <Text style={styles.statLabel}>Status</Text>
                 </View>
-              )}
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <MaterialIcons name="sports-soccer" size={18} color={colors.primary} />
+                  <Text style={styles.statVal}>{profile?.sports?.length ?? 0}</Text>
+                  <Text style={styles.statLabel}>Olahraga</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <MaterialIcons name="verified" size={18} color={colors.primary} />
+                  <Text style={styles.statVal}>Verified</Text>
+                  <Text style={styles.statLabel}>Akun</Text>
+                </View>
+              </View>
 
-              <Text style={styles.sectionTitle}>Olahraga</Text>
+              <Text style={styles.sectionTitle}>Preferensi Olahraga</Text>
               <View style={styles.sportsCard}>
                 {profile?.sports?.length ? (
                   <View style={styles.tagsRow}>
@@ -483,7 +512,7 @@ export default function ProfileScreen() {
                 )}
               </View>
 
-              {/* ===== KARTU PENGAJUAN OWNER – tepat di bawah OLAHRAGA ===== */}
+              {/* ===== KARTU PENGAJUAN OWNER ===== */}
               {renderOwnerSection()}
             </View>
 
@@ -699,21 +728,27 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     fontWeight: '700',
     color: colors.textSecondary,
   },
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  heroCard: {
     backgroundColor: colors.surface,
-    borderRadius: SIZES.borderRadiusLg,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: colors.divider,
-    padding: 16,
+    padding: 20,
+    marginBottom: 14,
+    alignItems: 'center',
+    ...SHADOWS.md,
+  },
+  avatarRingWrap: {
+    padding: 4,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: colors.primary,
     marginBottom: 12,
-    ...SHADOWS.sm,
   },
   avatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 20,
+    width: 80,
+    height: 80,
+    borderRadius: 24,
     backgroundColor: colors.surfaceContainer,
   },
   avatarWrap: {
@@ -723,9 +758,9 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     position: 'absolute',
     right: -4,
     bottom: -4,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -733,53 +768,107 @@ const makeStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     borderColor: colors.surface,
   },
   profileInfo: {
-    flex: 1,
-    marginLeft: 14,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
   },
   profileName: {
     ...FONTS.headlineSm,
-    fontSize: 17,
+    fontSize: 20,
+    fontWeight: '800',
     color: colors.text,
-    marginBottom: 2,
   },
   profileHandle: {
     ...FONTS.bodySm,
     color: colors.textSecondary,
     marginBottom: 6,
+    fontWeight: '600',
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    backgroundColor: colors.primaryMuted,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   locationText: {
     ...FONTS.bodySm,
-    color: colors.textSecondary,
+    color: colors.primary,
+    fontWeight: '700',
+    fontSize: 12,
   },
   editButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    ...SHADOWS.sm,
+  },
+  editButtonText: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.onPrimary,
+  },
+  statStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+    ...SHADOWS.sm,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  statVal: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.text,
+    marginTop: 2,
+  },
+  statLabel: {
+    fontFamily: FONT_FAMILY,
+    fontSize: 11,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+  statDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: colors.divider,
   },
   roleBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.surface,
-    borderRadius: SIZES.borderRadius,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 20,
-    ...SHADOWS.sm,
+    gap: 4,
+    backgroundColor: colors.primaryMuted,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   roleBadgeText: {
-    ...FONTS.labelMd,
-    color: colors.text,
+    fontFamily: FONT_FAMILY,
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.primary,
   },
   sectionTitle: {
     ...FONTS.labelMd,
