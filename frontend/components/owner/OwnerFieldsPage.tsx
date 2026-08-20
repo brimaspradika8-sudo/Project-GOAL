@@ -5,6 +5,7 @@ import {
   Modal, KeyboardAvoidingView, Platform, TextInput, Animated,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useFieldStore } from '../../store/fieldStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -53,6 +54,7 @@ type FieldTouched = { name: boolean; sport_type: boolean; price_per_hour: boolea
 const EMPTY_TOUCHED: FieldTouched = { name: false, sport_type: false, price_per_hour: false, description: false, location: false };
 
 export default function OwnerFieldsPage() {
+  const router = useRouter();
   const { colors } = useTheme();
   const isMobile = useIsMobileWeb();
   const st = React.useMemo(() => makeStyles(colors, isMobile), [colors, isMobile]);
@@ -598,19 +600,34 @@ export default function OwnerFieldsPage() {
         </View>
 
         <View style={st.statsRow}>
-          <View style={st.statItem}>
-            <Text style={st.statNum}>{fields.length}</Text>
-            <Text style={st.statLabel}>Total Lapangan</Text>
+          <View style={[st.statCard, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
+            <View style={[st.statIconWrap, { backgroundColor: colors.primaryContainer }]}>
+              <MaterialIcons name="stadium" size={20} color={colors.primary} />
+            </View>
+            <View style={st.statTextWrap}>
+              <Text style={[st.statNum, { color: colors.text }]}>{fields.length}</Text>
+              <Text style={[st.statLabel, { color: colors.textSecondary }]}>Total Lapangan</Text>
+            </View>
           </View>
-          <View style={st.statDivider} />
-          <View style={st.statItem}>
-            <Text style={[st.statNum, { color: colors.primary }]}>{activeCount}</Text>
-            <Text style={st.statLabel}>Aktif</Text>
+
+          <View style={[st.statCard, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
+            <View style={[st.statIconWrap, { backgroundColor: '#10B98118' }]}>
+              <MaterialIcons name="check-circle" size={20} color="#10B981" />
+            </View>
+            <View style={st.statTextWrap}>
+              <Text style={[st.statNum, { color: colors.text }]}>{activeCount}</Text>
+              <Text style={[st.statLabel, { color: colors.textSecondary }]}>Aktif</Text>
+            </View>
           </View>
-          <View style={st.statDivider} />
-          <View style={st.statItem}>
-            <Text style={[st.statNum, { color: colors.floodlight }]}>{pendingCount}</Text>
-            <Text style={st.statLabel}>Menunggu</Text>
+
+          <View style={[st.statCard, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
+            <View style={[st.statIconWrap, { backgroundColor: '#F59E0B18' }]}>
+              <MaterialIcons name="pending-actions" size={20} color="#F59E0B" />
+            </View>
+            <View style={st.statTextWrap}>
+              <Text style={[st.statNum, { color: colors.text }]}>{pendingCount}</Text>
+              <Text style={[st.statLabel, { color: colors.textSecondary }]}>Menunggu</Text>
+            </View>
           </View>
         </View>
 
@@ -650,7 +667,7 @@ export default function OwnerFieldsPage() {
               return (
                 <View key={f.id} style={st.card}>
                   <View style={st.cardImgWrap}>
-                    <Image source={{ uri: img }} style={st.cardImg} />
+                    <Image source={{ uri: img }} style={st.cardImg} resizeMode="cover" />
                     <View style={st.cardOverlay}>
                       <View style={[st.statusBadge, { backgroundColor: status.bg, borderColor: status.color + '40' }]}>
                         <View style={[st.statusDot, { backgroundColor: status.color }]} />
@@ -677,19 +694,33 @@ export default function OwnerFieldsPage() {
                     ) : null}
                     <View style={st.actions}>
                       <TouchableOpacity
+                        style={[st.detailBtn, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline }]}
+                        onPress={() => router.push(`/venue-detail?id=${f.id}`)}
+                        activeOpacity={0.8}
+                      >
+                        <MaterialIcons name="visibility" size={15} color={colors.textSecondary} />
+                        <Text style={[st.detailBtnText, { color: colors.textSecondary }]}>Detail</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
                         style={[st.actionBtn, { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outline }]}
                         onPress={() => openGallery(f)}
                         hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                        activeOpacity={0.8}
+                        accessibilityLabel="Kelola Galeri Foto"
                       >
                         <MaterialIcons name="photo-library" size={16} color={colors.textSecondary} />
                       </TouchableOpacity>
+
                       <TouchableOpacity
-                        style={[st.actionBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                        style={[st.editBtn, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '30' }]}
                         onPress={() => openEdit(f)}
-                        hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                        activeOpacity={0.8}
                       >
-                        <MaterialIcons name="edit" size={16} color={colors.onPrimary} />
+                        <MaterialIcons name="edit" size={15} color={colors.primary} />
+                        <Text style={[st.editBtnText, { color: colors.primary }]}>Edit</Text>
                       </TouchableOpacity>
+
                       <AnimatedDeleteButton
                         onPress={() => handleDelete(f.id, f.name)}
                       />
@@ -1172,18 +1203,47 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
   },
 
   statsRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surface,
-    marginHorizontal: SIZES.gutter, marginTop: 8,
-    borderRadius: SIZES.borderRadius, borderWidth: 1,
-    borderColor: colors.outline, paddingVertical: 8, paddingHorizontal: 16,
-    ...SHADOWS.xs,
+    flexDirection: 'row',
+    gap: 12,
+    marginHorizontal: SIZES.gutter,
+    marginTop: 14,
+    marginBottom: 8,
     ...(isMobile ? {} : { maxWidth: 1100, alignSelf: 'center', width: '100%' }),
   },
-  statItem: { flex: 1, alignItems: 'center' },
-  statNum: { ...FONTS.headlineSm, color: colors.text },
-  statLabel: { ...FONTS.bodySm, color: colors.textSecondary, marginTop: 2 },
-  statDivider: { width: 1, height: 28, backgroundColor: colors.outline },
+  statCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    ...SHADOWS.sm,
+  },
+  statIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statTextWrap: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  statNum: {
+    ...FONTS.titleLg,
+    fontSize: 22,
+    fontWeight: '800',
+    lineHeight: 26,
+  },
+  statLabel: {
+    ...FONTS.labelSm,
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginTop: 1,
+  },
 
   contentList: { padding: SIZES.gutter, paddingBottom: 60, ...(isMobile ? {} : { maxWidth: 1100, alignSelf: 'center', width: '100%' }) },
   cardGrid: isMobile ? {} : { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
@@ -1206,11 +1266,11 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
   card: {
     backgroundColor: colors.surface, borderRadius: 20, marginBottom: isMobile ? 16 : 0,
     borderWidth: 1, borderColor: colors.outline,
-    ...SHADOWS.sm,
-    ...(isMobile ? {} : { flex: 1, minWidth: 300 }),
+    ...SHADOWS.sm, overflow: 'hidden',
+    ...(isMobile ? {} : { flex: 1, minWidth: 320 }),
   },
-  cardImgWrap: { borderTopLeftRadius: 19, borderTopRightRadius: 19, overflow: 'hidden' },
-  cardImg: { width: '100%', height: 160 },
+  cardImgWrap: { height: 200, position: 'relative', overflow: 'hidden', backgroundColor: colors.surfaceContainerLow },
+  cardImg: { width: '100%', height: '100%' },
   cardOverlay: { position: 'absolute', top: 14, right: 14 },
   statusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -1236,16 +1296,26 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 10,
+    gap: 8,
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: colors.outline,
   },
+  detailBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1,
+  },
+  detailBtnText: { ...FONTS.titleSm, fontSize: 12, fontWeight: '600' },
+  editBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1,
+  },
+  editBtnText: { ...FONTS.titleSm, fontSize: 12, fontWeight: '700', color: colors.primary },
   actionBtn: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.surfaceContainerHigh,

@@ -98,7 +98,7 @@ export default function HelpCenterModal({ visible, onClose }: { visible: boolean
                 onPress={handleSendEmail}
                 activeOpacity={0.8}
               >
-                <View style={[helpStyles.contactIconBox, { backgroundColor: colors.secondary || colors.primaryContainer }]}>
+                <View style={[helpStyles.contactIconBox, { backgroundColor: colors.primaryContainer }]}>
                   <MaterialIcons name="email" size={22} color={colors.primary} />
                 </View>
                 <Text style={[helpStyles.contactTitle, { color: colors.text }]}>Email Support</Text>
@@ -127,7 +127,7 @@ export default function HelpCenterModal({ visible, onClose }: { visible: boolean
                       />
                     </TouchableOpacity>
                     {isOpen && (
-                      <View style={[helpStyles.faqBody, { backgroundColor: resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceVariant + '40' }]}>
+                      <View style={[helpStyles.faqBody, { backgroundColor: resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow }]}>
                         <Text style={[helpStyles.faqAnswer, { color: colors.textSecondary }]}>{faq.answer}</Text>
                       </View>
                     )}

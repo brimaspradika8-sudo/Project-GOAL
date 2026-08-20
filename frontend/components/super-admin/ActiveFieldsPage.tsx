@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { getErrorMessage, getAssetUrl, getResponseData } from '../../lib/api';
 import { apiFetch } from '../../lib/apiClient';
@@ -41,6 +42,7 @@ type FieldTouched = { name: boolean; sport_type: boolean; price_per_hour: boolea
 const EMPTY_TOUCHED: FieldTouched = { name: false, sport_type: false, price_per_hour: false, description: false, location: false };
 
 export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean } = {}) {
+  const router = useRouter();
   const { colors } = useTheme();
   const isMobile = useIsMobileWeb();
   const st = useMemo(() => makeStyles(colors, isMobile), [colors, isMobile]);
@@ -386,16 +388,16 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
                 : '-';
               return (
                 <View key={f.id} style={[st.card, { backgroundColor: colors.surface, borderColor: colors.outline }, selected.has(f.id) && { borderColor: colors.primary, backgroundColor: colors.primaryContainer + '20' }]}>
-                  <TouchableOpacity
-                    onPress={() => toggleSelect(f.id)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    style={st.checkbox}
-                    activeOpacity={0.7}
-                  >
-                    <SelectCheckbox selected={selected.has(f.id)} colors={colors} size={20} />
-                  </TouchableOpacity>
                   <View style={st.cardImgWrap}>
-                    <Image source={{ uri: getAssetUrl(img) || img }} style={st.cardImg} />
+                    <Image source={{ uri: getAssetUrl(img) || img }} style={st.cardImg} resizeMode="cover" />
+                    <TouchableOpacity
+                      onPress={() => toggleSelect(f.id)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      style={st.imageCheckbox}
+                      activeOpacity={0.8}
+                    >
+                      <SelectCheckbox selected={selected.has(f.id)} colors={colors} size={20} />
+                    </TouchableOpacity>
                   </View>
                   <View style={st.cardBody}>
                     <View style={st.cardTop}>
@@ -423,13 +425,23 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
 
                     <View style={st.actions}>
                       <TouchableOpacity
-                        style={[st.editBtn, { backgroundColor: colors.successLight, borderColor: colors.primary + '30' }]}
+                        style={[st.detailBtn, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline }]}
+                        activeOpacity={0.8}
+                        onPress={() => router.push(`/venue-detail?id=${f.id}`)}
+                      >
+                        <MaterialIcons name="visibility" size={15} color={colors.textSecondary} />
+                        <Text style={[st.detailBtnText, { color: colors.textSecondary }]}>Detail</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[st.editBtn, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '30' }]}
                         activeOpacity={0.8}
                         onPress={() => openEdit(f)}
                       >
-                        <MaterialIcons name="edit" size={16} color={colors.primary} />
+                        <MaterialIcons name="edit" size={15} color={colors.primary} />
                         <Text style={[st.editBtnText, { color: colors.primary }]}>Edit</Text>
                       </TouchableOpacity>
+
                       <AnimatedDeleteButton
                         onPress={() => setDeleteTarget({ id: f.id, name: f.name })}
                       />
@@ -695,6 +707,18 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
   scroll: { flex: 1 },
 
   checkbox: { padding: 4, alignSelf: 'flex-start', marginBottom: 6 },
+  imageCheckbox: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    zIndex: 10,
+    backgroundColor: colors.surface + 'EE',
+    borderRadius: 10,
+    padding: 6,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    ...SHADOWS.xs,
+  },
 
   emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12 },
   emptyIconWrap: {
@@ -709,7 +733,7 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
     borderRadius: 20, marginBottom: 16,
     borderWidth: 1, ...SHADOWS.sm, overflow: 'hidden',
   },
-  cardImgWrap: { height: 140 },
+  cardImgWrap: { height: 200, position: 'relative', overflow: 'hidden', backgroundColor: colors.surfaceContainerLow },
   cardImg: { width: '100%', height: '100%' },
   cardBody: { padding: 16 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
@@ -723,14 +747,19 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
 
   actions: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10,
-    marginTop: 12, paddingTop: 10,
+    marginTop: 14, paddingTop: 12,
     borderTopWidth: 1, borderTopColor: colors.outline,
   },
+  detailBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingVertical: 9, paddingHorizontal: 13, borderRadius: 12, borderWidth: 1,
+  },
+  detailBtnText: { ...FONTS.titleSm, fontSize: 12, fontWeight: '600' },
   editBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingVertical: 9, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1,
   },
-  editBtnText: { ...FONTS.titleSm, fontSize: 12 },
+  editBtnText: { ...FONTS.titleSm, fontSize: 12, fontWeight: '700' },
 
   // Edit modal
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
