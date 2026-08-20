@@ -248,7 +248,7 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
                     <MaterialIcons name="stadium" size={20} color={colors.warning} />
                   </View>
                   <View style={st.cardTopInfo}>
-                    <Text style={[st.fieldName, { color: colors.text }]} numberOfLines={1}>{f.name}</Text>
+                    <Text style={[st.fieldName, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{f.name}</Text>
                     <View style={st.sportTag}>
                       <MaterialIcons name="sports" size={11} color={colors.warning} />
                       <Text style={[st.sportText, { color: colors.warning }]}>{f.sport_type?.toUpperCase()}</Text>

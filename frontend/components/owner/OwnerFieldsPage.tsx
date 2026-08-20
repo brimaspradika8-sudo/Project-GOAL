@@ -677,7 +677,9 @@ export default function OwnerFieldsPage() {
                   </View>
                   <View style={st.cardBody}>
                     <View style={st.cardTop}>
-                      <Text style={st.name} numberOfLines={1}>{f.name}</Text>
+                      <View style={{ flex: 1, marginRight: 12 }}>
+                        <Text style={st.name} numberOfLines={1} ellipsizeMode="tail">{f.name}</Text>
+                      </View>
                       <View style={st.pricePill}>
                         <Text style={st.price}>{priceStr}<Text style={st.priceSub}>/jam</Text></Text>
                       </View>

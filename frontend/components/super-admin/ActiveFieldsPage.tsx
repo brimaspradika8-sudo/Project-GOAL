@@ -19,6 +19,7 @@ import SelectCheckbox from '../shared/SelectCheckbox';
 import BulkActionBar from '../shared/BulkActionBar';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
+import { getSportBadgeStyle } from '../../utils/sportBadge';
 import { useDebounce } from '../../hooks/useDebounce';
 import { fieldError } from '../../lib/formValidation';
 import { useIsMobileWeb } from '../../lib/responsive';
@@ -327,9 +328,15 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
           </View>
         </View>
 
-        <View style={st.chipWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ maxHeight: 44, marginBottom: 12 }}
+          contentContainerStyle={[st.chipWrap, { paddingRight: 24 }]}
+        >
           {SPORT_CHIPS.map(s => {
             const active = (filterSport === null && s === 'Semua') || filterSport === sportValue(s);
+            const badge = getSportBadgeStyle(sportValue(s) || s);
             return (
               <TouchableOpacity
                 key={s}
@@ -341,12 +348,12 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
                 onPress={() => setFilterSport(sportValue(s))}
                 activeOpacity={0.8}
               >
-                {active && <MaterialIcons name="check" size={14} color={colors.onPrimary} />}
+                <MaterialIcons name={s === 'Semua' ? 'sports' : badge.icon} size={14} color={active ? colors.onPrimary : colors.textSecondary} />
                 <Text style={[st.chipText, { color: colors.textSecondary }, active && { color: colors.onPrimary }]}>{s}</Text>
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
 
         <View style={st.resultRow}>
           <Text style={[st.resultText, { color: colors.textTertiary }]}>
@@ -386,10 +393,13 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
               const priceStr = f.price_per_hour
                 ? `Rp${Number(f.price_per_hour).toLocaleString('id-ID')}`
                 : '-';
+              const badge = getSportBadgeStyle(f.sport_type);
+              const sportLabel = (SPORT_LABELS[f.sport_type] || f.sport_type)?.toUpperCase();
               return (
                 <View key={f.id} style={[st.card, { backgroundColor: colors.surface, borderColor: colors.outline }, selected.has(f.id) && { borderColor: colors.primary, backgroundColor: colors.primaryContainer + '20' }]}>
                   <View style={st.cardImgWrap}>
                     <Image source={{ uri: getAssetUrl(img) || img }} style={st.cardImg} resizeMode="cover" />
+                    
                     <TouchableOpacity
                       onPress={() => toggleSelect(f.id)}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -398,18 +408,26 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
                     >
                       <SelectCheckbox selected={selected.has(f.id)} colors={colors} size={20} />
                     </TouchableOpacity>
+
+                    {/* Sport Badge Tag on Card Image */}
+                    <View style={[st.sportPillBadge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
+                      <MaterialIcons name={badge.icon} size={13} color={badge.color} />
+                      <Text style={[st.sportPillText, { color: badge.color }]}>{sportLabel}</Text>
+                    </View>
                   </View>
+
                   <View style={st.cardBody}>
                     <View style={st.cardTop}>
-                      <Text style={[st.fieldName, { color: colors.text }]} numberOfLines={1}>{f.name}</Text>
-                      <View style={[st.pricePill, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '30' }]}>
+                      <View style={{ flex: 1, marginRight: 12 }}>
+                        <Text style={[st.fieldName, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">
+                          {f.name}
+                        </Text>
+                      </View>
+                      <View style={[st.pricePill, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '35' }]}>
                         <Text style={[st.price, { color: colors.primary }]}>{priceStr}<Text style={[st.priceSub, { color: colors.textSecondary }]}>/jam</Text></Text>
                       </View>
                     </View>
-                    <View style={st.detailRow}>
-                      <MaterialIcons name="sports" size={14} color={colors.textSecondary} />
-                      <Text style={[st.detailText, { color: colors.textSecondary }]}>{(SPORT_LABELS[f.sport_type] || f.sport_type)?.toUpperCase()}</Text>
-                    </View>
+
                     {f.owner && (
                       <View style={st.detailRow}>
                         <MaterialIcons name="person" size={14} color={colors.textSecondary} />
@@ -718,6 +736,26 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
     borderWidth: 1,
     borderColor: colors.outline,
     ...SHADOWS.xs,
+  },
+  sportPillBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+    ...SHADOWS.xs,
+  },
+  sportPillText: {
+    ...FONTS.labelSm,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
 
   emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12 },

@@ -185,7 +185,7 @@ export default function TrashedFieldsPage() {
                 <MaterialIcons name="delete" size={20} color={colors.error} />
               </View>
               <View style={st.cardInfo}>
-                <Text style={[st.fieldName, { color: colors.text }]} numberOfLines={1}>{f.name}</Text>
+                <Text style={[st.fieldName, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">{f.name}</Text>
                 <View style={st.tagRow}>
                   {f.sport_type && (
                     <View style={[st.sportTag, { backgroundColor: softSurface }]}>
