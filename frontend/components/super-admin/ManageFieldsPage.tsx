@@ -145,20 +145,20 @@ export default function ManageFieldsPage() {
       <View style={st.statCardsRow}>
         <View style={[st.statCard, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
           <View style={[st.statIconWrap, { backgroundColor: colors.primaryContainer }]}>
-            <MaterialIcons name="stadium" size={18} color={colors.primary} />
+            <MaterialIcons name="stadium" size={20} color={colors.primary} />
           </View>
-          <View>
+          <View style={st.statTextWrap}>
             <Text style={[st.statValue, { color: colors.text }]}>{(activeCount ?? 0) + (pendingCount ?? 0) + (trashedCount ?? 0)}</Text>
             <Text style={[st.statLabel, { color: colors.textSecondary }]}>Total Lapangan</Text>
           </View>
         </View>
 
         <View style={[st.statCard, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
-          <View style={[st.statIconWrap, { backgroundColor: '#10B98115' }]}>
-            <MaterialIcons name="check-circle" size={18} color="#10B981" />
+          <View style={[st.statIconWrap, { backgroundColor: '#10B98118' }]}>
+            <MaterialIcons name="check-circle" size={20} color="#10B981" />
           </View>
-          <View>
-            <Text style={[st.statValue, { color: colors.text }]}>{activeCount}</Text>
+          <View style={st.statTextWrap}>
+            <Text style={[st.statValue, { color: colors.text }]}>{activeCount ?? 0}</Text>
             <Text style={[st.statLabel, { color: colors.textSecondary }]}>Lapangan Aktif</Text>
           </View>
         </View>
@@ -168,11 +168,11 @@ export default function ManageFieldsPage() {
           onPress={() => handleTabChange('pending')}
           activeOpacity={0.85}
         >
-          <View style={[st.statIconWrap, { backgroundColor: '#F59E0B15' }]}>
-            <MaterialIcons name="pending-actions" size={18} color="#F59E0B" />
+          <View style={[st.statIconWrap, { backgroundColor: '#F59E0B18' }]}>
+            <MaterialIcons name="pending-actions" size={20} color="#F59E0B" />
           </View>
-          <View>
-            <Text style={[st.statValue, { color: colors.text }]}>{pendingCount}</Text>
+          <View style={st.statTextWrap}>
+            <Text style={[st.statValue, { color: colors.text }]}>{pendingCount ?? 0}</Text>
             <Text style={[st.statLabel, { color: colors.textSecondary }]}>Pending Validasi</Text>
           </View>
         </TouchableOpacity>
@@ -186,13 +186,13 @@ export default function ManageFieldsPage() {
               key={tab.key}
               style={[st.tab, isActive && st.tabActive]}
               onPress={() => handleTabChange(tab.key)}
-              activeOpacity={0.75}
+              activeOpacity={0.8}
             >
-              <MaterialIcons name={tab.icon as any} size={15} color={isActive ? colors.primary : colors.textTertiary} />
+              <MaterialIcons name={tab.icon as any} size={16} color={isActive ? colors.primary : colors.textTertiary} />
               <Text style={[st.tabLabel, isActive && st.tabLabelActive]}>{tab.label}</Text>
               {tab.count !== null && tab.count > 0 && (
-                <View style={[st.tabBadge, isActive && { backgroundColor: tab.badgeActive }]}>
-                  <Text style={[st.tabBadgeText, isActive && { color: tab.badgeText }]}>{tab.count}</Text>
+                <View style={[st.tabBadge, isActive && st.tabBadgeActive]}>
+                  <Text style={[st.tabBadgeText, isActive && { color: tab.badgeText || colors.primary }]}>{tab.count}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -344,10 +344,10 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
   screen: { flex: 1, backgroundColor: colors.background },
   statCardsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
     paddingHorizontal: SIZES.gutter,
-    marginTop: 14,
-    marginBottom: 4,
+    marginTop: 16,
+    marginBottom: 8,
     ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
   },
   statCard: {
@@ -355,27 +355,33 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    padding: 12,
-    borderRadius: 14,
+    padding: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    ...SHADOWS.xs,
+    ...SHADOWS.sm,
   },
   statIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  statTextWrap: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   statValue: {
     ...FONTS.titleLg,
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '800',
-    lineHeight: 22,
+    lineHeight: 26,
   },
   statLabel: {
     ...FONTS.labelSm,
     fontSize: 11,
+    fontWeight: '600',
+    marginTop: 1,
   },
   settingsHeaderBtn: {
     width: 38,
@@ -387,22 +393,58 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
   },
 
   tabRow: {
-    flexDirection: 'row', gap: 10,
-    marginHorizontal: SIZES.gutter, marginTop: 10, marginBottom: 4,
+    flexDirection: 'row',
+    padding: 5,
+    marginHorizontal: SIZES.gutter,
+    marginTop: 10,
+    marginBottom: 6,
+    borderRadius: 16,
+    backgroundColor: colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: colors.outline,
+    ...SHADOWS.xs,
+    ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
   },
   tab: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 7, paddingVertical: 11, borderRadius: 12,
-    backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.outline,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
   },
-  tabActive: { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '60' },
-  tabLabel: { ...FONTS.titleSm, color: colors.textTertiary },
-  tabLabelActive: { color: colors.primary },
+  tabActive: {
+    backgroundColor: colors.surfaceWhite,
+    ...SHADOWS.sm,
+  },
+  tabLabel: {
+    ...FONTS.titleSm,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textTertiary,
+  },
+  tabLabelActive: {
+    color: colors.primary,
+    fontWeight: '800',
+  },
   tabBadge: {
-    backgroundColor: colors.surfaceContainerHigh, borderRadius: 10,
-    paddingHorizontal: 8, paddingVertical: 2, minWidth: 24, alignItems: 'center',
+    backgroundColor: colors.surfaceContainerHigh,
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    minWidth: 20,
+    alignItems: 'center',
   },
-  tabBadgeText: { ...FONTS.labelSm, color: colors.textSecondary },
+  tabBadgeActive: {
+    backgroundColor: colors.primaryContainer,
+  },
+  tabBadgeText: {
+    ...FONTS.labelSm,
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
 
   tabContent: { flex: 1 },
 

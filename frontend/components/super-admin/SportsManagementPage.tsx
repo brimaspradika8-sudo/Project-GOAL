@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
   RefreshControl, TextInput, Modal, KeyboardAvoidingView,
-  Platform, ActivityIndicator, Alert, Switch,
+  Platform, ActivityIndicator, Switch,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getErrorMessage } from '../../lib/api';
@@ -25,6 +25,69 @@ export type SportItem = {
   created_at?: string;
 };
 
+// ── Validation (mirrors the same pattern used for the "Tambah Lapangan" form
+// in lib/fieldValidation.ts: real-time per-field checks, max-length caps that
+// match what the backend actually enforces, inline error messages). ──────────
+const MAX_NAME_LENGTH = 100;   // matches backend: 'name' => 'required|string|max:100'
+const MAX_SLUG_LENGTH = 50;    // matches backend: 'slug' => 'nullable|string|max:50'
+const MAX_DESC_LENGTH = 500;   // matches backend: 'description' => 'nullable|string|max:500'
+
+type SportFormErrors = { name: string; slug: string; description: string };
+const EMPTY_SPORT_ERRORS: SportFormErrors = { name: '', slug: '', description: '' };
+type SportFormTouched = { name: boolean; slug: boolean; description: boolean };
+const EMPTY_SPORT_TOUCHED: SportFormTouched = { name: false, slug: false, description: false };
+
+function validateSportName(value: string): string {
+  const v = value.trim();
+  if (!v) return 'Nama jenis olahraga wajib diisi.';
+  if (v.length < 3) return 'Nama jenis olahraga minimal 3 karakter.';
+  if (v.length > MAX_NAME_LENGTH) return `Nama jenis olahraga tidak boleh lebih dari ${MAX_NAME_LENGTH} karakter.`;
+  return '';
+}
+
+function validateSportSlug(value: string): string {
+  const v = value.trim();
+  if (!v) return ''; // optional - auto-generated from name if left empty
+  if (v.length > MAX_SLUG_LENGTH) return `Slug tidak boleh lebih dari ${MAX_SLUG_LENGTH} karakter.`;
+  if (!/^[a-zA-Z0-9_-]+$/.test(v)) return 'Slug hanya boleh berisi huruf, angka, garis bawah (_), dan strip (-).';
+  return '';
+}
+
+function validateSportDescription(value: string): string {
+  const v = value.trim();
+  if (!v) return '';
+  if (v.length > MAX_DESC_LENGTH) return `Deskripsi tidak boleh lebih dari ${MAX_DESC_LENGTH} karakter.`;
+  return '';
+}
+
+function validateAllSportFields(name: string, slug: string, description: string): SportFormErrors {
+  return {
+    name: validateSportName(name),
+    slug: validateSportSlug(slug),
+    description: validateSportDescription(description),
+  };
+}
+
+function hasSportErrors(errors: SportFormErrors): boolean {
+  return Object.values(errors).some((e) => e !== '');
+}
+
+// Only show an error once the user has actually interacted with the field,
+// so the form doesn't flash red the instant the modal opens.
+function fieldErr(err: string, touched: boolean): string {
+  return touched ? err : '';
+}
+
+function FieldError({ message, colors }: { message: string; colors: ThemeColors }) {
+  if (!message) return null;
+  return (
+    <View style={styles.fieldErrorRow}>
+      <MaterialIcons name="warning" size={13} color={colors.error} />
+      <Text style={[styles.fieldErrorText, { color: colors.error }]}>{message}</Text>
+    </View>
+  );
+}
+
 export default function SportsManagementPage({ hideHeader }: { hideHeader?: boolean } = {}) {
   const { colors } = useTheme();
   const isMobile = useIsMobileWeb();
@@ -44,6 +107,8 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
   const [formIsActive, setFormIsActive] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<SportFormErrors>(EMPTY_SPORT_ERRORS);
+  const [formTouched, setFormTouched] = useState<SportFormTouched>(EMPTY_SPORT_TOUCHED);
 
   // Delete dialog state
   const [deleteTarget, setDeleteTarget] = useState<SportItem | null>(null);
@@ -82,6 +147,8 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
     setFormDescription('');
     setFormIsActive(true);
     setFormError(null);
+    setFormErrors(EMPTY_SPORT_ERRORS);
+    setFormTouched(EMPTY_SPORT_TOUCHED);
     setModalVisible(true);
   };
 
@@ -92,12 +159,49 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
     setFormDescription(item.description || '');
     setFormIsActive(item.is_active);
     setFormError(null);
+    setFormErrors(EMPTY_SPORT_ERRORS);
+    setFormTouched(EMPTY_SPORT_TOUCHED);
     setModalVisible(true);
   };
 
+  const handleNameChange = (v: string) => {
+    setFormName(v);
+    if (formTouched.name) {
+      setFormErrors((prev) => ({ ...prev, name: validateSportName(v) }));
+    }
+  };
+  const handleSlugChange = (v: string) => {
+    setFormSlug(v);
+    if (formTouched.slug) {
+      setFormErrors((prev) => ({ ...prev, slug: validateSportSlug(v) }));
+    }
+  };
+  const handleDescriptionChange = (v: string) => {
+    setFormDescription(v);
+    if (formTouched.description) {
+      setFormErrors((prev) => ({ ...prev, description: validateSportDescription(v) }));
+    }
+  };
+
+  const handleNameBlur = () => {
+    setFormTouched((p) => ({ ...p, name: true }));
+    setFormErrors((prev) => ({ ...prev, name: validateSportName(formName) }));
+  };
+  const handleSlugBlur = () => {
+    setFormTouched((p) => ({ ...p, slug: true }));
+    setFormErrors((prev) => ({ ...prev, slug: validateSportSlug(formSlug) }));
+  };
+  const handleDescriptionBlur = () => {
+    setFormTouched((p) => ({ ...p, description: true }));
+    setFormErrors((prev) => ({ ...prev, description: validateSportDescription(formDescription) }));
+  };
+
   const handleSave = async () => {
-    if (!formName.trim()) {
-      setFormError('Nama jenis olahraga wajib diisi.');
+    setFormTouched({ name: true, slug: true, description: true });
+    const errs = validateAllSportFields(formName, formSlug, formDescription);
+    setFormErrors(errs);
+    if (hasSportErrors(errs)) {
+      setFormError('Periksa kembali isian yang belum valid.');
       return;
     }
 
@@ -184,6 +288,8 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
         (s.description && s.description.toLowerCase().includes(q))
     );
   }, [sports, search]);
+
+  const isSubmitDisabled = formLoading || hasSportErrors(validateAllSportFields(formName, formSlug, formDescription));
 
   if (loading) {
     return (
@@ -385,69 +491,93 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
 
             {formError ? <AlertBox type="error" title={formError} style={{ marginBottom: 12 }} /> : null}
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <View style={st.fieldWrap}>
-                <Text style={[st.fieldLabel, { color: colors.textSecondary }]}>
-                  Nama Olahraga *
-                </Text>
+                <View style={st.fieldLabelRow}>
+                  <Text style={[st.fieldLabel, { color: colors.textSecondary }]}>
+                    Nama Olahraga *
+                  </Text>
+                  <Text style={[st.charCount, { color: colors.textTertiary }]}>
+                    {formName.length}/{MAX_NAME_LENGTH}
+                  </Text>
+                </View>
                 <TextInput
                   style={[
                     st.fieldInput,
                     {
                       backgroundColor: colors.surfaceContainerLow,
-                      borderColor: colors.outline,
+                      borderColor: fieldErr(formErrors.name, formTouched.name) ? colors.error : colors.outline,
                       color: colors.text,
                     },
                   ]}
                   placeholder="Contoh: Pickleball, Squash"
                   placeholderTextColor={colors.textTertiary}
                   value={formName}
-                  onChangeText={setFormName}
+                  onChangeText={handleNameChange}
+                  onBlur={handleNameBlur}
+                  maxLength={MAX_NAME_LENGTH}
                 />
+                <FieldError message={fieldErr(formErrors.name, formTouched.name)} colors={colors} />
               </View>
 
               <View style={st.fieldWrap}>
-                <Text style={[st.fieldLabel, { color: colors.textSecondary }]}>
-                  Kode / Slug (Opsional)
-                </Text>
+                <View style={st.fieldLabelRow}>
+                  <Text style={[st.fieldLabel, { color: colors.textSecondary }]}>
+                    Kode / Slug (Opsional)
+                  </Text>
+                  <Text style={[st.charCount, { color: colors.textTertiary }]}>
+                    {formSlug.length}/{MAX_SLUG_LENGTH}
+                  </Text>
+                </View>
                 <TextInput
                   style={[
                     st.fieldInput,
                     {
                       backgroundColor: colors.surfaceContainerLow,
-                      borderColor: colors.outline,
+                      borderColor: fieldErr(formErrors.slug, formTouched.slug) ? colors.error : colors.outline,
                       color: colors.text,
                     },
                   ]}
                   placeholder="Contoh: pickleball (otomatis jika kosong)"
                   placeholderTextColor={colors.textTertiary}
                   value={formSlug}
-                  onChangeText={setFormSlug}
+                  onChangeText={handleSlugChange}
+                  onBlur={handleSlugBlur}
                   autoCapitalize="none"
+                  maxLength={MAX_SLUG_LENGTH}
                 />
+                <FieldError message={fieldErr(formErrors.slug, formTouched.slug)} colors={colors} />
               </View>
 
               <View style={st.fieldWrap}>
-                <Text style={[st.fieldLabel, { color: colors.textSecondary }]}>
-                  Deskripsi (Opsional)
-                </Text>
+                <View style={st.fieldLabelRow}>
+                  <Text style={[st.fieldLabel, { color: colors.textSecondary }]}>
+                    Deskripsi (Opsional)
+                  </Text>
+                  <Text style={[st.charCount, { color: colors.textTertiary }]}>
+                    {formDescription.length}/{MAX_DESC_LENGTH}
+                  </Text>
+                </View>
                 <TextInput
                   style={[
                     st.fieldInput,
                     st.textArea,
                     {
                       backgroundColor: colors.surfaceContainerLow,
-                      borderColor: colors.outline,
+                      borderColor: fieldErr(formErrors.description, formTouched.description) ? colors.error : colors.outline,
                       color: colors.text,
                     },
                   ]}
                   placeholder="Penjelasan singkat mengenai jenis olahraga"
                   placeholderTextColor={colors.textTertiary}
                   value={formDescription}
-                  onChangeText={setFormDescription}
+                  onChangeText={handleDescriptionChange}
+                  onBlur={handleDescriptionBlur}
                   multiline
                   numberOfLines={3}
+                  maxLength={MAX_DESC_LENGTH}
                 />
+                <FieldError message={fieldErr(formErrors.description, formTouched.description)} colors={colors} />
               </View>
 
               <View style={st.switchRow}>
@@ -468,10 +598,10 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
                 style={[
                   st.submitBtn,
                   { backgroundColor: colors.primary },
-                  formLoading && { opacity: 0.6 },
+                  isSubmitDisabled && { opacity: 0.5 },
                 ]}
                 onPress={handleSave}
-                disabled={formLoading}
+                disabled={isSubmitDisabled}
               >
                 {formLoading ? (
                   <ActivityIndicator color={colors.onPrimary} size="small" />
@@ -500,6 +630,20 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  fieldErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 6,
+    paddingHorizontal: 4,
+  },
+  fieldErrorText: {
+    fontSize: 12,
+    flex: 1,
+  },
+});
 
 const makeStyles = (colors: ThemeColors, isMobile: boolean) =>
   StyleSheet.create({
@@ -611,12 +755,22 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) =>
     },
     sheetTitle: { ...FONTS.titleLg, fontSize: 18 },
     fieldWrap: { marginBottom: 14 },
+    fieldLabelRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 6,
+    },
     fieldLabel: {
       ...FONTS.labelSm,
       fontSize: 11,
       fontWeight: '700',
-      marginBottom: 6,
       textTransform: 'uppercase',
+    },
+    charCount: {
+      ...FONTS.labelSm,
+      fontSize: 10,
+      fontWeight: '600',
     },
     fieldInput: {
       borderRadius: 12,
