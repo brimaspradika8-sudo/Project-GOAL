@@ -155,6 +155,32 @@ class BookingController extends Controller
         ]);
     }
 
+    public function storeManualBooking(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'field_id' => ['required', 'integer', 'exists:fields,id'],
+            'booking_date' => ['required', 'date_format:Y-m-d'],
+            'slots' => ['required', 'array', 'min:1'],
+            'slots.*.start_time' => ['required', 'date_format:H:i'],
+            'slots.*.end_time' => ['required', 'date_format:H:i'],
+            'customer_name' => ['required', 'string', 'max:255'],
+            'customer_phone' => ['nullable', 'string', 'max:50'],
+            'payment_method' => ['nullable', 'string', 'in:cash,transfer,qris'],
+        ]);
+
+        try {
+            $booking = $this->bookingService->createManualBooking($request->user(), $data);
+        } catch (BookingConflictException $e) {
+            return $this->errorResponse($e->getMessage(), [], 409);
+        } catch (ValidationException $e) {
+            return $this->errorResponse($e->getMessage(), $e->errors(), 422);
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse($e->getMessage(), [], 403);
+        }
+
+        return $this->resourceResponse('Booking offline/walk-in berhasil disimpan.', new BookingResource($booking), 201);
+    }
+
     /**
      * Super admin monitoring across all bookings.
      * Filters: status, date, field_id, owner_id.

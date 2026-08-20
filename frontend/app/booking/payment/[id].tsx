@@ -55,11 +55,6 @@ export default function BookingPaymentScreen() {
     return () => clearInterval(interval);
   }, [booking, refetch]);
 
-  const handleConfirm = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.replace({ pathname: '/booking-success', params: { id: String(bookingId) } });
-  };
-
   const handleExpired = useCallback(async () => {
     if (isExpiringRef.current) return;
     isExpiringRef.current = true;
@@ -163,26 +158,8 @@ export default function BookingPaymentScreen() {
           </Text>
         </View>
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: 40 }} />
       </ScrollView>
-
-      {/* Bottom Confirm Button */}
-      <View style={st.bottomBar}>
-        <View style={st.bottomBarInner}>
-          <View style={st.bottomLabelWrap}>
-            <Text style={st.bottomLabel}>Total Bayar</Text>
-            <Text style={st.bottomAmount}>{formatPrice(booking.total_price)}</Text>
-          </View>
-          <TouchableOpacity
-            style={st.payBtn}
-            onPress={handleConfirm}
-            activeOpacity={0.85}
-          >
-            <MaterialIcons name="check" size={20} color={colors.onPrimary} />
-            <Text style={st.payBtnText}>Konfirmasi Booking</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
     </View>
   );
 

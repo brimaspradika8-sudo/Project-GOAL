@@ -19,14 +19,25 @@ function startOfDay(date: Date): Date {
 }
 
 interface CalendarPickerProps {
-  value: string;
-  onChange: (date: string) => void;
+  value?: string;
+  onChange?: (date: string) => void;
+  selectedDates?: string[];
+  onMultiChange?: (dates: string[]) => void;
+  multiSelect?: boolean;
   days?: number;
   startDate?: Date;
   style?: ViewStyle;
 }
 
-export default function CalendarPicker({ value, onChange, startDate = new Date(), style }: CalendarPickerProps) {
+export default function CalendarPicker({
+  value,
+  onChange,
+  selectedDates = [],
+  onMultiChange,
+  multiSelect = false,
+  startDate = new Date(),
+  style,
+}: CalendarPickerProps) {
   const { colors } = useTheme();
   const today = useMemo(() => startOfDay(new Date()), []);
   const todayIso = formatDate(today);
@@ -60,6 +71,25 @@ export default function CalendarPicker({ value, onChange, startDate = new Date()
   const nextMonth = () => {
     setViewMonth(viewMonth === 11 ? 0 : viewMonth + 1);
     if (viewMonth === 11) setViewYear(viewYear + 1);
+  };
+
+  const isDateSelected = (iso: string) => {
+    if (multiSelect) {
+      return selectedDates.includes(iso);
+    }
+    return iso === value;
+  };
+
+  const handlePressDate = (iso: string) => {
+    if (multiSelect && onMultiChange) {
+      if (selectedDates.includes(iso)) {
+        onMultiChange(selectedDates.filter((d) => d !== iso));
+      } else {
+        onMultiChange([...selectedDates, iso]);
+      }
+    } else if (onChange) {
+      onChange(iso);
+    }
   };
 
   return (
@@ -97,7 +127,7 @@ export default function CalendarPicker({ value, onChange, startDate = new Date()
           const iso = formatDate(date);
           const isPast = date < today;
           const isToday = iso === todayIso;
-          const isSelected = iso === value;
+          const isSelected = isDateSelected(iso);
           const disabled = isPast;
 
           return (
@@ -105,7 +135,9 @@ export default function CalendarPicker({ value, onChange, startDate = new Date()
               <TouchableOpacity
                 activeOpacity={disabled ? 1 : 0.8}
                 disabled={disabled}
-                onPress={() => { if (!disabled) onChange(iso); }}
+                onPress={() => {
+                  if (!disabled) handlePressDate(iso);
+                }}
                 style={[
                   styles.day,
                   {

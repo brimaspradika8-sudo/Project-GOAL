@@ -64,6 +64,8 @@ export interface SlotsResponse {
   tanggal: string;
   field_status: FieldLiveStatus;
   slots: TimeSlot[];
+  closed_days?: number[];
+  holidays?: string[];
 }
 
 export interface CreateBookingPayload {
@@ -255,4 +257,15 @@ export async function addOwnerBlockedSlot(
 
 export async function deleteOwnerBlockedSlot(blockedSlotId: number): Promise<{ message: string }> {
   return apiSend('DELETE', `/owner/blocked-slots/${blockedSlotId}`, {});
+}
+
+export async function createOwnerManualBooking(payload: {
+  field_id: number;
+  booking_date: string;
+  slots: { start_time: string; end_time: string }[];
+  customer_name: string;
+  customer_phone?: string;
+  payment_method?: string;
+}): Promise<{ message: string; data: Booking }> {
+  return apiSend('POST', '/owner/bookings/manual', { body: payload });
 }

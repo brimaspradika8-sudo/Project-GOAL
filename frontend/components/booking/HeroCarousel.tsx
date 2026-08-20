@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
   ViewStyle,
 } from 'react-native';
@@ -35,7 +36,7 @@ export default function HeroCarousel({
   const { colors } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [width, setWidth] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
   const [index, setIndex] = useState(0);
 
   const list = images.length > 0 ? images : [];
@@ -50,11 +51,11 @@ export default function HeroCarousel({
 
   const startAutoplay = () => {
     stopAutoplay();
-    if (count <= 1 || width <= 0) return;
+    if (count <= 1 || containerWidth <= 0) return;
     timerRef.current = setInterval(() => {
       setIndex((prev) => {
         const next = (prev + 1) % count;
-        scrollRef.current?.scrollTo({ x: next * width, animated: true });
+        scrollRef.current?.scrollTo({ x: next * containerWidth, animated: true });
         return next;
       });
     }, AUTOPLAY_MS);
@@ -64,12 +65,23 @@ export default function HeroCarousel({
     startAutoplay();
     return stopAutoplay;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [count, width]);
+  }, [count, containerWidth]);
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (width <= 0) return;
-    const i = Math.round(e.nativeEvent.contentOffset.x / width);
-    setIndex(Math.max(0, Math.min(count - 1, i)));
+    if (containerWidth <= 0) return;
+    const currentX = e.nativeEvent.contentOffset.x;
+    const i = Math.round(currentX / containerWidth);
+    if (i !== index && i >= 0 && i < count) {
+      setIndex(i);
+    }
+  };
+
+  const scrollToSlide = (targetIndex: number) => {
+    if (containerWidth <= 0 || targetIndex < 0 || targetIndex >= count) return;
+    stopAutoplay();
+    setIndex(targetIndex);
+    scrollRef.current?.scrollTo({ x: targetIndex * containerWidth, animated: true });
+    startAutoplay();
   };
 
   return (
@@ -87,18 +99,21 @@ export default function HeroCarousel({
         ]}
         onLayout={(e) => {
           const w = e.nativeEvent.layout.width;
-          if (w > 0 && Math.abs(w - width) > 1) {
-            setWidth(w);
+          if (w > 0 && Math.abs(w - containerWidth) > 1) {
+            setContainerWidth(w);
             setIndex(0);
             scrollRef.current?.scrollTo({ x: 0, animated: false });
           }
         }}
       >
-        {count > 0 ? (
+        {count > 0 && containerWidth > 0 ? (
           <ScrollView
             ref={scrollRef}
             horizontal
             pagingEnabled
+            snapToInterval={containerWidth}
+            snapToAlignment="start"
+            decelerationRate="fast"
             showsHorizontalScrollIndicator={false}
             onScroll={handleScroll}
             scrollEventThrottle={16}
@@ -106,13 +121,18 @@ export default function HeroCarousel({
             onScrollEndDrag={startAutoplay}
             onMomentumScrollEnd={startAutoplay}
             bounces={false}
+            style={{ width: containerWidth }}
           >
             {list.map((uri, i) => (
-              <View key={`${uri}-${i}`} style={[styles.page, { width }]}>
+              <View key={`${uri}-${i}`} style={[styles.page, { width: containerWidth }]}>
                 <SafeImage source={{ uri }} style={styles.image} fallbackSize={48} />
               </View>
             ))}
           </ScrollView>
+        ) : count > 0 ? (
+          <View style={styles.placeholder}>
+            <SafeImage source={{ uri: list[0] }} style={styles.image} fallbackSize={48} />
+          </View>
         ) : (
           <View style={styles.placeholder}>
             <View style={[styles.placeholderIconWrap, { backgroundColor: colors.primaryContainer }]}>
@@ -128,16 +148,52 @@ export default function HeroCarousel({
 
         <LinearGradient
           pointerEvents="none"
-          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.55)']}
+          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.65)']}
           style={styles.gradient}
         />
 
         {count > 1 && (
-          <View style={styles.dots}>
-            {list.map((_, i) => (
-              <View key={i} style={[styles.dot, i === index && styles.dotActive]} />
-            ))}
-          </View>
+          <>
+            {/* Arrow Nav (Web / Large screens) */}
+            {Platform.OS === 'web' && index > 0 && (
+              <TouchableOpacity
+                style={[styles.arrowBtn, styles.arrowLeft]}
+                onPress={() => scrollToSlide(index - 1)}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons name="chevron-left" size={26} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
+
+            {Platform.OS === 'web' && index < count - 1 && (
+              <TouchableOpacity
+                style={[styles.arrowBtn, styles.arrowRight]}
+                onPress={() => scrollToSlide(index + 1)}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons name="chevron-right" size={26} color="#FFFFFF" />
+              </TouchableOpacity>
+            )}
+
+            {/* Pagination Indicators / Dots */}
+            <View style={styles.dots}>
+              {list.map((_, i) => (
+                <TouchableOpacity
+                  key={i}
+                  onPress={() => scrollToSlide(i)}
+                  activeOpacity={0.8}
+                  style={[styles.dotTouch]}
+                >
+                  <View style={[styles.dot, i === index && styles.dotActive]} />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Counter badge (e.g. 1/3) */}
+            <View style={styles.counterBadge}>
+              <Text style={styles.counterText}>{index + 1} / {count}</Text>
+            </View>
+          </>
         )}
       </View>
     </View>
@@ -184,6 +240,24 @@ const styles = StyleSheet.create({
   placeholderText: {
     ...typography.bodyMd,
   },
+  arrowBtn: {
+    position: 'absolute',
+    top: '50%',
+    marginTop: -20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  arrowLeft: {
+    left: 12,
+  },
+  arrowRight: {
+    right: 12,
+  },
   dots: {
     position: 'absolute',
     bottom: 14,
@@ -191,16 +265,36 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 6,
+    alignItems: 'center',
+    gap: 4,
+    zIndex: 5,
+  },
+  dotTouch: {
+    padding: 4,
   },
   dot: {
-    width: 6,
-    height: 6,
+    width: 7,
+    height: 7,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(255,255,255,0.55)',
+    backgroundColor: 'rgba(255,255,255,0.5)',
   },
   dotActive: {
-    width: 18,
+    width: 22,
     backgroundColor: '#FFFFFF',
+  },
+  counterBadge: {
+    position: 'absolute',
+    bottom: 14,
+    right: 14,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    zIndex: 5,
+  },
+  counterText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

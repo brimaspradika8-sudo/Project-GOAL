@@ -31,6 +31,16 @@ class FieldAvailabilityController extends Controller
 
         $result = $this->availabilityService->forDate($field, $date, $bookedRanges);
 
+        $closedDays = \App\Models\FieldSchedule::where('field_id', $field->id)
+            ->where('is_closed', true)
+            ->pluck('day_of_week')
+            ->toArray();
+
+        $holidays = \App\Models\FieldHoliday::where('field_id', $field->id)
+            ->get()
+            ->map(fn($h) => \Illuminate\Support\Carbon::parse($h->date)->format('Y-m-d'))
+            ->toArray();
+
         return $this->successResponse('Ketersediaan lapangan berhasil dimuat.', [
             'field' => (new FieldResource($field))->resolve($request),
             'lapangan' => [
@@ -41,6 +51,8 @@ class FieldAvailabilityController extends Controller
             'tanggal' => $result['date'],
             'field_status' => $this->availabilityService->liveFieldStatus($field, $date),
             'slots' => $result['slots'],
+            'closed_days' => $closedDays,
+            'holidays' => $holidays,
         ]);
     }
 }

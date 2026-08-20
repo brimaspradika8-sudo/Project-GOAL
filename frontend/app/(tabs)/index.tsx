@@ -59,7 +59,7 @@ export default function HomeScreen() {
   const [notifVisible, setNotifVisible] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 500);
   const isSearching = fieldsLoading || (searchQuery.trim() !== debouncedSearch.trim());
-  const { colors } = useTheme();
+  const { colors, resolved } = useTheme();
   const { refresh: refreshNotifications, unreadCount } = useNotificationStore();
 
   useEffect(() => {
@@ -179,7 +179,16 @@ export default function HomeScreen() {
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
+        style={{ backgroundColor: colors.background }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+            progressBackgroundColor={resolved === 'dark' ? colors.surfaceContainerHigh : '#FFFFFF'}
+          />
+        }
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.pageShell}>
@@ -290,10 +299,7 @@ export default function HomeScreen() {
           </View>
 
           {(isFiltering ? fieldsLoading : popularLoading) ? (
-            <View style={styles.emptyState}>
-              <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={styles.emptyText}>Memuat lapangan...</Text>
-            </View>
+            <SkeletonVenueList />
           ) : filteredVenues.length === 0 ? (
             <View style={styles.emptyState}>
               <MaterialIcons name="search-off" size={40} color={colors.textTertiary} />

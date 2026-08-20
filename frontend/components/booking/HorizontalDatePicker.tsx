@@ -44,6 +44,8 @@ interface HorizontalDatePickerProps {
   onChange: (iso: string) => void;
   startDate?: Date;
   days?: number;
+  holidays?: string[];
+  closedDays?: number[];
   style?: ViewStyle;
 }
 
@@ -52,6 +54,8 @@ export default function HorizontalDatePicker({
   onChange,
   startDate = new Date(),
   days = 60,
+  holidays = [],
+  closedDays = [],
   style,
 }: HorizontalDatePickerProps) {
   const { colors } = useTheme();
@@ -104,7 +108,9 @@ export default function HorizontalDatePicker({
       0,
       Math.min(items.length - 1, Math.round(e.nativeEvent.contentOffset.x / STRIDE)),
     );
-    setActiveMonth(items[idx].monthLabel);
+    if (items[idx]) {
+      setActiveMonth(items[idx].monthLabel);
+    }
   };
 
   const scrollToMonth = (monthIndex: number) => {
@@ -117,6 +123,10 @@ export default function HorizontalDatePicker({
   useEffect(() => {
     const selectedIndex = value ? items.findIndex((item) => item.iso === value) : -1;
     const targetIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    if (value) {
+      const targetItem = items.find((item) => item.iso === value);
+      if (targetItem) setActiveMonth(targetItem.monthLabel);
+    }
     const sc = scrollRef.current;
     if (sc) sc.scrollTo({ x: targetIndex * STRIDE, animated: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -159,17 +169,37 @@ export default function HorizontalDatePicker({
         {items.map((item) => {
           const selected = item.iso === value;
           const disabled = item.isPast;
+          const dateObj = new Date(item.iso + 'T00:00:00');
+          const isClosed = closedDays.includes(dateObj.getDay());
+          const isHolidayDate = holidays.includes(item.iso);
+          const isHoliday = isClosed || isHolidayDate;
+
           return (
             <TouchableOpacity
               key={item.iso}
               activeOpacity={disabled ? 1 : 0.75}
               disabled={disabled}
-              onPress={() => { if (!disabled) onChange(item.iso); }}
+              onPress={() => {
+                if (!disabled) {
+                  setActiveMonth(item.monthLabel);
+                  onChange(item.iso);
+                }
+              }}
               style={[
                 styles.dayCard,
                 {
-                  backgroundColor: selected ? colors.primary : colors.surfaceWhite,
-                  borderColor: selected || item.isToday ? colors.primary : colors.divider,
+                  backgroundColor: selected
+                    ? colors.primary
+                    : isHoliday
+                    ? '#FEE2E2'
+                    : colors.surfaceWhite,
+                  borderColor: selected
+                    ? colors.primary
+                    : isHoliday
+                    ? '#EF4444'
+                    : item.isToday
+                    ? colors.primary
+                    : colors.divider,
                 },
                 disabled && styles.dayCardDisabled,
               ]}
@@ -177,7 +207,13 @@ export default function HorizontalDatePicker({
               <Text
                 style={[
                   styles.weekday,
-                  { color: selected ? 'rgba(255,255,255,0.85)' : colors.textTertiary },
+                  {
+                    color: selected
+                      ? 'rgba(255,255,255,0.85)'
+                      : isHoliday
+                      ? '#DC2626'
+                      : colors.textTertiary,
+                  },
                 ]}
               >
                 {item.weekday}
@@ -185,11 +221,22 @@ export default function HorizontalDatePicker({
               <Text
                 style={[
                   styles.dayNum,
-                  { color: selected ? '#FFFFFF' : item.isToday ? colors.primary : colors.text },
+                  {
+                    color: selected
+                      ? '#FFFFFF'
+                      : isHoliday
+                      ? '#DC2626'
+                      : item.isToday
+                      ? colors.primary
+                      : colors.text,
+                  },
                 ]}
               >
                 {item.day}
               </Text>
+              {isHoliday && !selected && (
+                <Text style={styles.holidayBadgeText}>Libur</Text>
+              )}
             </TouchableOpacity>
           );
         })}
@@ -252,5 +299,13 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
     lineHeight: 26,
+  },
+  holidayBadgeText: {
+    fontFamily: typography.labelMd.fontFamily,
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#DC2626',
+    textTransform: 'uppercase',
+    marginTop: -2,
   },
 });

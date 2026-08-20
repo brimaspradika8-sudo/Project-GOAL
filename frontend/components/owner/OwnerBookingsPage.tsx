@@ -9,7 +9,7 @@ import { router } from 'expo-router';
 import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../goalTheme';
 import DashboardHeader from '../shared/DashboardHeader';
 import { SkeletonCards } from '../Skeleton';
-import { useTheme } from '../../lib/theme';
+import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useToastStore } from '../../store/toastStore';
 import {
   ownerApproveBooking,
@@ -17,8 +17,11 @@ import {
   ownerRejectBooking,
   ownerCompleteBooking,
   getOwnerBookings,
+  createOwnerManualBooking,
+  getSlots,
   type Booking,
 } from '../../services/bookingService';
+import { apiFetch } from '../../lib/apiClient';
 import { useIsMobileWeb } from '../../lib/responsive';
 import { ErrorState } from '../common';
 import { formatCurrency } from '../../lib/format';
@@ -307,6 +310,174 @@ function BookingCard({
   );
 }
 
+// ─── Walk-In Booking Modal ───────────────────────────────────────────────────
+
+function WalkInBookingModal({
+  visible,
+  onClose,
+  onSuccess,
+  colors,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  colors: any;
+}) {
+  const [fields, setFields] = useState<any[]>([]);
+  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
+  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [slots, setSlots] = useState<any[]>([]);
+  const [selectedSlots, setSelectedSlots] = useState<any[]>([]);
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!visible) return;
+    apiFetch('/fields/my/list').then(res => res.json()).then(data => {
+      const list = Array.isArray(data?.data) ? data.data : [];
+      setFields(list);
+      if (list.length > 0) setSelectedFieldId(list[0].id);
+    }).catch(() => {});
+  }, [visible]);
+
+  useEffect(() => {
+    if (!selectedFieldId || !date) return;
+    setLoadingSlots(true);
+    setSelectedSlots([]);
+    getSlots(selectedFieldId, date).then(res => {
+      setSlots(res?.slots ?? []);
+    }).catch(() => {
+      setSlots([]);
+    }).finally(() => {
+      setLoadingSlots(false);
+    });
+  }, [selectedFieldId, date]);
+
+  const handleToggleSlot = (slot: any) => {
+    if (slot.status !== 'AVAILABLE') return;
+    const exists = selectedSlots.some(s => s.start_time === slot.start_time);
+    if (exists) {
+      setSelectedSlots(selectedSlots.filter(s => s.start_time !== slot.start_time));
+    } else {
+      setSelectedSlots([...selectedSlots, slot]);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!selectedFieldId || selectedSlots.length === 0 || !customerName) {
+      useToastStore.getState().show({ type: 'error', title: 'Data belum lengkap', description: 'Isi nama pelanggan dan pilih minimal 1 slot jam.' });
+      return;
+    }
+    setSaving(true);
+    try {
+      await createOwnerManualBooking({
+        field_id: selectedFieldId,
+        booking_date: date,
+        slots: selectedSlots.map(s => ({ start_time: s.start_time, end_time: s.end_time })),
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        payment_method: 'cash',
+      });
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Booking walk-in berhasil disimpan dan slot terkunci!' });
+      onSuccess();
+      onClose();
+    } catch (e: any) {
+      useToastStore.getState().show({ type: 'error', title: 'Gagal', description: e?.message || 'Gagal menyimpan booking offline.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' }}>
+        <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={onClose} />
+        <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxWidth: 560, width: '100%', alignSelf: 'center', maxHeight: '88%' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Text style={{ fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: '700', color: colors.text }}>Booking Walk-in (POS Kasir)</Text>
+            <TouchableOpacity onPress={onClose}>
+              <MaterialIcons name="close" size={22} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>Pilih Lapangan</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 14 }}>
+              {fields.map(f => (
+                <TouchableOpacity
+                  key={f.id}
+                  onPress={() => setSelectedFieldId(f.id)}
+                  style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: selectedFieldId === f.id ? colors.primary : colors.outline, backgroundColor: selectedFieldId === f.id ? colors.primaryContainer : colors.surface }}
+                >
+                  <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600', color: selectedFieldId === f.id ? colors.primary : colors.text }}>{f.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>Nama Pelanggan (Offline)</Text>
+            <TextInput
+              value={customerName}
+              onChangeText={setCustomerName}
+              placeholder="Contoh: Pak Budi / Tim Futsal Jaya"
+              placeholderTextColor={colors.textTertiary}
+              style={{ borderWidth: 1, borderColor: colors.outline, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontFamily: FONT_FAMILY, fontSize: 14, color: colors.text, marginBottom: 12 }}
+            />
+
+            <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>Nomor HP (Opsional)</Text>
+            <TextInput
+              value={customerPhone}
+              onChangeText={setCustomerPhone}
+              placeholder="08123456789"
+              placeholderTextColor={colors.textTertiary}
+              keyboardType="phone-pad"
+              style={{ borderWidth: 1, borderColor: colors.outline, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontFamily: FONT_FAMILY, fontSize: 14, color: colors.text, marginBottom: 16 }}
+            />
+
+            <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', marginBottom: 8 }}>Pilih Jam (Tanggal {date})</Text>
+            {loadingSlots ? (
+              <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
+            ) : slots.length === 0 ? (
+              <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, color: colors.textSecondary, marginBottom: 16 }}>Tidak ada slot tersedia di tanggal ini.</Text>
+            ) : (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+                {slots.map(s => {
+                  const isSelected = selectedSlots.some(sel => sel.start_time === s.start_time);
+                  const isAvail = s.status === 'AVAILABLE';
+                  return (
+                    <TouchableOpacity
+                      key={s.start_time}
+                      disabled={!isAvail}
+                      onPress={() => handleToggleSlot(s)}
+                      style={{
+                        paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1,
+                        borderColor: isSelected ? colors.primary : !isAvail ? colors.outline : colors.outline,
+                        backgroundColor: isSelected ? colors.primary : !isAvail ? colors.surfaceContainerLow : colors.surface,
+                        opacity: !isAvail ? 0.4 : 1,
+                      }}
+                    >
+                      <Text style={{ fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '600', color: isSelected ? colors.onPrimary : colors.text }}>{s.start_time}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+
+            <TouchableOpacity
+              onPress={handleSave}
+              disabled={saving || selectedSlots.length === 0}
+              style={{ backgroundColor: colors.primary, paddingVertical: 12, borderRadius: 12, alignItems: 'center', opacity: saving || selectedSlots.length === 0 ? 0.6 : 1, marginBottom: 10 }}
+            >
+              {saving ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={{ fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700', color: colors.onPrimary }}>Kunci Slot (Simpan Booking)</Text>}
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function OwnerBookingsPage() {
@@ -330,6 +501,7 @@ export default function OwnerBookingsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingAction, setLoadingAction] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [walkInModal, setWalkInModal] = useState(false);
 
   // Reject modal state
   const [rejectTarget, setRejectTarget] = useState<Booking | null>(null);
@@ -355,8 +527,6 @@ export default function OwnerBookingsPage() {
   const filteredBookings = [...bookings].sort((a, b) => {
     return new Date(b.created_at ?? b.booking_date).getTime() - new Date(a.created_at ?? a.booking_date).getTime();
   });
-
-  // ── Actions ─────────────────────────────────────────────────────────────────
 
   const handleApprove = useCallback(async (id: number) => {
     setLoadingAction(id);
@@ -412,8 +582,6 @@ export default function OwnerBookingsPage() {
     }
   }, [fetchBookings, showToast]);
 
-  // ── Render ──────────────────────────────────────────────────────────────────
-
   return (
     <View style={[st.screen, { backgroundColor: colors.background }]}>
       <DashboardHeader
@@ -421,21 +589,42 @@ export default function OwnerBookingsPage() {
         subtitle="Pantau dan kelola jadwal lapangan Anda"
         showBack={false}
         right={
-          <TouchableOpacity
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 19,
-              backgroundColor: 'rgba(255,255,255,0.18)',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-            activeOpacity={0.8}
-            onPress={() => router.push('/(owner)/booking-settings')}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <MaterialIcons name="settings" size={22} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                backgroundColor: '#10B981',
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+                borderRadius: 10,
+              }}
+              activeOpacity={0.85}
+              onPress={() => setWalkInModal(true)}
+            >
+              <MaterialIcons name="add" size={18} color="#FFFFFF" />
+              <Text style={{ fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: '#FFFFFF' }}>
+                Walk-in
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                backgroundColor: 'rgba(255,255,255,0.18)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              activeOpacity={0.8}
+              onPress={() => router.push('/(owner)/booking-settings')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <MaterialIcons name="settings" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -451,24 +640,26 @@ export default function OwnerBookingsPage() {
             st.contentList,
             !isMobile && { maxWidth: 900, alignSelf: 'center', width: '100%' }
           ]}
+          style={{ backgroundColor: colors.background }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
               tintColor={colors.primary}
               colors={[colors.primary]}
+              progressBackgroundColor={resolved === 'dark' ? colors.surfaceContainerHigh : '#FFFFFF'}
             />
           }
           showsVerticalScrollIndicator={false}
         >
           {filteredBookings.length === 0 ? (
             <View style={st.emptyWrap}>
-              <View style={[st.emptyIcon, { backgroundColor: colors.surfaceContainerHigh, borderColor: colors.outline ?? colors.divider }]}>
+              <View style={[st.emptyIcon, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline }]}>
                 <MaterialIcons name="event-busy" size={40} color={colors.textTertiary} />
               </View>
-              <Text style={[st.emptyTitle, { color: colors.text }]}>Tidak ada booking</Text>
+              <Text style={[st.emptyTitle, { color: colors.text }]}>Belum ada booking</Text>
               <Text style={[st.emptyDesc, { color: colors.textSecondary }]}>
-                Belum ada booking dengan status ini.
+                Pesanan booking dari pengguna atau kasir walk-in akan muncul di sini.
               </Text>
             </View>
           ) : (
@@ -499,13 +690,21 @@ export default function OwnerBookingsPage() {
         loading={rejecting}
         colors={colors}
       />
+
+      {/* Walk-in Offline Booking Modal */}
+      <WalkInBookingModal
+        visible={walkInModal}
+        onClose={() => setWalkInModal(false)}
+        onSuccess={fetchBookings}
+        colors={colors}
+      />
     </View>
   );
 }
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
 
-const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark', isMobile: boolean) =>
+const makeStyles = (colors: ThemeColors, resolved: 'light' | 'dark', isMobile: boolean) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
 

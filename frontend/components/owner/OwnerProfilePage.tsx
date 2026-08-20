@@ -365,7 +365,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'li
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceVariant + '30',
+    backgroundColor: resolved === 'dark' ? colors.surfaceContainerHigh : colors.surfaceContainerLow,
     borderRadius: SIZES.borderRadiusLg,
     paddingVertical: 14,
     paddingHorizontal: 8,

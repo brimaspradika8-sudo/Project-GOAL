@@ -144,6 +144,69 @@ class BookingService
         return $booking->load(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name', 'slots']);
     }
 
+    public function createManualBooking(User $owner, array $data): Booking
+    {
+        $field = Field::with('owner:id,name', 'prices')->find($data['field_id']);
+
+        if (! $field) {
+            throw ValidationException::withMessages([
+                'field_id' => 'Lapangan tidak ditemukan.',
+            ]);
+        }
+
+        if ($field->owner_id !== $owner->id && $owner->profile?->role !== Profile::ROLE_SUPER_ADMIN) {
+            throw new AuthorizationException('Anda tidak memiliki akses ke lapangan ini.');
+        }
+
+        $bookingDate = $data['booking_date'] ?? $data['date'];
+        $slots = $this->normalizeSlots($data['slots'], $field);
+
+        $startTime = $slots[0]['start_time'];
+        $endTime = $slots[count($slots) - 1]['end_time'];
+
+        $duration = $this->slotGenerator->toMinutes($endTime) - $this->slotGenerator->toMinutes($startTime);
+        $totalPrice = collect($slots)->sum(fn (array $slot) => $this->pricing->priceForSlot(
+            $field,
+            $slot['start_time'],
+            $slot['end_time']
+        ));
+
+        $customerName = $data['customer_name'] ?? 'Walk-in Customer';
+        $customerPhone = $data['customer_phone'] ?? '';
+        $notes = "Walk-in Offline: {$customerName}".($customerPhone ? " ({$customerPhone})" : '');
+
+        $booking = DB::transaction(function () use ($owner, $field, $data, $bookingDate, $startTime, $endTime, $duration, $totalPrice, $notes, $slots) {
+            Field::whereKey($field->id)->lockForUpdate()->first();
+
+            $this->assertNoConflict($field->id, $bookingDate, $slots);
+
+            $booking = Booking::create([
+                'user_id' => $owner->id,
+                'field_id' => $field->id,
+                'booking_date' => $bookingDate,
+                'start_time' => $startTime,
+                'end_time' => $endTime,
+                'duration_minutes' => $duration,
+                'total_price' => $totalPrice,
+                'payment_method' => $data['payment_method'] ?? 'cash',
+                'status' => BookingStatus::CONFIRMED->value,
+                'notes' => $notes,
+            ]);
+
+            foreach ($slots as $slot) {
+                BookingSlot::create([
+                    'booking_id' => $booking->id,
+                    'start_time' => $slot['start_time'],
+                    'end_time' => $slot['end_time'],
+                ]);
+            }
+
+            return $booking;
+        });
+
+        return $booking->load(['field:id,name,sport_type,location,image_url,price_per_hour,owner_id', 'user:id,name', 'slots']);
+    }
+
     public function cancel(User $user, int $id, ?string $reason): Booking
     {
         $booking = Booking::with('field:id,name,owner_id')->find($id);

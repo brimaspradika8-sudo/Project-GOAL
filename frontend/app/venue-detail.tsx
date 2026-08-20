@@ -290,15 +290,41 @@ export default function VenueDetailScreen() {
   function renderSlotSection() {
     if (!isApproved) return null;
     const slots = slotsData?.slots ?? [];
+    const closedDays = slotsData?.closed_days ?? [];
+    const holidays = slotsData?.holidays ?? [];
 
     return (
       <View style={st.bookingCard}>
         <Text style={st.bookingTitle}>Pilih Jadwal</Text>
-        <HorizontalDatePicker value={selectedDate} onChange={handleDateChange} />
+        <HorizontalDatePicker
+          value={selectedDate}
+          onChange={handleDateChange}
+          closedDays={closedDays}
+          holidays={holidays}
+        />
 
         <Text style={st.bookingHint}>Maksimal {MAX_BOOKING_SLOTS} jam. Ketuk slot berurutan untuk menyewa lebih lama.</Text>
 
         <View style={st.cardDivider} />
+
+        <View style={st.legendRow}>
+          <View style={st.legendItem}>
+            <View style={[st.legendDot, { backgroundColor: colors.success }]} />
+            <Text style={st.legendText}>Tersedia</Text>
+          </View>
+          <View style={st.legendItem}>
+            <View style={[st.legendDot, { backgroundColor: colors.primary }]} />
+            <Text style={st.legendText}>Dipilih</Text>
+          </View>
+          <View style={st.legendItem}>
+            <View style={[st.legendDot, { backgroundColor: colors.error }]} />
+            <Text style={st.legendText}>Penuh</Text>
+          </View>
+          <View style={st.legendItem}>
+            <View style={[st.legendDot, { backgroundColor: colors.textTertiary }]} />
+            <Text style={st.legendText}>Libur/Lewat</Text>
+          </View>
+        </View>
 
         {slotsLoading ? (
           <View style={st.slotsLoading}>
@@ -637,15 +663,16 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isMobile: boo
     justifyContent: 'center',
   },
   slotsLoadingText: { ...FONTS.bodyMd, color: colors.textSecondary },
-  slotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' },
+  slotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-start' },
   slotBtn: {
-    width: '22%',
-    maxWidth: 112,
-    height: 62,
-    borderRadius: SIZES.borderRadius,
+    minWidth: isMobile ? '28%' : 110,
+    flexGrow: 1,
+    height: 64,
+    borderRadius: 14,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 8,
   },
   slotBtnSelected: {
     backgroundColor: colors.primary,
@@ -758,6 +785,31 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isMobile: boo
     fontSize: 14,
     fontWeight: '600',
     color: colors.text,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: 12,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  legendText: {
+    ...FONTS.labelSm,
+    color: colors.textSecondary,
+    fontSize: 11,
   },
   desktopTwoCol: {
     flexDirection: 'row',

@@ -31,37 +31,51 @@ interface UseSlotsResult {
   refetch: () => void;
 }
 
-export function useSlots(fieldId: number | null, date: string): UseSlotsResult {
+export function useSlots(fieldId: number | null, date: string, pollIntervalMs = 3000): UseSlotsResult {
   const [slotsData, setSlotsData] = useState<SlotsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cancelledRef = useRef(false);
 
-  const fetch = useCallback(async () => {
+  const fetch = useCallback(async (isSilent = false) => {
     if (!fieldId || !date) return;
-    setLoading(true);
-    setError(null);
+    if (!isSilent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const data = await getSlots(fieldId, date);
       if (cancelledRef.current) return;
       setSlotsData(data);
+      if (isSilent) setError(null);
     } catch (e: any) {
       if (cancelledRef.current) return;
-      setError(e?.message || 'Gagal memuat slot waktu');
+      if (!isSilent) setError(e?.message || 'Gagal memuat slot waktu');
     } finally {
-      if (!cancelledRef.current) setLoading(false);
+      if (!cancelledRef.current && !isSilent) setLoading(false);
     }
   }, [fieldId, date]);
 
   useEffect(() => {
     cancelledRef.current = false;
-    fetch();
+    fetch(false);
+
+    if (pollIntervalMs > 0) {
+      const interval = setInterval(() => {
+        fetch(true);
+      }, pollIntervalMs);
+      return () => {
+        cancelledRef.current = true;
+        clearInterval(interval);
+      };
+    }
+
     return () => {
       cancelledRef.current = true;
     };
-  }, [fetch]);
+  }, [fetch, pollIntervalMs]);
 
-  return { slotsData, loading, error, refetch: fetch };
+  return { slotsData, loading, error, refetch: () => fetch(false) };
 }
 
 // ─── useBookingDetail ─────────────────────────────────────────────────────────
@@ -153,7 +167,7 @@ export function useBookingHistory(): UseBookingHistoryResult {
     fetch();
     const interval = setInterval(() => {
       fetch({ silent: true });
-    }, 10000);
+    }, 3000);
     return () => {
       cancelledRef.current = true;
       clearInterval(interval);

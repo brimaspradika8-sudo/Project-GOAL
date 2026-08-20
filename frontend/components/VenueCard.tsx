@@ -12,6 +12,8 @@ import { formatCurrency } from '../lib/format';
 
 import type { Field } from '../store/fieldStore';
 
+import { getSportBadgeStyle } from '../utils/sportBadge';
+
 const SPORT_ICONS: Record<string, string> = {
   futsal: 'sports-soccer',
   basketball: 'sports-basketball',
@@ -34,11 +36,13 @@ export default function VenueCard({ field, onFavoriteToggle, isFavorite = false 
   const hasImage = !!field.image_url;
   const isApproved = field.status === 'approved';
   const sportLabel = SPORT_LABELS[field.sport_type] || field.sport_type;
-  const sportIcon = (SPORT_ICONS[field.sport_type] || 'sports') as React.ComponentProps<typeof MaterialIcons>['name'];
+  const badgeStyle = getSportBadgeStyle(field.sport_type);
+  const sportIcon = badgeStyle.icon;
   const { hydrate, isFavorite: checkFavorite, toggleFavorite } = useFavoriteStore();
   const isLiked = checkFavorite(field.id) || isFavorite;
 
   const [activeImgIndex, setActiveImgIndex] = useState(0);
+  const [cardWidth, setCardWidth] = useState(0);
 
   const images = useMemo(() => {
     if (field.images && field.images.length > 0) {
@@ -57,7 +61,15 @@ export default function VenueCard({ field, onFavoriteToggle, isFavorite = false 
       activeOpacity={0.85}
       onPress={() => router.push({ pathname: '/venue-detail', params: { id: String(field.id) } })}
     >
-      <View style={st.imageWrap}>
+      <View
+        style={st.imageWrap}
+        onLayout={(e) => {
+          const w = e.nativeEvent.layout.width;
+          if (w > 0 && Math.abs(w - cardWidth) > 1) {
+            setCardWidth(w);
+          }
+        }}
+      >
         {images.length > 0 ? (
           <ScrollView
             horizontal
@@ -77,7 +89,7 @@ export default function VenueCard({ field, onFavoriteToggle, isFavorite = false 
             style={st.imageScroll}
           >
             {images.map((url, idx) => (
-              <View key={`${url}-${idx}`} style={st.imageSlide}>
+              <View key={`${url}-${idx}`} style={[st.imageSlide, cardWidth > 0 ? { width: cardWidth } : null]}>
                 <SafeImage source={{ uri: url }} style={st.image} resizeMode="cover" fallbackSize={32} />
               </View>
             ))}
@@ -89,8 +101,17 @@ export default function VenueCard({ field, onFavoriteToggle, isFavorite = false 
           </View>
         )}
 
-        <View style={st.sportPill}>
-          <Text style={st.sportPillText}>{sportLabel}</Text>
+        <View
+          style={[
+            st.sportPill,
+            {
+              backgroundColor: badgeStyle.bg,
+              borderColor: badgeStyle.border,
+            },
+          ]}
+        >
+          <MaterialIcons name={badgeStyle.icon} size={12} color={badgeStyle.color} style={{ marginRight: 4 }} />
+          <Text style={[st.sportPillText, { color: badgeStyle.color }]}>{sportLabel}</Text>
         </View>
 
         {images.length > 1 && (
@@ -204,7 +225,6 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     flex: 1,
   },
   imageSlide: {
-    width: 280,
     height: 146,
   },
   image: {
@@ -269,10 +289,12 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     position: 'absolute',
     top: 10,
     left: 10,
-    backgroundColor: colors.primary,
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
   },
   sportPillText: {
     color: colors.onPrimary,

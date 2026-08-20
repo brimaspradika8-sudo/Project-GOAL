@@ -21,6 +21,8 @@ import {
   type FieldBlockedSlotItem,
 } from '../../services/bookingService';
 
+import CalendarPicker from '../booking/CalendarPicker';
+
 type FieldPrice = {
   id: number;
   field_id: number;
@@ -245,21 +247,30 @@ export default function OwnerBookingSettingsPage() {
     }
   };
 
+  const [selectedHolidayDates, setSelectedHolidayDates] = useState<string[]>([]);
+
   // Holiday handlers
   const handleAddHoliday = async () => {
-    if (!selectedField || !holidayForm.date) return;
+    const datesToAdd = selectedHolidayDates.length > 0 ? selectedHolidayDates : holidayForm.date ? [holidayForm.date] : [];
+    if (!selectedField || datesToAdd.length === 0) return;
     setConfirmHolidaySave(true);
   };
 
   const confirmAddHoliday = async () => {
-    if (!selectedField || !holidayForm.date) return;
+    const datesToAdd = selectedHolidayDates.length > 0 ? selectedHolidayDates : holidayForm.date ? [holidayForm.date] : [];
+    if (!selectedField || datesToAdd.length === 0) return;
     setHolidaySaving(true);
     setConfirmHolidaySave(false);
     try {
-      await addOwnerHoliday(selectedField.id, holidayForm.date, holidayForm.reason);
-      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Hari libur berhasil ditambahkan.' });
+      await Promise.all(datesToAdd.map((d) => addOwnerHoliday(selectedField.id, d, holidayForm.reason)));
+      useToastStore.getState().show({
+        type: 'success',
+        title: 'Berhasil',
+        description: `${datesToAdd.length} hari libur berhasil ditambahkan.`,
+      });
       setHolidayModal(false);
       setHolidayForm({ date: '', reason: '' });
+      setSelectedHolidayDates([]);
       loadHolidaysAndBlocked(selectedField.id);
     } catch (e: any) {
       useToastStore.getState().show({ type: 'error', title: 'Gagal', description: e?.message || 'Gagal menambahkan hari libur.' });
@@ -534,35 +545,43 @@ export default function OwnerBookingSettingsPage() {
                 <MaterialIcons name="close" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-            <View style={st.inputWrap}>
-              <Text style={st.inputLabel}>Tanggal (YYYY-MM-DD)</Text>
-              <View style={st.inputRow}>
-                <MaterialIcons name="event" size={18} color={colors.textSecondary} />
-                <TextInput
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ flexShrink: 1 }}>
+              <View style={{ marginBottom: 16 }}>
+                <Text style={st.inputLabel}>Pilih Tanggal di Kalender (Bisa Banyak Tanggal)</Text>
+                <CalendarPicker
+                  multiSelect
+                  selectedDates={selectedHolidayDates}
+                  onMultiChange={setSelectedHolidayDates}
                   value={holidayForm.date}
-                  onChangeText={(val) => setHolidayForm((prev) => ({ ...prev, date: val }))}
-                  placeholder="2026-08-17"
-                  placeholderTextColor={colors.textTertiary}
-                  style={st.input}
+                  onChange={(date) => setHolidayForm((prev) => ({ ...prev, date }))}
                 />
+                {selectedHolidayDates.length > 0 && (
+                  <View style={{ marginTop: 8, padding: 8, borderRadius: 8, backgroundColor: colors.primaryContainer }}>
+                    <Text style={{ fontFamily: FONTS.labelSm.fontFamily, fontSize: 12, fontWeight: '700', color: colors.onPrimaryContainer }}>
+                      {selectedHolidayDates.length} tanggal dipilih: {selectedHolidayDates.join(', ')}
+                    </Text>
+                  </View>
+                )}
               </View>
-            </View>
-            <View style={st.inputWrap}>
-              <Text style={st.inputLabel}>Alasan / Keterangan</Text>
-              <View style={st.inputRow}>
-                <MaterialIcons name="info-outline" size={18} color={colors.textSecondary} />
-                <TextInput
-                  value={holidayForm.reason}
-                  onChangeText={(val) => setHolidayForm((prev) => ({ ...prev, reason: val }))}
-                  placeholder="Libur Nasional / Perbaikan Venue"
-                  placeholderTextColor={colors.textTertiary}
-                  style={st.input}
-                />
+
+              <View style={st.inputWrap}>
+                <Text style={st.inputLabel}>Alasan / Keterangan</Text>
+                <View style={st.inputRow}>
+                  <MaterialIcons name="info-outline" size={18} color={colors.textSecondary} />
+                  <TextInput
+                    value={holidayForm.reason}
+                    onChangeText={(val) => setHolidayForm((prev) => ({ ...prev, reason: val }))}
+                    placeholder="Libur Nasional / Perbaikan Venue"
+                    placeholderTextColor={colors.textTertiary}
+                    style={st.input}
+                  />
+                </View>
               </View>
-            </View>
-            <TouchableOpacity style={[st.primaryBtn, holidaySaving && st.disabled]} onPress={handleAddHoliday} disabled={holidaySaving}>
-              {holidaySaving ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={st.primaryBtnText}>Simpan Hari Libur</Text>}
-            </TouchableOpacity>
+              <TouchableOpacity style={[st.primaryBtn, holidaySaving && st.disabled]} onPress={handleAddHoliday} disabled={holidaySaving}>
+                {holidaySaving ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={st.primaryBtnText}>Simpan Hari Libur</Text>}
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -578,39 +597,37 @@ export default function OwnerBookingSettingsPage() {
                 <MaterialIcons name="close" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-            <View style={st.inputWrap}>
-              <Text style={st.inputLabel}>Tanggal (YYYY-MM-DD)</Text>
-              <View style={st.inputRow}>
-                <MaterialIcons name="event" size={18} color={colors.textSecondary} />
-                <TextInput
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ flexShrink: 1 }}>
+              <View style={{ marginBottom: 16 }}>
+                <Text style={st.inputLabel}>Pilih Tanggal di Kalender</Text>
+                <CalendarPicker
                   value={blockedSlotForm.date}
-                  onChangeText={(val) => setBlockedSlotForm((prev) => ({ ...prev, date: val }))}
-                  placeholder="2026-08-20"
-                  placeholderTextColor={colors.textTertiary}
-                  style={st.input}
+                  onChange={(date) => setBlockedSlotForm((prev) => ({ ...prev, date }))}
                 />
               </View>
-            </View>
-            <View style={st.grid}>
-              <TimeInput label="Jam Mulai" value={blockedSlotForm.start_time} onChangeText={(val) => setBlockedSlotForm((prev) => ({ ...prev, start_time: val }))} st={st} colors={colors} />
-              <TimeInput label="Jam Selesai" value={blockedSlotForm.end_time} onChangeText={(val) => setBlockedSlotForm((prev) => ({ ...prev, end_time: val }))} st={st} colors={colors} />
-            </View>
-            <View style={st.inputWrap}>
-              <Text style={st.inputLabel}>Alasan / Keterangan</Text>
-              <View style={st.inputRow}>
-                <MaterialIcons name="info-outline" size={18} color={colors.textSecondary} />
-                <TextInput
-                  value={blockedSlotForm.reason}
-                  onChangeText={(val) => setBlockedSlotForm((prev) => ({ ...prev, reason: val }))}
-                  placeholder="Maintenance / Event Internal"
-                  placeholderTextColor={colors.textTertiary}
-                  style={st.input}
-                />
+
+              <View style={st.grid}>
+                <TimeInput label="Jam Mulai" value={blockedSlotForm.start_time} onChangeText={(val) => setBlockedSlotForm((prev) => ({ ...prev, start_time: val }))} st={st} colors={colors} />
+                <TimeInput label="Jam Selesai" value={blockedSlotForm.end_time} onChangeText={(val) => setBlockedSlotForm((prev) => ({ ...prev, end_time: val }))} st={st} colors={colors} />
               </View>
-            </View>
-            <TouchableOpacity style={[st.primaryBtn, blockedSlotSaving && st.disabled]} onPress={handleAddBlockedSlot} disabled={blockedSlotSaving}>
-              {blockedSlotSaving ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={st.primaryBtnText}>Simpan Blocked Slot</Text>}
-            </TouchableOpacity>
+              <View style={st.inputWrap}>
+                <Text style={st.inputLabel}>Alasan / Keterangan</Text>
+                <View style={st.inputRow}>
+                  <MaterialIcons name="info-outline" size={18} color={colors.textSecondary} />
+                  <TextInput
+                    value={blockedSlotForm.reason}
+                    onChangeText={(val) => setBlockedSlotForm((prev) => ({ ...prev, reason: val }))}
+                    placeholder="Maintenance / Event Internal"
+                    placeholderTextColor={colors.textTertiary}
+                    style={st.input}
+                  />
+                </View>
+              </View>
+              <TouchableOpacity style={[st.primaryBtn, blockedSlotSaving && st.disabled]} onPress={handleAddBlockedSlot} disabled={blockedSlotSaving}>
+                {blockedSlotSaving ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={st.primaryBtnText}>Simpan Blocked Slot</Text>}
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -792,6 +809,16 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   emptyTitle: { ...FONTS.titleLg, color: colors.text },
   emptyText: { ...FONTS.bodyMd, color: colors.textSecondary, textAlign: 'center' },
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
-  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxWidth: 560, width: '100%', alignSelf: 'center', ...(Platform.OS === 'web' ? { borderRadius: 12, marginTop: 'auto', marginBottom: 'auto' } : {}) },
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxWidth: 560,
+    maxHeight: Platform.OS === 'web' ? ('85vh' as any) : '85%',
+    width: '100%',
+    alignSelf: 'center',
+    ...(Platform.OS === 'web' ? { borderRadius: 16, marginTop: 'auto', marginBottom: 'auto' } : {}),
+  },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
 });

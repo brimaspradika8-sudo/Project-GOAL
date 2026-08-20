@@ -16,7 +16,7 @@ import { SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
 import { FadeInView } from '../../components/FadeInView';
 import { useTheme } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
-import { useBookingHistory } from '../../hooks/useBooking';
+import { useBookingHistory, useNow } from '../../hooks/useBooking';
 import { cancelBooking, bulkDeleteBookings, type Booking, type BookingStatus } from '../../services/bookingService';
 import { BookingCard, formatDateDisplay } from '../../components/booking';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
@@ -137,8 +137,28 @@ export default function BookingTabScreen() {
     refresh();
   }, [refresh]));
 
-  const upcoming = bookings.filter(b => ACTIVE_STATUSES.includes(b.status));
-  const history = bookings.filter(b => PAST_STATUSES.includes(b.status));
+  const now = useNow(1000);
+
+  const processedBookings = React.useMemo(() => {
+    const nowTime = now.getTime();
+    return bookings.map((b) => {
+      if (b.status === 'WAITING_CONFIRMATION') {
+        const isPaymentExp = b.payment_expired_at && new Date(b.payment_expired_at).getTime() <= nowTime;
+        const isExp = b.expired_at && new Date(b.expired_at).getTime() <= nowTime;
+        if (isPaymentExp || isExp) {
+          return {
+            ...b,
+            status: 'EXPIRED' as BookingStatus,
+            cancel_reason: b.cancel_reason || 'Waktu pembayaran telah habis',
+          };
+        }
+      }
+      return b;
+    });
+  }, [bookings, now]);
+
+  const upcoming = processedBookings.filter(b => ACTIVE_STATUSES.includes(b.status));
+  const history = processedBookings.filter(b => PAST_STATUSES.includes(b.status));
   const displayed = activeTab === 'aktif' ? upcoming : history;
   const isHistoryTab = activeTab === 'riwayat';
   const selectableIds = isHistoryTab ? history.map(b => b.id) : [];
@@ -354,6 +374,7 @@ export default function BookingTabScreen() {
       ) : (
         <ScrollView
           showsVerticalScrollIndicator={false}
+          style={{ backgroundColor: colors.background }}
           contentContainerStyle={[
             st.scrollContent,
             !isMobile && { maxWidth: 1200, alignSelf: 'center', width: '100%' },
@@ -364,6 +385,7 @@ export default function BookingTabScreen() {
               onRefresh={refresh}
               tintColor={colors.primary}
               colors={[colors.primary]}
+              progressBackgroundColor={resolved === 'dark' ? colors.surfaceContainerHigh : '#FFFFFF'}
             />
           }
         >
