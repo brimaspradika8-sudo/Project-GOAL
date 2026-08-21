@@ -37,18 +37,14 @@ class SportController extends Controller
     {
         $validated = $request->validate([
             'name'        => 'required|string|max:100|unique:sports,name',
-            'slug'        => 'nullable|string|max:50|unique:sports,slug',
             'description' => 'nullable|string|max:500',
             'is_active'   => 'nullable|boolean',
         ], [
             'name.required' => 'Nama olahraga wajib diisi.',
             'name.unique'   => 'Nama olahraga sudah ada.',
-            'slug.unique'   => 'Kode/slug olahraga sudah ada.',
         ]);
 
-        $slug = !empty($validated['slug'])
-            ? \Str::slug($validated['slug'], '_')
-            : \Str::slug($validated['name'], '_');
+        $slug = \Str::slug($validated['name'], '_');
 
         $sport = Sport::create([
             'name'        => trim($validated['name']),
@@ -73,18 +69,14 @@ class SportController extends Controller
 
         $validated = $request->validate([
             'name'        => 'required|string|max:100|unique:sports,name,' . $id,
-            'slug'        => 'nullable|string|max:50|unique:sports,slug,' . $id,
             'description' => 'nullable|string|max:500',
             'is_active'   => 'nullable|boolean',
         ], [
             'name.required' => 'Nama olahraga wajib diisi.',
             'name.unique'   => 'Nama olahraga sudah ada.',
-            'slug.unique'   => 'Kode/slug olahraga sudah ada.',
         ]);
 
-        $slug = !empty($validated['slug'])
-            ? \Str::slug($validated['slug'], '_')
-            : \Str::slug($validated['name'], '_');
+        $slug = \Str::slug($validated['name'], '_');
 
         $sport->update([
             'name'        => trim($validated['name']),

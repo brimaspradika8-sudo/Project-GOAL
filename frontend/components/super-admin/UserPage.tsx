@@ -513,8 +513,10 @@ export default function UserPage() {
                     </TouchableOpacity>
                   )}
                   <View style={st.cardLeft}>
-                    <View style={[st.avatar, { backgroundColor: rc.bg }]}>
-                      <Text style={[st.avatarText, { color: rc.color }]}>{(u.name || '?').charAt(0).toUpperCase()}</Text>
+                    <View style={[st.avatar, { backgroundColor: colors.surfaceContainerHigh }]}>
+                      <Text style={[st.avatarText, { color: roleKey === USER_ROLES.SUPER_ADMIN ? '#F59E0B' : '#60A5FA' }]}>
+                        {(u.name || '?').charAt(0).toUpperCase()}
+                      </Text>
                     </View>
                     <View style={st.info}>
                       <Text style={st.name} numberOfLines={1}>{u.name}</Text>
@@ -526,7 +528,7 @@ export default function UserPage() {
                     </View>
                   </View>
                   <View style={st.actions}>
-                    {/* Ungu — Edit User (semua baris) */}
+                    {/* Edit User */}
                     <TouchableOpacity
                       style={[st.actionBtn, { backgroundColor: '#10B981', borderColor: '#10B981' }]}
                       onPress={() => openEdit(u)}
@@ -535,7 +537,7 @@ export default function UserPage() {
                       <MaterialIcons name="edit" size={16} color="#FFFFFF" />
                     </TouchableOpacity>
 
-                    {/* Hijau — Upgrade Role (super_admin only, bukan baris super_admin) */}
+                    {/* Upgrade / Change Role */}
                     {isSuperAdmin && roleKey !== USER_ROLES.SUPER_ADMIN && (
                       <TouchableOpacity
                         style={[st.actionBtn, { backgroundColor: '#10B981', borderColor: '#10B981' }]}
@@ -549,7 +551,7 @@ export default function UserPage() {
                       </TouchableOpacity>
                     )}
 
-                    {/* Merah — Hapus User */}
+                    {/* Hapus User */}
                     {!isOwnRow && (
                       <AnimatedDeleteButton
                         size={36}
@@ -1002,15 +1004,13 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
   gridList: {
     padding: SIZES.gutter,
     paddingBottom: 24,
+    gap: 10,
     ...(isMobile
       ? {}
       : {
           maxWidth: 1200,
           alignSelf: 'center',
           width: '100%',
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: 16,
         }),
   },
   list: { padding: SIZES.gutter, paddingBottom: 24, ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }) },
@@ -1037,15 +1037,8 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.surface, borderRadius: 16, padding: 14, marginBottom: 10,
     borderWidth: 1, borderColor: colors.outline,
+    width: '100%',
     ...SHADOWS.xs,
-    ...(isMobile
-      ? { width: '100%' }
-      : {
-          width: 'calc(33.333% - 11px)' as any,
-          minWidth: 320,
-          maxWidth: 400,
-          marginBottom: 0,
-        }),
   },
   cardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   avatar: { width: 46, height: 46, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 13 },

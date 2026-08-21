@@ -29,27 +29,18 @@ export type SportItem = {
 // in lib/fieldValidation.ts: real-time per-field checks, max-length caps that
 // match what the backend actually enforces, inline error messages). ──────────
 const MAX_NAME_LENGTH = 100;   // matches backend: 'name' => 'required|string|max:100'
-const MAX_SLUG_LENGTH = 50;    // matches backend: 'slug' => 'nullable|string|max:50'
 const MAX_DESC_LENGTH = 500;   // matches backend: 'description' => 'nullable|string|max:500'
 
-type SportFormErrors = { name: string; slug: string; description: string };
-const EMPTY_SPORT_ERRORS: SportFormErrors = { name: '', slug: '', description: '' };
-type SportFormTouched = { name: boolean; slug: boolean; description: boolean };
-const EMPTY_SPORT_TOUCHED: SportFormTouched = { name: false, slug: false, description: false };
+type SportFormErrors = { name: string; description: string };
+const EMPTY_SPORT_ERRORS: SportFormErrors = { name: '', description: '' };
+type SportFormTouched = { name: boolean; description: boolean };
+const EMPTY_SPORT_TOUCHED: SportFormTouched = { name: false, description: false };
 
 function validateSportName(value: string): string {
   const v = value.trim();
   if (!v) return 'Nama jenis olahraga wajib diisi.';
   if (v.length < 3) return 'Nama jenis olahraga minimal 3 karakter.';
   if (v.length > MAX_NAME_LENGTH) return `Nama jenis olahraga tidak boleh lebih dari ${MAX_NAME_LENGTH} karakter.`;
-  return '';
-}
-
-function validateSportSlug(value: string): string {
-  const v = value.trim();
-  if (!v) return ''; // optional - auto-generated from name if left empty
-  if (v.length > MAX_SLUG_LENGTH) return `Slug tidak boleh lebih dari ${MAX_SLUG_LENGTH} karakter.`;
-  if (!/^[a-zA-Z0-9_-]+$/.test(v)) return 'Slug hanya boleh berisi huruf, angka, garis bawah (_), dan strip (-).';
   return '';
 }
 
@@ -60,10 +51,9 @@ function validateSportDescription(value: string): string {
   return '';
 }
 
-function validateAllSportFields(name: string, slug: string, description: string): SportFormErrors {
+function validateAllSportFields(name: string, description: string): SportFormErrors {
   return {
     name: validateSportName(name),
-    slug: validateSportSlug(slug),
     description: validateSportDescription(description),
   };
 }
@@ -102,7 +92,6 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<SportItem | null>(null);
   const [formName, setFormName] = useState('');
-  const [formSlug, setFormSlug] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formIsActive, setFormIsActive] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
@@ -143,7 +132,6 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
   const openAddModal = () => {
     setEditingItem(null);
     setFormName('');
-    setFormSlug('');
     setFormDescription('');
     setFormIsActive(true);
     setFormError(null);
@@ -155,7 +143,6 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
   const openEditModal = (item: SportItem) => {
     setEditingItem(item);
     setFormName(item.name);
-    setFormSlug(item.slug);
     setFormDescription(item.description || '');
     setFormIsActive(item.is_active);
     setFormError(null);
@@ -170,12 +157,6 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
       setFormErrors((prev) => ({ ...prev, name: validateSportName(v) }));
     }
   };
-  const handleSlugChange = (v: string) => {
-    setFormSlug(v);
-    if (formTouched.slug) {
-      setFormErrors((prev) => ({ ...prev, slug: validateSportSlug(v) }));
-    }
-  };
   const handleDescriptionChange = (v: string) => {
     setFormDescription(v);
     if (formTouched.description) {
@@ -187,18 +168,14 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
     setFormTouched((p) => ({ ...p, name: true }));
     setFormErrors((prev) => ({ ...prev, name: validateSportName(formName) }));
   };
-  const handleSlugBlur = () => {
-    setFormTouched((p) => ({ ...p, slug: true }));
-    setFormErrors((prev) => ({ ...prev, slug: validateSportSlug(formSlug) }));
-  };
   const handleDescriptionBlur = () => {
     setFormTouched((p) => ({ ...p, description: true }));
     setFormErrors((prev) => ({ ...prev, description: validateSportDescription(formDescription) }));
   };
 
   const handleSave = async () => {
-    setFormTouched({ name: true, slug: true, description: true });
-    const errs = validateAllSportFields(formName, formSlug, formDescription);
+    setFormTouched({ name: true, description: true });
+    const errs = validateAllSportFields(formName, formDescription);
     setFormErrors(errs);
     if (hasSportErrors(errs)) {
       setFormError('Periksa kembali isian yang belum valid.');
@@ -216,7 +193,6 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
 
       const body = {
         name: formName.trim(),
-        slug: formSlug.trim() || undefined,
         description: formDescription.trim() || null,
         is_active: formIsActive,
       };
@@ -284,12 +260,11 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
     return sports.filter(
       (s) =>
         s.name.toLowerCase().includes(q) ||
-        s.slug.toLowerCase().includes(q) ||
         (s.description && s.description.toLowerCase().includes(q))
     );
   }, [sports, search]);
 
-  const isSubmitDisabled = formLoading || hasSportErrors(validateAllSportFields(formName, formSlug, formDescription));
+  const isSubmitDisabled = formLoading || hasSportErrors(validateAllSportFields(formName, formDescription));
 
   if (loading) {
     return (
@@ -398,9 +373,6 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
                   <View style={st.cardTitleWrap}>
                     <Text style={[st.cardTitle, { color: colors.text }]}>
                       {item.name}
-                    </Text>
-                    <Text style={[st.cardBadge, { color: colors.textTertiary }]}>
-                      slug: {item.slug}
                     </Text>
                   </View>
                   <View
@@ -518,35 +490,6 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
                   maxLength={MAX_NAME_LENGTH}
                 />
                 <FieldError message={fieldErr(formErrors.name, formTouched.name)} colors={colors} />
-              </View>
-
-              <View style={st.fieldWrap}>
-                <View style={st.fieldLabelRow}>
-                  <Text style={[st.fieldLabel, { color: colors.textSecondary }]}>
-                    Kode / Slug (Opsional)
-                  </Text>
-                  <Text style={[st.charCount, { color: colors.textTertiary }]}>
-                    {formSlug.length}/{MAX_SLUG_LENGTH}
-                  </Text>
-                </View>
-                <TextInput
-                  style={[
-                    st.fieldInput,
-                    {
-                      backgroundColor: colors.surfaceContainerLow,
-                      borderColor: fieldErr(formErrors.slug, formTouched.slug) ? colors.error : colors.outline,
-                      color: colors.text,
-                    },
-                  ]}
-                  placeholder="Contoh: pickleball (otomatis jika kosong)"
-                  placeholderTextColor={colors.textTertiary}
-                  value={formSlug}
-                  onChangeText={handleSlugChange}
-                  onBlur={handleSlugBlur}
-                  autoCapitalize="none"
-                  maxLength={MAX_SLUG_LENGTH}
-                />
-                <FieldError message={fieldErr(formErrors.slug, formTouched.slug)} colors={colors} />
               </View>
 
               <View style={st.fieldWrap}>

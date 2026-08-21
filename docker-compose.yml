@@ -38,6 +38,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 512M
     networks:
       - goal-network
 
@@ -63,6 +68,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 384M
     networks:
       - goal-network
 
@@ -88,6 +98,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
     networks:
       - goal-network
 
