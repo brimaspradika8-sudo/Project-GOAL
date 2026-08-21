@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Modal, TextInput, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
@@ -12,6 +12,37 @@ import SportsManagementPage from './SportsManagementPage';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
 import { useToastStore } from '../../store/toastStore';
+import { fetchFieldValidationSettings, saveFieldValidationSettings } from '../../lib/fieldValidationSettings';
+
+type ValidationErrors = {
+  max_name_length: string; max_description_length: string;
+  min_price: string; max_price: string; max_image_mb: string;
+};
+const EMPTY_VERRS: ValidationErrors = { max_name_length: '', max_description_length: '', min_price: '', max_price: '', max_image_mb: '' };
+
+function validateSettings(maxN: string, maxD: string, minP: string, maxP: string, maxI: string): ValidationErrors {
+  const e = { ...EMPTY_VERRS };
+  const name = parseInt(maxN, 10);
+  if (!maxN || isNaN(name)) e.max_name_length = 'Wajib diisi.';
+  else if (name < 5) e.max_name_length = 'Minimal 5 karakter.';
+  else if (name > 255) e.max_name_length = 'Maksimal 255 karakter.';
+  const desc = parseInt(maxD, 10);
+  if (!maxD || isNaN(desc)) e.max_description_length = 'Wajib diisi.';
+  else if (desc < 10) e.max_description_length = 'Minimal 10 karakter.';
+  else if (desc > 5000) e.max_description_length = 'Maksimal 5000 karakter.';
+  const minV = parseInt(minP, 10);
+  if (!minP || isNaN(minV)) e.min_price = 'Wajib diisi.';
+  else if (minV < 0) e.min_price = 'Tidak boleh negatif.';
+  const maxV = parseInt(maxP, 10);
+  if (!maxP || isNaN(maxV)) e.max_price = 'Wajib diisi.';
+  else if (!isNaN(minV) && maxV <= minV) e.max_price = 'Harus lebih besar dari harga minimum.';
+  const imgMb = parseInt(maxI, 10);
+  if (!maxI || isNaN(imgMb)) e.max_image_mb = 'Wajib diisi.';
+  else if (imgMb < 1) e.max_image_mb = 'Minimal 1 MB.';
+  else if (imgMb > 20) e.max_image_mb = 'Maksimal 20 MB.';
+  return e;
+}
+function hasVErrors(e: ValidationErrors) { return Object.values(e).some(v => v !== ''); }
 
 type Tab = 'active' | 'pending' | 'trashed';
 type SettingsTab = 'validation' | 'sports';
@@ -19,7 +50,7 @@ type SettingsTab = 'validation' | 'sports';
 export default function ManageFieldsPage() {
   const { colors } = useTheme();
   const isMobile = useIsMobileWeb();
-  const st = makeStyles(colors, isMobile);
+  const st = useMemo(() => makeStyles(colors, isMobile), [colors, isMobile]);
   const params = useLocalSearchParams<{ tab?: string }>();
   const tabParam = params.tab;
 
@@ -37,15 +68,35 @@ export default function ManageFieldsPage() {
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [trashedCount, setTrashedCount] = useState<number | null>(null);
 
-  // Settings modal states
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('validation');
-  const [maxNameLength, setMaxNameLength] = useState('100');
+  const [maxNameLength, setMaxNameLength] = useState('50');
   const [maxDescLength, setMaxDescLength] = useState('1000');
   const [minPrice, setMinPrice] = useState('10000');
   const [maxPrice, setMaxPrice] = useState('5000000');
-  const [maxImageMb, setMaxImageMb] = useState('5');
+  const [maxImageMb, setMaxImageMb] = useState('2');
   const [savingSettings, setSavingSettings] = useState(false);
+  const [loadingSettings, setLoadingSettings] = useState(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(EMPTY_VERRS);
+  const [touchedSettings, setTouchedSettings] = useState(false);
+
+  const loadSettings = useCallback(() => {
+    setLoadingSettings(true);
+    fetchFieldValidationSettings()
+      .then((s) => {
+        if (s) {
+          if (s.max_name_length) setMaxNameLength(String(s.max_name_length));
+          if (s.max_description_length) setMaxDescLength(String(s.max_description_length));
+          if (s.min_price !== undefined) setMinPrice(String(s.min_price));
+          if (s.max_price !== undefined) setMaxPrice(String(s.max_price));
+          if (s.max_image_mb) setMaxImageMb(String(s.max_image_mb));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingSettings(false));
+  }, []);
+  useEffect(() => { loadSettings(); }, [loadSettings]);
 
   const fetchCounts = useCallback(async () => {
     try {
@@ -104,22 +155,47 @@ export default function ManageFieldsPage() {
     refreshCount(tab);
   };
 
-  const handleSaveSettings = () => {
-    setSavingSettings(true);
-    setTimeout(() => {
-      setSavingSettings(false);
-      useToastStore.getState().show({
-        type: 'success',
-        title: 'Berhasil Disimpan',
-        description: 'Aturan validasi lapangan berhasil diperbarui.',
-      });
-    }, 400);
+  const handleChange = (setter: (v: string) => void, field: keyof ValidationErrors, value: string) => {
+    setter(value);
+    if (touchedSettings) {
+      const n = { n: field === 'max_name_length' ? value : maxNameLength, d: field === 'max_description_length' ? value : maxDescLength, minP: field === 'min_price' ? value : minPrice, maxP: field === 'max_price' ? value : maxPrice, i: field === 'max_image_mb' ? value : maxImageMb };
+      setValidationErrors(validateSettings(n.n, n.d, n.minP, n.maxP, n.i));
+    }
   };
 
-  const tabs: { key: Tab; label: string; icon: string; count: number | null; badgeActive?: string; badgeText?: string }[] = [
-    { key: 'active', label: 'Aktif', icon: 'stadium', count: activeCount, badgeActive: colors.primary + '20', badgeText: colors.primary },
-    { key: 'pending', label: 'Pending', icon: 'pending-actions', count: pendingCount, badgeActive: colors.floodlight + '20', badgeText: colors.floodlight },
-    { key: 'trashed', label: 'Sampah', icon: 'delete-sweep', count: trashedCount, badgeActive: colors.error + '20', badgeText: colors.error },
+  const handleSaveSettings = async () => {
+    setTouchedSettings(true);
+    const errs = validateSettings(maxNameLength, maxDescLength, minPrice, maxPrice, maxImageMb);
+    setValidationErrors(errs);
+    if (hasVErrors(errs)) { setSettingsError('Periksa kembali isian yang belum valid.'); return; }
+    setSettingsError(null);
+    setSavingSettings(true);
+    try {
+      await saveFieldValidationSettings({
+        max_name_length: parseInt(maxNameLength, 10),
+        max_description_length: parseInt(maxDescLength, 10),
+        min_price: parseInt(minPrice, 10),
+        max_price: parseInt(maxPrice, 10),
+        max_image_mb: parseInt(maxImageMb, 10),
+      });
+      useToastStore.getState().show({ type: 'success', title: 'Berhasil Disimpan', description: 'Aturan validasi lapangan berhasil diperbarui.' });
+      setIsSettingsOpen(false); setTouchedSettings(false); setValidationErrors(EMPTY_VERRS);
+    } catch (err: any) {
+      const msg = err.message || 'Gagal menyimpan aturan validasi.';
+      setSettingsError(msg);
+      useToastStore.getState().show({ type: 'error', title: 'Gagal Menyimpan', description: msg });
+    } finally { setSavingSettings(false); }
+  };
+
+  const handleCloseSettings = () => {
+    setIsSettingsOpen(false); setTouchedSettings(false); setSettingsError(null);
+    setValidationErrors(EMPTY_VERRS); loadSettings();
+  };
+
+  const tabs: { key: Tab; label: string; icon: string; count: number | null }[] = [
+    { key: 'active', label: 'Aktif', icon: 'stadium', count: activeCount },
+    { key: 'pending', label: 'Pending', icon: 'pending-actions', count: pendingCount },
+    { key: 'trashed', label: 'Sampah', icon: 'delete-sweep', count: trashedCount },
   ];
 
   return (
@@ -206,132 +282,103 @@ export default function ManageFieldsPage() {
         {activeTab === 'trashed' && <TrashedFieldsPage />}
       </View>
 
-      {/* ── Settings & Validation Modal ── */}
-      <Modal
-        visible={isSettingsOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setIsSettingsOpen(false)}
-      >
+      {/* ── Settings Modal ── */}
+      <Modal visible={isSettingsOpen} transparent animationType="slide" onRequestClose={handleCloseSettings}>
         <KeyboardAvoidingView style={st.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setIsSettingsOpen(false)} />
-          <View style={st.settingsSheet}>
-            <View style={st.modalHandle} />
+          <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={handleCloseSettings} />
+          <View style={[st.settingsSheet, { backgroundColor: colors.surface }]}>
+            <View style={[st.modalHandle, { backgroundColor: colors.outline }]} />
+            {/* Header */}
             <View style={st.modalHeader}>
               <View style={st.modalTitleGroup}>
-                <MaterialIcons name="settings" size={22} color={colors.primary} />
-                <Text style={[st.modalTitle, { color: colors.text }]}>Pengaturan & Validasi Lapangan</Text>
+                <View style={[st.modalIconBg, { backgroundColor: colors.primaryContainer }]}>
+                  <MaterialIcons name="settings" size={18} color={colors.primary} />
+                </View>
+                <View>
+                  <Text style={[st.modalTitle, { color: colors.text }]}>Pengaturan Validasi</Text>
+                  <Text style={[st.modalSubtitle, { color: colors.textSecondary }]}>Konfigurasi aturan input lapangan</Text>
+                </View>
               </View>
-              <TouchableOpacity onPress={() => setIsSettingsOpen(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <MaterialIcons name="close" size={20} color={colors.textSecondary} />
+              <TouchableOpacity style={[st.modalCloseBtn, { backgroundColor: colors.surfaceContainerLow }]} onPress={handleCloseSettings} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <MaterialIcons name="close" size={18} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
-
-            {/* Sub Tabs inside Modal */}
-            <View style={st.modalTabRow}>
-              <TouchableOpacity
-                style={[st.modalTab, settingsTab === 'validation' && st.modalTabActive]}
-                onPress={() => setSettingsTab('validation')}
-                activeOpacity={0.8}
-              >
-                <MaterialIcons name="tune" size={16} color={settingsTab === 'validation' ? colors.primary : colors.textTertiary} />
-                <Text style={[st.modalTabLabel, settingsTab === 'validation' && st.modalTabLabelActive]}>Rule Validasi</Text>
+            {/* Sub Tabs */}
+            <View style={[st.modalTabRow, { borderBottomColor: colors.outline }]}>
+              <TouchableOpacity style={[st.modalTab, settingsTab === 'validation' && [st.modalTabActive, { borderColor: colors.primary }]]} onPress={() => setSettingsTab('validation')} activeOpacity={0.8}>
+                <MaterialIcons name="tune" size={15} color={settingsTab === 'validation' ? colors.primary : colors.textTertiary} />
+                <Text style={[st.modalTabLabel, { color: settingsTab === 'validation' ? colors.primary : colors.textTertiary }]}>Rule Validasi</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[st.modalTab, settingsTab === 'sports' && st.modalTabActive]}
-                onPress={() => setSettingsTab('sports')}
-                activeOpacity={0.8}
-              >
-                <MaterialIcons name="sports-soccer" size={16} color={settingsTab === 'sports' ? colors.primary : colors.textTertiary} />
-                <Text style={[st.modalTabLabel, settingsTab === 'sports' && st.modalTabLabelActive]}>Jenis Olahraga (CRUD)</Text>
+              <TouchableOpacity style={[st.modalTab, settingsTab === 'sports' && [st.modalTabActive, { borderColor: colors.primary }]]} onPress={() => setSettingsTab('sports')} activeOpacity={0.8}>
+                <MaterialIcons name="sports-soccer" size={15} color={settingsTab === 'sports' ? colors.primary : colors.textTertiary} />
+                <Text style={[st.modalTabLabel, { color: settingsTab === 'sports' ? colors.primary : colors.textTertiary }]}>Jenis Olahraga</Text>
               </TouchableOpacity>
             </View>
-
             {settingsTab === 'validation' ? (
-              <ScrollView style={st.modalBody} showsVerticalScrollIndicator={false}>
-                <View style={st.inputGroup}>
-                  <Text style={[st.inputLabel, { color: colors.textSecondary }]}>Maksimal Karakter Nama Lapangan</Text>
-                  <TextInput
-                    style={[st.input, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline, color: colors.text }]}
-                    keyboardType="numeric"
-                    value={maxNameLength}
-                    onChangeText={setMaxNameLength}
-                    placeholder="Contoh: 100"
-                    placeholderTextColor={colors.textTertiary}
-                  />
-                </View>
-
-                <View style={st.inputGroup}>
-                  <Text style={[st.inputLabel, { color: colors.textSecondary }]}>Maksimal Karakter Deskripsi</Text>
-                  <TextInput
-                    style={[st.input, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline, color: colors.text }]}
-                    keyboardType="numeric"
-                    value={maxDescLength}
-                    onChangeText={setMaxDescLength}
-                    placeholder="Contoh: 1000"
-                    placeholderTextColor={colors.textTertiary}
-                  />
-                </View>
-
-                <View style={st.rowInputs}>
-                  <View style={[st.inputGroup, { flex: 1 }]}>
-                    <Text style={[st.inputLabel, { color: colors.textSecondary }]}>Harga Minimum (Rp)</Text>
-                    <TextInput
-                      style={[st.input, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline, color: colors.text }]}
-                      keyboardType="numeric"
-                      value={minPrice}
-                      onChangeText={setMinPrice}
-                      placeholder="10000"
-                      placeholderTextColor={colors.textTertiary}
-                    />
-                  </View>
-
-                  <View style={[st.inputGroup, { flex: 1 }]}>
-                    <Text style={[st.inputLabel, { color: colors.textSecondary }]}>Harga Maksimum (Rp)</Text>
-                    <TextInput
-                      style={[st.input, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline, color: colors.text }]}
-                      keyboardType="numeric"
-                      value={maxPrice}
-                      onChangeText={setMaxPrice}
-                      placeholder="5000000"
-                      placeholderTextColor={colors.textTertiary}
-                    />
-                  </View>
-                </View>
-
-                <View style={st.inputGroup}>
-                  <Text style={[st.inputLabel, { color: colors.textSecondary }]}>Batas Maksimal Ukuran Foto (MB)</Text>
-                  <TextInput
-                    style={[st.input, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline, color: colors.text }]}
-                    keyboardType="numeric"
-                    value={maxImageMb}
-                    onChangeText={setMaxImageMb}
-                    placeholder="Contoh: 5"
-                    placeholderTextColor={colors.textTertiary}
-                  />
-                </View>
-
-                <TouchableOpacity
-                  style={[st.saveBtn, { backgroundColor: colors.primary }, savingSettings && { opacity: 0.7 }]}
-                  onPress={handleSaveSettings}
-                  disabled={savingSettings}
-                  activeOpacity={0.85}
-                >
-                  {savingSettings ? (
-                    <ActivityIndicator size="small" color={colors.onPrimary} />
-                  ) : (
-                    <>
-                      <MaterialIcons name="save" size={18} color={colors.onPrimary} />
-                      <Text style={[st.saveBtnText, { color: colors.onPrimary }]}>Simpan Pengaturan Validasi</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
+              <ScrollView style={st.modalBody} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                {loadingSettings ? (
+                  <View style={st.loadingWrap}><ActivityIndicator size="small" color={colors.primary} /><Text style={[st.loadingText, { color: colors.textSecondary }]}>Memuat pengaturan...</Text></View>
+                ) : (
+                  <>
+                    {settingsError ? (
+                      <View style={[st.errorBanner, { backgroundColor: colors.errorContainer, borderColor: colors.error + '50' }]}>
+                        <MaterialIcons name="error-outline" size={16} color={colors.error} />
+                        <Text style={[st.errorBannerText, { color: colors.error }]}>{settingsError}</Text>
+                      </View>
+                    ) : null}
+                    {/* Teks Section */}
+                    <View style={[st.sectionCard, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline }]}>
+                      <View style={[st.sectionHeader, { borderBottomColor: colors.outline }]}>
+                        <MaterialIcons name="text-fields" size={16} color={colors.primary} />
+                        <Text style={[st.sectionTitle, { color: colors.text }]}>Panjang Teks</Text>
+                      </View>
+                      <SettingInput label="Maks. Karakter Nama" hint="Batas: 5 - 255 karakter" icon="badge"
+                        value={maxNameLength} error={validationErrors.max_name_length}
+                        onChangeText={(v) => handleChange(setMaxNameLength, 'max_name_length', v)} colors={colors} st={st} />
+                      <SettingInput label="Maks. Karakter Deskripsi" hint="Batas: 10 - 5000 karakter" icon="notes"
+                        value={maxDescLength} error={validationErrors.max_description_length}
+                        onChangeText={(v) => handleChange(setMaxDescLength, 'max_description_length', v)} colors={colors} st={st} />
+                    </View>
+                    {/* Harga Section */}
+                    <View style={[st.sectionCard, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline }]}>
+                      <View style={[st.sectionHeader, { borderBottomColor: colors.outline }]}>
+                        <MaterialIcons name="payments" size={16} color={colors.primary} />
+                        <Text style={[st.sectionTitle, { color: colors.text }]}>Rentang Harga (Rp)</Text>
+                      </View>
+                      <View style={st.rowInputs}>
+                        <View style={{ flex: 1 }}>
+                          <SettingInput label="Harga Minimum" hint="Min: Rp 0" icon="arrow-downward"
+                            value={minPrice} error={validationErrors.min_price}
+                            onChangeText={(v) => handleChange(setMinPrice, 'min_price', v)} colors={colors} st={st} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <SettingInput label="Harga Maksimum" hint="Harus > harga minimum" icon="arrow-upward"
+                            value={maxPrice} error={validationErrors.max_price}
+                            onChangeText={(v) => handleChange(setMaxPrice, 'max_price', v)} colors={colors} st={st} />
+                        </View>
+                      </View>
+                    </View>
+                    {/* Foto Section */}
+                    <View style={[st.sectionCard, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline }]}>
+                      <View style={[st.sectionHeader, { borderBottomColor: colors.outline }]}>
+                        <MaterialIcons name="photo-camera" size={16} color={colors.primary} />
+                        <Text style={[st.sectionTitle, { color: colors.text }]}>Batas Foto</Text>
+                      </View>
+                      <SettingInput label="Ukuran Maks. Foto" hint="Batas: 1 - 20 MB" icon="photo-size-select-large"
+                        value={maxImageMb} error={validationErrors.max_image_mb}
+                        onChangeText={(v) => handleChange(setMaxImageMb, 'max_image_mb', v)} colors={colors} st={st} />
+                    </View>
+                    <TouchableOpacity style={[st.saveBtn, { backgroundColor: colors.primary }, savingSettings && { opacity: 0.7 }]} onPress={handleSaveSettings} disabled={savingSettings} activeOpacity={0.85}>
+                      {savingSettings
+                        ? <ActivityIndicator size="small" color={colors.onPrimary} />
+                        : <><MaterialIcons name="save" size={18} color={colors.onPrimary} /><Text style={[st.saveBtnText, { color: colors.onPrimary }]}>Simpan Pengaturan</Text></>
+                      }
+                    </TouchableOpacity>
+                  </>
+                )}
               </ScrollView>
             ) : (
-              <View style={st.sportsModalWrap}>
-                <SportsManagementPage hideHeader />
-              </View>
+              <View style={st.sportsModalWrap}><SportsManagementPage hideHeader /></View>
             )}
           </View>
         </KeyboardAvoidingView>
@@ -340,8 +387,25 @@ export default function ManageFieldsPage() {
   );
 }
 
+// ── Sub-component ────────────────────────────────────────────────────────────
+function SettingInput({ label, hint, icon, value, error, onChangeText, colors, st }: {
+  label: string; hint: string; icon: string; value: string; error: string;
+  onChangeText: (v: string) => void; colors: ThemeColors; st: ReturnType<typeof makeStyles>;
+}) {
+  return (
+    <View style={st.inputGroup}>
+      <Text style={[st.inputLabel, { color: colors.textSecondary }]}>{label}</Text>
+      <View style={[st.inputWrap, { backgroundColor: colors.surface, borderColor: error ? colors.error : colors.outline }]}>
+        <MaterialIcons name={icon as any} size={16} color={error ? colors.error : colors.textTertiary} style={st.inputIcon} />
+        <TextInput style={[st.input, { color: colors.text }]} keyboardType="numeric" value={value} onChangeText={onChangeText} placeholder="—" placeholderTextColor={colors.textTertiary} />
+      </View>
+      {error ? <Text style={[st.inputError, { color: colors.error }]}>{error}</Text> : <Text style={[st.inputHint, { color: colors.textTertiary }]}>{hint}</Text>}
+    </View>
+  );
+}
+
 const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
+  screen: { flex: 1 },
   statCardsRow: {
     flexDirection: 'row',
     gap: 12,
@@ -352,36 +416,38 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
   },
   statCard: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: isMobile ? 'column' : 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 14,
-    borderRadius: 16,
+    gap: isMobile ? 6 : 10,
+    padding: isMobile ? 12 : 16,
+    borderRadius: 18,
     borderWidth: 1,
     ...SHADOWS.sm,
   },
   statIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
+    width: isMobile ? 36 : 44,
+    height: isMobile ? 36 : 44,
+    borderRadius: isMobile ? 11 : 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
   statTextWrap: {
-    flex: 1,
+    flex: isMobile ? 0 : 1,
+    alignItems: isMobile ? 'center' : 'flex-start',
     justifyContent: 'center',
   },
   statValue: {
     ...FONTS.titleLg,
-    fontSize: 22,
+    fontSize: isMobile ? 18 : 22,
     fontWeight: '800',
-    lineHeight: 26,
+    lineHeight: isMobile ? 22 : 26,
   },
   statLabel: {
     ...FONTS.labelSm,
-    fontSize: 11,
+    fontSize: isMobile ? 10 : 11,
     fontWeight: '600',
     marginTop: 1,
+    textAlign: isMobile ? 'center' : 'left',
   },
   settingsHeaderBtn: {
     width: 38,
@@ -448,114 +514,44 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
 
   tabContent: { flex: 1 },
 
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.55)' },
   settingsSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    maxHeight: '90%',
-    maxWidth: 720,
-    width: '100%',
-    alignSelf: 'center',
-    flex: 1,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    paddingHorizontal: isMobile ? 16 : 28, paddingTop: 14, paddingBottom: 8,
+    maxHeight: '92%', maxWidth: isMobile ? undefined : 680, width: '100%', alignSelf: 'center', flex: 1, ...SHADOWS.lg,
   },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.outline,
-    alignSelf: 'center',
-    marginBottom: 14,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  modalTitleGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  modalTitle: {
-    ...FONTS.titleLg,
-    fontSize: 17,
-    fontWeight: '800',
-  },
-  modalTabRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.outline,
-    paddingBottom: 10,
-  },
-  modalTab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: colors.surfaceContainerLow,
-  },
-  modalTabActive: {
-    backgroundColor: colors.primaryContainer,
-  },
-  modalTabLabel: {
-    ...FONTS.labelMd,
-    color: colors.textTertiary,
-    fontWeight: '600',
-  },
-  modalTabLabelActive: {
-    color: colors.primary,
-    fontWeight: '800',
-  },
-  modalBody: {
-    flex: 1,
-  },
-  inputGroup: {
-    marginBottom: 14,
-  },
-  inputLabel: {
-    ...FONTS.labelSm,
-    fontSize: 11,
-    fontWeight: '700',
-    marginBottom: 6,
-    textTransform: 'uppercase',
-  },
-  input: {
-    borderRadius: 12,
-    borderWidth: 1.5,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
-  },
-  rowInputs: {
-    flexDirection: 'row',
-    gap: 12,
-  },
+  modalHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  modalTitleGroup: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  modalIconBg: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  modalTitle: { ...FONTS.titleLg, fontSize: 16, fontWeight: '800' },
+  modalSubtitle: { ...FONTS.labelSm, fontSize: 11, marginTop: 1 },
+  modalCloseBtn: { width: 32, height: 32, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  modalTabRow: { flexDirection: 'row', gap: 8, marginBottom: 16, borderBottomWidth: 1, paddingBottom: 12 },
+  modalTab: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5, borderColor: 'transparent', backgroundColor: colors.surfaceContainerLow },
+  modalTabActive: { backgroundColor: colors.primaryContainer },
+  modalTabLabel: { ...FONTS.labelMd, fontWeight: '600', fontSize: 13 },
+  modalBody: { flex: 1 },
+  loadingWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 32 },
+  loadingText: { ...FONTS.labelMd, fontSize: 13 },
+  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 14 },
+  errorBannerText: { ...FONTS.labelMd, fontSize: 13, flex: 1 },
+  sectionCard: { borderRadius: 16, borderWidth: 1, padding: isMobile ? 14 : 18, marginBottom: 12 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14, paddingBottom: 10, borderBottomWidth: 1 },
+  sectionTitle: { ...FONTS.titleSm, fontSize: 13, fontWeight: '700' },
+  inputGroup: { marginBottom: 12 },
+  inputLabel: { ...FONTS.labelSm, fontSize: 11, fontWeight: '700', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.3 },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1.5, overflow: 'hidden' },
+  inputIcon: { paddingHorizontal: 12 },
+  input: { flex: 1, paddingVertical: 11, paddingRight: 14, fontSize: 14, fontWeight: '600' },
+  inputError: { ...FONTS.labelSm, fontSize: 11, marginTop: 4, fontWeight: '600' },
+  inputHint: { ...FONTS.labelSm, fontSize: 11, marginTop: 4 },
+  rowInputs: { flexDirection: 'row', gap: 10 },
   saveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 13,
-    borderRadius: 14,
-    marginTop: 10,
-    marginBottom: 20,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 14, borderRadius: 16, marginTop: 4, marginBottom: 20,
   },
-  saveBtnText: {
-    ...FONTS.titleSm,
-    fontSize: 14,
-    fontWeight: '700',
-  },
+  saveBtnText: { ...FONTS.titleSm, fontSize: 15, fontWeight: '700' },
   sportsModalWrap: {
     flex: 1,
   },

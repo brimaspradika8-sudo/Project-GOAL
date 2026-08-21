@@ -123,6 +123,12 @@ export default function AdminTabLayout() {
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
             <Tabs.Screen
+              name="sports"
+              options={{
+                href: null,
+              }}
+            />
+            <Tabs.Screen
               name="audit-logs"
               options={{
                 href: null,
@@ -201,6 +207,12 @@ export default function AdminTabLayout() {
                 tabBarBadgeStyle: isSuperAdmin && manageFieldsBadge ? styles.badge : undefined,
               }}
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
+            />
+            <Tabs.Screen
+              name="sports"
+              options={{
+                href: null,
+              }}
             />
             <Tabs.Screen
               name="audit-logs"

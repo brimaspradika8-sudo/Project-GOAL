@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\UserRole;
+use App\Models\FieldValidationSetting;
 use App\Services\SupabaseStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,8 +22,10 @@ class UploadController extends Controller
             return $this->errorResponse('Anda tidak memiliki akses untuk mengupload gambar.', [], 403);
         }
 
+        $maxImageKb = FieldValidationSetting::current()->max_image_mb * 1024;
+
         $request->validate([
-            'image' => 'required|file|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'image' => 'required|file|image|mimes:jpg,jpeg,png,webp|max:' . $maxImageKb,
         ]);
 
         try {

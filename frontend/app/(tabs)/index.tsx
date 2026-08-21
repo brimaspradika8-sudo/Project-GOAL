@@ -19,6 +19,7 @@ import { useProfileStore } from '../../store/profileStore';
 import { Field, useFieldStore } from '../../store/fieldStore';
 import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
 import { CATEGORIES } from '../../data/venues';
+import { useSportStore, getSportIconName } from '../../store/sportStore';
 import { SafeImage } from '../../components/SafeImage';
 import { SkeletonVenueList, SkeletonHorizontalCards, SkeletonProfile, SkeletonHero } from '../../components/Skeleton';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -40,8 +41,12 @@ const DEFAULT_IMAGES: Record<string, string> = {
   default: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=800&auto=format&fit=crop',
 };
 
-function getSportFilter(category: string): string | undefined {
+function getSportFilter(category: string, sportsList?: { slug: string; name: string }[]): string | undefined {
   if (category === 'Semua') return undefined;
+  if (Array.isArray(sportsList)) {
+    const fromStore = sportsList.find(s => s.name === category || s.slug === category);
+    if (fromStore) return fromStore.slug;
+  }
   const categoryItem = CATEGORIES.find(c => c.label === category || c.key === category);
   if (categoryItem) return categoryItem.key;
   return SPORT_MAP[category] || category.toLowerCase();
@@ -61,6 +66,11 @@ export default function HomeScreen() {
   const isSearching = fieldsLoading || (searchQuery.trim() !== debouncedSearch.trim());
   const { colors, resolved } = useTheme();
   const { refresh: refreshNotifications, unreadCount } = useNotificationStore();
+  const { sports, fetchSports } = useSportStore();
+
+  useEffect(() => {
+    fetchSports();
+  }, [fetchSports]);
 
   useEffect(() => {
     if (!profile && !profileLoading) fetchProfile();
@@ -83,9 +93,9 @@ export default function HomeScreen() {
 
   useEffect(() => {
     lastSearchRef.current = debouncedSearch;
-    const sport = getSportFilter(activeCategory);
-    fetchFields(sport, debouncedSearch || undefined);
-  }, [activeCategory, debouncedSearch, fetchFields]);
+    const sportFilter = getSportFilter(activeCategory, sports);
+    fetchFields(sportFilter, debouncedSearch || undefined);
+  }, [activeCategory, debouncedSearch, fetchFields, sports]);
 
   useEffect(() => {
     fetchPopularFields().catch(() => {});
@@ -98,9 +108,9 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       lastSearchRef.current = debouncedSearch;
-      const sport = getSportFilter(activeCategory);
+      const sport = getSportFilter(activeCategory, sports);
       fetchFields(sport, debouncedSearch || undefined);
-    }, [activeCategory, debouncedSearch, fetchFields])
+    }, [activeCategory, debouncedSearch, fetchFields, sports])
   );
 
   // Refetch popular fields on focus too, but decoupled from the search
@@ -114,7 +124,7 @@ export default function HomeScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    const sport = getSportFilter(activeCategory);
+    const sport = getSportFilter(activeCategory, sports);
     await Promise.all([fetchProfile(), fetchFields(sport, debouncedSearch || undefined), fetchPopularFields()]);
     setRefreshing(false);
   };
@@ -127,7 +137,7 @@ export default function HomeScreen() {
 
   const styles = makeStyles(colors);
   const isDesktop = width >= 900;
-  const sports = profile?.sports ?? [];
+  const userFavoriteSports = profile?.sports ?? [];
   const userName = profile?.full_name || profile?.username || 'Pengguna';
   const isOwnerOrSuperAdmin = profile?.role === 'owner' || profile?.role === 'super_admin';
 
@@ -227,11 +237,15 @@ export default function HomeScreen() {
 
         <View style={styles.section}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-            {[{ label: 'Semua', icon: 'apps' as const }, ...CATEGORIES].map((item) => {
+            {[{ label: 'Semua', icon: 'apps' as const, key: 'all' }, ...(sports || []).map(s => ({
+              label: s.name,
+              key: s.slug || String(s.id),
+              icon: (getSportIconName(s.slug) as any),
+            }))].map((item) => {
               const isActive = activeCategory === item.label;
               return (
                 <TouchableOpacity
-                  key={item.label}
+                  key={item.key || item.label}
                   style={styles.categoryItem}
                   activeOpacity={0.7}
                   onPress={() => setActiveCategory(item.label)}
@@ -359,13 +373,13 @@ export default function HomeScreen() {
         </View>
         )}
 
-        {sports.length > 0 && (
+        {userFavoriteSports.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Olahraga favorit</Text>
             </View>
             <View style={styles.sportChips}>
-              {sports.map((sport) => (
+              {userFavoriteSports.map((sport) => (
                 <View key={sport} style={styles.sportChip}>
                   <Text style={styles.sportChipText} numberOfLines={1}>{sport}</Text>
                 </View>

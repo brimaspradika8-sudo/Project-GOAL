@@ -14,6 +14,7 @@ use App\Http\Controllers\Owner\SuperAdminOwnerController;
 use App\Http\Controllers\Profile\AvatarController;
 use App\Http\Controllers\Profile\OnboardingController;
 use App\Http\Controllers\Profile\ProfileController;
+use App\Http\Controllers\SuperAdmin\FieldValidationSettingController;
 use App\Http\Controllers\SuperAdmin\UserController;
 use App\Http\Controllers\UploadController;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +36,7 @@ Route::middleware('throttle:60,1')->group(function () {
     Route::get('/fields/{id}', [FieldController::class, 'show']);
     Route::get('/fields/{id}/availability', [FieldAvailabilityController::class, 'show']);
     Route::get('/lapangan/{id}/slots', [FieldAvailabilityController::class, 'show']);
+    Route::get('/sports', [\App\Http\Controllers\SportController::class, 'index']);
     Route::get('/me/onboarding/check-username', [OnboardingController::class, 'checkUsername']);
 });
 // Protected (Sanctum + rate limit)
@@ -61,6 +63,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     // Di-move ke dalam group role:owner,super_admin di bawah
     // Fields - owner manages own fields
     Route::middleware('role:owner,super_admin')->group(function () {
+        Route::get('/field-validation-settings', [FieldValidationSettingController::class, 'show']);
         Route::get('/fields/my/list', [FieldController::class, 'myFields']);
         Route::post('/fields', [FieldController::class, 'store']);
         Route::put('/fields/{id}', [FieldController::class, 'update']);
@@ -114,6 +117,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
         Route::post('/super-admin/sports', [\App\Http\Controllers\SportController::class, 'store']);
         Route::put('/super-admin/sports/{id}', [\App\Http\Controllers\SportController::class, 'update']);
         Route::delete('/super-admin/sports/{id}', [\App\Http\Controllers\SportController::class, 'destroy']);
+
+        // Field validation settings - super_admin only (write). Read is in the owner,super_admin group above.
+        Route::put('/super-admin/field-validation-settings', [FieldValidationSettingController::class, 'update']);
     });
     // Bookings - player
     Route::middleware('role:player')->group(function () {
