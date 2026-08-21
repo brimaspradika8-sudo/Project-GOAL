@@ -420,10 +420,9 @@ export default function OwnerKasirPage() {
 
   const validateCustomerPhone = (v: string): string => {
     const t = v.trim();
-    if (!t) return '';
-    const cleaned = t.replace(/[\s-]/g, '');
-    if (!/^(\+62|62|0)8[1-9][0-9]{6,11}$/.test(cleaned)) {
-      return 'Format nomor HP tidak valid (contoh: 08123456789).';
+    if (!t) return 'Nomor HP wajib diisi.';
+    if (t.length < 9 || t.length > 15) {
+      return 'Nomor HP harus 9 hingga 15 digit angka (contoh: 08123456789).';
     }
     return '';
   };
@@ -435,23 +434,21 @@ export default function OwnerKasirPage() {
 
   const handleCustomerNameChange = (val: string) => {
     setCustomerName(val);
-    if (customerTouched.name) {
-      setCustomerErrors((prev) => ({ ...prev, name: validateCustomerName(val) }));
-    }
+    setCustomerTouched((prev) => ({ ...prev, name: true }));
+    setCustomerErrors((prev) => ({ ...prev, name: validateCustomerName(val) }));
   };
 
   const handleCustomerPhoneChange = (val: string) => {
-    setCustomerPhone(val);
-    if (customerTouched.phone) {
-      setCustomerErrors((prev) => ({ ...prev, phone: validateCustomerPhone(val) }));
-    }
+    const numericOnly = val.replace(/\D/g, '');
+    setCustomerPhone(numericOnly);
+    setCustomerTouched((prev) => ({ ...prev, phone: true }));
+    setCustomerErrors((prev) => ({ ...prev, phone: validateCustomerPhone(numericOnly) }));
   };
 
   const handleCustomerNotesChange = (val: string) => {
     setNotes(val);
-    if (customerTouched.notes) {
-      setCustomerErrors((prev) => ({ ...prev, notes: validateCustomerNotes(val) }));
-    }
+    setCustomerTouched((prev) => ({ ...prev, notes: true }));
+    setCustomerErrors((prev) => ({ ...prev, notes: validateCustomerNotes(val) }));
   };
 
   const handleCustomerBlur = (field: 'name' | 'phone' | 'notes') => {
@@ -461,11 +458,12 @@ export default function OwnerKasirPage() {
     if (field === 'notes') setCustomerErrors((prev) => ({ ...prev, notes: validateCustomerNotes(notes) }));
   };
 
-  const hasCustomerErrors = Boolean(
-    validateCustomerName(customerName) ||
-    validateCustomerPhone(customerPhone) ||
-    validateCustomerNotes(notes)
-  );
+  const liveNameError = validateCustomerName(customerName);
+  const livePhoneError = validateCustomerPhone(customerPhone);
+  const liveNotesError = validateCustomerNotes(notes);
+
+  const hasCustomerErrors = Boolean(liveNameError || livePhoneError || liveNotesError);
+  const isFormValid = !hasCustomerErrors && selectedSlots.length > 0 && Boolean(selectedField);
 
   // Transaction
   const [saving, setSaving] = useState(false);
@@ -735,7 +733,7 @@ export default function OwnerKasirPage() {
                 </View>
               ) : null}
 
-              <Text style={[st.inputLabel, { color: colors.textSecondary, marginTop: 12 }]}>Nomor HP (Opsional)</Text>
+              <Text style={[st.inputLabel, { color: colors.textSecondary, marginTop: 12 }]}>Nomor HP *</Text>
               <TextInput
                 value={customerPhone}
                 onChangeText={handleCustomerPhoneChange}
@@ -843,13 +841,8 @@ export default function OwnerKasirPage() {
                           }}
                         >
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-<<<<<<< HEAD
-                            <MaterialIcons name="access-time" size={15} color={colors.primary} />
-                            <Text style={{ fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '600', color: colors.text }}>
-=======
                             <MaterialIcons name="schedule" size={16} color={colors.primary} />
                             <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600', color: colors.text }}>
->>>>>>> 16538af81281a88cb5af8e9d2679388464257316
                               {s.start_time} – {s.end_time}
                             </Text>
                           </View>
@@ -889,10 +882,28 @@ export default function OwnerKasirPage() {
                     </Text>
                   </View>
 
+                  {/* Live Validation Hint */}
+                  {!isFormValid && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10, backgroundColor: colors.surfaceContainerLow, padding: 10, borderRadius: 10 }}>
+                      <MaterialIcons name="info-outline" size={16} color={colors.error} />
+                      <Text style={{ fontFamily: FONT_FAMILY, fontSize: 12, color: colors.error, fontWeight: '600', flex: 1 }}>
+                        {selectedSlots.length === 0
+                          ? 'Pilih minimal 1 slot jam terlebih dahulu.'
+                          : liveNameError
+                          ? liveNameError
+                          : livePhoneError
+                          ? livePhoneError
+                          : liveNotesError
+                          ? liveNotesError
+                          : 'Lengkapi data pesanan.'}
+                      </Text>
+                    </View>
+                  )}
+
                   {/* Checkout Button */}
                   <TouchableOpacity
                     onPress={handleCheckout}
-                    disabled={saving || selectedSlots.length === 0 || hasCustomerErrors || !customerName.trim()}
+                    disabled={saving || !isFormValid}
                     activeOpacity={0.85}
                     style={{
                       backgroundColor: colors.primary,
@@ -902,8 +913,8 @@ export default function OwnerKasirPage() {
                       flexDirection: 'row',
                       justifyContent: 'center',
                       gap: 8,
-                      opacity: saving || selectedSlots.length === 0 || hasCustomerErrors || !customerName.trim() ? 0.5 : 1,
-                      ...(Platform.OS === 'web' ? { boxShadow: `0 4px 16px ${colors.primary}50` } : {}),
+                      opacity: saving || !isFormValid ? 0.45 : 1,
+                      ...(Platform.OS === 'web' && isFormValid ? { boxShadow: `0 4px 16px ${colors.primary}50` } : {}),
                     }}
                   >
                     {saving ? (

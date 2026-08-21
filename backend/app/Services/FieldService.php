@@ -144,7 +144,7 @@ class FieldService
             ->paginate(15);
     }
 
-    public function listByOwner(User $user): LengthAwarePaginator
+    public function listByOwner(User $user, ?string $search = null, ?string $sport = null, ?string $status = null, int $page = 1): LengthAwarePaginator
     {
         $query = Field::query();
 
@@ -152,10 +152,27 @@ class FieldService
             $query->where('owner_id', $user->id);
         }
 
+        if ($search) {
+            $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search);
+            $searchTerm = "%{$escaped}%";
+            $query->where(function ($q) use ($searchTerm) {
+                $q->whereRaw('LOWER(name) LIKE ?', [$searchTerm])
+                    ->orWhereRaw('LOWER(location) LIKE ?', [$searchTerm]);
+            });
+        }
+
+        if ($sport) {
+            $this->applySportFilter($query, $sport);
+        }
+
+        if ($status && in_array($status, ['approved', 'pending', 'rejected'], true)) {
+            $query->where('status', $status);
+        }
+
         return $query
             ->with(['owner:id,name', 'approver:id,name', 'prices', 'images'])
             ->latest()
-            ->paginate(15);
+            ->paginate(15, ['*'], 'page', $page);
     }
 
     public function find(int $id): ?Field

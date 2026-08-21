@@ -75,24 +75,34 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
   const [bulkDeleteTarget, setBulkDeleteTarget] = useState(false);
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
   const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-  const fetchFields = useCallback(async () => {
+  const fetchFields = useCallback(async (silent = false) => {
     try {
-      const res = await apiFetch('/fields', {
+      if (!silent) setLoading(true);
+      const res = await apiFetch('/fields/my/list', {
         params: { search: debouncedSearch, sport: filterSport, page: '1' },
       });
       const data = await res.json().catch(() => ({}));
       setFields(data?.data ?? []);
     } catch {
-      useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Gagal memuat data lapangan.' });
+      if (!silent) {
+        useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Gagal memuat data lapangan.' });
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, [debouncedSearch, filterSport]);
 
-  useEffect(() => { fetchFields(); }, [fetchFields]);
-  const onRefresh = () => { setRefreshing(true); fetchFields(); };
+  useEffect(() => {
+    fetchFields(false);
+    const interval = setInterval(() => {
+      fetchFields(true);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [fetchFields]);
+  const onRefresh = () => { setRefreshing(true); fetchFields(false); };
 
   const openEdit = (f: any) => {
     setEditTarget(f);
@@ -240,12 +250,16 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
     setDeleteLoading(true);
     try {
       const res = await apiFetch(`/fields/${deleteTarget.id}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Lapangan dihapus.' });
+        useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: data?.message || 'Lapangan dihapus.' });
         setDeleteTarget(null);
+        try {
+          const { useFieldStore } = require('../../store/fieldStore');
+          await useFieldStore.getState().clearCache().catch(() => {});
+        } catch {}
         fetchFields();
       } else {
-        const data = await res.json().catch(() => ({}));
         useToastStore.getState().show({ type: 'error', title: 'Gagal', description: getErrorMessage(data, 'Gagal menghapus lapangan.') });
       }
     } catch {
@@ -322,50 +336,43 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
         {!hideHeader && <DashboardHeader title="Lapangan Aktif" subtitle="Kelola semua lapangan yang sudah disetujui" showBack={false} />}
 
         <View style={st.searchWrap}>
-          <View style={[st.searchBar, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline }]}>
-            <MaterialIcons name="search" size={18} color={colors.textTertiary} />
-            <TextInput
-              style={[st.searchInput, { color: colors.text }]}
-              placeholder="Cari nama atau lokasi..."
-              placeholderTextColor={colors.textTertiary}
-              value={search}
-              onChangeText={setSearch}
-              returnKeyType="search"
-            />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <MaterialIcons name="close" size={16} color={colors.textTertiary} />
-              </TouchableOpacity>
-            )}
+          <View style={st.searchAndFilterRow}>
+            <View style={[st.searchBar, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline }]}>
+              <MaterialIcons name="search" size={18} color={colors.textTertiary} />
+              <TextInput
+                style={[st.searchInput, { color: colors.text }]}
+                placeholder="Cari nama atau lokasi..."
+                placeholderTextColor={colors.textTertiary}
+                value={search}
+                onChangeText={setSearch}
+                returnKeyType="search"
+              />
+              {search.length > 0 && (
+                <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <MaterialIcons name="close" size={16} color={colors.textTertiary} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={[
+                st.filterBtn,
+                {
+                  backgroundColor: filterSport ? colors.primaryContainer : colors.surfaceContainerLow,
+                  borderColor: filterSport ? colors.primary : colors.outline,
+                }
+              ]}
+              onPress={() => setIsFilterModalOpen(true)}
+              activeOpacity={0.8}
+            >
+              <MaterialIcons name="tune" size={18} color={filterSport ? colors.primary : colors.textSecondary} />
+              <Text style={[st.filterBtnText, { color: filterSport ? colors.primary : colors.textSecondary }]} numberOfLines={1}>
+                {filterSport ? (sports.find(s => s.slug === filterSport)?.name || filterSport) : 'Filter Olahraga'}
+              </Text>
+              <MaterialIcons name="arrow-drop-down" size={18} color={filterSport ? colors.primary : colors.textSecondary} />
+            </TouchableOpacity>
           </View>
         </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={st.chipScroll}
-          contentContainerStyle={st.chipWrap}
-        >
-          {sportChips.map(chip => {
-            const active = (filterSport === null && chip.value === null) || filterSport === chip.value;
-            const badge = chip.value ? getSportBadgeStyle(chip.value) : { color: colors.textSecondary, bg: colors.surfaceContainerLow };
-            return (
-              <TouchableOpacity
-                key={chip.value || chip.label}
-                style={[
-                  st.chip,
-                  { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline },
-                  active && { backgroundColor: colors.primary, borderColor: colors.primary },
-                ]}
-                onPress={() => setFilterSport(chip.value)}
-                activeOpacity={0.8}
-              >
-                <MaterialIcons name={(chip.icon as any) || 'sports'} size={14} color={active ? colors.onPrimary : colors.textSecondary} />
-                <Text style={[st.chipText, { color: colors.textSecondary }, active && { color: colors.onPrimary }]}>{chip.label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
 
         <View style={st.resultRow}>
           <Text style={[st.resultText, { color: colors.textTertiary }]}>
@@ -403,7 +410,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
             fields.map((f: any) => {
               const img = f.image_url || IMG_PLACEHOLDER;
               const priceStr = f.price_per_hour
-                ? `Rp${Number(f.price_per_hour).toLocaleString('id-ID')}`
+                ? `Rp ${Number(f.price_per_hour).toLocaleString('id-ID')}`
                 : '-';
               const badge = getSportBadgeStyle(f.sport_type);
               const sportLabel = ((sports || []).find(s => s.slug === f.sport_type)?.name || SPORT_LABELS[f.sport_type] || f.sport_type)?.toUpperCase();
@@ -421,22 +428,41 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
                       <SelectCheckbox selected={selected.has(f.id)} colors={colors} size={20} />
                     </TouchableOpacity>
 
-                    {/* Sport Badge Tag on Card Image */}
-                    <View style={[st.sportPillBadge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
-                      <MaterialIcons name={badge.icon} size={13} color={badge.color} />
-                      <Text style={[st.sportPillText, { color: badge.color }]}>{sportLabel}</Text>
+                    {/* Sport & Status Badges (Top Right) */}
+                    <View style={{ position: 'absolute', top: 10, right: 10, flexDirection: 'row', alignItems: 'center', gap: 6, zIndex: 10 }}>
+                      <View style={[st.sportPillBadge, { position: 'relative', top: 0, right: 0, backgroundColor: badge.bg, borderColor: badge.border }]}>
+                        <MaterialIcons name={badge.icon} size={13} color={badge.color} />
+                        <Text style={[st.sportPillText, { color: badge.color }]}>{sportLabel}</Text>
+                      </View>
+                      {f.status && f.status !== 'approved' && (
+                        <View style={{
+                          paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20,
+                          backgroundColor: f.status === 'pending' ? '#FEF3C7' : '#FEE2E2',
+                          borderColor: f.status === 'pending' ? '#F59E0B40' : '#EF444440',
+                          borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 4,
+                        }}>
+                          <MaterialIcons
+                            name={f.status === 'pending' ? 'pending' : 'cancel'}
+                            size={12}
+                            color={f.status === 'pending' ? '#D97706' : '#DC2626'}
+                          />
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: f.status === 'pending' ? '#D97706' : '#DC2626' }}>
+                            {f.status === 'pending' ? 'Pending' : 'Ditolak'}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
 
                   <View style={st.cardBody}>
                     <View style={st.cardTop}>
-                      <View style={{ flex: 1, marginRight: 12 }}>
+                      <View style={{ flex: 1, marginRight: 10 }}>
                         <Text style={[st.fieldName, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">
                           {f.name}
                         </Text>
                       </View>
                       <View style={[st.pricePill, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '35' }]}>
-                        <Text style={[st.price, { color: colors.primary }]}>{priceStr}<Text style={[st.priceSub, { color: colors.textSecondary }]}>/jam</Text></Text>
+                        <Text style={[st.price, { color: colors.primary }]}>{priceStr}<Text style={[st.priceSub, { color: colors.primary }]}> / jam</Text></Text>
                       </View>
                     </View>
 
@@ -455,26 +481,22 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
 
                     <View style={st.actions}>
                       <TouchableOpacity
-                        style={[st.detailBtn, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline }]}
-                        activeOpacity={0.8}
-                        onPress={() => router.push(`/venue-detail?id=${f.id}`)}
-                      >
-                        <MaterialIcons name="visibility" size={15} color={colors.textSecondary} />
-                        <Text style={[st.detailBtnText, { color: colors.textSecondary }]}>Detail</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={[st.editBtn, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '30' }]}
+                        style={[st.cardActionBtn, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '30' }]}
                         activeOpacity={0.8}
                         onPress={() => openEdit(f)}
                       >
                         <MaterialIcons name="edit" size={15} color={colors.primary} />
-                        <Text style={[st.editBtnText, { color: colors.primary }]}>Edit</Text>
+                        <Text style={[st.cardActionText, { color: colors.primary, fontWeight: '700' }]}>Edit</Text>
                       </TouchableOpacity>
 
-                      <AnimatedDeleteButton
+                      <TouchableOpacity
+                        style={[st.cardActionBtn, { backgroundColor: colors.errorContainer + '40', borderColor: colors.error + '30' }]}
+                        activeOpacity={0.8}
                         onPress={() => setDeleteTarget({ id: f.id, name: f.name })}
-                      />
+                      >
+                        <MaterialIcons name="delete-outline" size={15} color={colors.error} />
+                        <Text style={[st.cardActionText, { color: colors.error, fontWeight: '700' }]}>Hapus</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
                 </View>
@@ -635,6 +657,51 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
         onCancel={() => setDeleteTarget(null)}
       />
 
+      <Modal visible={isFilterModalOpen} transparent animationType="fade" onRequestClose={() => setIsFilterModalOpen(false)}>
+        <View style={st.modalOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={() => setIsFilterModalOpen(false)} />
+          <View style={[st.filterModalBox, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
+            <View style={st.filterModalHead}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <MaterialIcons name="tune" size={20} color={colors.primary} />
+                <Text style={[st.filterModalTitle, { color: colors.text }]}>Filter Olahraga</Text>
+              </View>
+              <TouchableOpacity onPress={() => setIsFilterModalOpen(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <MaterialIcons name="close" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+              {sportChips.map(chip => {
+                const active = (filterSport === null && chip.value === null) || filterSport === chip.value;
+                return (
+                  <TouchableOpacity
+                    key={chip.value || chip.label}
+                    style={[
+                      st.filterOptionItem,
+                      active && { backgroundColor: colors.primaryContainer }
+                    ]}
+                    onPress={() => {
+                      setFilterSport(chip.value);
+                      setIsFilterModalOpen(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <MaterialIcons name={(chip.icon as any) || 'sports'} size={18} color={active ? colors.primary : colors.textSecondary} />
+                      <Text style={[st.filterOptionText, { color: active ? colors.primary : colors.text }, active && { fontWeight: '700' }]}>
+                        {chip.label}
+                      </Text>
+                    </View>
+                    {active && <MaterialIcons name="check" size={18} color={colors.primary} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       <ConfirmDialog
         visible={bulkDeleteTarget}
         title={`Hapus ${selected.size} lapangan terpilih?`}
@@ -659,6 +726,10 @@ function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboar
   placeholder?: string; keyboardType?: any; multiline?: boolean;
   error?: string; st: ReturnType<typeof makeStyles>; colors: ThemeColors;
 }) {
+  const isNumeric = keyboardType === 'numeric' || keyboardType === 'number-pad';
+  const numericVal = isNumeric && value ? value.replace(/\D/g, '') : '';
+  const formattedRupiah = numericVal ? `Rp ${parseInt(numericVal, 10).toLocaleString('id-ID')}` : '';
+
   return (
     <View style={st.fieldWrap}>
       <Text style={[st.fieldLabel, { color: colors.textSecondary }]}>{label}</Text>
@@ -671,7 +742,13 @@ function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboar
         <TextInput
           style={[st.fieldInput, { color: colors.text }, multiline && { minHeight: 80, textAlignVertical: 'top' }]}
           value={value}
-          onChangeText={onChangeText}
+          onChangeText={(v) => {
+            if (isNumeric) {
+              onChangeText(v.replace(/\D/g, ''));
+            } else {
+              onChangeText(v);
+            }
+          }}
           onBlur={onBlur}
           placeholder={placeholder ?? label}
           placeholderTextColor={colors.textTertiary}
@@ -679,6 +756,26 @@ function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboar
           multiline={multiline}
         />
       </View>
+      {isNumeric && formattedRupiah ? (
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          marginTop: 8,
+          alignSelf: 'flex-start',
+          backgroundColor: colors.primaryContainer,
+          borderColor: colors.primary + '35',
+          borderWidth: 1,
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 10,
+        }}>
+          <MaterialIcons name="payments" size={15} color={colors.primary} />
+          <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>
+            Terbaca: <Text style={{ fontWeight: '800' }}>{formattedRupiah}</Text>
+          </Text>
+        </View>
+      ) : null}
       {error ? (
         <View style={st.fieldErrorRow}>
           <MaterialIcons name="warning" size={13} color={colors.error} />
@@ -694,37 +791,74 @@ function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboar
 const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
 
-  searchWrap: { paddingHorizontal: SIZES.gutter, marginBottom: 10, ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }) },
+  searchWrap: { paddingHorizontal: SIZES.gutter, marginBottom: 12, ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }) },
+  searchAndFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   searchBar: {
+    flex: 1,
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10,
     borderWidth: 1.5,
   },
   searchInput: { flex: 1, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}) },
-
-  chipScroll: {
-    paddingHorizontal: SIZES.gutter,
-    marginBottom: 12,
-    flexGrow: 0,
-    ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }),
-  },
-  chipWrap: {
+  filterBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingRight: 24,
-    paddingVertical: 2,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    gap: 6,
+    borderRadius: 14,
     paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    minHeight: 44,
   },
-  chipText: { ...FONTS.labelMd, fontSize: 12, fontWeight: '600' },
+  filterBtnText: {
+    ...FONTS.labelMd,
+    fontSize: 13,
+    fontWeight: '600',
+    maxWidth: 130,
+  },
+  filterModalBox: {
+    width: '90%',
+    maxWidth: 380,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    alignSelf: 'center',
+    marginVertical: 'auto',
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }
+      : { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.18, shadowRadius: 12, elevation: 10 }),
+  },
+  filterModalHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.outline,
+  },
+  filterModalTitle: {
+    ...FONTS.headlineSm,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  filterOptionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  filterOptionText: {
+    ...FONTS.bodyMd,
+    fontSize: 14,
+  },
 
   resultRow: {
     flexDirection: 'row',
@@ -822,10 +956,15 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
   detailText: { ...FONTS.bodyMd, flex: 1 },
 
   actions: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8,
     marginTop: 14, paddingTop: 12,
     borderTopWidth: 1, borderTopColor: colors.outline,
   },
+  cardActionBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    height: 36, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1,
+  },
+  cardActionText: { ...FONTS.labelMd, fontSize: 12, fontWeight: '600' },
   detailBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingVertical: 9, paddingHorizontal: 13, borderRadius: 12, borderWidth: 1,

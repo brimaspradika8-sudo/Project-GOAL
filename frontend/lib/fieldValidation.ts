@@ -69,11 +69,10 @@ export function validateFieldPrice(
   const max = settings.max_price ?? DEFAULT_FIELD_VALIDATION_SETTINGS.max_price;
   const v = value.trim();
   if (!v) return '';
-  const cleaned = v.replace(/\D/g, '');
-  if (cleaned !== v.replace(/[^0-9]/g, '') || /\D/.test(v.replace(/\./g, '').replace(/,/g, ''))) {
-    return 'Harga harus berupa angka.';
+  if (/\D/.test(v)) {
+    return 'Harga harus berupa angka bulat (tanpa huruf/simbol).';
   }
-  const num = parseInt(cleaned, 10);
+  const num = parseInt(v, 10);
   if (isNaN(num)) return 'Harga harus berupa angka.';
   if (num < min) return `Harga per jam tidak boleh kurang dari Rp ${min.toLocaleString('id-ID')}.`;
   if (num > max) return `Harga per jam tidak boleh lebih dari Rp ${max.toLocaleString('id-ID')}.`;

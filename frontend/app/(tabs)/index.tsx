@@ -65,7 +65,8 @@ export default function HomeScreen() {
   const debouncedSearch = useDebounce(searchQuery, 500);
   const isSearching = fieldsLoading || (searchQuery.trim() !== debouncedSearch.trim());
   const { colors, resolved } = useTheme();
-  const { refresh: refreshNotifications, unreadCount } = useNotificationStore();
+  const hasUnread = useNotificationStore((s) => s.items.some((n) => !n.read));
+  const refreshNotifications = useNotificationStore((s) => s.refresh);
   const { sports, fetchSports } = useSportStore();
 
   useEffect(() => {
@@ -177,7 +178,7 @@ export default function HomeScreen() {
             <ThemeToggle />
             <TouchableOpacity style={styles.topBarBtn} activeOpacity={0.7} onPress={() => setNotifVisible(true)}>
               <MaterialIcons name="notifications-none" size={22} color={colors.onSurface} />
-              {unreadCount() > 0 ? <View style={styles.topBarBadge} /> : null}
+              {hasUnread ? <View style={styles.topBarBadge} /> : null}
             </TouchableOpacity>
             <TouchableOpacity style={styles.avatarBtn} activeOpacity={0.7} onPress={() => router.push('/(tabs)/profile')}>
               <MaterialIcons name="person" size={20} color={colors.primary} />

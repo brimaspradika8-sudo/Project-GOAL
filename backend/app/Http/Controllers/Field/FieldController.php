@@ -122,13 +122,18 @@ class FieldController extends Controller
             return $this->errorResponse('Lapangan tidak ditemukan.', [], 404);
         }
 
-        $this->authorizeField($request, 'delete', $field);
+        try {
+            $this->authorizeField($request, 'delete', $field);
+            $this->fieldService->delete($field, $request->user());
+            $this->fieldService->invalidateCache();
 
-        $this->fieldService->delete($field, $request->user());
-
-        $this->fieldService->invalidateCache();
-
-        return $this->successResponse('Lapangan berhasil dihapus.');
+            return $this->successResponse('Lapangan berhasil dihapus.');
+        } catch (AuthorizationException $e) {
+            return $this->errorResponse('Anda tidak berhak menghapus lapangan ini.', [], 403);
+        } catch (\Throwable $e) {
+            Log::error('Field deletion failed', ['id' => $id, 'error' => $e->getMessage()]);
+            return $this->errorResponse('Gagal menghapus lapangan: '.$e->getMessage(), [], 500);
+        }
     }
 
     public function pending(): JsonResponse
@@ -143,7 +148,21 @@ class FieldController extends Controller
 
     public function myFields(Request $request): JsonResponse
     {
-        $fields = $this->fieldService->listByOwner($request->user());
+        $data = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'sport'  => ['nullable', 'string', 'max:50'],
+            'status' => ['nullable', 'string', 'in:approved,pending,rejected'],
+            'page'   => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        $fields = $this->fieldService->listByOwner(
+            $request->user(),
+            $data['search'] ?? null,
+            $data['sport'] ?? null,
+            $data['status'] ?? null,
+            $data['page'] ?? 1
+        );
+
         foreach ($fields->items() as $field) {
             $field->makeVisible(['rejection_reason', 'approved_by']);
         }

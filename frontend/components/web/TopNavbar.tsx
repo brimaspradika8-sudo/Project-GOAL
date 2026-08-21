@@ -28,7 +28,8 @@ export default function TopNavbar() {
   const router = useRouter();
   const breakpoint = useBreakpoint();
   const [notifVisible, setNotifVisible] = React.useState(false);
-  const { refresh, unreadCount } = useNotificationStore();
+  const hasUnread = useNotificationStore((s) => s.items.some((n) => !n.read));
+  const refresh = useNotificationStore((s) => s.refresh);
 
   React.useEffect(() => {
     refresh().catch(() => {});
@@ -37,8 +38,6 @@ export default function TopNavbar() {
   if (breakpoint === 'mobile') {
     return <MobileTopNavbar colors={colors} pathname={pathname} router={router} />;
   }
-
-  const unread = unreadCount();
 
   return (
     <View style={[styles.navbar, { backgroundColor: colors.surface, borderBottomColor: colors.outline }]}>
@@ -82,7 +81,7 @@ export default function TopNavbar() {
             onPress={() => setNotifVisible(true)}
           >
             <MaterialIcons name="notifications-none" size={20} color={colors.onSurface} />
-            {unread > 0 ? <View style={[styles.notifBadge, { backgroundColor: colors.error }]} /> : null}
+            {hasUnread ? <View style={[styles.notifBadge, { backgroundColor: colors.error }]} /> : null}
           </Pressable>
           <Pressable
             style={[styles.avatar, { backgroundColor: colors.primaryLight }]}

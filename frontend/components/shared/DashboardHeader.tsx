@@ -37,7 +37,8 @@ export default function DashboardHeader({
   const backButtonIcon = resolved === 'dark' ? colors.onPrimaryContainer : colors.primary;
 
   const [notifVisible, setNotifVisible] = useState(false);
-  const { refresh, unreadCount } = useNotificationStore();
+  const hasUnread = useNotificationStore((s) => s.items.some((n) => !n.read));
+  const refresh = useNotificationStore((s) => s.refresh);
 
   useEffect(() => {
     refresh().catch(() => {});
@@ -89,7 +90,7 @@ export default function DashboardHeader({
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <MaterialIcons name="notifications" size={isMobile ? 19 : 22} color={headerTextColor} />
-              {unreadCount() > 0 ? <View style={st.notifBadge} /> : null}
+              {hasUnread ? <View style={st.notifBadge} /> : null}
             </TouchableOpacity>
           </View>
         </View>

@@ -37,21 +37,30 @@ export default function PendingFieldsPage({ hideHeader }: { hideHeader?: boolean
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
-  const fetchFields = useCallback(async () => {
+  const fetchFields = useCallback(async (silent = false) => {
     try {
+      if (!silent) setLoading(true);
       const res = await apiFetch('/fields/pending/list');
       const data = await res.json().catch(() => ({}));
       setFields(data?.data ?? []);
     } catch {
-      useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Gagal memuat data.' });
+      if (!silent) {
+        useToastStore.getState().show({ type: 'error', title: 'Error', description: 'Gagal memuat data.' });
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
-  useEffect(() => { fetchFields(); }, [fetchFields]);
-  const onRefresh = () => { setRefreshing(true); fetchFields(); };
+  useEffect(() => {
+    fetchFields(false);
+    const interval = setInterval(() => {
+      fetchFields(true);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [fetchFields]);
+  const onRefresh = () => { setRefreshing(true); fetchFields(false); };
 
   const reviewField = async (id: number, status: 'approved' | 'rejected', reason?: string) => {
     const res = await apiFetch(`/fields/${id}/approve`, {

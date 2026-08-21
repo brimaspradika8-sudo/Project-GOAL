@@ -29,7 +29,7 @@ interface NotificationState {
   clear: () => void;
   markAsRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
-  clearAll: () => Promise<number>;
+  clearAll: () => Promise<{ success: boolean; deleted: number }>;
   unreadCount: () => number;
 }
 
@@ -111,12 +111,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       if (res.ok) {
         set({ items: [] });
         const data = await res.json().catch(() => ({}));
-        return Number(data?.data?.deleted ?? 0);
+        return { success: true, deleted: Number(data?.data?.deleted ?? 0) };
       }
-      return 0;
+      return { success: false, deleted: 0 };
     } catch {
-      await get().refresh();
-      return 0;
+      return { success: false, deleted: 0 };
     }
   },
 

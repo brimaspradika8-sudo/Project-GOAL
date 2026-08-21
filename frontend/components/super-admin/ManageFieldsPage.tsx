@@ -127,7 +127,13 @@ export default function ManageFieldsPage() {
     } catch {}
   }, []);
 
-  useEffect(() => { fetchCounts(); }, [fetchCounts]);
+  useEffect(() => {
+    fetchCounts();
+    const interval = setInterval(() => {
+      fetchCounts();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [fetchCounts]);
 
   const refreshCount = useCallback((tab: Tab) => {
     const fetchers: Record<Tab, () => Promise<void>> = {
@@ -226,23 +232,23 @@ export default function ManageFieldsPage() {
       {/* ── STAT CARDS ── */}
       <View style={st.statCardsRow}>
         <View style={[st.statCard, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
-          <View style={[st.statIconWrap, { backgroundColor: colors.primaryContainer }]}>
-            <MaterialIcons name="stadium" size={20} color={colors.primary} />
-          </View>
-          <View style={st.statTextWrap}>
+          <View style={st.statCardHead}>
+            <View style={[st.statIconWrap, { backgroundColor: colors.primaryContainer }]}>
+              <MaterialIcons name="stadium" size={18} color={colors.primary} />
+            </View>
             <Text style={[st.statValue, { color: colors.text }]}>{(activeCount ?? 0) + (pendingCount ?? 0) + (trashedCount ?? 0)}</Text>
-            <Text style={[st.statLabel, { color: colors.textSecondary }]}>Total Lapangan</Text>
           </View>
+          <Text style={[st.statLabel, { color: colors.textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>Total Lapangan</Text>
         </View>
 
         <View style={[st.statCard, { backgroundColor: colors.surface, borderColor: colors.outline }]}>
-          <View style={[st.statIconWrap, { backgroundColor: '#10B98118' }]}>
-            <MaterialIcons name="check-circle" size={20} color="#10B981" />
-          </View>
-          <View style={st.statTextWrap}>
+          <View style={st.statCardHead}>
+            <View style={[st.statIconWrap, { backgroundColor: '#10B98118' }]}>
+              <MaterialIcons name="check-circle" size={18} color="#10B981" />
+            </View>
             <Text style={[st.statValue, { color: colors.text }]}>{activeCount ?? 0}</Text>
-            <Text style={[st.statLabel, { color: colors.textSecondary }]}>Lapangan Aktif</Text>
           </View>
+          <Text style={[st.statLabel, { color: colors.textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>Lapangan Aktif</Text>
         </View>
 
         <TouchableOpacity
@@ -250,13 +256,13 @@ export default function ManageFieldsPage() {
           onPress={() => handleTabChange('pending')}
           activeOpacity={0.85}
         >
-          <View style={[st.statIconWrap, { backgroundColor: '#F59E0B18' }]}>
-            <MaterialIcons name="pending-actions" size={20} color="#F59E0B" />
-          </View>
-          <View style={st.statTextWrap}>
+          <View style={st.statCardHead}>
+            <View style={[st.statIconWrap, { backgroundColor: '#F59E0B18' }]}>
+              <MaterialIcons name="pending-actions" size={18} color="#F59E0B" />
+            </View>
             <Text style={[st.statValue, { color: colors.text }]}>{pendingCount ?? 0}</Text>
-            <Text style={[st.statLabel, { color: colors.textSecondary }]}>Pending Validasi</Text>
           </View>
+          <Text style={[st.statLabel, { color: colors.textSecondary }]} numberOfLines={1} adjustsFontSizeToFit>Pending Validasi</Text>
         </TouchableOpacity>
       </View>
 
@@ -414,46 +420,41 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
   screen: { flex: 1 },
   statCardsRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     paddingHorizontal: SIZES.gutter,
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 14,
+    marginBottom: 6,
     ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }),
   },
   statCard: {
     flex: 1,
-    flexDirection: isMobile ? 'column' : 'row',
-    alignItems: 'center',
-    gap: isMobile ? 6 : 10,
-    padding: isMobile ? 12 : 16,
-    borderRadius: 18,
+    padding: 12,
+    borderRadius: 16,
     borderWidth: 1,
     ...SHADOWS.sm,
   },
+  statCardHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
   statIconWrap: {
-    width: isMobile ? 36 : 44,
-    height: isMobile ? 36 : 44,
-    borderRadius: isMobile ? 11 : 14,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  statTextWrap: {
-    flex: isMobile ? 0 : 1,
-    alignItems: isMobile ? 'center' : 'flex-start',
-    justifyContent: 'center',
-  },
   statValue: {
     ...FONTS.titleLg,
-    fontSize: isMobile ? 18 : 22,
+    fontSize: 20,
     fontWeight: '800',
-    lineHeight: isMobile ? 22 : 26,
   },
   statLabel: {
     ...FONTS.labelSm,
-    fontSize: isMobile ? 10 : 11,
+    fontSize: 11,
     fontWeight: '600',
-    marginTop: 1,
-    textAlign: isMobile ? 'center' : 'left',
   },
   settingsHeaderBtn: {
     width: 38,

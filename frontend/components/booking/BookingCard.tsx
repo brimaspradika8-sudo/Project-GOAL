@@ -332,7 +332,6 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isMobile: boo
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    alignItems: 'center',
   },
   countdownBox: {
     flexDirection: 'row',

@@ -113,24 +113,6 @@ export default function OwnerProfilePage() {
       onPress: () => router.push('/onboarding'),
     },
     {
-      icon: 'lock-outline' as const,
-      label: 'Ubah Kata Sandi',
-      sublabel: 'Keamanan & Autentikasi',
-      onPress: () => router.push('/change-password'),
-    },
-    {
-      icon: 'stadium' as const,
-      label: 'Kelola Lapangan Saya',
-      sublabel: `${businessInfo.fieldsCount} Lapangan Terdaftar`,
-      onPress: () => router.push('/(owner)/fields'),
-    },
-    {
-      icon: 'event-available' as const,
-      label: 'Pengaturan Jam Operasional',
-      sublabel: 'Jadwal & Skema Harga',
-      onPress: () => router.push('/(owner)/booking-settings'),
-    },
-    {
       icon: 'help-outline' as const,
       label: 'Pusat Bantuan Owner',
       sublabel: 'FAQ & Hubungi CS',

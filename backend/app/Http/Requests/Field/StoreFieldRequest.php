@@ -23,7 +23,7 @@ class StoreFieldRequest extends FormRequest
             'sport_type'      => ['required', 'string', 'max:50', Rule::exists('sports', 'slug')->where('is_active', true)],
             'location'        => 'nullable|string|max:255',
             'description'     => 'nullable|string|min:10|max:' . $settings->max_description_length,
-            'price_per_hour'  => ['nullable', 'numeric', 'min:' . $settings->min_price, 'max:' . $settings->max_price],
+            'price_per_hour'  => ['nullable', 'integer', 'min:' . $settings->min_price, 'max:' . $settings->max_price],
             'image_url'       => 'required|url|max:2048',
         ];
     }
@@ -47,7 +47,8 @@ class StoreFieldRequest extends FormRequest
             'description.string'      => 'Deskripsi harus berupa teks.',
             'description.min'         => 'Deskripsi minimal 10 karakter jika diisi.',
             'description.max'         => 'Deskripsi tidak boleh lebih dari ' . $settings->max_description_length . ' karakter.',
-            'price_per_hour.numeric'  => 'Harga harus berupa angka.',
+            'price_per_hour.integer'  => 'Harga harus berupa angka bulat.',
+            'price_per_hour.numeric'  => 'Harga harus berupa angka bulat.',
             'price_per_hour.min'      => 'Harga per jam tidak boleh kurang dari ' . $fmt($settings->min_price) . '.',
             'price_per_hour.max'      => 'Harga per jam tidak boleh lebih dari ' . $fmt($settings->max_price) . '.',
             'image_url.required'      => 'Gambar utama lapangan wajib diisi.',

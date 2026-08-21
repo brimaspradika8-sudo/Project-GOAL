@@ -123,12 +123,12 @@ export default function NotificationCenter({ visible, onClose }: NotificationCen
   const handleClearAll = async () => {
     setClearing(true);
     setClearError(null);
-    const deleted = await clearAll();
+    const result = await clearAll();
     setClearing(false);
-    setConfirmClear(false);
-    if (deleted === 0 && items.length > 0) {
+    if (result.success) {
+      setConfirmClear(false);
+    } else {
       setClearError('Gagal menghapus notifikasi. Coba lagi.');
-      setConfirmClear(true);
     }
   };
 

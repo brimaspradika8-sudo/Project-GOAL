@@ -63,7 +63,8 @@ export default function ProfileScreen() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const { refresh: refreshNotifications, unreadCount } = useNotificationStore();
+  const unreadItemsCount = useNotificationStore((s) => s.items.filter((n) => !n.read).length);
+  const refreshNotifications = useNotificationStore((s) => s.refresh);
 
   useEffect(() => {
     refreshNotifications().catch(() => {});
@@ -537,9 +538,9 @@ export default function ProfileScreen() {
                     <MaterialIcons name="notifications-none" size={20} color={colors.primary} />
                   </View>
                   <Text style={styles.settingLabel}>Notifikasi</Text>
-                  {unreadCount() > 0 ? (
+                  {unreadItemsCount > 0 ? (
                     <View style={styles.notifBadgeCount}>
-                      <Text style={styles.notifBadgeText}>{unreadCount() > 99 ? '99+' : unreadCount()}</Text>
+                      <Text style={styles.notifBadgeText}>{unreadItemsCount > 99 ? '99+' : unreadItemsCount}</Text>
                     </View>
                   ) : null}
                   <MaterialIcons name="chevron-right" size={20} color={colors.outline} />
