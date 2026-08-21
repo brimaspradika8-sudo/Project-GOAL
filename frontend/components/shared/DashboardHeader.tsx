@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONTS, SHADOWS } from '../goalTheme';
 import { useTheme } from '../../lib/theme';
+import { useIsMobileWeb } from '../../lib/responsive';
 import NotificationCenter from './NotificationCenter';
 import { useNotificationStore } from '../../store/notificationStore';
 
@@ -26,8 +27,9 @@ export default function DashboardHeader({
   titleColor,
 }: DashboardHeaderProps) {
   const { colors, resolved } = useTheme();
+  const isMobile = useIsMobileWeb();
   const insets = useSafeAreaInsets();
-  const st = makeStyles(colors);
+  const st = makeStyles(colors, isMobile);
   const headerBackground = resolved === 'dark' ? colors.primaryContainer : colors.primary;
   const headerTextColor = '#FFFFFF';
   const headerSubtextColor = resolved === 'dark' ? colors.onPrimaryContainer : 'rgba(255,255,255,0.82)';
@@ -68,7 +70,7 @@ export default function DashboardHeader({
           ) : null}
 
           <View style={st.textGroup}>
-            <Text style={[st.title, { color: titleColor ?? headerTextColor }]} numberOfLines={1}>
+            <Text style={[st.title, { color: titleColor ?? headerTextColor }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
               {title}
             </Text>
             {subtitle ? (
@@ -86,7 +88,7 @@ export default function DashboardHeader({
               onPress={() => setNotifVisible(true)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <MaterialIcons name="notifications" size={22} color={headerTextColor} />
+              <MaterialIcons name="notifications" size={isMobile ? 19 : 22} color={headerTextColor} />
               {unreadCount() > 0 ? <View style={st.notifBadge} /> : null}
             </TouchableOpacity>
           </View>
@@ -98,10 +100,10 @@ export default function DashboardHeader({
   );
 }
 
-const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet.create({
+const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isMobile: boolean) => StyleSheet.create({
   wrap: {
-    paddingBottom: 16,
-    paddingHorizontal: 20,
+    paddingBottom: isMobile ? 12 : 16,
+    paddingHorizontal: isMobile ? 14 : 20,
     overflow: 'hidden',
     position: 'relative',
     ...(Platform.OS === 'web'
@@ -131,24 +133,26 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     zIndex: 1,
-    gap: 8,
+    gap: isMobile ? 4 : 8,
   },
   backBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: isMobile ? 36 : 44,
+    height: isMobile ? 36 : 44,
+    borderRadius: isMobile ? 18 : 22,
     backgroundColor: colors.surfaceWhite,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: isMobile ? 8 : 12,
     ...SHADOWS.xs,
   },
   textGroup: {
     flex: 1,
     flexShrink: 1,
+    minWidth: 0,
   },
   title: {
     ...FONTS.headlineMd,
+    ...(isMobile ? { fontSize: 18, lineHeight: 22 } : {}),
   },
   subtitle: {
     ...FONTS.bodySm,
@@ -157,15 +161,15 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors']) => StyleSheet
   rightSlot: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginLeft: 8,
+    gap: isMobile ? 6 : 10,
+    marginLeft: isMobile ? 4 : 8,
     flexShrink: 0,
     paddingTop: 2,
   },
   notifBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: isMobile ? 32 : 38,
+    height: isMobile ? 32 : 38,
+    borderRadius: isMobile ? 16 : 19,
     backgroundColor: 'rgba(255,255,255,0.18)',
     justifyContent: 'center',
     alignItems: 'center',

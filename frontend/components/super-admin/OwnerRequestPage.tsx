@@ -429,7 +429,9 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'li
   modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', padding: 24 },
   modal: {
     backgroundColor: colors.surface, borderRadius: 20, padding: 22,
-    borderWidth: 1, borderColor: colors.outline, ...SHADOWS.lg,
+    borderWidth: 1, borderColor: colors.outline,
+    maxWidth: 520, width: '100%', alignSelf: 'center',
+    ...SHADOWS.lg,
   },
   modalHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 6 },
   modalIconWrap: {

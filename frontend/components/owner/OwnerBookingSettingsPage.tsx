@@ -55,8 +55,8 @@ const DEFAULT_PRICE_FORM: PriceForm = { start_time: '07:00', end_time: '17:00', 
 
 export default function OwnerBookingSettingsPage() {
   const { colors } = useTheme();
-  const st = makeStyles(colors);
   const isMobile = useIsMobileWeb();
+  const st = useMemo(() => makeStyles(colors, isMobile), [colors, isMobile]);
   const [fields, setFields] = useState<OwnerField[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -767,10 +767,10 @@ function PriceModal({ visible, editing, form, setForm, error, loading, onClose, 
   );
 }
 
-const makeStyles = (colors: ThemeColors) => StyleSheet.create({
+const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   loader: { marginTop: 40 },
-  content: { padding: SIZES.gutter, paddingBottom: 80 },
+  content: { padding: SIZES.gutter, paddingBottom: 80, ...(isMobile ? {} : { maxWidth: 960, alignSelf: 'center', width: '100%' }) },
   alert: { marginBottom: 14 },
   sectionLabel: { ...FONTS.labelSm, color: colors.textSecondary, marginBottom: 10, textTransform: 'uppercase' },
   fieldTabs: { gap: 10, paddingBottom: 16 },

@@ -12,7 +12,8 @@ import SportsManagementPage from './SportsManagementPage';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
 import { useToastStore } from '../../store/toastStore';
-import { fetchFieldValidationSettings, saveFieldValidationSettings } from '../../lib/fieldValidationSettings';
+import { useFieldValidationSettingsStore } from '../../store/fieldValidationSettingsStore';
+import { type FieldValidationSettings } from '../../lib/fieldValidationSettings';
 
 type ValidationErrors = {
   max_name_length: string; max_description_length: string;
@@ -68,34 +69,39 @@ export default function ManageFieldsPage() {
   const [pendingCount, setPendingCount] = useState<number | null>(null);
   const [trashedCount, setTrashedCount] = useState<number | null>(null);
 
+  // Validation settings state from store
+  const { settings: globalSettings, fetchSettings, updateSettings } = useFieldValidationSettingsStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('validation');
-  const [maxNameLength, setMaxNameLength] = useState('50');
-  const [maxDescLength, setMaxDescLength] = useState('1000');
-  const [minPrice, setMinPrice] = useState('10000');
-  const [maxPrice, setMaxPrice] = useState('5000000');
-  const [maxImageMb, setMaxImageMb] = useState('2');
+  const [maxNameLength, setMaxNameLength] = useState(String(globalSettings.max_name_length));
+  const [maxDescLength, setMaxDescLength] = useState(String(globalSettings.max_description_length));
+  const [minPrice, setMinPrice] = useState(String(globalSettings.min_price));
+  const [maxPrice, setMaxPrice] = useState(String(globalSettings.max_price));
+  const [maxImageMb, setMaxImageMb] = useState(String(globalSettings.max_image_mb));
   const [savingSettings, setSavingSettings] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(EMPTY_VERRS);
   const [touchedSettings, setTouchedSettings] = useState(false);
 
-  const loadSettings = useCallback(() => {
+  const applySettingsToForm = useCallback((s: FieldValidationSettings) => {
+    if (s.max_name_length) setMaxNameLength(String(s.max_name_length));
+    if (s.max_description_length) setMaxDescLength(String(s.max_description_length));
+    if (s.min_price !== undefined) setMinPrice(String(s.min_price));
+    if (s.max_price !== undefined) setMaxPrice(String(s.max_price));
+    if (s.max_image_mb) setMaxImageMb(String(s.max_image_mb));
+  }, []);
+
+  const loadSettings = useCallback((force = false) => {
     setLoadingSettings(true);
-    fetchFieldValidationSettings()
+    fetchSettings(force)
       .then((s) => {
-        if (s) {
-          if (s.max_name_length) setMaxNameLength(String(s.max_name_length));
-          if (s.max_description_length) setMaxDescLength(String(s.max_description_length));
-          if (s.min_price !== undefined) setMinPrice(String(s.min_price));
-          if (s.max_price !== undefined) setMaxPrice(String(s.max_price));
-          if (s.max_image_mb) setMaxImageMb(String(s.max_image_mb));
-        }
+        if (s) applySettingsToForm(s);
       })
       .catch(() => {})
       .finally(() => setLoadingSettings(false));
-  }, []);
+  }, [fetchSettings, applySettingsToForm]);
+
   useEffect(() => { loadSettings(); }, [loadSettings]);
 
   const fetchCounts = useCallback(async () => {
@@ -171,7 +177,7 @@ export default function ManageFieldsPage() {
     setSettingsError(null);
     setSavingSettings(true);
     try {
-      await saveFieldValidationSettings({
+      await updateSettings({
         max_name_length: parseInt(maxNameLength, 10),
         max_description_length: parseInt(maxDescLength, 10),
         min_price: parseInt(minPrice, 10),
@@ -268,7 +274,7 @@ export default function ManageFieldsPage() {
               <Text style={[st.tabLabel, isActive && st.tabLabelActive]}>{tab.label}</Text>
               {tab.count !== null && tab.count > 0 && (
                 <View style={[st.tabBadge, isActive && st.tabBadgeActive]}>
-                  <Text style={[st.tabBadgeText, isActive && { color: tab.badgeText || colors.primary }]}>{tab.count}</Text>
+                  <Text style={[st.tabBadgeText, isActive && { color: colors.primary }]}>{tab.count}</Text>
                 </View>
               )}
             </TouchableOpacity>
