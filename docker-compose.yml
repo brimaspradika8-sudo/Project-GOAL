@@ -42,21 +42,11 @@ services:
       - goal-network
 
 
-  # ── Queue Worker ──────────────────────────────────────────────────────────
   queue-worker:
     image: goal-app
     container_name: goal-queue-worker
     restart: unless-stopped
-    entrypoint: ["sh", "/var/www/docker-entrypoint.sh"]
-    command:
-      - php
-      - artisan
-      - queue:work
-      - --tries=3
-      - --timeout=90
-      - --backoff=3
-      - --max-time=3600
-      - --sleep=3
+    command: php artisan queue:work --tries=3 --timeout=90 --backoff=3 --max-time=3600 --sleep=3
     environment:
       RUN_MIGRATIONS: "false"
       DB_HOST: postgres
@@ -81,8 +71,7 @@ services:
     image: goal-app
     container_name: goal-scheduler
     restart: unless-stopped
-    entrypoint: ["sh", "/var/www/docker-entrypoint.sh"]
-    command: [php, artisan, schedule:work]
+    command: php artisan schedule:work
     environment:
       RUN_MIGRATIONS: "false"
       DB_HOST: postgres

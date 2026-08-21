@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Route;
 // Health Check (public — untuk monitoring & uptime checks)
 Route::get('/health', [HealthController::class, 'check']);
 
-Route::middleware('throttle:auth-sensitive')->group(function () {
+Route::middleware('throttle:60,1')->group(function () {
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
     Route::post('/auth/verify-token', [PasswordResetController::class, 'token']);

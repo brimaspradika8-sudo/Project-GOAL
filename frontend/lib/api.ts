@@ -23,18 +23,23 @@ function getWebHost(): string | null {
 }
 
 export function getApiBaseUrl() {
+  const webHost = getWebHost();
+  if (webHost) {
+    return `http://${webHost}:8000/api`;
+  }
+
   const configuredUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
   if (configuredUrl) {
     const trimmed = trimTrailingSlash(configuredUrl);
     return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
   }
 
-  const host = getExpoHost() || getWebHost();
+  const host = getExpoHost();
   if (host) {
     return `http://${host}:8000/api`;
   }
 
-  return 'http://192.168.1.5:8000/api';
+  return 'http://127.0.0.1:8000/api';
 }
 
 export const API_BASE_URL = getApiBaseUrl();
