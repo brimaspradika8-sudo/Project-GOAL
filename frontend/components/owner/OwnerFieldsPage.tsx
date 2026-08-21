@@ -20,6 +20,7 @@ import AnimatedDeleteButton from '../shared/AnimatedDeleteButton';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
+import { useSportStore } from '../../store/sportStore';
 import { fieldError } from '../../lib/formValidation';
 import {
   SPORT_OPTIONS, SPORT_MAP,
@@ -58,6 +59,11 @@ export default function OwnerFieldsPage() {
   const { colors } = useTheme();
   const isMobile = useIsMobileWeb();
   const st = React.useMemo(() => makeStyles(colors, isMobile), [colors, isMobile]);
+  const { sports, fetchSports } = useSportStore();
+
+  useEffect(() => {
+    fetchSports();
+  }, [fetchSports]);
   const STATUS_CFG = React.useMemo(() => getStatusCfg(colors), [colors]);
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -686,7 +692,9 @@ export default function OwnerFieldsPage() {
                     </View>
                     <View style={st.detailRow}>
                       <MaterialIcons name="sports" size={14} color={colors.textSecondary} />
-                      <Text style={st.detailText}>{(Object.keys(SPORT_MAP).find(k => SPORT_MAP[k] === f.sport_type) || f.sport_type)?.toUpperCase()}</Text>
+                      <Text style={st.detailText}>
+                        {((sports || []).find(s => s.slug === f.sport_type)?.name || (Object.keys(SPORT_MAP).find(k => SPORT_MAP[k] === f.sport_type)) || f.sport_type)?.toUpperCase()}
+                      </Text>
                     </View>
                     {f.description ? (
                       <View style={st.detailRow}>
@@ -953,6 +961,7 @@ function FieldModal({
   st: ReturnType<typeof makeStyles>;
   colors: ThemeColors;
 }) {
+  const { sports } = useSportStore();
   const sheetAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (visible) sheetAnim.setValue(0);
@@ -1041,6 +1050,7 @@ function FieldModal({
               onBlur={blur('name')}
               placeholder="Contoh: Futsal Arena Gemilang"
               error={errors.name}
+              maxLength={50}
               st={st}
               colors={colors}
             />
@@ -1048,15 +1058,15 @@ function FieldModal({
             <View style={st.fieldWrap}>
               <Text style={st.fieldLabel}>Jenis Olahraga</Text>
               <View style={[st.sportRow, errors.sport_type ? st.sportRowError : null]}>
-                {SPORT_OPTIONS.map(s => {
-                  const active = form.sport_type === SPORT_MAP[s];
+                {(sports || []).map(s => {
+                  const active = form.sport_type === s.slug;
                   return (
                     <TouchableOpacity
-                      key={s}
+                      key={s.slug || s.id}
                       style={[st.sportChip, active && st.sportChipActive]}
-                      onPress={() => onFieldChange('sport_type', SPORT_MAP[s])}
+                      onPress={() => onFieldChange('sport_type', s.slug)}
                     >
-                      <Text style={[st.sportChipText, active && st.sportChipTextActive]}>{s}</Text>
+                      <Text style={[st.sportChipText, active && st.sportChipTextActive]}>{s.name}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -1146,18 +1156,24 @@ function FieldError({ message, st, colors }: { message: string; st: ReturnType<t
 }
 
 // ── Text input field ──────────────────────────────────────────────────────────
-function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboardType, multiline, error, st, colors }: {
+function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboardType, multiline, error, maxLength, st, colors }: {
   label: string; icon: string; value: string;
   onChangeText: (v: string) => void;
   onBlur?: () => void;
   placeholder?: string; keyboardType?: any; multiline?: boolean;
   error?: string;
+  maxLength?: number;
   st: ReturnType<typeof makeStyles>;
   colors: ThemeColors;
 }) {
   return (
     <View style={st.fieldWrap}>
-      <Text style={st.fieldLabel}>{label}</Text>
+      <View style={st.fieldLabelRow}>
+        <Text style={st.fieldLabel}>{label}</Text>
+        {maxLength ? (
+          <Text style={st.charCount}>{value.length}/{maxLength}</Text>
+        ) : null}
+      </View>
       <View style={[
         st.fieldRow,
         multiline && { alignItems: 'flex-start', paddingTop: 14 },
@@ -1173,6 +1189,7 @@ function FField({ label, icon, value, onChangeText, onBlur, placeholder, keyboar
           placeholderTextColor={colors.textTertiary}
           keyboardType={keyboardType}
           multiline={multiline}
+          maxLength={maxLength}
         />
       </View>
       {error ? <FieldError message={error} st={st} colors={colors} /> : null}
@@ -1450,7 +1467,9 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
 
   // Field input
   fieldWrap: { marginBottom: 20 },
-  fieldLabel: { ...FONTS.labelSm, fontSize: 11, fontWeight: '700', color: colors.textSecondary, marginBottom: 10, letterSpacing: 0.6, textTransform: 'uppercase' },
+  fieldLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  fieldLabel: { ...FONTS.labelSm, fontSize: 11, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.6, textTransform: 'uppercase' },
+  charCount: { ...FONTS.labelSm, fontSize: 10, fontWeight: '600', color: colors.textTertiary },
   fieldRow: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.surfaceContainerLow, borderRadius: 14,

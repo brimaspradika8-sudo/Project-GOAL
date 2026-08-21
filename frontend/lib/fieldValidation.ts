@@ -47,8 +47,9 @@ export function validateFieldName(value: string): string {
 }
 
 export function validateFieldSportType(value: string): string {
-  if (!value.trim()) return 'Jenis olahraga wajib diisi.';
-  if (!VALID_SPORT_VALUES.includes(value.trim())) return 'Jenis olahraga tidak valid. Pilih salah satu kategori yang tersedia.';
+  const v = value.trim();
+  if (!v) return 'Jenis olahraga wajib diisi.';
+  if (v.length > 50) return 'Jenis olahraga tidak boleh lebih dari 50 karakter.';
   return '';
 }
 

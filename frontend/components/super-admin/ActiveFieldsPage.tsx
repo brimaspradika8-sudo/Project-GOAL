@@ -21,6 +21,7 @@ import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { getSportBadgeStyle } from '../../utils/sportBadge';
 import { useDebounce } from '../../hooks/useDebounce';
+import { useSportStore } from '../../store/sportStore';
 import { fieldError } from '../../lib/formValidation';
 import { useIsMobileWeb } from '../../lib/responsive';
 import {
@@ -47,6 +48,11 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
   const { colors } = useTheme();
   const isMobile = useIsMobileWeb();
   const st = useMemo(() => makeStyles(colors, isMobile), [colors, isMobile]);
+  const { sports, fetchSports } = useSportStore();
+
+  useEffect(() => {
+    fetchSports();
+  }, [fetchSports]);
 
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -292,8 +298,14 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
     }
   };
 
-  const SPORT_CHIPS = ['Semua', ...SPORT_OPTIONS];
-  const sportValue = (s: string) => s === 'Semua' ? null : (SPORT_MAP[s] ?? null);
+  const sportChips = useMemo(() => [
+    { label: 'Semua', value: null, icon: 'sports' },
+    ...(sports || []).map(s => ({
+      label: s.name,
+      value: s.slug,
+      icon: getSportBadgeStyle(s.slug).icon || 'sports',
+    })),
+  ], [sports]);
 
   if (loading) {
     return (
@@ -334,22 +346,22 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
           style={{ maxHeight: 44, marginBottom: 12 }}
           contentContainerStyle={[st.chipWrap, { paddingRight: 24 }]}
         >
-          {SPORT_CHIPS.map(s => {
-            const active = (filterSport === null && s === 'Semua') || filterSport === sportValue(s);
-            const badge = getSportBadgeStyle(sportValue(s) || s);
+          {sportChips.map(chip => {
+            const active = (filterSport === null && chip.value === null) || filterSport === chip.value;
+            const badge = chip.value ? getSportBadgeStyle(chip.value) : { color: colors.textSecondary, bg: colors.surfaceContainerLow };
             return (
               <TouchableOpacity
-                key={s}
+                key={chip.value || chip.label}
                 style={[
                   st.chip,
                   { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline },
                   active && { backgroundColor: colors.primary, borderColor: colors.primary },
                 ]}
-                onPress={() => setFilterSport(sportValue(s))}
+                onPress={() => setFilterSport(chip.value)}
                 activeOpacity={0.8}
               >
-                <MaterialIcons name={s === 'Semua' ? 'sports' : badge.icon} size={14} color={active ? colors.onPrimary : colors.textSecondary} />
-                <Text style={[st.chipText, { color: colors.textSecondary }, active && { color: colors.onPrimary }]}>{s}</Text>
+                <MaterialIcons name={(chip.icon as any) || 'sports'} size={14} color={active ? colors.onPrimary : colors.textSecondary} />
+                <Text style={[st.chipText, { color: colors.textSecondary }, active && { color: colors.onPrimary }]}>{chip.label}</Text>
               </TouchableOpacity>
             );
           })}
@@ -394,7 +406,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
                 ? `Rp${Number(f.price_per_hour).toLocaleString('id-ID')}`
                 : '-';
               const badge = getSportBadgeStyle(f.sport_type);
-              const sportLabel = (SPORT_LABELS[f.sport_type] || f.sport_type)?.toUpperCase();
+              const sportLabel = ((sports || []).find(s => s.slug === f.sport_type)?.name || SPORT_LABELS[f.sport_type] || f.sport_type)?.toUpperCase();
               return (
                 <View key={f.id} style={[st.card, { backgroundColor: colors.surface, borderColor: colors.outline }, selected.has(f.id) && { borderColor: colors.primary, backgroundColor: colors.primaryContainer + '20' }]}>
                   <View style={st.cardImgWrap}>
@@ -547,15 +559,15 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
               <View style={st.fieldWrap}>
                 <Text style={[st.fieldLabel, { color: colors.textSecondary }]}>Jenis Olahraga</Text>
                 <View style={[st.sportRow, editErrors.sport_type ? { borderColor: colors.error } : null]}>
-                  {SPORT_OPTIONS.map(s => {
-                    const active = editForm.sport_type === SPORT_MAP[s];
+                  {(sports || []).map(s => {
+                    const active = editForm.sport_type === s.slug;
                     return (
                       <TouchableOpacity
-                        key={s}
+                        key={s.slug || s.id}
                         style={[st.sportChip, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline }, active && { backgroundColor: colors.primary, borderColor: colors.primary }]}
-                        onPress={() => onFormFieldChange('sport_type', SPORT_MAP[s])}
+                        onPress={() => onFormFieldChange('sport_type', s.slug)}
                       >
-                        <Text style={[st.sportChipText, { color: colors.textSecondary }, active && { color: colors.onPrimary }]}>{s}</Text>
+                        <Text style={[st.sportChipText, { color: colors.textSecondary }, active && { color: colors.onPrimary }]}>{s.name}</Text>
                       </TouchableOpacity>
                     );
                   })}
