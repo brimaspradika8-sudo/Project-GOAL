@@ -365,7 +365,7 @@ export default function UserPage() {
             <View style={[st.statIconWrap, { backgroundColor: colors.primaryContainer }]}>
               <MaterialIcons name="group" size={18} color={colors.primary} />
             </View>
-            <View>
+            <View style={st.statTextWrap}>
               <Text style={[st.statValue, { color: colors.text }]}>{totalCount}</Text>
               <Text style={[st.statLabel, { color: colors.textSecondary }]}>Total Pengguna</Text>
             </View>
@@ -847,30 +847,38 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
   },
   statCard: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: isMobile ? 'column' : 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 12,
+    justifyContent: 'center',
+    gap: isMobile ? 6 : 10,
+    padding: isMobile ? 10 : 12,
     borderRadius: 14,
     borderWidth: 1,
+    minWidth: 0,
     ...SHADOWS.xs,
   },
   statIconWrap: {
-    width: 36,
-    height: 36,
+    width: isMobile ? 30 : 36,
+    height: isMobile ? 30 : 36,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  statTextWrap: {
+    minWidth: 0,
+    alignItems: isMobile ? 'center' : 'flex-start',
+  },
   statValue: {
     ...FONTS.titleLg,
-    fontSize: 18,
+    fontSize: isMobile ? 16 : 18,
     fontWeight: '800',
-    lineHeight: 22,
+    lineHeight: isMobile ? 19 : 22,
+    textAlign: isMobile ? 'center' : 'left',
   },
   statLabel: {
     ...FONTS.labelSm,
-    fontSize: 11,
+    fontSize: isMobile ? 9.5 : 11,
+    textAlign: isMobile ? 'center' : 'left',
   },
 
   filterChipsRow: {

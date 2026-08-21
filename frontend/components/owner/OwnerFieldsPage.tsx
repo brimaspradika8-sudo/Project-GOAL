@@ -21,6 +21,7 @@ import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
 import { useSportStore } from '../../store/sportStore';
+import { useFieldValidationSettingsStore } from '../../store/fieldValidationSettingsStore';
 import { fieldError } from '../../lib/formValidation';
 import {
   SPORT_OPTIONS, SPORT_MAP,
@@ -60,10 +61,12 @@ export default function OwnerFieldsPage() {
   const isMobile = useIsMobileWeb();
   const st = React.useMemo(() => makeStyles(colors, isMobile), [colors, isMobile]);
   const { sports, fetchSports } = useSportStore();
+  const { settings: valSettings, fetchSettings: fetchValSettings } = useFieldValidationSettingsStore();
 
   useEffect(() => {
     fetchSports();
-  }, [fetchSports]);
+    fetchValSettings();
+  }, [fetchSports, fetchValSettings]);
   const STATUS_CFG = React.useMemo(() => getStatusCfg(colors), [colors]);
   const [fields, setFields] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,10 +113,10 @@ export default function OwnerFieldsPage() {
   ) => {
     let err = '';
     switch (key) {
-      case 'name': err = fieldError(value, validateFieldName(value), touched); break;
+      case 'name': err = fieldError(value, validateFieldName(value, valSettings), touched); break;
       case 'sport_type': err = fieldError(value, validateFieldSportType(value), touched); break;
-      case 'price_per_hour': err = fieldError(value, validateFieldPrice(value), touched); break;
-      case 'description': err = fieldError(value, validateFieldDescription(value), touched); break;
+      case 'price_per_hour': err = fieldError(value, validateFieldPrice(value, valSettings), touched); break;
+      case 'description': err = fieldError(value, validateFieldDescription(value, valSettings), touched); break;
       case 'location': err = fieldError(value, validateFieldLocation(value), touched); break;
       case 'image_uri': err = validateFieldImage(value, form.image_url, form.image_mime); break;
     }
@@ -168,7 +171,7 @@ export default function OwnerFieldsPage() {
       setEditTouched(touchedAll);
     }
     const form = isCreate ? createForm : editForm;
-    const errs = validateAllFields(form);
+    const errs = validateAllFields(form, valSettings);
     if (isCreate) {
       setCreateErrors(errs);
     } else {
@@ -204,7 +207,7 @@ export default function OwnerFieldsPage() {
         return;
       }
 
-      const sizeErr = validateFieldImageSize(asset.fileSize ?? 0);
+      const sizeErr = validateFieldImageSize(asset.fileSize ?? 0, valSettings);
       if (sizeErr) {
         setErrors(prev => ({ ...prev, image: sizeErr }));
         return;
@@ -684,7 +687,7 @@ export default function OwnerFieldsPage() {
                   <View style={st.cardBody}>
                     <View style={st.cardTop}>
                       <View style={{ flex: 1, marginRight: 12 }}>
-                        <Text style={st.name} numberOfLines={1} ellipsizeMode="tail">{f.name}</Text>
+                        <Text style={st.name} numberOfLines={2} ellipsizeMode="tail">{f.name}</Text>
                       </View>
                       <View style={st.pricePill}>
                         <Text style={st.price}>{priceStr}<Text style={st.priceSub}>/jam</Text></Text>
@@ -962,6 +965,7 @@ function FieldModal({
   colors: ThemeColors;
 }) {
   const { sports } = useSportStore();
+  const { settings: valSettings } = useFieldValidationSettingsStore();
   const sheetAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (visible) sheetAnim.setValue(0);
@@ -1035,7 +1039,7 @@ function FieldModal({
                     </View>
                     <View style={st.imageEmptyTextCol}>
                       <Text style={st.imageEmptyText}>Tap untuk memilih foto</Text>
-                      <Text style={st.imageEmptyHint}>Format JPG (Maks 2MB)</Text>
+                      <Text style={st.imageEmptyHint}>Format JPG (Maks {valSettings.max_image_mb}MB)</Text>
                     </View>
                   </View>
                 )}
@@ -1050,7 +1054,7 @@ function FieldModal({
               onBlur={blur('name')}
               placeholder="Contoh: Futsal Arena Gemilang"
               error={errors.name}
-              maxLength={50}
+              maxLength={valSettings.max_name_length}
               st={st}
               colors={colors}
             />
@@ -1082,6 +1086,7 @@ function FieldModal({
               placeholder="Fasilitas yang tersedia..."
               multiline
               error={errors.description}
+              maxLength={valSettings.max_description_length}
               st={st}
               colors={colors}
             />
@@ -1290,10 +1295,11 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
   },
   cardImgWrap: { height: 200, position: 'relative', overflow: 'hidden', backgroundColor: colors.surfaceContainerLow },
   cardImg: { width: '100%', height: '100%' },
-  cardOverlay: { position: 'absolute', top: 14, right: 14 },
+  cardOverlay: { position: 'absolute', top: 14, right: 14, zIndex: 10 },
   statusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1,
+    zIndex: 10,
   },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { ...FONTS.labelSm },

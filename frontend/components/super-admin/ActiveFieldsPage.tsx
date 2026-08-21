@@ -343,8 +343,8 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={{ maxHeight: 44, marginBottom: 12 }}
-          contentContainerStyle={[st.chipWrap, { paddingRight: 24 }]}
+          style={st.chipScroll}
+          contentContainerStyle={st.chipWrap}
         >
           {sportChips.map(chip => {
             const active = (filterSport === null && chip.value === null) || filterSport === chip.value;
@@ -702,13 +702,18 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
   },
   searchInput: { flex: 1, fontSize: 14, paddingVertical: 0, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}) },
 
-  chipWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  chipScroll: {
     paddingHorizontal: SIZES.gutter,
     marginBottom: 12,
+    flexGrow: 0,
     ...(isMobile ? {} : { maxWidth: 1200, alignSelf: 'center', width: '100%' }),
+  },
+  chipWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingRight: 24,
+    paddingVertical: 2,
   },
   chip: {
     flexDirection: 'row',

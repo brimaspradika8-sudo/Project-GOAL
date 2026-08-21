@@ -119,6 +119,9 @@ const rmStyles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
+    maxWidth: 520,
+    width: '100%',
+    alignSelf: 'center',
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
   },
   handle: {
@@ -713,6 +716,7 @@ const makeStyles = (colors: ThemeColors, resolved: 'light' | 'dark', isMobile: b
       paddingVertical: 12,
       gap: 8,
       borderBottomWidth: 1,
+      ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
     },
     tabBtn: {
       flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -729,8 +733,8 @@ const makeStyles = (colors: ThemeColors, resolved: 'light' | 'dark', isMobile: b
     },
     tabCountText: { fontSize: 10, fontFamily: FONT_FAMILY, fontWeight: '700' },
 
-    loadingWrap: { padding: SIZES.gutter, paddingTop: 16 },
-    contentList: { padding: SIZES.gutter, paddingBottom: 100 },
+    loadingWrap: { padding: SIZES.gutter, paddingTop: 16, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
+    contentList: { padding: SIZES.gutter, paddingBottom: 100, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
 
     emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12 },
     emptyIcon: {

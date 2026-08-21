@@ -48,6 +48,7 @@ interface Transaction {
   id: number;
   customer_name: string;
   customer_phone?: string;
+  user?: { name: string };
   booking_date: string;
   start_time: string;
   end_time: string;
@@ -406,6 +407,65 @@ export default function OwnerKasirPage() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [notes, setNotes] = useState('');
+  const [customerErrors, setCustomerErrors] = useState({ name: '', phone: '', notes: '' });
+  const [customerTouched, setCustomerTouched] = useState({ name: false, phone: false, notes: false });
+
+  const validateCustomerName = (v: string): string => {
+    const t = v.trim();
+    if (!t) return 'Nama pelanggan wajib diisi.';
+    if (t.length < 3) return 'Nama pelanggan minimal 3 karakter.';
+    if (t.length > 50) return 'Nama pelanggan maksimal 50 karakter.';
+    return '';
+  };
+
+  const validateCustomerPhone = (v: string): string => {
+    const t = v.trim();
+    if (!t) return '';
+    const cleaned = t.replace(/[\s-]/g, '');
+    if (!/^(\+62|62|0)8[1-9][0-9]{6,11}$/.test(cleaned)) {
+      return 'Format nomor HP tidak valid (contoh: 08123456789).';
+    }
+    return '';
+  };
+
+  const validateCustomerNotes = (v: string): string => {
+    if (v.length > 200) return 'Catatan maksimal 200 karakter.';
+    return '';
+  };
+
+  const handleCustomerNameChange = (val: string) => {
+    setCustomerName(val);
+    if (customerTouched.name) {
+      setCustomerErrors((prev) => ({ ...prev, name: validateCustomerName(val) }));
+    }
+  };
+
+  const handleCustomerPhoneChange = (val: string) => {
+    setCustomerPhone(val);
+    if (customerTouched.phone) {
+      setCustomerErrors((prev) => ({ ...prev, phone: validateCustomerPhone(val) }));
+    }
+  };
+
+  const handleCustomerNotesChange = (val: string) => {
+    setNotes(val);
+    if (customerTouched.notes) {
+      setCustomerErrors((prev) => ({ ...prev, notes: validateCustomerNotes(val) }));
+    }
+  };
+
+  const handleCustomerBlur = (field: 'name' | 'phone' | 'notes') => {
+    setCustomerTouched((prev) => ({ ...prev, [field]: true }));
+    if (field === 'name') setCustomerErrors((prev) => ({ ...prev, name: validateCustomerName(customerName) }));
+    if (field === 'phone') setCustomerErrors((prev) => ({ ...prev, phone: validateCustomerPhone(customerPhone) }));
+    if (field === 'notes') setCustomerErrors((prev) => ({ ...prev, notes: validateCustomerNotes(notes) }));
+  };
+
+  const hasCustomerErrors = Boolean(
+    validateCustomerName(customerName) ||
+    validateCustomerPhone(customerPhone) ||
+    validateCustomerNotes(notes)
+  );
 
   // Transaction
   const [saving, setSaving] = useState(false);
@@ -455,12 +515,19 @@ export default function OwnerKasirPage() {
   }, 0);
 
   const handleCheckout = async () => {
-    if (!selectedField || selectedSlots.length === 0) {
-      showToast({ type: 'error', title: 'Belum lengkap', description: 'Pilih lapangan dan minimal 1 slot jam.' });
+    setCustomerTouched({ name: true, phone: true, notes: true });
+    const nameErr = validateCustomerName(customerName);
+    const phoneErr = validateCustomerPhone(customerPhone);
+    const notesErr = validateCustomerNotes(notes);
+    setCustomerErrors({ name: nameErr, phone: phoneErr, notes: notesErr });
+
+    if (nameErr || phoneErr || notesErr) {
+      showToast({ type: 'error', title: 'Data belum valid', description: nameErr || phoneErr || notesErr });
       return;
     }
-    if (!customerName.trim()) {
-      showToast({ type: 'error', title: 'Nama pelanggan kosong', description: 'Masukkan nama pelanggan walk-in.' });
+
+    if (!selectedField || selectedSlots.length === 0) {
+      showToast({ type: 'error', title: 'Belum lengkap', description: 'Pilih lapangan dan minimal 1 slot jam.' });
       return;
     }
 
@@ -488,6 +555,8 @@ export default function OwnerKasirPage() {
       setCustomerName('');
       setCustomerPhone('');
       setNotes('');
+      setCustomerErrors({ name: '', phone: '', notes: '' });
+      setCustomerTouched({ name: false, phone: false, notes: false });
       setTxRefreshKey((k) => k + 1);
     } catch (e: any) {
       showToast({ type: 'error', title: 'Gagal', description: e?.message || 'Transaksi gagal disimpan.' });
@@ -634,36 +703,99 @@ export default function OwnerKasirPage() {
             </SectionCard>
 
             {/* Section: Data Pelanggan */}
-            <SectionCard title="Data Pelanggan (Walk-in)" icon="badge" colors={colors}>
-              <Text style={[st.inputLabel, { color: colors.textSecondary }]}>Nama Pelanggan *</Text>
+            <SectionCard title="Data Pelanggan (Walk-in)" icon="person" colors={colors}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <Text style={[st.inputLabel, { color: colors.textSecondary }]}>Nama Pelanggan *</Text>
+                <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, color: colors.textTertiary }}>
+                  {customerName.length}/50
+                </Text>
+              </View>
               <TextInput
                 value={customerName}
-                onChangeText={setCustomerName}
+                onChangeText={handleCustomerNameChange}
+                onBlur={() => handleCustomerBlur('name')}
                 placeholder="Contoh: Pak Budi / Tim Garuda"
                 placeholderTextColor={colors.textTertiary}
-                style={[st.input, { borderColor: colors.outline, color: colors.text, backgroundColor: colors.surfaceContainerLow }]}
+                maxLength={50}
+                style={[
+                  st.input,
+                  {
+                    borderColor: customerTouched.name && customerErrors.name ? colors.error : colors.outline,
+                    color: colors.text,
+                    backgroundColor: colors.surfaceContainerLow,
+                  },
+                ]}
               />
+              {customerTouched.name && customerErrors.name ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                  <MaterialIcons name="error-outline" size={13} color={colors.error} />
+                  <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, color: colors.error, fontWeight: '600' }}>
+                    {customerErrors.name}
+                  </Text>
+                </View>
+              ) : null}
 
               <Text style={[st.inputLabel, { color: colors.textSecondary, marginTop: 12 }]}>Nomor HP (Opsional)</Text>
               <TextInput
                 value={customerPhone}
-                onChangeText={setCustomerPhone}
+                onChangeText={handleCustomerPhoneChange}
+                onBlur={() => handleCustomerBlur('phone')}
                 placeholder="08123456789"
                 placeholderTextColor={colors.textTertiary}
                 keyboardType="phone-pad"
-                style={[st.input, { borderColor: colors.outline, color: colors.text, backgroundColor: colors.surfaceContainerLow }]}
+                maxLength={16}
+                style={[
+                  st.input,
+                  {
+                    borderColor: customerTouched.phone && customerErrors.phone ? colors.error : colors.outline,
+                    color: colors.text,
+                    backgroundColor: colors.surfaceContainerLow,
+                  },
+                ]}
               />
+              {customerTouched.phone && customerErrors.phone ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                  <MaterialIcons name="error-outline" size={13} color={colors.error} />
+                  <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, color: colors.error, fontWeight: '600' }}>
+                    {customerErrors.phone}
+                  </Text>
+                </View>
+              ) : null}
 
-              <Text style={[st.inputLabel, { color: colors.textSecondary, marginTop: 12 }]}>Catatan (Opsional)</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, marginBottom: 4 }}>
+                <Text style={[st.inputLabel, { color: colors.textSecondary }]}>Catatan (Opsional)</Text>
+                <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, color: colors.textTertiary }}>
+                  {notes.length}/200
+                </Text>
+              </View>
               <TextInput
                 value={notes}
-                onChangeText={setNotes}
+                onChangeText={handleCustomerNotesChange}
+                onBlur={() => handleCustomerBlur('notes')}
                 placeholder="Contoh: bayar nanti, bonus 1 jam, dll"
                 placeholderTextColor={colors.textTertiary}
                 multiline
                 numberOfLines={2}
-                style={[st.input, { borderColor: colors.outline, color: colors.text, backgroundColor: colors.surfaceContainerLow, height: 68, textAlignVertical: 'top' }]}
+                maxLength={200}
+                style={[
+                  st.input,
+                  {
+                    borderColor: customerTouched.notes && customerErrors.notes ? colors.error : colors.outline,
+                    color: colors.text,
+                    backgroundColor: colors.surfaceContainerLow,
+                    height: 68,
+                    textAlignVertical: 'top',
+                  },
+                ]}
               />
+              {customerTouched.notes && customerErrors.notes ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                  <MaterialIcons name="error-outline" size={13} color={colors.error} />
+                  <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, color: colors.error, fontWeight: '600' }}>
+                    {customerErrors.notes}
+                  </Text>
+                </View>
+              ) : null}
             </SectionCard>
           </View>
 
@@ -705,38 +837,47 @@ export default function OwnerKasirPage() {
                             justifyContent: 'space-between',
                             alignItems: 'center',
                             backgroundColor: colors.surfaceContainerLow,
+                            paddingHorizontal: 12,
+                            paddingVertical: 10,
                             borderRadius: 10,
-                            padding: 12,
                           }}
                         >
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+<<<<<<< HEAD
                             <MaterialIcons name="access-time" size={15} color={colors.primary} />
                             <Text style={{ fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '600', color: colors.text }}>
+=======
+                            <MaterialIcons name="schedule" size={16} color={colors.primary} />
+                            <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600', color: colors.text }}>
+>>>>>>> 16538af81281a88cb5af8e9d2679388464257316
                               {s.start_time} – {s.end_time}
                             </Text>
                           </View>
-                          <Text style={{ fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700', color: colors.text }}>
-                            {s.price != null
-                              ? formatCurrency(s.price)
-                              : selectedField.price_per_hour != null
-                              ? formatCurrency((selectedField.price_per_hour * (selectedField.session_duration_minutes ?? 60)) / 60)
-                              : '-'}
+                          <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '700', color: colors.primary }}>
+                            {formatCurrency(s.price ?? selectedField.price_per_hour ?? 0)}
                           </Text>
                         </View>
                       ))}
                     </View>
                   )}
 
-                  {/* Divider */}
-                  <View style={{ height: 1, backgroundColor: colors.outline, marginVertical: 4 }} />
-
-                  {/* Total */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 12 }}>
-                    <Text style={{ fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '700', color: colors.text }}>
-                      Total
+                  {/* Total price */}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingTop: 12,
+                      borderTopWidth: 1,
+                      borderTopColor: colors.outline,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <Text style={{ fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700', color: colors.textSecondary }}>
+                      Total ({selectedSlots.length} slot)
                     </Text>
-                    <Text style={{ fontFamily: FONT_FAMILY, fontSize: 22, fontWeight: '900', color: colors.primary }}>
-                      {total > 0 ? formatCurrency(total) : '-'}
+                    <Text style={{ fontFamily: FONT_FAMILY, fontSize: 18, fontWeight: '800', color: colors.primary }}>
+                      {formatCurrency(total)}
                     </Text>
                   </View>
 
@@ -751,7 +892,7 @@ export default function OwnerKasirPage() {
                   {/* Checkout Button */}
                   <TouchableOpacity
                     onPress={handleCheckout}
-                    disabled={saving || selectedSlots.length === 0 || !customerName.trim()}
+                    disabled={saving || selectedSlots.length === 0 || hasCustomerErrors || !customerName.trim()}
                     activeOpacity={0.85}
                     style={{
                       backgroundColor: colors.primary,
@@ -761,7 +902,7 @@ export default function OwnerKasirPage() {
                       flexDirection: 'row',
                       justifyContent: 'center',
                       gap: 8,
-                      opacity: saving || selectedSlots.length === 0 || !customerName.trim() ? 0.5 : 1,
+                      opacity: saving || selectedSlots.length === 0 || hasCustomerErrors || !customerName.trim() ? 0.5 : 1,
                       ...(Platform.OS === 'web' ? { boxShadow: `0 4px 16px ${colors.primary}50` } : {}),
                     }}
                   >
