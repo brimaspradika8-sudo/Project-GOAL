@@ -5,6 +5,7 @@ FROM php:8.2-fpm
 RUN apt-get update && apt-get install -y \
     git \
     curl \
+    netcat-openbsd \
     libpq-dev \
     libzip-dev \
     libicu-dev \
@@ -46,6 +47,13 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 # Pastikan folder storage & cache bisa ditulis oleh www-data (user PHP-FPM)
 RUN chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
+
+# Healthcheck: memastikan PHP-FPM benar-benar sudah listening di port 9000
+# sebelum container dianggap "healthy". Ini mencegah race condition di mana
+# Nginx sudah start dan menerima request padahal PHP-FPM (setelah migrasi &
+# cache clear di entrypoint) belum siap -> menyebabkan 502 Bad Gateway.
+HEALTHCHECK --interval=5s --timeout=3s --start-period=90s --retries=20 \
+    CMD nc -z 127.0.0.1 9000 || exit 1
 
 EXPOSE 9000
 

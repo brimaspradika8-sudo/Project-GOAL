@@ -37,23 +37,29 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 
 type BootProfile = Profile;
 
-async function fetchProfile(token: string): Promise<{ profile: BootProfile | null; unauthorized: boolean }> {
-  try {
-    const res = await apiFetch('/me', { token, skipToken: true, timeout: 20000 });
-    if (res.status === 401 || res.status === 403) {
-      return { profile: null, unauthorized: true };
+async function fetchProfile(token: string, maxRetries = 2): Promise<{ profile: BootProfile | null; unauthorized: boolean; networkError: boolean }> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await apiFetch('/me', { token, skipToken: true, timeout: 8000 });
+      if (res.status === 401 || res.status === 403 || (res.status >= 400 && res.status < 500)) {
+        return { profile: null, unauthorized: true, networkError: false };
+      }
+      if (res.ok) {
+        const profile = profileFromApi<BootProfile>(await res.json());
+        if (!isUserRole(profile?.role)) {
+          return { profile: null, unauthorized: true, networkError: false };
+        }
+        return { profile, unauthorized: false, networkError: false };
+      }
+    } catch {
+      // retry on network exception
     }
-    if (!res.ok) {
-      return { profile: null, unauthorized: false };
+
+    if (attempt < maxRetries) {
+      await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
     }
-    const profile = profileFromApi<BootProfile>(await res.json());
-    if (!isUserRole(profile?.role)) {
-      return { profile: null, unauthorized: true };
-    }
-    return { profile, unauthorized: false };
-  } catch {
-    return { profile: null, unauthorized: false };
   }
+  return { profile: null, unauthorized: false, networkError: true };
 }
 
 function AppToastWrapper() {
@@ -123,9 +129,9 @@ function RootLayoutInner() {
       }
 
       setBootStep('profile_fetch');
-      let { profile, unauthorized } = await fetchProfile(storedToken);
+      let { profile, unauthorized, networkError } = await fetchProfile(storedToken);
 
-      if (!profile && !unauthorized) {
+      if (networkError && !profile) {
         setBootError('Tidak dapat terhubung ke server. Periksa jaringan Anda lalu coba lagi.');
         setBooting(false);
         return;
@@ -144,10 +150,8 @@ function RootLayoutInner() {
           }
         }
       } else {
-        if (unauthorized) {
-          await SecureStore.deleteItemAsync(TOKEN_KEY);
-          useProfileStore.getState().clearProfile();
-        }
+        await SecureStore.deleteItemAsync(TOKEN_KEY);
+        useProfileStore.getState().clearProfile();
         if (!isAuthRoute) {
           router.replace('/login');
         }

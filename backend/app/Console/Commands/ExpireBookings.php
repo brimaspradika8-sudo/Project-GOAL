@@ -17,7 +17,7 @@ class ExpireBookings extends Command
     public function handle(): int
     {
         $count = 0;
-        Booking::where('status', BookingStatus::WAITING_CONFIRMATION->value)
+        $bookings = Booking::where('status', BookingStatus::WAITING_CONFIRMATION->value)
             ->where(function ($query) {
                 $query->where(function ($q) {
                     $q->whereNotNull('expired_at')
@@ -28,13 +28,13 @@ class ExpireBookings extends Command
                 });
             })
             ->limit(100)
-            ->chunk(25, function ($bookings) use (&$count) {
-                foreach ($bookings as $booking) {
-                    Log::info('Dispatching auto cancel booking job', ['booking_id' => $booking->id]);
-                    AutoCancelBooking::dispatch($booking->id);
-                    $count++;
-                }
-            });
+            ->get();
+
+        foreach ($bookings as $booking) {
+            Log::info('Dispatching auto cancel booking job', ['booking_id' => $booking->id]);
+            AutoCancelBooking::dispatch($booking->id);
+            $count++;
+        }
 
         $this->info('Dispatched expiration jobs for ' . $count . ' booking(s).');
 

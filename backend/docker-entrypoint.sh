@@ -16,31 +16,24 @@ done
 
 echo "==> [GOAL] PostgreSQL siap."
 
-# Bersihkan cache lama & regenerate
-rm -f bootstrap/cache/packages.php 2>/dev/null || true
-php artisan config:clear >/dev/null 2>&1 || true
-php artisan package:discover --ansi >/dev/null 2>&1 || true
+# Jika ada command override (queue:work, schedule:work, dsb), jalankan langsung tanpa migrasi/cache-clear
+if [ $# -gt 0 ]; then
+    exec "$@"
+fi
 
-# Migrasi hanya dijalankan oleh service utama (app), bukan queue/scheduler
+# Migrasi hanya dijalankan oleh service utama (app)
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
     echo "==> [GOAL] Menjalankan migrasi database..."
     php artisan migrate --force
     echo "==> [GOAL] Migrasi selesai."
 fi
 
-# Dalam development, selalu bersihkan cache agar perubahan .env/routes langsung aktif
-echo "==> [GOAL] Membersihkan cache Laravel..."
+# Dalam development, bersihkan cache secukupnya
+echo "==> [GOAL] Membersihkan cache..."
 php artisan config:clear || true
 php artisan route:clear  || true
 php artisan view:clear   || true
-php artisan cache:clear  || true
 echo "==> [GOAL] Cleanup cache selesai."
-
-# Jika ada command override (queue:work, schedule:work, php-fpm, dsb), jalankan itu
-if [ $# -gt 0 ]; then
-    exec "$@"
-fi
 
 echo "==> [GOAL] Memulai PHP-FPM..."
 exec php-fpm
-
