@@ -76,6 +76,28 @@ class BookingQueueTest extends TestCase
         $this->assertNotNull(Booking::find($booking->id)->cancelled_at);
     }
 
+    public function test_expire_bookings_command_dispatches_jobs(): void
+    {
+        $player = $this->userWithRole(UserRole::PLAYER);
+        $field = $this->fieldFor();
+
+        Booking::create([
+            'user_id' => $player->id,
+            'field_id' => $field->id,
+            'booking_date' => $this->date,
+            'start_time' => '07:00',
+            'end_time' => '08:00',
+            'duration_minutes' => 60,
+            'total_price' => 70000,
+            'status' => BookingStatus::WAITING_CONFIRMATION->value,
+            'expired_at' => now()->subMinute(),
+        ]);
+
+        $this->artisan('booking:expire')
+            ->expectsOutput('Dispatched expiration jobs for 1 booking(s).')
+            ->assertExitCode(0);
+    }
+
     public function test_confirmed_booking_is_not_changed_by_job(): void
     {
         $player = $this->userWithRole(UserRole::PLAYER);

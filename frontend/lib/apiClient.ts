@@ -1,7 +1,6 @@
 import { API_BASE_URL, DEFAULT_HEADERS } from './api';
 import { TOKEN_KEY } from './auth';
 import * as SecureStore from './secureStorage';
-import { useProfileStore } from '../store/profileStore';
 import { router } from 'expo-router';
 
 export interface ApiRequestOptions extends Omit<RequestInit, 'body' | 'headers'> {
