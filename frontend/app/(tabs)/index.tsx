@@ -90,10 +90,7 @@ export default function HomeScreen() {
     }
   }, []);
 
-  const lastSearchRef = useRef(debouncedSearch);
-
   useEffect(() => {
-    lastSearchRef.current = debouncedSearch;
     const sportFilter = getSportFilter(activeCategory, sports);
     fetchFields(sportFilter, debouncedSearch || undefined);
   }, [activeCategory, debouncedSearch, fetchFields, sports]);
@@ -108,17 +105,7 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      lastSearchRef.current = debouncedSearch;
-      const sport = getSportFilter(activeCategory, sports);
-      fetchFields(sport, debouncedSearch || undefined);
-    }, [activeCategory, debouncedSearch, fetchFields, sports])
-  );
-
-  // Refetch popular fields on focus too, but decoupled from the search
-  // debounce - popular fields never take a search param, so it shouldn't
-  // re-fire every time the user types.
-  useFocusEffect(
-    useCallback(() => {
+      // Refresh on tab focus
       fetchPopularFields().catch(() => {});
     }, [fetchPopularFields])
   );

@@ -59,7 +59,7 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [filterSport, setFilterSport] = useState<string | null>(null);
-  const debouncedSearch = useDebounce(search, 400);
+  const debouncedSearch = useDebounce(search, 500);
 
   const [editTarget, setEditTarget] = useState<any | null>(null);
   const [editForm, setEditForm] = useState<FieldFormData>(EMPTY_FORM);

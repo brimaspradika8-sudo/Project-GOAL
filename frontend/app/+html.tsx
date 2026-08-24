@@ -29,7 +29,7 @@ export default function Root({ children }: PropsWithChildren) {
         <ScrollViewStyleReset />
         <style
           dangerouslySetInnerHTML={{
-            __html: `input[type='password']::-ms-reveal,input[type='password']::-ms-clear{display:none}`,
+            __html: `input[type='password']::-ms-reveal,input[type='password']::-ms-clear{display:none} input:focus,textarea:focus,select:focus,[contenteditable]:focus,[contenteditable]:focus-visible,input:focus-visible,textarea:focus-visible,button:focus,button:focus-visible,[role='button']:focus,[role='button']:focus-visible,a:focus,a:focus-visible{outline:none !important;}`,
           }}
         />
       </head>

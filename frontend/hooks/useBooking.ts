@@ -167,7 +167,7 @@ export function useBookingHistory(): UseBookingHistoryResult {
     fetch();
     const interval = setInterval(() => {
       fetch({ silent: true });
-    }, 3000);
+    }, 15000);
     return () => {
       cancelledRef.current = true;
       clearInterval(interval);

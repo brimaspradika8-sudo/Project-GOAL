@@ -86,7 +86,7 @@ export default function UserPage() {
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
   const [bulkDeleteError, setBulkDeleteError] = useState<string | null>(null);
 
-  const debouncedSearch = useDebounce(search, 400);
+  const debouncedSearch = useDebounce(search, 500);
 
   const loggedInUserRole = useProfileStore((state) => state.profile?.role);
   const loggedInUserId = useProfileStore((state) => state.profile?.user_id);

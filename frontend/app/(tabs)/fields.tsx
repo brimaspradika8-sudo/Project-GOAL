@@ -46,9 +46,9 @@ export default function FieldsScreen() {
   const [sort, setSort] = useState<NonNullable<FieldFilters['sort']>>('latest');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortModalOpen, setIsSortModalOpen] = useState(false);
-  const debouncedSearch = useDebounce(search, 150);
-  const debouncedMinPrice = useDebounce(minPrice, 400);
-  const debouncedMaxPrice = useDebounce(maxPrice, 400);
+  const debouncedSearch = useDebounce(search, 500);
+  const debouncedMinPrice = useDebounce(minPrice, 500);
+  const debouncedMaxPrice = useDebounce(maxPrice, 500);
   const { fields, loading, loadingMore, meta, fetchFields, fetchMore, refreshFields } = useFieldStore();
   const [refreshing, setRefreshing] = useState(false);
   const { colors } = useTheme();
@@ -68,20 +68,17 @@ export default function FieldsScreen() {
     }).start();
   }, [filterAnimation, isFilterOpen]);
 
-  const lastFetchRef = useRef(debouncedSearch);
-
   useEffect(() => {
-    lastFetchRef.current = debouncedSearch;
     const sport = activeFilter === 'Semua' ? undefined : SPORT_MAP[activeFilter] || activeFilter.toLowerCase();
     fetchFields(sport, debouncedSearch || undefined, { minPrice: debouncedMinPrice, maxPrice: debouncedMaxPrice, sort });
   }, [activeFilter, debouncedSearch, debouncedMinPrice, debouncedMaxPrice, fetchFields, sort]);
 
   useFocusEffect(
     useCallback(() => {
-      lastFetchRef.current = debouncedSearch;
+      // Re-fetch only on initial screen focus
       const sport = activeFilter === 'Semua' ? undefined : SPORT_MAP[activeFilter] || activeFilter.toLowerCase();
       fetchFields(sport, debouncedSearch || undefined, { minPrice: debouncedMinPrice, maxPrice: debouncedMaxPrice, sort });
-    }, [activeFilter, debouncedSearch, debouncedMinPrice, debouncedMaxPrice, fetchFields, sort])
+    }, [])
   );
 
   const onRefresh = useCallback(async () => {
