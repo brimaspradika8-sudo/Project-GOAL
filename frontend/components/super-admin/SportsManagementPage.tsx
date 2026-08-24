@@ -15,6 +15,7 @@ import AnimatedDeleteButton from '../shared/AnimatedDeleteButton';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
+import { getSportBadgeStyle } from '../../utils/sportBadge';
 
 export type SportItem = {
   id: number;
@@ -28,33 +29,25 @@ export type SportItem = {
 // ── Validation (mirrors the same pattern used for the "Tambah Lapangan" form
 // in lib/fieldValidation.ts: real-time per-field checks, max-length caps that
 // match what the backend actually enforces, inline error messages). ──────────
-const MAX_NAME_LENGTH = 100;   // matches backend: 'name' => 'required|string|max:100'
-const MAX_DESC_LENGTH = 500;   // matches backend: 'description' => 'nullable|string|max:500'
+const MIN_NAME_LENGTH = 5;
+const MAX_NAME_LENGTH = 50;   // matches backend: 'name' => 'required|string|min:5|max:50'
 
-type SportFormErrors = { name: string; description: string };
-const EMPTY_SPORT_ERRORS: SportFormErrors = { name: '', description: '' };
-type SportFormTouched = { name: boolean; description: boolean };
-const EMPTY_SPORT_TOUCHED: SportFormTouched = { name: false, description: false };
+type SportFormErrors = { name: string };
+const EMPTY_SPORT_ERRORS: SportFormErrors = { name: '' };
+type SportFormTouched = { name: boolean };
+const EMPTY_SPORT_TOUCHED: SportFormTouched = { name: false };
 
 function validateSportName(value: string): string {
   const v = value.trim();
   if (!v) return 'Nama jenis olahraga wajib diisi.';
-  if (v.length < 3) return 'Nama jenis olahraga minimal 3 karakter.';
+  if (v.length < MIN_NAME_LENGTH) return `Nama jenis olahraga minimal ${MIN_NAME_LENGTH} karakter.`;
   if (v.length > MAX_NAME_LENGTH) return `Nama jenis olahraga tidak boleh lebih dari ${MAX_NAME_LENGTH} karakter.`;
   return '';
 }
 
-function validateSportDescription(value: string): string {
-  const v = value.trim();
-  if (!v) return '';
-  if (v.length > MAX_DESC_LENGTH) return `Deskripsi tidak boleh lebih dari ${MAX_DESC_LENGTH} karakter.`;
-  return '';
-}
-
-function validateAllSportFields(name: string, description: string): SportFormErrors {
+function validateAllSportFields(name: string): SportFormErrors {
   return {
     name: validateSportName(name),
-    description: validateSportDescription(description),
   };
 }
 
@@ -92,7 +85,6 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<SportItem | null>(null);
   const [formName, setFormName] = useState('');
-  const [formDescription, setFormDescription] = useState('');
   const [formIsActive, setFormIsActive] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -132,7 +124,6 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
   const openAddModal = () => {
     setEditingItem(null);
     setFormName('');
-    setFormDescription('');
     setFormIsActive(true);
     setFormError(null);
     setFormErrors(EMPTY_SPORT_ERRORS);
@@ -143,7 +134,6 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
   const openEditModal = (item: SportItem) => {
     setEditingItem(item);
     setFormName(item.name);
-    setFormDescription(item.description || '');
     setFormIsActive(item.is_active);
     setFormError(null);
     setFormErrors(EMPTY_SPORT_ERRORS);
@@ -157,25 +147,15 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
       setFormErrors((prev) => ({ ...prev, name: validateSportName(v) }));
     }
   };
-  const handleDescriptionChange = (v: string) => {
-    setFormDescription(v);
-    if (formTouched.description) {
-      setFormErrors((prev) => ({ ...prev, description: validateSportDescription(v) }));
-    }
-  };
 
   const handleNameBlur = () => {
     setFormTouched((p) => ({ ...p, name: true }));
     setFormErrors((prev) => ({ ...prev, name: validateSportName(formName) }));
   };
-  const handleDescriptionBlur = () => {
-    setFormTouched((p) => ({ ...p, description: true }));
-    setFormErrors((prev) => ({ ...prev, description: validateSportDescription(formDescription) }));
-  };
 
   const handleSave = async () => {
-    setFormTouched({ name: true, description: true });
-    const errs = validateAllSportFields(formName, formDescription);
+    setFormTouched({ name: true });
+    const errs = validateAllSportFields(formName);
     setFormErrors(errs);
     if (hasSportErrors(errs)) {
       setFormError('Periksa kembali isian yang belum valid.');
@@ -193,7 +173,6 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
 
       const body = {
         name: formName.trim(),
-        description: formDescription.trim() || null,
         is_active: formIsActive,
       };
 
@@ -257,14 +236,10 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
   const filteredSports = useMemo(() => {
     if (!search.trim()) return sports;
     const q = search.toLowerCase();
-    return sports.filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) ||
-        (s.description && s.description.toLowerCase().includes(q))
-    );
+    return sports.filter((s) => s.name.toLowerCase().includes(q));
   }, [sports, search]);
 
-  const isSubmitDisabled = formLoading || hasSportErrors(validateAllSportFields(formName, formDescription));
+  const isSubmitDisabled = formLoading || hasSportErrors(validateAllSportFields(formName));
 
   if (loading) {
     return (
@@ -358,78 +333,82 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
               </Text>
             </View>
           ) : (
-            filteredSports.map((item) => (
-              <View
-                key={item.id}
-                style={[
-                  st.card,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.outline,
-                  },
-                ]}
-              >
-                <View style={st.cardHeader}>
-                  <View style={st.cardTitleWrap}>
-                    <Text style={[st.cardTitle, { color: colors.text }]}>
-                      {item.name}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      st.statusPill,
-                      {
-                        backgroundColor: item.is_active
-                          ? colors.successLight
-                          : colors.errorContainer,
-                      },
-                    ]}
-                  >
-                    <Text
+            filteredSports.map((item) => {
+              const badge = getSportBadgeStyle(item.name || item.slug);
+              return (
+                <View
+                  key={item.id}
+                  style={[
+                    st.card,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.outline,
+                    },
+                  ]}
+                >
+                  <View style={st.cardHeader}>
+                    <View style={st.cardTitleWrap}>
+                      <View style={[st.sportIconBadge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
+                        <MaterialIcons name={badge.icon as any} size={20} color={badge.color} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[st.cardTitle, { color: colors.text }]}>
+                          {item.name}
+                        </Text>
+                        {item.slug ? (
+                          <Text style={[st.cardBadge, { color: colors.textTertiary }]}>
+                            {item.slug}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
+                    <View
                       style={[
-                        st.statusText,
+                        st.statusPill,
                         {
-                          color: item.is_active
-                            ? colors.primary
-                            : colors.error,
+                          backgroundColor: item.is_active
+                            ? colors.successLight
+                            : colors.errorContainer,
                         },
                       ]}
                     >
-                      {item.is_active ? 'Aktif' : 'Non-Aktif'}
-                    </Text>
+                      <Text
+                        style={[
+                          st.statusText,
+                          {
+                            color: item.is_active
+                              ? colors.primary
+                              : colors.error,
+                          },
+                        ]}
+                      >
+                        {item.is_active ? 'Aktif' : 'Non-Aktif'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={st.cardActions}>
+                    <TouchableOpacity
+                      style={[
+                        st.actionBtn,
+                        {
+                          backgroundColor: colors.surfaceContainerLow,
+                          borderColor: colors.outline,
+                        },
+                      ]}
+                      onPress={() => openEditModal(item)}
+                    >
+                      <MaterialIcons name="edit" size={16} color={colors.primary} />
+                      <Text style={[st.actionBtnText, { color: colors.primary }]}>
+                        Edit
+                      </Text>
+                    </TouchableOpacity>
+
+                    <AnimatedDeleteButton onPress={() => setDeleteTarget(item)} />
                   </View>
                 </View>
-
-                {item.description ? (
-                  <Text
-                    style={[st.cardDesc, { color: colors.textSecondary }]}
-                    numberOfLines={2}
-                  >
-                    {item.description}
-                  </Text>
-                ) : null}
-
-                <View style={st.cardActions}>
-                  <TouchableOpacity
-                    style={[
-                      st.actionBtn,
-                      {
-                        backgroundColor: colors.surfaceContainerLow,
-                        borderColor: colors.outline,
-                      },
-                    ]}
-                    onPress={() => openEditModal(item)}
-                  >
-                    <MaterialIcons name="edit" size={16} color={colors.primary} />
-                    <Text style={[st.actionBtnText, { color: colors.primary }]}>
-                      Edit
-                    </Text>
-                  </TouchableOpacity>
-
-                  <AnimatedDeleteButton onPress={() => setDeleteTarget(item)} />
-                </View>
-              </View>
-            ))
+              );
+            })
           )}
         </ScrollView>
       </View>
@@ -489,38 +468,21 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
                   onBlur={handleNameBlur}
                   maxLength={MAX_NAME_LENGTH}
                 />
+                {formName.trim() ? (
+                  <View style={st.previewRow}>
+                    <Text style={[st.previewLabel, { color: colors.textSecondary }]}>Preview Ikon:</Text>
+                    {(() => {
+                      const pBadge = getSportBadgeStyle(formName);
+                      return (
+                        <View style={[st.previewChip, { backgroundColor: pBadge.bg, borderColor: pBadge.border }]}>
+                          <MaterialIcons name={pBadge.icon as any} size={15} color={pBadge.color} />
+                          <Text style={[st.previewChipText, { color: pBadge.color }]}>{formName.trim()}</Text>
+                        </View>
+                      );
+                    })()}
+                  </View>
+                ) : null}
                 <FieldError message={fieldErr(formErrors.name, formTouched.name)} colors={colors} />
-              </View>
-
-              <View style={st.fieldWrap}>
-                <View style={st.fieldLabelRow}>
-                  <Text style={[st.fieldLabel, { color: colors.textSecondary }]}>
-                    Deskripsi (Opsional)
-                  </Text>
-                  <Text style={[st.charCount, { color: colors.textTertiary }]}>
-                    {formDescription.length}/{MAX_DESC_LENGTH}
-                  </Text>
-                </View>
-                <TextInput
-                  style={[
-                    st.fieldInput,
-                    st.textArea,
-                    {
-                      backgroundColor: colors.surfaceContainerLow,
-                      borderColor: fieldErr(formErrors.description, formTouched.description) ? colors.error : colors.outline,
-                      color: colors.text,
-                    },
-                  ]}
-                  placeholder="Penjelasan singkat mengenai jenis olahraga"
-                  placeholderTextColor={colors.textTertiary}
-                  value={formDescription}
-                  onChangeText={handleDescriptionChange}
-                  onBlur={handleDescriptionBlur}
-                  multiline
-                  numberOfLines={3}
-                  maxLength={MAX_DESC_LENGTH}
-                />
-                <FieldError message={fieldErr(formErrors.description, formTouched.description)} colors={colors} />
               </View>
 
               <View style={st.switchRow}>
@@ -642,9 +604,21 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) =>
       alignItems: 'flex-start',
       marginBottom: 6,
     },
-    cardTitleWrap: { flex: 1, marginRight: 8 },
+    cardTitleWrap: { flex: 1, marginRight: 8, flexDirection: 'row', alignItems: 'center', gap: 10 },
+    sportIconBadge: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+      borderWidth: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
     cardTitle: { ...FONTS.titleLg, fontSize: 16 },
-    cardBadge: { ...FONTS.labelSm, fontSize: 11, marginTop: 2 },
+    cardBadge: { ...FONTS.labelSm, fontSize: 11, marginTop: 1 },
+    previewRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+    previewLabel: { ...FONTS.labelSm, fontSize: 11 },
+    previewChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, borderWidth: 1 },
+    previewChipText: { ...FONTS.labelSm, fontSize: 12, fontWeight: '700' },
     statusPill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
     statusText: { ...FONTS.labelSm, fontSize: 11, fontWeight: '700' },
     cardDesc: { ...FONTS.bodySm, marginBottom: 12 },

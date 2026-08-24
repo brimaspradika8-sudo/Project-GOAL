@@ -69,7 +69,7 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
     });
 
     return (
-      <View style={containerStyle}>
+      <View style={[styles.outerWrapper, containerStyle]}>
         <Animated.View style={[
           styles.container,
           {
@@ -91,10 +91,10 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
             styles.labelContainer,
             {
               transform: [{ translateY: labelTranslateY }, { scale: labelScale }],
-                left: icon ? 52 : 18,
-                backgroundColor: isActive ? colors.bgElevated : 'transparent',
-              },
-            ]}>
+              left: icon ? 52 : 18,
+              backgroundColor: isActive ? colors.bgElevated : 'transparent',
+            },
+          ]}>
             <Animated.Text style={[styles.label, { color: labelColor }]}>{label}</Animated.Text>
           </Animated.View>
           <TextInput
@@ -142,6 +142,11 @@ const AuthInput = React.forwardRef<TextInput, AuthInputProps>(
 AuthInput.displayName = 'AuthInput';
 
 const styles = StyleSheet.create({
+  outerWrapper: {
+    paddingTop: 10,
+    position: 'relative',
+    overflow: 'visible',
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -150,6 +155,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1.5,
     paddingHorizontal: 10,
+    overflow: 'visible',
+    zIndex: 1,
   },
   iconContainer: {
     width: 40,
@@ -160,6 +167,8 @@ const styles = StyleSheet.create({
   labelContainer: {
     position: 'absolute',
     paddingHorizontal: 4,
+    borderRadius: 4,
+    zIndex: 10,
   },
   label: {
     ...FONTS.bodyMd,

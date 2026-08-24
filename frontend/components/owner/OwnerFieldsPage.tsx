@@ -1199,12 +1199,18 @@ function FieldModal({
               <View style={[st.sportRow, errors.sport_type ? st.sportRowError : null]}>
                 {(sports || []).map(s => {
                   const active = form.sport_type === s.slug;
+                  const iconName = getSportIcon(s.slug);
                   return (
                     <TouchableOpacity
                       key={s.slug || s.id}
                       style={[st.sportChip, active && st.sportChipActive]}
                       onPress={() => onFieldChange('sport_type', s.slug)}
                     >
+                      <MaterialIcons
+                        name={iconName as any}
+                        size={16}
+                        color={active ? colors.onPrimary : colors.textSecondary}
+                      />
                       <Text style={[st.sportChipText, active && st.sportChipTextActive]}>{s.name}</Text>
                     </TouchableOpacity>
                   );
@@ -1693,7 +1699,8 @@ const makeStyles = (colors: ThemeColors, isMobile: boolean) => StyleSheet.create
   sportRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   sportRowError: { borderColor: colors.error },
   sportChip: {
-    paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
     backgroundColor: colors.surfaceContainerLow, borderWidth: 1, borderColor: colors.outline,
   },
   sportChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },

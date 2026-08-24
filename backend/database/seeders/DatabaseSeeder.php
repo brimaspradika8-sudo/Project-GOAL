@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
     use WithoutModelEvents;
     public function run(): void
     {
+        $this->call(SuperAdminSeeder::class);
         $superAdmin = $this->user('Super Admin', 'superadmin@goal.test', UserRole::SUPER_ADMIN);
         $superAdminBrimas = $this->user('Brimas Pradika', 'brimas.pradika14@smk.belajar.id', UserRole::SUPER_ADMIN, false, 'Admin123');
         $owner = $this->user('Goal Owner', 'owner@goal.test', UserRole::OWNER, true);

@@ -36,7 +36,6 @@ export default function OwnerTabLayout() {
   const sidebarItems: SidebarItem[] = [
     { href: '/(owner)/fields', label: 'Kelola Lapangan', icon: 'stadium' },
     { href: '/(owner)/bookings', label: 'Kelola Booking', icon: 'receipt-long' },
-    { href: '/(owner)/kasir', label: 'Kasir Offline', icon: 'point-of-sale' },
     { href: '/(owner)/revenue', label: 'Kelola Pendapatan', icon: 'bar-chart' },
     { href: '/(owner)/profile', label: 'Profile', icon: 'person' },
   ];
@@ -85,16 +84,7 @@ export default function OwnerTabLayout() {
               }}
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
-            <Tabs.Screen
-              name="kasir"
-              options={{
-                title: 'Kasir',
-                tabBarIcon: ({ color }) => (
-                  <MaterialIcons name="point-of-sale" size={24} color={color} />
-                ),
-              }}
-              listeners={{ tabPress: () => Haptics.selectionAsync() }}
-            />
+            <Tabs.Screen name="kasir" options={{ href: null }} />
             <Tabs.Screen
               name="revenue"
               options={{
@@ -162,16 +152,7 @@ export default function OwnerTabLayout() {
               }}
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
-            <Tabs.Screen
-              name="kasir"
-              options={{
-                title: 'Kasir',
-                tabBarIcon: ({ color }) => (
-                  <MaterialIcons name="point-of-sale" size={24} color={color} />
-                ),
-              }}
-              listeners={{ tabPress: () => Haptics.selectionAsync() }}
-            />
+            <Tabs.Screen name="kasir" options={{ href: null }} />
             <Tabs.Screen
               name="revenue"
               options={{
@@ -231,16 +212,7 @@ export default function OwnerTabLayout() {
         }}
         listeners={{ tabPress: () => Haptics.selectionAsync() }}
       />
-      <Tabs.Screen
-        name="kasir"
-        options={{
-          title: 'Kasir',
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons name="point-of-sale" size={24} color={color} />
-          ),
-        }}
-        listeners={{ tabPress: () => Haptics.selectionAsync() }}
-      />
+      <Tabs.Screen name="kasir" options={{ href: null }} />
       <Tabs.Screen
         name="revenue"
         options={{
