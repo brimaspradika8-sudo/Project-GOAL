@@ -68,6 +68,16 @@ function AppToastWrapper() {
 }
 
 export default function RootLayout() {
+  const [isClient, setIsClient] = useState(Platform.OS !== 'web');
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return null;
+  }
+
   return (
     <SafeAreaProvider>
       <ErrorBoundary>

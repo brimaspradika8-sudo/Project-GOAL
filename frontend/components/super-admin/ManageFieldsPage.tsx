@@ -34,8 +34,12 @@ function validateSettings(maxN: string, maxD: string, minP: string, maxP: string
   const minV = parseInt(minP, 10);
   if (!minP || isNaN(minV)) e.min_price = 'Wajib diisi.';
   else if (minV < 0) e.min_price = 'Tidak boleh negatif.';
+  else if (minV > 0 && minV < 1000) e.min_price = 'Harga minimum terlalu kecil. Minimal Rp 1.000.';
+  else if (minV > 100000000) e.min_price = 'Harga minimum terlalu besar. Maksimal Rp 100.000.000.';
   const maxV = parseInt(maxP, 10);
   if (!maxP || isNaN(maxV)) e.max_price = 'Wajib diisi.';
+  else if (maxV < 1000) e.max_price = 'Harga maksimum terlalu kecil. Minimal Rp 1.000.';
+  else if (maxV > 100000000) e.max_price = 'Harga maksimum terlalu besar. Maksimal Rp 100.000.000.';
   else if (!isNaN(minV) && maxV <= minV) e.max_price = 'Harus lebih besar dari harga minimum.';
   const imgMb = parseInt(maxI, 10);
   if (!maxI || isNaN(imgMb)) e.max_image_mb = 'Wajib diisi.';
@@ -359,12 +363,12 @@ export default function ManageFieldsPage() {
                       </View>
                       <View style={st.rowInputs}>
                         <View style={{ flex: 1 }}>
-                          <SettingInput label="Harga Minimum" hint="Min: Rp 0" icon="arrow-downward"
+                          <SettingInput label="Harga Minimum" hint="Batas: Rp 1.000 - Rp 100.000.000" icon="arrow-downward"
                             value={minPrice} error={validationErrors.min_price}
                             onChangeText={(v) => handleChange(setMinPrice, 'min_price', v)} colors={colors} st={st} />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <SettingInput label="Harga Maksimum" hint="Harus > harga minimum" icon="arrow-upward"
+                          <SettingInput label="Harga Maksimum" hint="Harus > harga minimum (maks Rp 100.000.000)" icon="arrow-upward"
                             value={maxPrice} error={validationErrors.max_price}
                             onChangeText={(v) => handleChange(setMaxPrice, 'max_price', v)} colors={colors} st={st} />
                         </View>

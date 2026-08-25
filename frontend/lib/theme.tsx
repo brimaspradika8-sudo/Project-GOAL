@@ -11,8 +11,11 @@ function isThemeMode(v: unknown): v is ThemeMode {
 function readStoredThemeSync(): ThemeMode | null {
   try {
     if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
-      const v = localStorage.getItem(THEME_KEY);
-      if (isThemeMode(v)) return v;
+      let v = localStorage.getItem(THEME_KEY);
+      if (v) {
+        v = v.replace(/^"|"$/g, '');
+        if (isThemeMode(v)) return v;
+      }
     }
   } catch {}
   return null;

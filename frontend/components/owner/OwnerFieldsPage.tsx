@@ -1233,6 +1233,7 @@ function FieldModal({
               onBlur={blur('price_per_hour')}
               placeholder="Contoh: 150000"
               keyboardType="numeric"
+              maxLength={String(valSettings.max_price).length}
               error={errors.price_per_hour}
               st={st}
               colors={colors}
