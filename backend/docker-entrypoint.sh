@@ -30,9 +30,7 @@ fi
 
 # Dalam development, bersihkan cache secukupnya
 echo "==> [GOAL] Membersihkan cache..."
-php artisan config:clear || true
-php artisan route:clear  || true
-php artisan view:clear   || true
+php artisan optimize:clear || true
 echo "==> [GOAL] Cleanup cache selesai."
 
 echo "==> [GOAL] Memulai PHP-FPM..."

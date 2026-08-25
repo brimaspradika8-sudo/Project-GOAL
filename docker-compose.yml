@@ -42,9 +42,9 @@ services:
     healthcheck:
       test: ["CMD", "nc", "-z", "127.0.0.1", "9000"]
       interval: 5s
-      timeout: 3s
-      retries: 20
-      start_period: 90s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
     deploy:
       resources:
         limits:

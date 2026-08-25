@@ -70,16 +70,21 @@ export default function ProfileScreen() {
     refreshNotifications().catch(() => {});
   }, [refreshNotifications]);
 
-  const ownValidateName = (v: string) => { if (!v.trim()) return 'Nama wajib diisi.'; if (v.trim().length > 255) return 'Nama maksimal 255 karakter.'; return ''; };
-  const ownValidateEmail = (v: string) => { if (!v.trim()) return 'Email wajib diisi.'; if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) return 'Format email tidak valid.'; return ''; };
-  const ownValidateBiz = (v: string) => { if (!v.trim()) return 'Nama usaha wajib diisi.'; if (v.trim().length > 255) return 'Nama usaha maksimal 255 karakter.'; return ''; };
-  const ownValidateAddr = (v: string) => { if (!v.trim()) return 'Alamat wajib diisi.'; if (v.trim().length > 500) return 'Alamat maksimal 500 karakter.'; return ''; };
+  const ownValidateName = (v: string) => { const t = v.trim(); if (!t) return 'Nama wajib diisi.'; if (t.length < 3) return 'Nama minimal 3 karakter.'; if (t.length > 50) return 'Nama maksimal 50 karakter.'; return ''; };
+  const ownValidateEmail = (v: string) => { const t = v.trim(); if (!t) return 'Email wajib diisi.'; if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)) return 'Format email tidak valid.'; if (t.length > 255) return 'Email maksimal 255 karakter.'; return ''; };
+  const ownValidateBiz = (v: string) => { const t = v.trim(); if (!t) return 'Nama usaha wajib diisi.'; if (t.length < 3) return 'Nama usaha minimal 3 karakter.'; if (t.length > 50) return 'Nama usaha maksimal 50 karakter.'; return ''; };
+  const ownValidateAddr = (v: string) => { const t = v.trim(); if (!t) return 'Alamat wajib diisi.'; if (t.length < 5) return 'Alamat minimal 5 karakter.'; if (t.length > 500) return 'Alamat maksimal 500 karakter.'; return ''; };
   const ownValidatePhone = (v: string) => { const t = v.trim(); if (!t) return 'Nomor telepon wajib diisi.'; if (!/^\d+$/.test(t)) return 'Nomor telepon hanya boleh berisi angka.'; if (t.length < 8) return 'Nomor telepon minimal 8 digit.'; if (t.length > 15) return 'Nomor telepon maksimal 15 digit.'; return ''; };
 
   const setOwnErr = (key: keyof typeof ownerErrors) => (err: string) => setOwnerErrors(p => ({ ...p, [key]: err }));
   const onOwnField = (key: keyof typeof ownerErrors, validate: (v: string) => string) => (v: string) => {
     setOwnerForm(p => ({ ...p, [key]: v }));
     setOwnErr(key)(fieldError(v, validate(v), ownerTouched[key]));
+  };
+  const onOwnPhoneField = (v: string) => {
+    const digitsOnly = v.replace(/\D/g, '');
+    setOwnerForm(p => ({ ...p, phone: digitsOnly }));
+    setOwnErr('phone')(fieldError(digitsOnly, ownValidatePhone(digitsOnly), ownerTouched.phone));
   };
   const onOwnBlur = (key: keyof typeof ownerErrors, validate: (v: string) => string) => () => {
     setOwnerTouched(p => ({ ...p, [key]: true }));
@@ -88,6 +93,11 @@ export default function ProfileScreen() {
 
   const openOwnerModal = () => {
     setSubmitError(null);
+    setOwnerForm(prev => ({
+      ...prev,
+      name: profile?.full_name || prev.name || '',
+      email: profile?.email || prev.email || '',
+    }));
     setOwnerErrors({ name: '', email: '', business_name: '', address: '', phone: '' });
     setOwnerTouched({ name: false, email: false, business_name: false, address: false, phone: false });
     setShowOwnerModal(true);
@@ -221,12 +231,13 @@ export default function ProfileScreen() {
     const trimmedBusiness = ownerForm.business_name.trim();
     const trimmedAddress = ownerForm.address.trim();
     const trimmedPhone = ownerForm.phone.trim();
-    setOwnerForm({ name: trimmedName, email: trimmedEmail, business_name: trimmedBusiness, address: trimmedAddress, phone: trimmedPhone });
+    const payload = { name: trimmedName, email: trimmedEmail, business_name: trimmedBusiness, address: trimmedAddress, phone: trimmedPhone };
+    setOwnerForm(payload);
 
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const res = await apiFetch('/me/owner-request', { method: 'POST', body: ownerForm });
+      const res = await apiFetch('/me/owner-request', { method: 'POST', body: payload });
       const data = await res.json();
       if (!res.ok) {
         const msg = data.errors
@@ -640,9 +651,11 @@ export default function ProfileScreen() {
           label="Nomor Telepon"
           icon="phone"
           value={ownerForm.phone}
-          onChangeText={onOwnField('phone', ownValidatePhone)}
+          onChangeText={onOwnPhoneField}
           onBlur={onOwnBlur('phone', ownValidatePhone)}
           keyboardType="phone-pad"
+          inputMode="numeric"
+          maxLength={15}
           containerStyle={styles.inputContainer}
           error={ownerErrors.phone}
         />

@@ -37,9 +37,12 @@ class SportController extends Controller
     {
         $validated = $request->validate([
             'name'        => 'required|string|max:100|unique:sports,name',
+            'description' => 'nullable|string|max:500',
             'is_active'   => 'nullable|boolean',
         ], [
             'name.required' => 'Nama olahraga wajib diisi.',
+            'name.min'      => 'Nama olahraga minimal 5 karakter.',
+            'name.max'      => 'Nama olahraga maksimal 50 karakter.',
             'name.unique'   => 'Nama olahraga sudah ada.',
         ]);
 
@@ -67,11 +70,13 @@ class SportController extends Controller
         $sport = Sport::findOrFail($id);
 
         $validated = $request->validate([
-            'name'        => 'required|string|max:100|unique:sports,name,' . $id,
+            'name'        => 'required|string|min:5|max:50|unique:sports,name,' . $id,
             'description' => 'nullable|string|max:500',
             'is_active'   => 'nullable|boolean',
         ], [
             'name.required' => 'Nama olahraga wajib diisi.',
+            'name.min'      => 'Nama olahraga minimal 5 karakter.',
+            'name.max'      => 'Nama olahraga maksimal 50 karakter.',
             'name.unique'   => 'Nama olahraga sudah ada.',
         ]);
 
