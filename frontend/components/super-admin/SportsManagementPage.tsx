@@ -15,6 +15,7 @@ import AnimatedDeleteButton from '../shared/AnimatedDeleteButton';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
+import { useDebounce } from '../../hooks/useDebounce';
 import { getSportBadgeStyle } from '../../utils/sportBadge';
 
 export type SportItem = {
@@ -233,11 +234,12 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
     }
   };
 
+  const debouncedSearch = useDebounce(search, 500);
   const filteredSports = useMemo(() => {
-    if (!search.trim()) return sports;
-    const q = search.toLowerCase();
+    if (!debouncedSearch.trim()) return sports;
+    const q = debouncedSearch.toLowerCase();
     return sports.filter((s) => s.name.toLowerCase().includes(q));
-  }, [sports, search]);
+  }, [sports, debouncedSearch]);
 
   const isSubmitDisabled = formLoading || hasSportErrors(validateAllSportFields(formName));
 

@@ -22,6 +22,7 @@ import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
 import { useSportStore } from '../../store/sportStore';
 import { useFieldValidationSettingsStore } from '../../store/fieldValidationSettingsStore';
+import { useDebounce } from '../../hooks/useDebounce';
 import { fieldError } from '../../lib/formValidation';
 import {
   SPORT_OPTIONS, SPORT_MAP,
@@ -605,14 +606,15 @@ export default function OwnerFieldsPage() {
 
   const activeCount = fields.filter(f => f.status === 'approved').length;
   const pendingCount = fields.filter(f => f.status === 'pending').length;
+  const debouncedSearch = useDebounce(search, 500);
   const filteredFields = React.useMemo(() => {
     return fields.filter(f => {
-      const q = search.trim().toLowerCase();
+      const q = debouncedSearch.trim().toLowerCase();
       const matchSearch = !q || f.name.toLowerCase().includes(q) || (f.location && f.location.toLowerCase().includes(q));
       const matchSport = !filterSport || f.sport_type === filterSport;
       return matchSearch && matchSport;
     });
-  }, [fields, search, filterSport]);
+  }, [fields, debouncedSearch, filterSport]);
 
   if (loading) {
     return (
