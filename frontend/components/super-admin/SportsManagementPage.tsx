@@ -19,9 +19,9 @@ import { getSportBadgeStyle } from '../../utils/sportBadge';
 
 export type SportItem = {
   id: number;
-  slug: string;
   name: string;
-  description?: string | null;
+  slug?: string;
+  description?: string;
   is_active: boolean;
   created_at?: string;
 };

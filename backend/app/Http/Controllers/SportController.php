@@ -36,7 +36,7 @@ class SportController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name'        => 'required|string|max:100|unique:sports,name',
+            'name'        => 'required|string|min:5|max:50|unique:sports,name',
             'description' => 'nullable|string|max:500',
             'is_active'   => 'nullable|boolean',
         ], [
