@@ -241,7 +241,7 @@ export default function SuperAdminProfilePage() {
 
 const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark', isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  content: { padding: SIZES.gutter, paddingBottom: 60, ...(isMobile ? {} : { maxWidth: 650, alignSelf: 'center', width: '100%' }) },
+  content: { padding: SIZES.gutter, paddingBottom: 60, ...(isMobile ? {} : { maxWidth: 850, alignSelf: 'center', width: '100%', paddingTop: 20 }) },
 
   logoutOverlay: {
     flex: 1,

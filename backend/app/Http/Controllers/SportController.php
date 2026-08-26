@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Sport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class SportController extends Controller
 {
@@ -13,16 +14,16 @@ class SportController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Sport::query();
+        $isSuperAdmin = $request->user() && $request->user()->role === 'super_admin' && !$request->has('active_only');
+        $cacheKey = $isSuperAdmin ? 'sports_all' : 'sports_active';
 
-        // If not super admin or specifically requested, only show active sports
-        if (!$request->user() || $request->user()->role !== 'super_admin') {
-            $query->where('is_active', true);
-        } else if ($request->has('active_only')) {
-            $query->where('is_active', true);
-        }
-
-        $sports = $query->orderBy('name', 'asc')->get();
+        $sports = Cache::remember($cacheKey, 86400, function () use ($isSuperAdmin) {
+            $query = Sport::query();
+            if (!$isSuperAdmin) {
+                $query->where('is_active', true);
+            }
+            return $query->orderBy('name', 'asc')->get();
+        });
 
         return response()->json([
             'status' => 'success',
@@ -37,7 +38,6 @@ class SportController extends Controller
     {
         $validated = $request->validate([
             'name'        => 'required|string|min:5|max:50|unique:sports,name',
-            'description' => 'nullable|string|max:500',
             'is_active'   => 'nullable|boolean',
         ], [
             'name.required' => 'Nama olahraga wajib diisi.',
@@ -50,10 +50,10 @@ class SportController extends Controller
 
         $sport = Sport::create([
             'name'        => trim($validated['name']),
-            'slug'        => $slug,
-            'description' => isset($validated['description']) ? trim($validated['description']) : null,
             'is_active'   => $validated['is_active'] ?? true,
         ]);
+
+        $this->invalidateCache();
 
         return response()->json([
             'status'  => 'success',
@@ -71,7 +71,6 @@ class SportController extends Controller
 
         $validated = $request->validate([
             'name'        => 'required|string|min:5|max:50|unique:sports,name,' . $id,
-            'description' => 'nullable|string|max:500',
             'is_active'   => 'nullable|boolean',
         ], [
             'name.required' => 'Nama olahraga wajib diisi.',
@@ -84,10 +83,10 @@ class SportController extends Controller
 
         $sport->update([
             'name'        => trim($validated['name']),
-            'slug'        => $slug,
-            'description' => isset($validated['description']) ? trim($validated['description']) : null,
             'is_active'   => $validated['is_active'] ?? $sport->is_active,
         ]);
+
+        $this->invalidateCache();
 
         return response()->json([
             'status'  => 'success',
@@ -113,10 +112,17 @@ class SportController extends Controller
         }
 
         $sport->delete();
+        $this->invalidateCache();
 
         return response()->json([
             'status'  => 'success',
             'message' => 'Jenis olahraga berhasil dihapus.',
         ]);
+    }
+
+    private function invalidateCache(): void
+    {
+        Cache::forget('sports_all');
+        Cache::forget('sports_active');
     }
 }

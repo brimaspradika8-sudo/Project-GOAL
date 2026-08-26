@@ -16,6 +16,7 @@ import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
 import { getSportBadgeStyle } from '../../utils/sportBadge';
+import { useDebounce } from '../../hooks/useDebounce';
 
 export type SportItem = {
   id: number;
@@ -80,6 +81,7 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 500);
 
   // Modal form states
   const [modalVisible, setModalVisible] = useState(false);
@@ -234,10 +236,10 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
   };
 
   const filteredSports = useMemo(() => {
-    if (!search.trim()) return sports;
-    const q = search.toLowerCase();
+    if (!debouncedSearch.trim()) return sports;
+    const q = debouncedSearch.toLowerCase();
     return sports.filter((s) => s.name.toLowerCase().includes(q));
-  }, [sports, search]);
+  }, [sports, debouncedSearch]);
 
   const isSubmitDisabled = formLoading || hasSportErrors(validateAllSportFields(formName));
 
@@ -287,6 +289,9 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
               value={search}
               onChangeText={setSearch}
             />
+            {search.trim() !== debouncedSearch.trim() && (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: search.length > 0 ? 6 : 0 }} />
+            )}
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch('')}>
                 <MaterialIcons name="close" size={16} color={colors.textTertiary} />

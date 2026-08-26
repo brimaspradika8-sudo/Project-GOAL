@@ -9,10 +9,8 @@ class Sport extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'slug',
+    protected $fillable = [,
         'name',
-        'description',
         'is_active',
     ];
 

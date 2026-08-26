@@ -272,7 +272,7 @@ export default function OwnerProfilePage() {
 
 const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], resolved: 'light' | 'dark', isMobile: boolean) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  content: { padding: SIZES.padding, paddingBottom: 60, ...(isMobile ? {} : { maxWidth: 680, alignSelf: 'center', width: '100%' }) },
+  content: { padding: SIZES.padding, paddingBottom: 60, ...(isMobile ? {} : { maxWidth: 850, alignSelf: 'center', width: '100%', paddingTop: 20 }) },
 
   profileHeaderCard: {
     backgroundColor: colors.surface,

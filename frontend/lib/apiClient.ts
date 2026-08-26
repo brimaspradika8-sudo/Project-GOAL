@@ -2,6 +2,7 @@ import { API_BASE_URL, DEFAULT_HEADERS } from './api';
 import { TOKEN_KEY } from './auth';
 import * as SecureStore from './secureStorage';
 import { router } from 'expo-router';
+import { useProfileStore } from '../store/profileStore';
 
 export interface ApiRequestOptions extends Omit<RequestInit, 'body' | 'headers'> {
   params?: Record<string, string | number | boolean | undefined | null>;
