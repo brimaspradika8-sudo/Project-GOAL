@@ -9,6 +9,7 @@ import { FONTS, SIZES, SHADOWS } from '../goalTheme';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
 import { useToastStore } from '../../store/toastStore';
+import { useDebounce } from '../../hooks/useDebounce';
 
 interface FAQItem {
   id: string;
@@ -55,6 +56,7 @@ export default function HelpCenterPage() {
   const st = makeStyles(colors, isMobile);
 
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 500);
   const [expandedFaq, setExpandedFaq] = useState<string | null>('1');
 
   // Support Form State
@@ -64,9 +66,9 @@ export default function HelpCenterPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const filteredFaqs = FAQ_DATA.filter(f =>
-    f.question.toLowerCase().includes(search.toLowerCase()) ||
-    f.answer.toLowerCase().includes(search.toLowerCase()) ||
-    f.category.toLowerCase().includes(search.toLowerCase())
+    f.question.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    f.answer.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+    f.category.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
 
   const toggleFaq = (id: string) => {
@@ -144,6 +146,9 @@ export default function HelpCenterPage() {
             value={search}
             onChangeText={setSearch}
           />
+          {search.trim() !== debouncedSearch.trim() && (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: search.length > 0 ? 6 : 0 }} />
+          )}
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <MaterialIcons name="close" size={16} color={colors.textSecondary} />

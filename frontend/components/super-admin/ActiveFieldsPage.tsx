@@ -347,6 +347,9 @@ export default function ActiveFieldsPage({ hideHeader }: { hideHeader?: boolean 
                 onChangeText={setSearch}
                 returnKeyType="search"
               />
+              {search.trim() !== debouncedSearch.trim() && (
+                <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: search.length > 0 ? 6 : 0 }} />
+              )}
               {search.length > 0 && (
                 <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <MaterialIcons name="close" size={16} color={colors.textTertiary} />

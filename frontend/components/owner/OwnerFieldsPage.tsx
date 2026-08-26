@@ -20,6 +20,7 @@ import AnimatedDeleteButton from '../shared/AnimatedDeleteButton';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
+import { useDebounce } from '../../hooks/useDebounce';
 import { useSportStore } from '../../store/sportStore';
 import { useFieldValidationSettingsStore } from '../../store/fieldValidationSettingsStore';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -87,6 +88,7 @@ export default function OwnerFieldsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 500);
   const [filterSport, setFilterSport] = useState<string | null>(null);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
@@ -652,6 +654,9 @@ export default function OwnerFieldsPage() {
                 onChangeText={setSearch}
                 returnKeyType="search"
               />
+              {search.trim() !== debouncedSearch.trim() && (
+                <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: search.length > 0 ? 6 : 0 }} />
+              )}
               {search.length > 0 && (
                 <TouchableOpacity onPress={() => setSearch('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <MaterialIcons name="close" size={16} color={colors.textTertiary} />
