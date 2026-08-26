@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\PasswordReset;
+/**
+ * @tags Authentication
+ */
 class PasswordResetController extends Controller
 {
     public function forgot(ForgotPasswordRequest $request): JsonResponse

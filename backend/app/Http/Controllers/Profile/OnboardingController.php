@@ -9,6 +9,9 @@ use App\Services\ProfileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Profil Pengguna
+ */
 class OnboardingController extends Controller
 {
     public function __construct(

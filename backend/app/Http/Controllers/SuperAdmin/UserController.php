@@ -11,6 +11,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 
+/**
+ * @tags Super Admin
+ */
 class UserController extends Controller
 {
     public function __construct(private UserService $userService) {}

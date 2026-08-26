@@ -24,6 +24,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * @tags Booking & Pemesanan
+ */
 class BookingController extends Controller
 {
     public function __construct(private BookingService $bookingService) {}

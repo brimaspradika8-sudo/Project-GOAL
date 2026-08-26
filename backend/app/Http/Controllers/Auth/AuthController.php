@@ -9,6 +9,9 @@ use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Authentication
+ */
 class AuthController extends Controller
 {
     public function __construct(

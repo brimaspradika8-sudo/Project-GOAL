@@ -6,6 +6,9 @@ use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Notifikasi
+ */
 class NotificationController extends Controller
 {
     public function __construct(private NotificationService $notifications) {}

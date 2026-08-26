@@ -13,6 +13,9 @@ use App\Services\FieldBookingConfigurationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * @tags Pemilik (Owner)
+ */
 class FieldBookingConfigurationController extends Controller
 {
     public function __construct(private FieldBookingConfigurationService $service) {}

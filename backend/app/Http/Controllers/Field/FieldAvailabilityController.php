@@ -10,6 +10,9 @@ use App\Services\BookingService;
 use App\Services\FieldService;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * @tags Lapangan (Fields)
+ */
 class FieldAvailabilityController extends Controller
 {
     public function __construct(

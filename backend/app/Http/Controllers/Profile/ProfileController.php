@@ -10,6 +10,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 
+/**
+ * @tags Profil Pengguna
+ */
 class ProfileController extends Controller
 {
     public function __construct(

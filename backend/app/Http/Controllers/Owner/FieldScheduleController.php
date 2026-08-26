@@ -11,6 +11,9 @@ use App\Models\Profile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Pemilik (Owner)
+ */
 class FieldScheduleController extends Controller
 {
     private function canManageField(Request $request, Field $field): bool

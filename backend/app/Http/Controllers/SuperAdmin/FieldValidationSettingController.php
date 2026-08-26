@@ -7,6 +7,9 @@ use App\Models\FieldValidationSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Super Admin
+ */
 class FieldValidationSettingController extends Controller
 {
     /**

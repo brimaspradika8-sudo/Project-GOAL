@@ -19,6 +19,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * @tags Lapangan (Fields)
+ */
 class FieldController extends Controller
 {
     public function __construct(

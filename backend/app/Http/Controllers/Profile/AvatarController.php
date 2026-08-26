@@ -10,6 +10,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * @tags Profil Pengguna
+ */
 class AvatarController extends Controller
 {
     public function __construct(

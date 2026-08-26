@@ -10,6 +10,9 @@ use App\Services\OwnerRequestService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Pemilik (Owner)
+ */
 class OwnerRequestController extends Controller
 {
     public function __construct(

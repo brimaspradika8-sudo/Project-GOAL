@@ -9,6 +9,9 @@ use App\Models\OwnerRequest;
 use App\Services\OwnerRequestService;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * @tags Super Admin
+ */
 class SuperAdminOwnerController extends Controller
 {
     public function __construct(private OwnerRequestService $ownerRequestService) {}
