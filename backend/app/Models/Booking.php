@@ -95,6 +95,15 @@ class Booking extends Model
     }
 
     /**
+     * Get calculated unique booking code (e.g. GL-20260826-0017)
+     */
+    public function getBookingCodeAttribute(): string
+    {
+        $dateStr = $this->booking_date ? $this->booking_date->format('Ymd') : date('Ymd');
+        return sprintf('GL-%s-%04d', $dateStr, $this->id);
+    }
+
+    /**
      * Apply common listing filters: status, date, field_id.
      *
      * @param array{status?: string, date?: string, field_id?: int|string} $filters

@@ -84,7 +84,7 @@ interface UseBookingDetailResult {
   booking: Booking | null;
   loading: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
+  refetch: (isSilent?: boolean) => Promise<void>;
 }
 
 export function useBookingDetail(bookingId: number | null): UseBookingDetailResult {
@@ -93,30 +93,34 @@ export function useBookingDetail(bookingId: number | null): UseBookingDetailResu
   const [error, setError] = useState<string | null>(null);
   const cancelledRef = useRef(false);
 
-  const fetch = useCallback(async () => {
+  const fetch = useCallback(async (isSilent = false) => {
     if (!bookingId) return;
+    if (!isSilent) {
+      setLoading(true);
+      setError(null);
+    }
     try {
       const res = await getBooking(bookingId);
       if (cancelledRef.current) return;
       setBooking(res.data ?? (res as any));
-      setError(null);
+      if (isSilent) setError(null);
     } catch (e: any) {
       if (cancelledRef.current) return;
-      setError(e?.message || 'Gagal memuat data booking');
+      if (!isSilent) setError(e?.message || 'Gagal memuat data booking');
     } finally {
-      if (!cancelledRef.current) setLoading(false);
+      if (!cancelledRef.current && !isSilent) setLoading(false);
     }
   }, [bookingId]);
 
   useEffect(() => {
     cancelledRef.current = false;
-    fetch();
+    fetch(false);
     return () => {
       cancelledRef.current = true;
     };
   }, [fetch]);
 
-  return { booking, loading, error, refetch: fetch };
+  return { booking, loading, error, refetch: (isSilent = true) => fetch(isSilent) };
 }
 
 // ─── useBookingHistory ────────────────────────────────────────────────────────

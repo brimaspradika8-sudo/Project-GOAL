@@ -13,7 +13,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { FONTS, SIZES, SHADOWS, FONT_FAMILY } from '../../components/goalTheme';
 import { useTheme } from '../../lib/theme';
 import { useBookingDetail } from '../../hooks/useBooking';
-import { cancelBooking } from '../../services/bookingService';
+import { cancelBooking, formatBookingCode } from '../../services/bookingService';
 import { BookingStatusBadge, isExpiredReason, formatPrice, formatDateDisplay } from '../../components/booking';
 import ConfirmDialog from '../../components/shared/ConfirmDialog';
 import { ErrorState, Loading } from '../../components/common';
@@ -121,7 +121,7 @@ export default function BookingDetailScreen() {
     }
   }
 
-  if (loading) {
+  if (loading && !booking) {
     return (
       <View style={st.container}>
         <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
@@ -131,7 +131,7 @@ export default function BookingDetailScreen() {
     );
   }
 
-  if (error || !booking) {
+  if (!booking) {
     return (
       <View style={st.container}>
         <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
@@ -139,7 +139,7 @@ export default function BookingDetailScreen() {
         <ErrorState
           title="Data booking tidak bisa dimuat"
           description={error ?? 'Booking tidak ditemukan.'}
-          onRetry={refetch}
+          onRetry={() => refetch(false)}
         />
       </View>
     );
@@ -248,7 +248,7 @@ export default function BookingDetailScreen() {
           <InfoRow label="Jam" value={`${booking.start_time} – ${booking.end_time}`} colors={colors} />
           <InfoRow label="Durasi" value={formatDuration(booking.duration_minutes)} colors={colors} />
           <InfoRow label="Metode Pembayaran" value="Cash" colors={colors} />
-          <InfoRow label="No. Booking" value={`#${booking.id}`} colors={colors} />
+          <InfoRow label="No. Booking" value={formatBookingCode(booking)} colors={colors} />
 
           <View style={[styles.divider, { backgroundColor: colors.divider }]} />
 

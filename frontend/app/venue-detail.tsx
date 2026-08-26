@@ -52,8 +52,13 @@ function formatDate(d: Date): string {
   return `${y}-${m}-${dd}`;
 }
 
-function addMinutesToTime(time: string, minutes: number): string {
-  const [h, m] = time.split(':').map(Number);
+function addMinutesToTime(time: string | undefined | null, minutes: number): string {
+  if (!time || typeof time !== 'string') return '';
+  const parts = time.split(':');
+  if (parts.length < 2) return time;
+  const h = Number(parts[0]);
+  const m = Number(parts[1]);
+  if (Number.isNaN(h) || Number.isNaN(m)) return time;
   const total = h * 60 + m + minutes;
   const nh = Math.floor(total / 60) % 24;
   const nm = total % 60;
@@ -347,6 +352,11 @@ export default function VenueDetailScreen() {
               const disabled = !isAvailable || isPast;
               const palette = SLOT_PALETTE[slot.status] ?? null;
 
+              const durationMin = f?.session_duration_minutes ?? 60;
+              const startTime = slot.start_time || '';
+              const slotEndTime = slot.end_time || addMinutesToTime(startTime, durationMin);
+              const timeDisplay = slotEndTime && slotEndTime !== startTime ? `${startTime} - ${slotEndTime}` : startTime;
+
               return (
                 <TouchableOpacity
                   key={i}
@@ -373,7 +383,7 @@ export default function VenueDetailScreen() {
                           : { color: palette?.text ?? colors.textTertiary },
                     ]}
                   >
-                    {slot.start_time}
+                    {timeDisplay}
                   </Text>
                   {isSelected ? (
                     <Text style={[st.slotHint, { color: 'rgba(255,255,255,0.9)' }]}>Dipilih</Text>
@@ -483,18 +493,18 @@ export default function VenueDetailScreen() {
                 </View>
               </View>
 
-              {/* RIGHT — Venue Info + Booking */}
+              {/* RIGHT — Venue Info + Description + Booking */}
               <View style={st.desktopRight}>
                 <FadeInView slideUp={12} duration={320}>
                   <VenueInfo field={f} sportIcon={sportIcon} isMobile={false} />
                 </FadeInView>
 
                 <FadeInView delay={60} duration={320}>
-                  {renderSlotSection()}
+                  <VenueDescription description={f.description} isMobile={false} />
                 </FadeInView>
 
                 <FadeInView delay={120} duration={320}>
-                  <VenueDescription description={f.description} isMobile={false} />
+                  {renderSlotSection()}
                 </FadeInView>
 
                 <FadeInView delay={180} duration={320}>
@@ -538,11 +548,11 @@ export default function VenueDetailScreen() {
             </FadeInView>
 
             <FadeInView delay={60} duration={320}>
-              {renderSlotSection()}
+              <VenueDescription description={f.description} isMobile={isMobile} />
             </FadeInView>
 
             <FadeInView delay={120} duration={320}>
-              <VenueDescription description={f.description} isMobile={isMobile} />
+              {renderSlotSection()}
             </FadeInView>
 
             <View style={{ height: 140 }} />
@@ -665,7 +675,7 @@ const makeStyles = (colors: ReturnType<typeof useTheme>['colors'], isMobile: boo
   slotsLoadingText: { ...FONTS.bodyMd, color: colors.textSecondary },
   slotsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-start' },
   slotBtn: {
-    minWidth: isMobile ? '28%' : 110,
+    minWidth: isMobile ? '45%' : 140,
     flexGrow: 1,
     height: 64,
     borderRadius: 14,

@@ -63,9 +63,8 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
       try {
         // Use skipToken: true to bypass SecureStore disk read delay
         const res = await apiFetch(`/me/onboarding/check-username?username=${encodeURIComponent(trimmed)}`, {
-          skipToken: true,
           signal: controller.signal,
-          timeout: 3000,
+          timeout: 4000,
         });
 
         const json = await res.json().catch(() => null);
@@ -81,7 +80,7 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
           setStatus(result);
         }
       } catch (e: any) {
-        const isAbort = e?.name === 'AbortError' || e?.name === 'TimeoutError';
+        const isAbort = e?.name === 'AbortError' || e?.name === 'TimeoutError' || e?.code === 'ERR_CANCELED' || (typeof e?.message === 'string' && e.message.toLowerCase().includes('abort'));
         if (!isAbort && mountedRef.current) {
           setStatus('error');
         }

@@ -38,7 +38,6 @@ class SportController extends Controller
     {
         $validated = $request->validate([
             'name'        => 'required|string|min:5|max:50|unique:sports,name',
-            'description' => 'nullable|string|max:500',
             'is_active'   => 'nullable|boolean',
         ], [
             'name.required' => 'Nama olahraga wajib diisi.',

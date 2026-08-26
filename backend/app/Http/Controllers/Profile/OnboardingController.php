@@ -28,7 +28,8 @@ class OnboardingController extends Controller
             return $this->successResponse('Status username berhasil dicek.', ['available' => false, 'reason' => $reason]);
         }
 
-        $available = $this->profile->isUsernameAvailable($username, $request->user()->id);
+        $userId = $request->user()?->id;
+        $available = $this->profile->isUsernameAvailable($username, $userId);
 
         return $this->successResponse('Status username berhasil dicek.', ['available' => $available]);
     }

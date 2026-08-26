@@ -18,7 +18,15 @@ export class ApiError extends Error {
   data: any;
 
   constructor(status: number, data: any) {
-    super(typeof data?.message === 'string' && data.message ? data.message : `Permintaan gagal (${status})`);
+    let msg = typeof data?.message === 'string' && data.message ? data.message : `Permintaan gagal (${status})`;
+    if (status === 422 && data?.errors && typeof data.errors === 'object') {
+      const firstKey = Object.keys(data.errors)[0];
+      const firstErr = Array.isArray(data.errors[firstKey]) ? data.errors[firstKey][0] : data.errors[firstKey];
+      if (firstErr) {
+        msg = `${firstErr}`;
+      }
+    }
+    super(msg);
     this.name = 'ApiError';
     this.status = status;
     this.data = data;

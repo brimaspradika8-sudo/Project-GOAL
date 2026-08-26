@@ -51,9 +51,9 @@ export default function BookingPaymentScreen() {
   // Poll while waiting for owner confirmation
   useEffect(() => {
     if (!booking || booking.status !== 'WAITING_CONFIRMATION') return;
-    const interval = setInterval(() => { refetch(); }, 3000);
+    const interval = setInterval(() => { refetch(true); }, 5000);
     return () => clearInterval(interval);
-  }, [booking, refetch]);
+  }, [booking?.status, refetch]);
 
   const handleExpired = useCallback(async () => {
     if (isExpiringRef.current) return;
@@ -78,7 +78,7 @@ export default function BookingPaymentScreen() {
     }
   }, [bookingId, booking?.field_id, showToast]);
 
-  if (loading) {
+  if (loading && !booking) {
     return (
       <View style={st.container}>
         <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
@@ -88,7 +88,7 @@ export default function BookingPaymentScreen() {
     );
   }
 
-  if (error || !booking) {
+  if (!booking) {
     return (
       <View style={st.container}>
         <StatusBar barStyle={colors.background === '#0B1118' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
@@ -96,7 +96,7 @@ export default function BookingPaymentScreen() {
         <ErrorState
           title="Data booking tidak bisa dimuat"
           description={error ?? 'Booking tidak ditemukan.'}
-          onRetry={refetch}
+          onRetry={() => refetch(false)}
         />
       </View>
     );

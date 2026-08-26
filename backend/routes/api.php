@@ -45,7 +45,6 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('/me', [ProfileController::class, 'me']);
     Route::put('/me', [ProfileController::class, 'update']);
     Route::put('/me/password', [ProfileController::class, 'updatePassword']);
-    Route::get('/me/onboarding/check-username', [OnboardingController::class, 'checkUsername']);
     Route::post('/me/onboarding', [OnboardingController::class, 'submit']);
     Route::post('/me/avatar', [AvatarController::class, 'store']);
     // Image upload

@@ -19,6 +19,7 @@ import {
   getOwnerBookings,
   createOwnerManualBooking,
   getSlots,
+  formatBookingCode,
   type Booking,
 } from '../../services/bookingService';
 import { apiFetch } from '../../lib/apiClient';
@@ -151,6 +152,67 @@ const rmStyles = StyleSheet.create({
   confirmBtnText: { fontFamily: FONT_FAMILY, fontSize: 15, fontWeight: '700', color: '#fff' },
 });
 
+// ─── Time Filter Types & Helper ────────────────────────────────────────────────
+
+type ActiveTab = 'ACTIVE' | 'HISTORY';
+type TimeFilter = 'ALL' | 'TODAY' | 'YESTERDAY' | 'WEEK' | 'MONTH' | 'YEAR';
+
+const ACTIVE_STATUSES = ['WAITING_CONFIRMATION', 'CONFIRMED', 'PAID'];
+const HISTORY_STATUSES = ['COMPLETED', 'REJECTED', 'CANCELLED', 'EXPIRED'];
+
+const TIME_FILTER_OPTIONS: { id: TimeFilter; label: string }[] = [
+  { id: 'ALL', label: 'Semua' },
+  { id: 'TODAY', label: 'Hari Ini' },
+  { id: 'YESTERDAY', label: 'Kemarin' },
+  { id: 'WEEK', label: '1 Minggu' },
+  { id: 'MONTH', label: '1 Bulan' },
+  { id: 'YEAR', label: '1 Tahun' },
+];
+
+function isWithinTimeFilter(bookingDateStr: string, filter: TimeFilter): boolean {
+  if (filter === 'ALL') return true;
+  if (!bookingDateStr) return false;
+
+  const dateClean = bookingDateStr.includes('T') ? bookingDateStr : `${bookingDateStr}T00:00:00`;
+  const bDate = new Date(dateClean);
+  if (isNaN(bDate.getTime())) return false;
+
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  if (filter === 'TODAY') {
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+    return bDate >= todayStart && bDate < tomorrowStart;
+  }
+
+  if (filter === 'YESTERDAY') {
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    return bDate >= yesterdayStart && bDate < todayStart;
+  }
+
+  if (filter === 'WEEK') {
+    const weekAgo = new Date(todayStart);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return bDate >= weekAgo;
+  }
+
+  if (filter === 'MONTH') {
+    const monthAgo = new Date(todayStart);
+    monthAgo.setDate(monthAgo.getDate() - 30);
+    return bDate >= monthAgo;
+  }
+
+  if (filter === 'YEAR') {
+    const yearAgo = new Date(todayStart);
+    yearAgo.setDate(yearAgo.getDate() - 365);
+    return bDate >= yearAgo;
+  }
+
+  return true;
+}
+
 // ─── Booking Card ──────────────────────────────────────────────────────────────
 
 function BookingCard({
@@ -159,7 +221,6 @@ function BookingCard({
   onApprove,
   onReject,
   onConfirmPayment,
-  onComplete,
   loadingAction,
   colors,
   resolved,
@@ -169,7 +230,6 @@ function BookingCard({
   onApprove: (id: number) => void;
   onReject: (b: Booking) => void;
   onConfirmPayment: (id: number) => void;
-  onComplete: (id: number) => void;
   loadingAction: number | null;
   colors: any;
   resolved: 'light' | 'dark';
@@ -189,60 +249,65 @@ function BookingCard({
   const isLoading = loadingAction === booking.id;
   const needsApproval = booking.status === 'WAITING_CONFIRMATION';
   const needsPaymentConfirm = booking.status === 'CONFIRMED';
-  const needsComplete = booking.status === 'PAID';
 
   return (
     <View style={[styles.card, { backgroundColor: cardSurface, borderColor: colors.outline ?? colors.divider }]}>
-      {/* Card Header */}
-      <View style={styles.cardHeader}>
-        <View style={styles.headerLeft}>
-          <View style={[styles.iconWrap, { backgroundColor: colors.primaryContainer }]}>
-            <MaterialIcons name="receipt-long" size={16} color={colors.primary} />
+      {/* Clickable Card Body -> Navigate to Booking Detail */}
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => router.push(`/booking-detail/${booking.id}`)}
+      >
+        {/* Card Header */}
+        <View style={styles.cardHeader}>
+          <View style={styles.headerLeft}>
+            <View style={[styles.iconWrap, { backgroundColor: colors.primaryContainer }]}>
+              <MaterialIcons name="receipt-long" size={16} color={colors.primary} />
+            </View>
+            <Text style={[styles.bookingCode, { color: colors.text }]} numberOfLines={1}>
+              {formatBookingCode(booking)}
+            </Text>
           </View>
-          <Text style={[styles.bookingCode, { color: colors.text }]} numberOfLines={1}>
-            #{booking.id}
-          </Text>
+          <View style={[styles.statusBadge, { backgroundColor: status.bg, borderColor: status.color + '44' }]}>
+            <MaterialIcons name={status.icon as any} size={11} color={status.color} />
+            <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+          </View>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: status.bg, borderColor: status.color + '44' }]}>
-          <MaterialIcons name={status.icon as any} size={11} color={status.color} />
-          <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
-        </View>
-      </View>
 
-      {/* Renter + Field */}
-      <View style={[styles.detailGrid, { backgroundColor: softSurface, borderColor: colors.outline ?? colors.divider }]}>
-        <View style={styles.detailCol}>
-          <View style={styles.detailLabelWrap}>
-            <MaterialIcons name="person" size={12} color={colors.textSecondary} />
-            <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Penyewa</Text>
+        {/* Renter + Field */}
+        <View style={[styles.detailGrid, { backgroundColor: softSurface, borderColor: colors.outline ?? colors.divider }]}>
+          <View style={styles.detailCol}>
+            <View style={styles.detailLabelWrap}>
+              <MaterialIcons name="person" size={12} color={colors.textSecondary} />
+              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Penyewa</Text>
+            </View>
+            <Text style={[styles.detailVal, { color: colors.text }]}>{renterName}</Text>
           </View>
-          <Text style={[styles.detailVal, { color: colors.text }]}>{renterName}</Text>
-        </View>
-        <View style={[styles.colDivider, { backgroundColor: colors.outline ?? colors.divider }]} />
-        <View style={styles.detailCol}>
-          <View style={styles.detailLabelWrap}>
-            <MaterialIcons name="stadium" size={12} color={colors.textSecondary} />
-            <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Lapangan</Text>
+          <View style={[styles.colDivider, { backgroundColor: colors.outline ?? colors.divider }]} />
+          <View style={styles.detailCol}>
+            <View style={styles.detailLabelWrap}>
+              <MaterialIcons name="stadium" size={12} color={colors.textSecondary} />
+              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Lapangan</Text>
+            </View>
+            <Text style={[styles.detailVal, { color: colors.text }]} numberOfLines={1}>{fieldName}</Text>
           </View>
-          <Text style={[styles.detailVal, { color: colors.text }]} numberOfLines={1}>{fieldName}</Text>
         </View>
-      </View>
 
-      {/* Schedule + Price */}
-      <View style={[styles.scheduleGrid, { backgroundColor: softSurface, borderColor: colors.outline ?? colors.divider }]}>
-        <View style={styles.scheduleRow}>
-          <MaterialIcons name="event" size={14} color={colors.textSecondary} />
-          <Text style={[styles.scheduleText, { color: colors.text }]}>{formatDateShort(bookingDate)}</Text>
+        {/* Schedule + Price */}
+        <View style={[styles.scheduleGrid, { backgroundColor: softSurface, borderColor: colors.outline ?? colors.divider }]}>
+          <View style={styles.scheduleRow}>
+            <MaterialIcons name="event" size={14} color={colors.textSecondary} />
+            <Text style={[styles.scheduleText, { color: colors.text }]}>{formatDateShort(bookingDate)}</Text>
+          </View>
+          <View style={styles.scheduleDot} />
+          <View style={styles.scheduleRow}>
+            <MaterialIcons name="schedule" size={14} color={colors.textSecondary} />
+            <Text style={[styles.scheduleText, { color: colors.text }]}>{timeStr}</Text>
+          </View>
+          <View style={[styles.pricePill, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '30' }]}>
+            <Text style={[styles.priceText, { color: colors.primary }]}>{priceStr}</Text>
+          </View>
         </View>
-        <View style={styles.scheduleDot} />
-        <View style={styles.scheduleRow}>
-          <MaterialIcons name="schedule" size={14} color={colors.textSecondary} />
-          <Text style={[styles.scheduleText, { color: colors.text }]}>{timeStr}</Text>
-        </View>
-        <View style={[styles.pricePill, { backgroundColor: colors.primaryContainer, borderColor: colors.primary + '30' }]}>
-          <Text style={[styles.priceText, { color: colors.primary }]}>{priceStr}</Text>
-        </View>
-      </View>
+      </TouchableOpacity>
 
       {/* Action Buttons */}
       {needsApproval && (
@@ -291,193 +356,7 @@ function BookingCard({
           )}
         </TouchableOpacity>
       )}
-
-      {needsComplete && (
-        <TouchableOpacity
-          style={[styles.cashBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
-          onPress={() => onComplete(booking.id)}
-          disabled={isLoading}
-          activeOpacity={0.8}
-        >
-          {isLoading ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <>
-              <MaterialIcons name="done-all" size={16} color="#fff" />
-              <Text style={[styles.cashBtnText, { color: '#fff' }]}>Tandai Selesai</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      )}
     </View>
-  );
-}
-
-// ─── Walk-In Booking Modal ───────────────────────────────────────────────────
-
-function WalkInBookingModal({
-  visible,
-  onClose,
-  onSuccess,
-  colors,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-  colors: any;
-}) {
-  const [fields, setFields] = useState<any[]>([]);
-  const [selectedFieldId, setSelectedFieldId] = useState<number | null>(null);
-  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [slots, setSlots] = useState<any[]>([]);
-  const [selectedSlots, setSelectedSlots] = useState<any[]>([]);
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [loadingSlots, setLoadingSlots] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!visible) return;
-    apiFetch('/fields/my/list').then(res => res.json()).then(data => {
-      const list = Array.isArray(data?.data) ? data.data : [];
-      setFields(list);
-      if (list.length > 0) setSelectedFieldId(list[0].id);
-    }).catch(() => {});
-  }, [visible]);
-
-  useEffect(() => {
-    if (!selectedFieldId || !date) return;
-    setLoadingSlots(true);
-    setSelectedSlots([]);
-    getSlots(selectedFieldId, date).then(res => {
-      setSlots(res?.slots ?? []);
-    }).catch(() => {
-      setSlots([]);
-    }).finally(() => {
-      setLoadingSlots(false);
-    });
-  }, [selectedFieldId, date]);
-
-  const handleToggleSlot = (slot: any) => {
-    if (slot.status !== 'AVAILABLE') return;
-    const exists = selectedSlots.some(s => s.start_time === slot.start_time);
-    if (exists) {
-      setSelectedSlots(selectedSlots.filter(s => s.start_time !== slot.start_time));
-    } else {
-      setSelectedSlots([...selectedSlots, slot]);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!selectedFieldId || selectedSlots.length === 0 || !customerName) {
-      useToastStore.getState().show({ type: 'error', title: 'Data belum lengkap', description: 'Isi nama pelanggan dan pilih minimal 1 slot jam.' });
-      return;
-    }
-    setSaving(true);
-    try {
-      await createOwnerManualBooking({
-        field_id: selectedFieldId,
-        booking_date: date,
-        slots: selectedSlots.map(s => ({ start_time: s.start_time, end_time: s.end_time })),
-        customer_name: customerName,
-        customer_phone: customerPhone,
-        payment_method: 'cash',
-      });
-      useToastStore.getState().show({ type: 'success', title: 'Berhasil', description: 'Booking walk-in berhasil disimpan dan slot terkunci!' });
-      onSuccess();
-      onClose();
-    } catch (e: any) {
-      useToastStore.getState().show({ type: 'error', title: 'Gagal', description: e?.message || 'Gagal menyimpan booking offline.' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' }}>
-        <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={onClose} />
-        <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxWidth: 560, width: '100%', alignSelf: 'center', maxHeight: '88%' }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <Text style={{ fontFamily: FONT_FAMILY, fontSize: 17, fontWeight: '700', color: colors.text }}>Booking Walk-in (POS Kasir)</Text>
-            <TouchableOpacity onPress={onClose}>
-              <MaterialIcons name="close" size={22} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>Pilih Lapangan</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 14 }}>
-              {fields.map(f => (
-                <TouchableOpacity
-                  key={f.id}
-                  onPress={() => setSelectedFieldId(f.id)}
-                  style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: selectedFieldId === f.id ? colors.primary : colors.outline, backgroundColor: selectedFieldId === f.id ? colors.primaryContainer : colors.surface }}
-                >
-                  <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, fontWeight: '600', color: selectedFieldId === f.id ? colors.primary : colors.text }}>{f.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>Nama Pelanggan (Offline)</Text>
-            <TextInput
-              value={customerName}
-              onChangeText={setCustomerName}
-              placeholder="Contoh: Pak Budi / Tim Futsal Jaya"
-              placeholderTextColor={colors.textTertiary}
-              style={{ borderWidth: 1, borderColor: colors.outline, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontFamily: FONT_FAMILY, fontSize: 14, color: colors.text, marginBottom: 12 }}
-            />
-
-            <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', marginBottom: 6 }}>Nomor HP (Opsional)</Text>
-            <TextInput
-              value={customerPhone}
-              onChangeText={setCustomerPhone}
-              placeholder="08123456789"
-              placeholderTextColor={colors.textTertiary}
-              keyboardType="phone-pad"
-              style={{ borderWidth: 1, borderColor: colors.outline, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontFamily: FONT_FAMILY, fontSize: 14, color: colors.text, marginBottom: 16 }}
-            />
-
-            <Text style={{ fontFamily: FONT_FAMILY, fontSize: 11, fontWeight: '700', color: colors.textSecondary, textTransform: 'uppercase', marginBottom: 8 }}>Pilih Jam (Tanggal {date})</Text>
-            {loadingSlots ? (
-              <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
-            ) : slots.length === 0 ? (
-              <Text style={{ fontFamily: FONT_FAMILY, fontSize: 13, color: colors.textSecondary, marginBottom: 16 }}>Tidak ada slot tersedia di tanggal ini.</Text>
-            ) : (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-                {slots.map(s => {
-                  const isSelected = selectedSlots.some(sel => sel.start_time === s.start_time);
-                  const isAvail = s.status === 'AVAILABLE';
-                  return (
-                    <TouchableOpacity
-                      key={s.start_time}
-                      disabled={!isAvail}
-                      onPress={() => handleToggleSlot(s)}
-                      style={{
-                        paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1,
-                        borderColor: isSelected ? colors.primary : !isAvail ? colors.outline : colors.outline,
-                        backgroundColor: isSelected ? colors.primary : !isAvail ? colors.surfaceContainerLow : colors.surface,
-                        opacity: !isAvail ? 0.4 : 1,
-                      }}
-                    >
-                      <Text style={{ fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '600', color: isSelected ? colors.onPrimary : colors.text }}>{s.start_time}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
-
-            <TouchableOpacity
-              onPress={handleSave}
-              disabled={saving || selectedSlots.length === 0}
-              style={{ backgroundColor: colors.primary, paddingVertical: 12, borderRadius: 12, alignItems: 'center', opacity: saving || selectedSlots.length === 0 ? 0.6 : 1, marginBottom: 10 }}
-            >
-              {saving ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={{ fontFamily: FONT_FAMILY, fontSize: 14, fontWeight: '700', color: colors.onPrimary }}>Kunci Slot (Simpan Booking)</Text>}
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
   );
 }
 
@@ -504,7 +383,10 @@ export default function OwnerBookingsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadingAction, setLoadingAction] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [walkInModal, setWalkInModal] = useState(false);
+
+  // Tab & Time filter states
+  const [activeTab, setActiveTab] = useState<ActiveTab>('ACTIVE');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('ALL');
 
   // Reject modal state
   const [rejectTarget, setRejectTarget] = useState<Booking | null>(null);
@@ -527,9 +409,23 @@ export default function OwnerBookingsPage() {
   useEffect(() => { fetchBookings(); }, [fetchBookings]);
   const onRefresh = useCallback(() => { setRefreshing(true); fetchBookings(); }, [fetchBookings]);
 
-  const filteredBookings = [...bookings].sort((a, b) => {
-    return new Date(b.created_at ?? b.booking_date).getTime() - new Date(a.created_at ?? a.booking_date).getTime();
-  });
+  // Counts for tabs
+  const activeCount = bookings.filter((b) => ACTIVE_STATUSES.includes(b.status)).length;
+  const historyCount = bookings.filter((b) => HISTORY_STATUSES.includes(b.status)).length;
+
+  // Filtered & sorted bookings
+  const filteredBookings = bookings
+    .filter((b) => {
+      const isCorrectTab = activeTab === 'ACTIVE'
+        ? ACTIVE_STATUSES.includes(b.status)
+        : HISTORY_STATUSES.includes(b.status);
+      if (!isCorrectTab) return false;
+
+      return isWithinTimeFilter(b.booking_date ?? b.created_at ?? '', timeFilter);
+    })
+    .sort((a, b) => {
+      return new Date(b.created_at ?? b.booking_date).getTime() - new Date(a.created_at ?? a.booking_date).getTime();
+    });
 
   const handleApprove = useCallback(async (id: number) => {
     setLoadingAction(id);
@@ -572,19 +468,6 @@ export default function OwnerBookingsPage() {
     }
   }, [rejectTarget, fetchBookings, showToast]);
 
-  const handleComplete = useCallback(async (id: number) => {
-    setLoadingAction(id);
-    try {
-      await ownerCompleteBooking(id);
-      showToast({ type: 'success', title: 'Booking selesai', description: 'Status booking berubah menjadi COMPLETED.' });
-      fetchBookings();
-    } catch {
-      showToast({ type: 'error', title: 'Gagal', description: 'Coba lagi nanti.' });
-    } finally {
-      setLoadingAction(null);
-    }
-  }, [fetchBookings, showToast]);
-
   return (
     <View style={[st.screen, { backgroundColor: colors.background }]}>
       <DashboardHeader
@@ -592,44 +475,142 @@ export default function OwnerBookingsPage() {
         subtitle="Pantau dan kelola jadwal lapangan Anda"
         showBack={false}
         right={
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <TouchableOpacity
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                backgroundColor: '#10B981',
-                paddingHorizontal: 12,
-                paddingVertical: 7,
-                borderRadius: 10,
-              }}
-              activeOpacity={0.85}
-              onPress={() => setWalkInModal(true)}
-            >
-              <MaterialIcons name="add" size={18} color="#FFFFFF" />
-              <Text style={{ fontFamily: FONT_FAMILY, fontSize: 12, fontWeight: '700', color: '#FFFFFF' }}>
-                Walk-in
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 19,
-                backgroundColor: 'rgba(255,255,255,0.18)',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-              activeOpacity={0.8}
-              onPress={() => router.push('/(owner)/booking-settings')}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <MaterialIcons name="settings" size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 19,
+              backgroundColor: 'rgba(255,255,255,0.18)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+            activeOpacity={0.8}
+            onPress={() => router.push('/(owner)/booking-settings')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <MaterialIcons name="settings" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
         }
       />
+
+      {/* Main Tabs (Booking Aktif vs Riwayat Booking) */}
+      <View style={[st.tabRow, { borderColor: colors.outline ?? colors.divider }]}>
+        <TouchableOpacity
+          style={[
+            st.tabBtn,
+            activeTab === 'ACTIVE' && [st.tabBtnActive, { backgroundColor: colors.primaryContainer, borderColor: colors.primary }],
+            activeTab !== 'ACTIVE' && { borderColor: colors.outline ?? colors.divider, backgroundColor: colors.surface },
+          ]}
+          onPress={() => setActiveTab('ACTIVE')}
+          activeOpacity={0.8}
+        >
+          <MaterialIcons
+            name="flash-on"
+            size={16}
+            color={activeTab === 'ACTIVE' ? colors.primary : colors.textSecondary}
+          />
+          <Text
+            style={[
+              st.tabText,
+              { color: activeTab === 'ACTIVE' ? colors.primary : colors.textSecondary },
+              activeTab === 'ACTIVE' && st.tabTextActive,
+            ]}
+          >
+            Booking Aktif
+          </Text>
+          <View
+            style={[
+              st.tabCount,
+              { backgroundColor: activeTab === 'ACTIVE' ? colors.primary : colors.surfaceContainerHigh },
+            ]}
+          >
+            <Text
+              style={[
+                st.tabCountText,
+                { color: activeTab === 'ACTIVE' ? colors.onPrimary : colors.textSecondary },
+              ]}
+            >
+              {activeCount}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            st.tabBtn,
+            activeTab === 'HISTORY' && [st.tabBtnActive, { backgroundColor: colors.primaryContainer, borderColor: colors.primary }],
+            activeTab !== 'HISTORY' && { borderColor: colors.outline ?? colors.divider, backgroundColor: colors.surface },
+          ]}
+          onPress={() => setActiveTab('HISTORY')}
+          activeOpacity={0.8}
+        >
+          <MaterialIcons
+            name="history"
+            size={16}
+            color={activeTab === 'HISTORY' ? colors.primary : colors.textSecondary}
+          />
+          <Text
+            style={[
+              st.tabText,
+              { color: activeTab === 'HISTORY' ? colors.primary : colors.textSecondary },
+              activeTab === 'HISTORY' && st.tabTextActive,
+            ]}
+          >
+            Riwayat Booking
+          </Text>
+          <View
+            style={[
+              st.tabCount,
+              { backgroundColor: activeTab === 'HISTORY' ? colors.primary : colors.surfaceContainerHigh },
+            ]}
+          >
+            <Text
+              style={[
+                st.tabCountText,
+                { color: activeTab === 'HISTORY' ? colors.onPrimary : colors.textSecondary },
+              ]}
+            >
+              {historyCount}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* Time Range Filter Pills */}
+      <View style={st.filterSection}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={st.filterScroll}
+        >
+          {TIME_FILTER_OPTIONS.map((opt) => {
+            const isSelected = timeFilter === opt.id;
+            return (
+              <TouchableOpacity
+                key={opt.id}
+                style={[
+                  st.filterPill,
+                  isSelected
+                    ? { backgroundColor: colors.primary, borderColor: colors.primary }
+                    : { backgroundColor: colors.surface, borderColor: colors.outline ?? colors.divider },
+                ]}
+                onPress={() => setTimeFilter(opt.id)}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    st.filterPillText,
+                    { color: isSelected ? colors.onPrimary : colors.textSecondary },
+                    isSelected && { fontWeight: '700' },
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {loading ? (
         <View style={st.loadingWrap}>
@@ -660,9 +641,11 @@ export default function OwnerBookingsPage() {
               <View style={[st.emptyIcon, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outline }]}>
                 <MaterialIcons name="event-busy" size={40} color={colors.textTertiary} />
               </View>
-              <Text style={[st.emptyTitle, { color: colors.text }]}>Belum ada booking</Text>
+              <Text style={[st.emptyTitle, { color: colors.text }]}>Tidak ada booking</Text>
               <Text style={[st.emptyDesc, { color: colors.textSecondary }]}>
-                Pesanan booking dari pengguna atau kasir walk-in akan muncul di sini.
+                {activeTab === 'ACTIVE'
+                  ? 'Belum ada booking aktif saat ini.'
+                  : 'Belum ada riwayat booking pada filter ini.'}
               </Text>
             </View>
           ) : (
@@ -674,7 +657,6 @@ export default function OwnerBookingsPage() {
                 onApprove={handleApprove}
                 onReject={setRejectTarget}
                 onConfirmPayment={handleConfirmPayment}
-                onComplete={handleComplete}
                 loadingAction={loadingAction}
                 colors={colors}
                 resolved={resolved}
@@ -693,14 +675,6 @@ export default function OwnerBookingsPage() {
         loading={rejecting}
         colors={colors}
       />
-
-      {/* Walk-in Offline Booking Modal */}
-      <WalkInBookingModal
-        visible={walkInModal}
-        onClose={() => setWalkInModal(false)}
-        onSuccess={fetchBookings}
-        colors={colors}
-      />
     </View>
   );
 }
@@ -712,31 +686,61 @@ const makeStyles = (colors: ThemeColors, resolved: 'light' | 'dark', isMobile: b
     screen: { flex: 1, backgroundColor: colors.background },
 
     tabRow: {
+      flexDirection: 'row',
       paddingHorizontal: SIZES.gutter,
       paddingVertical: 12,
-      gap: 8,
+      gap: 10,
       borderBottomWidth: 1,
       ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
     },
     tabBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 6,
-      paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 9,
+      borderRadius: 14,
       borderWidth: 1,
     },
     tabBtnActive: {},
-    tabText: { ...FONTS.labelMd },
+    tabText: { ...FONTS.labelMd, fontSize: 13 },
     tabTextActive: { fontWeight: '700' },
     tabCount: {
-      minWidth: 18, height: 18, borderRadius: 9,
-      paddingHorizontal: 4,
-      alignItems: 'center', justifyContent: 'center',
+      minWidth: 20,
+      height: 20,
+      borderRadius: 10,
+      paddingHorizontal: 6,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-    tabCountText: { fontSize: 10, fontFamily: FONT_FAMILY, fontWeight: '700' },
+    tabCountText: { fontSize: 11, fontFamily: FONT_FAMILY, fontWeight: '700' },
+
+    filterSection: {
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.outline ?? colors.divider,
+      backgroundColor: colors.background,
+      ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }),
+    },
+    filterScroll: {
+      paddingHorizontal: SIZES.gutter,
+      gap: 8,
+    },
+    filterPill: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 20,
+      borderWidth: 1,
+    },
+    filterPillText: {
+      ...FONTS.labelSm,
+      fontSize: 12,
+    },
 
     loadingWrap: { padding: SIZES.gutter, paddingTop: 16, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
-    contentList: { padding: SIZES.gutter, paddingBottom: 100, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
+    contentList: { padding: SIZES.gutter, paddingTop: 16, paddingBottom: 100, ...(isMobile ? {} : { maxWidth: 900, alignSelf: 'center', width: '100%' }) },
 
-    emptyWrap: { alignItems: 'center', marginTop: 80, gap: 12 },
+    emptyWrap: { alignItems: 'center', marginTop: 60, gap: 12 },
     emptyIcon: {
       width: 80, height: 80, borderRadius: 24,
       justifyContent: 'center', alignItems: 'center',

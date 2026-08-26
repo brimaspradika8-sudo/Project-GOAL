@@ -7,7 +7,6 @@ import 'react-native-reanimated';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import LoadingScreen, { type BootStep } from '../components/LoadingScreen';
 import SplashScreen from '../components/SplashScreen';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -111,9 +110,6 @@ function RootLayoutInner() {
     return () => clearTimeout(timer);
   }, [fontsLoaded, fontError]);
   const [showSplash, setShowSplash] = useState(Platform.OS !== 'web');
-  const [booting, setBooting] = useState(true);
-  const [bootError, setBootError] = useState<string | null>(null);
-  const [bootStep, setBootStep] = useState<BootStep>('auth_check');
   const bootRef = useRef(false);
 
   const onSplashFinish = useCallback(() => {
@@ -122,10 +118,6 @@ function RootLayoutInner() {
   }, []);
 
   const initialize = useCallback(async () => {
-    setBooting(true);
-    setBootError(null);
-    setBootStep('auth_check');
-
     try {
       const storedToken = await SecureStore.getItemAsync(TOKEN_KEY);
 
@@ -134,23 +126,13 @@ function RootLayoutInner() {
         if (!isAuthRoute) {
           router.replace('/login');
         }
-        setBooting(false);
         return;
       }
 
-      setBootStep('profile_fetch');
-      let { profile, unauthorized, networkError } = await fetchProfile(storedToken);
-
-      if (networkError && !profile) {
-        setBootError('Tidak dapat terhubung ke server. Periksa jaringan Anda lalu coba lagi.');
-        setBooting(false);
-        return;
-      }
+      let { profile } = await fetchProfile(storedToken);
 
       if (profile) {
         useProfileStore.setState({ profile, loading: false });
-
-        setBootStep('app_ready');
 
         if (!isAuthRoute) {
           if (profile.role === 'player' && profile.onboarding_completed === false) {
@@ -166,11 +148,11 @@ function RootLayoutInner() {
           router.replace('/login');
         }
       }
-
-      setTimeout(() => setBooting(false), 120);
     } catch {
-      setBootError('Tidak dapat terhubung ke server. Periksa jaringan Anda lalu coba lagi.');
-      setBooting(false);
+      useProfileStore.getState().clearProfile();
+      if (!isAuthRoute) {
+        router.replace('/login');
+      }
     }
   }, [isAuthRoute]);
 
@@ -210,13 +192,9 @@ function RootLayoutInner() {
         <Stack.Screen name="booking/payment/[id]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="booking-success" options={{ animation: 'slide_from_bottom', gestureEnabled: false }} />
       </Stack>
-      {(showSplash || booting || bootError) && (
+      {showSplash && (
         <View style={styles.loadingOverlay}>
-          {showSplash ? (
-            <SplashScreen onFinish={onSplashFinish} />
-          ) : (
-            <LoadingScreen currentStep={bootStep} error={bootError} onRetry={initialize} />
-          )}
+          <SplashScreen onFinish={onSplashFinish} />
         </View>
       )}
       <StatusBar style={resolved === 'dark' ? 'light' : 'dark'} />
@@ -230,3 +208,4 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
 });
+

@@ -24,6 +24,7 @@ export interface BookingField {
 
 export interface Booking {
   id: number;
+  booking_code?: string;
   user_id: number;
   field_id: number;
   booking_date: string;       // "YYYY-MM-DD"
@@ -46,6 +47,13 @@ export interface Booking {
   created_at: string;
   field?: BookingField;
   user?: { id: number; name: string };
+}
+
+export function formatBookingCode(booking: Partial<Booking> & { id: number }): string {
+  if (booking.booking_code) return booking.booking_code;
+  const dateStr = booking.booking_date ? booking.booking_date.replace(/-/g, '') : '';
+  const numStr = String(booking.id).padStart(4, '0');
+  return dateStr ? `GL-${dateStr}-${numStr}` : `GL-${numStr}`;
 }
 
 export interface TimeSlot {
