@@ -84,7 +84,16 @@ export default function OwnerTabLayout() {
               }}
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
-            <Tabs.Screen name="kasir" options={{ href: null }} />
+            <Tabs.Screen
+              name="kasir"
+              options={{
+                title: 'Kasir',
+                tabBarIcon: ({ color }) => (
+                  <MaterialIcons name="point-of-sale" size={24} color={color} />
+                ),
+              }}
+              listeners={{ tabPress: () => Haptics.selectionAsync() }}
+            />
             <Tabs.Screen
               name="revenue"
               options={{
@@ -152,7 +161,16 @@ export default function OwnerTabLayout() {
               }}
               listeners={{ tabPress: () => Haptics.selectionAsync() }}
             />
-            <Tabs.Screen name="kasir" options={{ href: null }} />
+            <Tabs.Screen
+              name="kasir"
+              options={{
+                title: 'Kasir',
+                tabBarIcon: ({ color }) => (
+                  <MaterialIcons name="point-of-sale" size={24} color={color} />
+                ),
+              }}
+              listeners={{ tabPress: () => Haptics.selectionAsync() }}
+            />
             <Tabs.Screen
               name="revenue"
               options={{
@@ -212,7 +230,16 @@ export default function OwnerTabLayout() {
         }}
         listeners={{ tabPress: () => Haptics.selectionAsync() }}
       />
-      <Tabs.Screen name="kasir" options={{ href: null }} />
+      <Tabs.Screen
+        name="kasir"
+        options={{
+          title: 'Kasir',
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="point-of-sale" size={24} color={color} />
+          ),
+        }}
+        listeners={{ tabPress: () => Haptics.selectionAsync() }}
+      />
       <Tabs.Screen
         name="revenue"
         options={{
