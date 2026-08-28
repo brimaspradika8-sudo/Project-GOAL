@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, View, ViewStyle, FlatList } from 'react-native';
+import { Animated, StyleSheet, View, ViewStyle, FlatList, Platform } from 'react-native';
 import { SHADOWS } from './goalTheme';
 import { useTheme } from '../lib/theme';
 
@@ -275,11 +275,15 @@ const st = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 11,
-    shadowColor: '#FFFFFF',
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 3,
     elevation: 2,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '2px 2px 3px rgba(255, 255, 255, 0.35)' }
+      : {
+          shadowColor: '#FFFFFF',
+          shadowOffset: { width: 2, height: 2 },
+          shadowOpacity: 0.35,
+          shadowRadius: 3,
+        }),
   },
   listItem: {
     flexDirection: 'row',

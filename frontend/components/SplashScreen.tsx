@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text, Platform } from 'react-native';
 
 interface Props { onFinish: () => void }
 
@@ -29,9 +29,13 @@ const s = StyleSheet.create({
     fontWeight: '900',
     color: '#fff',
     letterSpacing: 4,
-    textShadowColor: '#4be277',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 18,
+    ...(Platform.OS === 'web'
+      ? { textShadow: '0px 0px 18px #4be277' }
+      : {
+          textShadowColor: '#4be277',
+          textShadowOffset: { width: 0, height: 0 },
+          textShadowRadius: 18,
+        }),
   },
   tag: {
     fontSize: 13,

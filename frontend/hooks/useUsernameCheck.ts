@@ -80,7 +80,7 @@ export function useUsernameCheck(rawUsername: string): UsernameStatus {
           setStatus(result);
         }
       } catch (e: any) {
-        const isAbort = e?.name === 'AbortError' || e?.name === 'TimeoutError' || e?.code === 'ERR_CANCELED' || (typeof e?.message === 'string' && e.message.toLowerCase().includes('abort'));
+        const isAbort = e?.name === 'AbortError' || e?.name === 'TimeoutError' || e?.code === 'ERR_CANCELED' || (typeof e?.message === 'string' && (e.message.toLowerCase().includes('abort') || e.message.toLowerCase().includes('timeout')));
         if (!isAbort && mountedRef.current) {
           setStatus('error');
         }

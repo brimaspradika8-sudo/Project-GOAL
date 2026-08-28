@@ -127,7 +127,9 @@ export async function apiFetch(path: string, options: ApiRequestOptions = {}): P
   } catch (err: unknown) {
     // Normalize abort/timeout errors into a readable message
     if (err instanceof DOMException && (err.name === 'AbortError' || err.name === 'TimeoutError')) {
-      throw new Error(err.message || `Permintaan melebihi batas waktu (${timeout / 1000}s). Periksa koneksi jaringan Anda.`);
+      const normalizedError = new Error(err.message || `Permintaan melebihi batas waktu (${timeout / 1000}s). Periksa koneksi jaringan Anda.`);
+      normalizedError.name = err.name;
+      throw normalizedError;
     }
     // Re-throw other errors as-is
     throw err;
