@@ -15,14 +15,15 @@ import AnimatedDeleteButton from '../shared/AnimatedDeleteButton';
 import { useToastStore } from '../../store/toastStore';
 import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
+import { useDebounce } from '../../hooks/useDebounce';
 import { getSportBadgeStyle } from '../../utils/sportBadge';
 import { useDebounce } from '../../hooks/useDebounce';
 
 export type SportItem = {
   id: number;
-  slug: string;
   name: string;
-  description?: string | null;
+  slug?: string;
+  description?: string;
   is_active: boolean;
   created_at?: string;
 };
@@ -235,6 +236,7 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
     }
   };
 
+  const debouncedSearch = useDebounce(search, 500);
   const filteredSports = useMemo(() => {
     if (!debouncedSearch.trim()) return sports;
     const q = debouncedSearch.toLowerCase();
