@@ -16,11 +16,6 @@ done
 
 echo "==> [GOAL] PostgreSQL siap."
 
-# Jika ada command override (queue:work, schedule:work, dsb), jalankan langsung tanpa migrasi/cache-clear
-if [ $# -gt 0 ]; then
-    exec "$@"
-fi
-
 # Migrasi hanya dijalankan oleh service utama (app)
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     echo "==> [GOAL] Menjalankan migrasi database..."

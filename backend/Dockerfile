@@ -55,7 +55,7 @@ RUN chown -R www-data:www-data storage bootstrap/cache \
 HEALTHCHECK --interval=5s --timeout=3s --start-period=90s --retries=20 \
     CMD nc -z 127.0.0.1 9000 || exit 1
 
-EXPOSE 9000
+EXPOSE 8000
 
 # Gunakan entrypoint script yang menunggu PostgreSQL, migrate, lalu jalankan PHP-FPM
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
