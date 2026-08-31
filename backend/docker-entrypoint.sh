@@ -22,16 +22,16 @@ if [ $# -gt 0 ]; then
 fi
 
 # Migrasi hanya dijalankan oleh service utama (app)
-if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
+if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     echo "==> [GOAL] Menjalankan migrasi database..."
-    php artisan migrate --force
+    php artisan migrate --force || true
     echo "==> [GOAL] Migrasi selesai."
 fi
 
-# Dalam development, bersihkan cache secukupnya
-echo "==> [GOAL] Membersihkan cache..."
-php artisan optimize:clear || true
-echo "==> [GOAL] Cleanup cache selesai."
+if [ -f /usr/local/etc/php-fpm.d/zz-docker.conf ]; then
+    grep -q "pm.max_children" /usr/local/etc/php-fpm.d/zz-docker.conf || echo "pm.max_children = 20" >> /usr/local/etc/php-fpm.d/zz-docker.conf
+    grep -q "pm.max_requests" /usr/local/etc/php-fpm.d/zz-docker.conf || echo "pm.max_requests = 500" >> /usr/local/etc/php-fpm.d/zz-docker.conf
+fi
 
-echo "==> [GOAL] Memulai PHP-FPM..."
-exec php-fpm
+echo "==> [GOAL] Memulai Laravel..."
+php artisan serve --host=0.0.0.0 --port="${PORT:-8000}"

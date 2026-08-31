@@ -34,10 +34,11 @@ export default function OwnerTabLayout() {
   }, [profile, profileLoading, router]);
 
   const sidebarItems: SidebarItem[] = [
-    { href: '/(owner)/fields', label: 'Kelola Lapangan', icon: 'stadium' },
-    { href: '/(owner)/bookings', label: 'Kelola Booking', icon: 'receipt-long' },
-    { href: '/(owner)/revenue', label: 'Kelola Pendapatan', icon: 'bar-chart' },
-    { href: '/(owner)/profile', label: 'Profile', icon: 'person' },
+    { href: '/(owner)/fields', label: 'Kelola Lapangan', icon: 'stadium', section: 'UTAMA' },
+    { href: '/(owner)/bookings', label: 'Kelola Booking', icon: 'receipt-long', section: 'UTAMA' },
+    { href: '/(owner)/kasir', label: 'Kasir Offline', icon: 'point-of-sale', section: 'UTAMA' },
+    { href: '/(owner)/revenue', label: 'Laporan Pendapatan', icon: 'bar-chart', section: 'KEUANGAN' },
+    { href: '/(owner)/profile', label: 'Profil Owner', icon: 'person', section: 'AKUN' },
   ];
 
   const activeRoute = sidebarItems.find((item) => isSidebarRouteActive(pathname, item.href))?.href || '/(owner)/fields';

@@ -30,6 +30,7 @@ services:
     env_file:
       - ./backend/.env.docker
     environment:
+      RUN_MIGRATIONS: "false"
       DB_HOST: postgres
       DB_PORT: 5432
       QUEUE_CONNECTION: database
@@ -48,8 +49,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.5'
-          memory: 512M
+          cpus: '2.0'
+          memory: 1024M
     networks:
       - goal-network
 

@@ -17,7 +17,6 @@ import { useTheme, type ThemeColors } from '../../lib/theme';
 import { useIsMobileWeb } from '../../lib/responsive';
 import { useDebounce } from '../../hooks/useDebounce';
 import { getSportBadgeStyle } from '../../utils/sportBadge';
-import { useDebounce } from '../../hooks/useDebounce';
 
 export type SportItem = {
   id: number;
@@ -236,7 +235,6 @@ export default function SportsManagementPage({ hideHeader }: { hideHeader?: bool
     }
   };
 
-  const debouncedSearch = useDebounce(search, 500);
   const filteredSports = useMemo(() => {
     if (!debouncedSearch.trim()) return sports;
     const q = debouncedSearch.toLowerCase();

@@ -61,11 +61,13 @@ export default function AdminTabLayout() {
   }, [isSuperAdmin]);
 
   const sidebarItems: SidebarItem[] = [
-    { href: '/(super-admin)/users', label: 'Kelola Pengguna', icon: 'people-alt' },
+    { href: '/(super-admin)/users', label: 'Kelola Pengguna', icon: 'people-alt', badge: ownerRequestBadge, section: 'MANAJEMEN' },
     ...(isSuperAdmin ? [
-      { href: '/(super-admin)/manage-fields', label: 'Kelola Lapangan', icon: 'stadium' },
+      { href: '/(super-admin)/manage-fields', label: 'Kelola Lapangan', icon: 'stadium', badge: manageFieldsBadge, section: 'MANAJEMEN' },
+      { href: '/(super-admin)/sports', label: 'Jenis Olahraga', icon: 'sports-soccer', section: 'MANAJEMEN' },
     ] : []),
-    { href: '/(super-admin)/profile', label: 'Profil', icon: 'person' },
+    { href: '/(super-admin)/help-center', label: 'Pusat Bantuan', icon: 'help-outline', section: 'DUKUNGAN' },
+    { href: '/(super-admin)/profile', label: 'Profil Admin', icon: 'person', section: 'AKUN' },
   ];
 
   const activeRoute = sidebarItems.find((item) => isSidebarRouteActive(pathname, item.href))?.href || '/(super-admin)/users';

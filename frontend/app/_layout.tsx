@@ -23,16 +23,7 @@ import type { Profile } from '../store/profileStore';
 
 NativeSplash.preventAutoHideAsync();
 
-if (Platform.OS === 'web' && typeof document !== 'undefined') {
-  const fontLinkId = 'google-fonts-plus-jakarta';
-  if (!document.getElementById(fontLinkId)) {
-    const link = document.createElement('link');
-    link.id = fontLinkId;
-    link.rel = 'stylesheet';
-    link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap';
-    document.head.appendChild(link);
-  }
-}
+// Local fonts are loaded offline via Font.useFonts below.
 
 type BootProfile = Profile;
 
