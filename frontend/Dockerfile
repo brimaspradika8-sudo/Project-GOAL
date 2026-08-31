@@ -1,8 +1,12 @@
 FROM node:20-alpine AS builder
 
+ARG EXPO_PUBLIC_API_URL
+ENV EXPO_PUBLIC_API_URL=$EXPO_PUBLIC_API_URL
+
 WORKDIR /app
 
 COPY package*.json ./
+
 RUN npm ci
 
 COPY . .
